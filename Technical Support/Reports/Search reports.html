@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports Dashboard</title>
+  <link rel="stylesheet" href="Search reports.css" />
+</head>
+
+<body>
+  <header>
+    <div class="ms-logo">
+      <img src="/icon/Ms Logo.png" alt="MS Logo" />
+    </div>
+    <div class="back-button">
+      <a href="#">
+        <img src="/icon/Back.png" alt="Back Icon" class="back-icon" />
+        Back
+      </a>
+    </div>
+    <div class="Home-button">
+      <a href="#">
+        <img src="/icon/Home.png" alt="Home Icon" class="Home-icon" />
+        Home
+      </a>
+    </div>
+    <div class="hospital-logo">
+      <img src="/icon/hospital-logo.png" alt="Hospital Logo" />
+    </div>
+  </header>
+
+  <div class="container">
+   <!-- شريط البحث -->
+<div class="search-bar">
+    <div class="search-group">
+      <input type="text" placeholder="Search reports..." />
+      <select><option>Report Type</option></select>
+      <select><option>Status</option></select>
+      <select><option>Date Range</option></select>
+    </div>
+    <button class="new-report-btn">New Report</button>
+  </div>
+  
+    <!-- تقارير -->
+    <div class="report-card" data-href="/Technical Support/Reports/report-details.html">
+      <div class="report-card-header">
+        <img src="/icon/FRAME (1).png" alt="Maintenance Icon" />
+        Maintenance <span class="status pending">Pending</span>
+      </div>
+      <div class="report-details">
+        <img src="/icon/desktop.png" alt="Desktop Icon" />
+        <span>Jan 15, 2024 - 09:30 AM</span>
+      </div>
+      <p><strong>Server Room AC Maintenance</strong></p>
+      <p>Regular maintenance check required for the server room AC system.</p>
+      <div class="image-note-container">
+        <strong>Notes:</strong> Technician scheduled. Priority: Medium.
+      </div>
+    </div>
+
+    <div class="report-card" data-href="/Technical Support/Reports/report-details.html">
+      <div class="report-card-header">
+        <img src="/icon/teket.png" alt="Ticket Icon" />
+        Ticket <span class="status in-progress">In Progress</span>
+      </div>
+      <div class="report-details">
+        <img src="/icon/mobail.png" alt="Mobile Icon" />
+        <span>Jan 14, 2024 - 02:15 PM</span>
+      </div>
+      <p><strong>Mobile App Login Issue</strong></p>
+      <p>Login failures reported on iOS devices.</p>
+      <div class="image-note-container">
+        <strong>Notes:</strong> Dev team investigating.
+      </div>
+    </div>
+
+    <div class="report-card" data-href="/Technical Support/Reports/report-details.html">
+      <div class="report-card-header">
+        <img src="/icon/interenal.png" alt="Entry Icon" />
+        Entry <span class="status completed">Completed</span>
+      </div>
+      <div class="report-details">
+        <img src="/icon/desktop.png" alt="Desktop Icon" />
+        <span>Jan 13, 2024 - 11:45 AM</span>
+      </div>
+      <p><strong>New Employee Onboarding</strong></p>
+      <p>Setup complete for new hire: email, CRM, tools.</p>
+      <div class="image-note-container">
+        <strong>Notes:</strong> Access granted successfully.
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination">
+        <button class="page-btn">&lt;</button>
+        <button class="page-btn active" data-page="1">1</button>
+        <button class="page-btn" data-page="2">2</button>
+        <button class="page-btn" data-page="3">3</button>
+        <button class="page-btn" data-page="4">4</button>
+        <button class="page-btn">&gt;</button>
+      </div>
+  </div>      
+
+  <script src="Search reports.js"></script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance Report</title>
+    <link rel="stylesheet" href="/Technical Support/Reports/report-details.css">
+</head>
+<link rel="stylesheet" href="/report-details.css">
+<body>
+    <div class="nav">
+        <div class="ms-logo">
+            <img src="/icon/Ms Logo.png" alt="MS Logo">
+        </div>
+        <div class="home-section" style="position: absolute; left: 50%; transform: translateX(-50%);">
+            <img src="/icon/home.png" alt="Home"> HOME
+        </div>
+        <button class="save-btn" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 5px;">
+            <img src="/icon/SAVE(5).png" alt="Save Icon" style="width: 20px; height: 20px;"> Save
+        </button>
+        <img src="/icon/hospital-logo.png" alt="Hospital Logo" class="hospital-logo">
+        
+    <button class="back-button">
+            <img src="/icon/Back.png" alt="Arrow" style="width: 24px; height: 24px;">
+            Back
+        </button>
+
+    </div>
+
+    <div class="report-container">
+        <h2>Maintenance Report <span class="report-id">#MR-2024-001</span></h2>
+        
+        <div class="status-section" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+            <span class="status-label" style="background-color: #FEF3C7; color: #92400E; padding: 6px 12px; border-radius: 12px; font-weight: bold;">In Progress</span>
+            <span class="status-date" style="color: #6B7280; font-weight: 300;">Submitted on Jan 15, 2024 at 10:30 AM</span>
+        </div>
+        
+        <div class="buttons">
+            <button class="btn pdf-btn">📄 Download PDF</button>
+            <button class="btn edit-btn">✏ Edit Report</button>
+            <button class="btn close-btn">🗑 Close Report</button>
+       
+                
+        </div>
+
+        <div class="details">
+            <div>
+                <strong>Report ID:</strong> <span>MR-2024-001</span>
+                <strong>Device Type:</strong> <span>Laptop XPS 15</span>
+                <strong>Department:</strong> <span>IT Support</span>
+            </div>
+            <div>
+                <strong>Priority:</strong> <span>High</span>
+                <strong>Assigned To:</strong> <span>Technical Team A</span>
+                <strong>Category:</strong> <span>Hardware Issue</span>
+            </div>
+        </div>
+        
+        <div class="description">
+            <h3>Description</h3>
+            <p>Device experiencing frequent overheating issues during normal operation. The laptop shuts down unexpectedly when running multiple applications. Cooling fans are making unusual noises. Required immediate inspection and maintenance to prevent potential hardware damage.</p>
+        </div>
+        
+        <div class="specs">
+            <h3>Device Specifications</h3>
+            <ul>
+                <li><img src="/icon/FRAME (7).png" alt=""> Intel i7-11800H</li>
+                <li><img src="/icon/RE.png" alt=""> System Unresponsive</li>
+                <li><img src="/icon/WIFI.png" alt=""> Wi-Fi 6 Compatible</li>
+                <li><img src="/icon/desktop.png" alt=""> 15.6" 4K OLED Display</li>
+                <li><img src="/icon/FRAME (10).png" alt=""> Overheating Issue</li>
+                <li><img src="/icon/FRAME (8).png" alt=""> 512GB SSD</li>
+                <li><img src="/icon/FRAME (9).png" alt=""> Battery Health: 85%</li>
+            </ul>
+        </div>
+        
+        <div class="notes">
+            <h3>Additional Notes</h3>
+            <p><strong>Technical Team Note:</strong> Initial inspection suggests dust accumulation in cooling vents. Thermal paste might need replacement. Will conduct thorough cleaning and testing.<br><br>
+            <strong>Update (Jan 16, 2024):</strong> Cleaning completed. Thermal paste replaced. Running temperature tests to ensure proper cooling function.</p>
+        </div>
+    </div>
+</body>
+<script src="Reports.js"></script>
+</html>

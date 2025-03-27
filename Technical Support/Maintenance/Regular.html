@@ -59,7 +59,8 @@
             <label for="device-type">Device Type <span class="required">*</span></label>
             <select id="device-type" name="device-type" required>
                 <option value="" disabled selected>Select device type</option>
-                <option value="Pc">Pc</option>
+                <option value="PC">PC</option>
+
                 <option value="Printer">Printer</option>
                 <option value="Scanner">Scanner</option>
                 <option value="Laptop">Scanner</option>
@@ -70,8 +71,7 @@
             <label for="device-spec">Device Specifications <span class="required">*</span></label>
             <select id="device-spec" name="device-spec" required>
                 <option value="" disabled selected>Select specification</option>
-                <option value="Model A">Model A</option>
-                <option value="Model B">Model B</option>
+                
             </select>
 
             <!-- Detailed Device Specifications (Checkbox Options) -->
@@ -98,8 +98,36 @@
         </form> <!-- End of Form -->
     </div> <!-- End of Form Container -->
 
-    <!-- Include JavaScript File -->
-    <script src="Maintenance.js"></script> <!-- External JavaScript File -->
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+          const typeSelect = document.getElementById("device-type");
+          const specSelect = document.getElementById("device-spec");
+        
+          typeSelect.addEventListener("change", () => {
+            const selectedType = typeSelect.value;
+            specSelect.innerHTML = '<option disabled selected>Loading...</option>';
+        
+            fetch(`http://localhost:5050/api/devices/by-type/${selectedType}`)
+              .then(res => res.json())
+              .then(data => {
+                specSelect.innerHTML = '<option disabled selected>Select device</option>';
+                data.forEach(device => {
+                  const option = document.createElement("option");
+                  option.value = device.Serial_Number;
+                  option.textContent = `${device.Serial_Number} - ${device.name}`;
+                  specSelect.appendChild(option);
+                });
+              })
+              .catch(err => {
+                console.error("❌ Error loading specs:", err);
+                specSelect.innerHTML = '<option disabled>Error loading devices</option>';
+              });
+          });
+        });
+        </script>
+        
+        
 
 </body>
 </html>

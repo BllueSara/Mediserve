@@ -58,6 +58,14 @@ html {
     height: 20px;
 }
 
+/* أيقونة الأولوية */
+.priority-icon {
+    width: 16px; /* حجم الأيقونة */
+    height: 16px;
+    margin-right: 5px; /* مسافة بين الأيقونة والنص */
+    vertical-align: middle; /* محاذاة الأيقونة مع النص */
+}
+
 /* الشعارات */
 header {
     display: flex;
@@ -189,10 +197,9 @@ textarea {
 .priority-options {
     display: flex;
     gap: 120px;
-    justify-self:space-between;
-    height: 120;
-    width: 30;
-
+    justify-self: space-between;
+    height: 120px;
+    width: 30px;
 }
 
 .priority-options label {
@@ -206,6 +213,13 @@ textarea {
     background-color: #FFFFFF;
     cursor: pointer;
     transition: all 0.2s ease-in-out;
+}
+
+/* إضافة أيقونة للأولوية */
+.priority-options label .priority-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 5px;
 }
 
 /* تغيير الخلفية عند التحديد */

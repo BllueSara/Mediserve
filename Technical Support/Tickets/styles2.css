@@ -1,0 +1,244 @@
+/* إعادة ضبط الأساسيات */
+body, html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #f9fafb;
+  font-family: 'Inter', sans-serif;
+  text-align: center;
+}
+
+/* أزرار التنقل */
+.back-button,
+.home-button {
+  position: absolute;
+  top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  height: 150px;
+}
+
+/* زر الرجوع */
+.back-button {
+  left: 20px;
+}
+
+/* زر الصفحة الرئيسية */
+.home-button {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* تنسيق روابط الأزرار */
+.back-button a,
+.home-button a {
+  text-decoration: none;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ألوان الأزرار */
+.back-button a {
+  color: #4A5568;
+}
+
+.home-button a {
+  color: #3BAAE0;
+}
+
+/* أيقونات الأزرار */
+.back-icon,
+.home-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* الشعارات (الهيدر) */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  width: 100%;
+}
+
+/* شعار MC */
+.ms-logo {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+}
+
+.ms-logo img {
+  width: 120px;
+}
+
+/* شعار المستشفى */
+.hospital-logo {
+  position: absolute;
+  right: 40px;
+  top: 5px;
+}
+
+.hospital-logo img {
+  height: 50px;
+}
+
+/* الحاوية الأساسية */
+.ticket-container {
+  background-color: white;
+  max-width: 600px;
+  margin: 70px auto;
+  padding: 35px;
+  border-radius: 10px;
+  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.15);
+  text-align: left;
+}
+
+/* عناوين التذكرة */
+.title {
+  font-size: 26px;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #6B7280;
+  margin-bottom: 25px;
+}
+
+/* تحسين توزيع الحقول */
+.form-group {
+  margin-bottom: 18px;
+}
+
+/* تنسيق العناوين الفرعية */
+label {
+  display: block;
+  font-size: 14px;
+  color: #374151;
+  margin-bottom: 5px;
+}
+
+/* جعل Ticket Number مميزاً */
+.disabled-input {
+  background-color: #f3f4f6;
+  border: 1px solid #d1d5db;
+  color: #111827;
+  font-weight: 600;
+}
+
+/* تحسين مظهر القوائم المنسدلة */
+select {
+  background-color: #E5E7EB;
+  border: 1px solid #A1A1A1;
+  color: #374151;
+  font-weight: 500;
+}
+
+/* تأثير الحواف عند التفاعل */
+input:focus, select:focus, textarea:focus {
+  border-color: #3BAAE0;
+  box-shadow: 0px 0px 5px rgba(59, 170, 224, 0.5);
+  outline: none;
+}
+
+/* تنسيق الإدخالات */
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  background-color: #fff;
+  font-size: 14px;
+  transition: all 0.2s ease-in-out;
+}
+
+/* تحسين صندوق الوصف */
+textarea {
+  height: 90px;
+  resize: none;
+}
+
+/* زر الإرسال */
+.submit-btn {
+  width: 100%;
+  background-color: #3BAAE0;
+  color: white;
+  border: none;
+  padding: 12px;
+  font-size: 16px;
+  border-radius: 5px;
+  transition: all 0.3s ease-in-out;
+  cursor: pointer;
+}
+
+/* تحسين زر الإرسال عند التفاعل */
+.submit-btn:active {
+  background-color: #1E90FF;
+  transform: scale(0.98);
+}
+
+/* تنسيق أولوية التقرير */
+.priority-options {
+  display: flex;
+  gap: 120px;
+  justify-self: space-between;
+}
+
+.priority-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  padding: 10px 15px;
+  border: 1px solid #D1D5DB;
+  border-radius: 5px;
+  background-color: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+/* تحديد العنصر المحدد */
+.priority-options input[type="radio"]:checked + label {
+  background-color: #E0F2FE;
+  border-color: #3BAAE0;
+  font-weight: bold;
+}
+
+/* لون الحقول المطلوبة */
+.required {
+  color: red;
+  font-weight: bold;
+}
+
+/* تصميم متجاوب */
+@media screen and (max-width: 768px) {
+  .ticket-container {
+      width: 90%;
+  }
+
+  .priority-options {
+      flex-direction: column;
+      gap: 8px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .title {
+      font-size: 24px;
+  }
+
+  .priority-options {
+      flex-direction: column;
+      gap: 8px;
+  }
+}
