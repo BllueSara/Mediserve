@@ -1,85 +1,256 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Maintenance Report</title>
-    <link rel="stylesheet" href="/Technical Support/Reports/report-details.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maintenance Report</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f9fbfc;
+      margin: 0;
+      padding: 0;
+    }
+
+    .nav-buttons {
+      position: relative;
+    }
+
+    .back-button,
+    .Home-button {
+      position: absolute;
+      top: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+    }
+
+    .back-button {
+      left: 20px;
+    }
+
+    .Home-button {
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .back-button a,
+    .Home-button a {
+      text-decoration: none;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .back-button a {
+      color: #4A5568;
+    }
+
+    .Home-button a {
+      color: #3BAAE0;
+    }
+
+    .back-icon,
+    .Home-icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
+      background-color: #fff;
+    }
+
+    .ms-logo {
+      position: absolute;
+      left: 5px;
+      top: 10px;
+    }
+
+    .ms-logo img {
+      width: 120px;
+    }
+
+    .hospital-logo {
+      position: absolute;
+      right: 40px;
+      top: 5px;
+    }
+
+    .hospital-logo img {
+      height: 50px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 60px auto;
+      padding: 30px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    .status {
+      background-color: #FDE68A;
+      color: #92400E;
+      padding: 5px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      display: inline-block;
+    }
+
+    .report-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .action-buttons button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+
+    .download-btn {
+      background: #E2E8F0;
+    }
+
+    .edit-btn {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .close-btn {
+      background: #ef4444;
+      color: white;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .section-title {
+      font-weight: 600;
+      margin-top: 30px;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+
+    .description, .note {
+      background-color: #f9fafb;
+      padding: 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      text-align: left;
+    }
+
+    .spec-box {
+      background: #f1f5f9;
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+    }
+
+    .note {
+      margin-top: 10px;
+    }
+  </style>
 </head>
-<link rel="stylesheet" href="/report-details.css">
 <body>
-    <div class="nav">
-        <div class="ms-logo">
-            <img src="/icon/Ms Logo.png" alt="MS Logo">
-        </div>
-        <div class="home-section" style="position: absolute; left: 50%; transform: translateX(-50%);">
-            <img src="/icon/home.png" alt="Home"> HOME
-        </div>
-        <button class="save-btn" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 5px;">
-            <img src="/icon/SAVE(5).png" alt="Save Icon" style="width: 20px; height: 20px;"> Save
-        </button>
-        <img src="/icon/hospital-logo.png" alt="Hospital Logo" class="hospital-logo">
-        
-    <button class="back-button">
-            <img src="/icon/Back.png" alt="Arrow" style="width: 24px; height: 24px;">
-            Back
-        </button>
+  <div class="nav-buttons">
+    <div class="back-button">
+      <a href="#" onclick="goBack()">
+        <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> Back
+      </a>
+    </div>
+    <div class="Home-button">
+      <a href="#">
+        <img src="/icon/Home.png" alt="Home Icon" class="Home-icon"> Home
+      </a>
+    </div>
+  </div>
 
+  <header>
+    <div class="ms-logo">
+      <img src="/icon/MS Logo.png" alt="MS Logo">
+    </div>
+    <div class="hospital-logo">
+      <img src="/icon/hospital-logo.png" alt="King Abdulaziz Hospital">
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="report-header">
+      <div>
+        <h2>Maintenance Report #MR-2024-001</h2>
+        <span class="status">In Progress</span>
+        <p style="font-size: 13px; color: gray;">Submitted on Jan 15, 2024 at 10:30 AM</p>
+      </div>
+      <div class="action-buttons">
+        <button class="download-btn">⬇️ Download PDF</button>
+        <button class="edit-btn">✏️ Edit Report</button>
+        <button class="close-btn">❌ Close Report</button>
+      </div>
     </div>
 
-    <div class="report-container">
-        <h2>Maintenance Report <span class="report-id">#MR-2024-001</span></h2>
-        
-        <div class="status-section" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-            <span class="status-label" style="background-color: #FEF3C7; color: #92400E; padding: 6px 12px; border-radius: 12px; font-weight: bold;">In Progress</span>
-            <span class="status-date" style="color: #6B7280; font-weight: 300;">Submitted on Jan 15, 2024 at 10:30 AM</span>
-        </div>
-        
-        <div class="buttons">
-            <button class="btn pdf-btn">📄 Download PDF</button>
-            <button class="btn edit-btn">✏ Edit Report</button>
-            <button class="btn close-btn">🗑 Close Report</button>
-       
-                
-        </div>
-
-        <div class="details">
-            <div>
-                <strong>Report ID:</strong> <span>MR-2024-001</span>
-                <strong>Device Type:</strong> <span>Laptop XPS 15</span>
-                <strong>Department:</strong> <span>IT Support</span>
-            </div>
-            <div>
-                <strong>Priority:</strong> <span>High</span>
-                <strong>Assigned To:</strong> <span>Technical Team A</span>
-                <strong>Category:</strong> <span>Hardware Issue</span>
-            </div>
-        </div>
-        
-        <div class="description">
-            <h3>Description</h3>
-            <p>Device experiencing frequent overheating issues during normal operation. The laptop shuts down unexpectedly when running multiple applications. Cooling fans are making unusual noises. Required immediate inspection and maintenance to prevent potential hardware damage.</p>
-        </div>
-        
-        <div class="specs">
-            <h3>Device Specifications</h3>
-            <ul>
-                <li><img src="/icon/FRAME (7).png" alt=""> Intel i7-11800H</li>
-                <li><img src="/icon/RE.png" alt=""> System Unresponsive</li>
-                <li><img src="/icon/WIFI.png" alt=""> Wi-Fi 6 Compatible</li>
-                <li><img src="/icon/desktop.png" alt=""> 15.6" 4K OLED Display</li>
-                <li><img src="/icon/FRAME (10).png" alt=""> Overheating Issue</li>
-                <li><img src="/icon/FRAME (8).png" alt=""> 512GB SSD</li>
-                <li><img src="/icon/FRAME (9).png" alt=""> Battery Health: 85%</li>
-            </ul>
-        </div>
-        
-        <div class="notes">
-            <h3>Additional Notes</h3>
-            <p><strong>Technical Team Note:</strong> Initial inspection suggests dust accumulation in cooling vents. Thermal paste might need replacement. Will conduct thorough cleaning and testing.<br><br>
-            <strong>Update (Jan 16, 2024):</strong> Cleaning completed. Thermal paste replaced. Running temperature tests to ensure proper cooling function.</p>
-        </div>
+    <div class="grid">
+      <div><strong>Report ID</strong><br>MR-2024-001</div>
+      <div><strong>Priority</strong><br>High</div>
+      <div><strong>Device Type</strong><br>Laptop XPS 15</div>
+      <div><strong>Assigned To</strong><br>Technical Team A</div>
+      <div><strong>Department</strong><br>IT Support</div>
+      <div><strong>Category</strong><br>Hardware Issue</div>
     </div>
+
+    <div class="section-title">Description</div>
+    <div class="description">
+      Device experiencing frequent overheating issues during normal operation. The laptop shuts down unexpectedly when running multiple applications. Cooling fans are making unusual noises. Required immediate inspection and maintenance to prevent potential hardware damage.
+    </div>
+
+    <div class="section-title">Device Specifications</div>
+    <div class="grid">
+      <div class="spec-box">🧠 Intel Core i7-11800H</div>
+      <div class="spec-box">🔥 Overheating Issues</div>
+      <div class="spec-box">🔧 System Updates Required</div>
+      <div class="spec-box">💾 512GB SSD</div>
+      <div class="spec-box">📶 Wi-Fi 6 Compatible</div>
+      <div class="spec-box">🔋 Battery Health: 85%</div>
+      <div class="spec-box">🖥️ 15.6" 4K OLED Display</div>
+    </div>
+
+    <div class="section-title">Additional Notes</div>
+    <div class="note">
+      <strong>Technical Team Note:</strong><br>
+      Initial inspection suggests dust accumulation in cooling vents. Thermal paste might need replacement. Will conduct thorough cleaning and testing.
+    </div>
+    <div class="note">
+      <strong>Update (Jan 16, 2024):</strong><br>
+      Cleaning completed. Thermal paste replaced. Running temperature tests to ensure proper cooling function.
+    </div>
+  </div>
+
+  <script>
+    function goBack() {
+      window.history.back();
+    }
+  </script>
 </body>
-<script src="Reports.js"></script>
 </html>
