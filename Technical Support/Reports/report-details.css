@@ -1,245 +1,166 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f9fbfc;
+    margin: 0;
+    padding: 0;
+  }
 
-/* Reset page styles */
-body, html {
-    height: 100%; /* Set full height for page */
-    margin: 0; /* Remove default margin */
-    padding: 0; /* Remove default padding */
-    font-family: Arial, sans-serif; /* Set default font */
-    background-color: white; /* Set background color */
-    text-align: center; /* Center text by default */
-}
+  .nav-buttons {
+    position: relative;
+  }
 
-/* Main wrapper */
-.wrapper {
-    width: 1400px; /* Set wrapper width */
-    height: 900px; /* Set wrapper height */
-    margin: 0 auto; /* Center wrapper */
-    position: relative; /* Enable positioning of children */
-}
+  .back-button,
+  .Home-button {
+    position: absolute;
+    top: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+  }
 
-/* Container styles */
-.container {
-    width: 80%; /* Set container width */
-    margin: 0 auto; /* Center container */
-}
+  .back-button {
+    left: 20px;
+  }
 
-/* Header logos positioning */
-.ms-logo {
-    position: absolute; /* Position absolutely */
-    left: 5px; /* Set left distance */
-    top: 10px; /* Set top distance */
-}
+  .Home-button {
+    left: 50%;
+    transform: translateX(-50%);
+  }
 
-.ms-logo img {
-    width: 120px; /* Set logo width */
-}
+  .back-button a,
+  .Home-button a {
+    text-decoration: none;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
 
-.hospital-logo {
-    position: absolute; /* Position absolutely */
-    right: 10px; /* Set right distance */
-    top: 5px; /* Set top distance */
-}
+  .back-button a {
+    color: #4A5568;
+  }
 
-.hospital-logo img {
-    height: 50px; /* Set logo height */
-}
+  .Home-button a {
+    color: #3BAAE0;
+  }
 
-/* Navigation buttons */
-.back-button {
-    position: absolute; /* Position absolutely */
-    top: 20px; /* Set top distance */
-    left: 20px; /* Set left distance */
-    display: flex; /* Use flexbox for alignment */
-    align-items: center; /* Center items vertically */
-    gap: 5px; /* Space between icon and text */
-    text-decoration: none; /* Remove underline */
-    font-size: 14px; /* Set font size */
-    color: #4A5568; /* Set text color */
-}
+  .back-icon,
+  .Home-icon {
+    width: 20px;
+    height: 20px;
+  }
 
-.back-button img {
-    width: 20px; /* Set icon width */
-    height: 20px; /* Set icon height */
-}
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 40px;
+    background-color: #fff;
+  }
 
-.home-section {
-    position: absolute; /* Position absolutely */
-    top: 20px; /* Set top distance */
-    left: 50%; /* Center horizontally */
-    transform: translateX(-50%); /* Adjust for exact center */
-    display: flex; /* Use flexbox for alignment */
-    align-items: center; /* Center items vertically */
-    gap: 5px; /* Space between icon and text */
-    font-size: 14px; /* Set font size */
-    color: #3BAAE0; /* Set text color */
-}
+  .ms-logo {
+    position: absolute;
+    left: 5px;
+    top: 10px;
+  }
 
-.home-section img {
-    width: 20px; /* Set icon width */
-    height: 20px; /* Set icon height */
-}
+  .ms-logo img {
+    width: 120px;
+  }
 
-/* Report container styles */
-.report-container {
-    max-width: 800px; /* Set maximum width */
-    margin: 100px auto 0; /* Center container and add top margin */
-    padding: 20px; /* Add padding */
-    background-color: white; /* Set background color */
-    border-radius: 10px; /* Round corners */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Add subtle shadow */
-}
+  .hospital-logo {
+    position: absolute;
+    right: 40px;
+    top: 5px;
+  }
 
-/* Button container styles */
-.buttons {
-    display: flex; /* Use flexbox */
-    justify-content: flex-end; /* Align buttons to right */
-    gap: 10px; /* Space between buttons */
-    margin-bottom: 20px; /* Add bottom margin */
-}
+  .hospital-logo img {
+    height: 50px;
+  }
 
-/* Button styles */
-.btn {
-    padding: 10px 15px; /* Add padding */
-    border: none; /* Remove border */
-    border-radius: 6px; /* Round corners */
-    cursor: pointer; /* Show pointer on hover */
-    font-weight: bold; /* Set font weight */
-}
+  .container {
+    max-width: 900px;
+    margin: 60px auto;
+    padding: 30px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  }
 
-/* Specific button colors */
-.pdf-btn { 
-    background-color: #f4ecec; /* Set background color */
-    color: #000; /* Set text color */
-}
+  .status {
+    background-color: #FDE68A;
+    color: #92400E;
+    padding: 5px 12px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    display: inline-block;
+  }
 
-.edit-btn { 
-    background-color: #3baae0; /* Set background color */
-    color: #fff; /* Set text color */
-}
+  .report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
 
-.close-btn { 
-    background-color: #DC2626; /* Set background color */
-    color: #fff; /* Set text color */
-}
+  .action-buttons button {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-left: 10px;
+  }
 
-/* Content section styles */
-.description, .notes, .specs {
-    border: 1px solid #ddd; /* Add border */
-    padding: 15px; /* Add padding */
-    border-radius: 6px; /* Round corners */
-    background-color: #f8f9fa; /* Set background color */
-    margin-bottom: 20px; /* Add bottom margin */
-}
+  .download-btn {
+    background: #E2E8F0;
+  }
 
-.specs {
-    background-color: white; /* Set background color */
-    border: none; /* Remove border */
-}
+  .edit-btn {
+    background: #3b82f6;
+    color: white;
+  }
 
-/* Specifications list styles */
-.specs ul {
-    list-style: none; /* Remove list bullets */
-    padding: 0; /* Remove padding */
-    display: grid; /* Use grid layout */
-    grid-template-columns: repeat(2, 1fr); /* Two columns */
-    gap: 10px; /* Space between items */
-    border: none; /* Remove border */
-}
+  .close-btn {
+    background: #ef4444;
+    color: white;
+  }
 
-.specs li {
-    display: flex; /* Use flexbox */
-    align-items: center; /* Center items vertically */
-    border: 1px solid #ddd; /* Add border */
-    padding: 8px; /* Add padding */
-    border-radius: 6px; /* Round corners */
-    background-color: #ffffff; /* Set background color */
-}
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-top: 20px;
+  }
 
-.specs li img {
-    width: 20px; /* Set icon width */
-    height: 20px; /* Set icon height */
-    margin-right: 8px; /* Add right margin */
-}
+  .section-title {
+    font-weight: 600;
+    margin-top: 30px;
+    margin-bottom: 10px;
+    font-size: 16px;
+  }
 
-/* Details section styles */
-.details {
-    display: flex; /* Use flexbox */
-    justify-content: space-between; /* Space items evenly */
-    margin-bottom: 20px; /* Add bottom margin */
-}
+  .description, .note {
+    background-color: #f9fafb;
+    padding: 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    text-align: left;
+  }
 
-.details div {
-    flex: 1; /* Equal width columns */
-}
+  .spec-box {
+    background: #f1f5f9;
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+  }
 
-.details strong {
-    display: block; /* Stack vertically */
-    margin-bottom: 5px; /* Add bottom margin */
-}
-
-/* Image section styles */
-.image-section {
-    text-align: center; /* Center content */
-    margin-top: 20px; /* Add top margin */
-}
-
-.image-section img {
-    max-width: 100%; /* Responsive image */
-    border-radius: 6px; /* Round corners */
-    border: 1px solid #ddd; /* Add border */
-    padding: 5px; /* Add padding */
-}
-
-/* Save button styles */
-.save-btn {
-    background-color: #3BAAE0; /* Set button color */
-    color: white; /* Set text color */
-    border: none; /* Remove border */
-    padding: 8px 16px; /* Add padding */
-    border-radius: 5px; /* Round corners */
-    cursor: pointer; /* Show pointer on hover */
-    transition: background-color 0.3s; /* Smooth color transition */
-}
-
-.save-btn:hover {
-    background-color: #2d8bb8; /* Darker shade on hover */
-}
-
-/* Responsive design for tablets */
-@media screen and (max-width: 768px) {
-    .wrapper {
-        width: 90%; /* Adjust wrapper width */
-    }
-    
-    .report-container {
-        margin: 80px auto 0; /* Adjust top margin */
-        width: 90%; /* Adjust width */
-    }
-    
-    .specs ul {
-        grid-template-columns: 1fr; /* Single column */
-    }
-}
-
-/* Responsive design for mobile */
-@media screen and (max-width: 480px) {
-    .wrapper {
-        width: 95%; /* Adjust wrapper width */
-    }
-    
-    .report-container {
-        margin: 60px auto 0; /* Adjust top margin */
-        width: 95%; /* Adjust width */
-        padding: 15px; /* Reduce padding */
-    }
-    
-    .buttons {
-        flex-direction: column; /* Stack buttons vertically */
-    }
-    
-    .save-btn {
-        padding: 6px 12px; /* Reduce padding */
-        font-size: 14px; /* Reduce font size */
-    }
-}  
+  .note {
+    margin-top: 10px;
+  }
