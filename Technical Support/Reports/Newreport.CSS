@@ -1,144 +1,200 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
-
 body {
-    font-family: 'Roboto', sans-serif;
-    background-color: #F8FBFF;
-    margin: 40;
-    padding: 350;
-}
-
-.container {
-    width: 50%;
-    margin: 40px auto;
-    background: white;
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    border: 1px solid #ddd;
-}
-
-/* زر "Save" في اليمين */
-.save-container {
+    font-family: 'Inter', sans-serif;
+    background-color: #f9fbfc;
+    margin: 0;
+    padding: 0;
+  }
+  
+  header {
     display: flex;
-    justify-content: flex-end;
-    margin: 10px 20px;
-}
-
-.save-btn {
-    background: #3BAAE0;
-    color: white;
-    padding: 10px 15px;
-    font-size: 14px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 40px;
+    background-color: #fff;
+  }
+  
+  .ms-logo {
+    position: absolute;
+    left: 5px;
+    top: 10px;
+  }
+  
+  .ms-logo img {
+    width: 120px;
+  }
+  
+  .hospital-logo {
+    position: absolute;
+    right: 40px;
+    top: 5px;
+  }
+  
+  .hospital-logo img {
+    height: 50px;
+  }
+  
+  .nav-buttons {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 40px;
+    background-color: #fff;
+  }
+  
+  .back-button,
+  .Home-button {
+    position: absolute;
+    top: 20px;
     display: flex;
     align-items: center;
-}
-
-.save-btn img {
-    width: 20px;
-    margin-right: 8px;
-}
-
-h1.title {
-    font-size: 22px;
-    font-weight: bold;
-    color: #333;
-}
-
-.subtitle {
+    gap: 8px;
+    width: fit-content;
+    height: 150px;
+  }
+  
+  .back-button {
+    left: 20px;
+  }
+  
+  .Home-button {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  
+  .back-button a,
+  .Home-button a {
+    text-decoration: none;
     font-size: 14px;
-    color: #777;
-    margin-bottom: 20px;
-}
-
-.form-group {
-    margin-bottom: 20px;
-}
-
-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  
+  .back-button a {
+    color: #4A5568;
+  }
+  
+  .Home-button a {
+    color: #3BAAE0;
+  }
+  
+  .back-icon,
+  .Home-icon {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .container {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 40px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  }
+  
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .title {
+    font-size: 24px;
+    font-weight: 600;
+    margin-top: 30px;
+  }
+  
+  label {
     display: block;
-    font-weight: 500;
-    margin-bottom: 5px;
-    color: #333;
-}
-
-input, select, textarea {
+    margin-bottom: 8px;
+    margin-top: 24px;
+    font-weight: 600;
+  }
+  
+  input, select, textarea {
     width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 14px;
+    box-sizing: border-box;
+  }
+  
+  textarea {
+    resize: vertical;
+    height: 100px;
+  }
+  
+  .row {
+    display: flex;
+    gap: 20px;
+  }
+  
+  .row > div {
+    flex: 1;
+  }
+  
+  .upload-box {
+    border: 2px dashed #ccc;
+    padding: 30px;
+    text-align: center;
+    border-radius: 10px;
+    margin-top: 16px;
+  }
+  
+  .upload-box p {
+    margin: 10px 0;
+  }
+  
+  .file-preview {
+    margin-top: 10px;
     padding: 10px;
     border: 1px solid #ddd;
     border-radius: 5px;
-    font-size: 14px;
-}
-
-textarea {
-    height: 80px;
-    resize: none;
-}
-
-.signature-box {
-    height: 80px;
-    border: 2px dashed #bbb;
+    background: #f0f0f0;
+  }
+  
+  .signature-box {
+    margin-top: 20px;
+  }
+  
+  .signature-pad {
+    height: 150px;
+    background: #fff;
+    border: 1px solid #ccc;
     border-radius: 8px;
-    background: #f9f9f9;
+  }
+  
+  .buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+  }
+  
+  button {
+    padding: 12px 24px;
+    border: none;
+    background-color: #00aaff;
+    color: white;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  
+  .save-btn {
+    background-color: #3fa3ff;
+  }
+  
+  .submit-btn {
+    background-color: #00c2ff;
     display: flex;
     align-items: center;
-    justify-content: center;
-}
-
-.signature-placeholder {
-    font-size: 14px;
-    color: #777;
-    text-align: center;
-}
-
-/* ترتيب أزرار "Submit" و "Print" */
-.form-buttons {
-    display: flex;
-    justify-content: center;
-    margin-top: 20px;
-}
-
-.submit-btn {
-    background: #3BAAE0;
-    color: white;
-    padding: 12px;
-    font-size: 16px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    margin-right: 10px;
-}
-
-.print-btn {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-}
-
-.print-btn img {
-    width: 30px;
-}
-
-/* أزرار التنقل */
-.nav-buttons {
-    display: flex;
-    justify-content: space-between;
-    padding: 15px;
-}
-
-.home-button {
-    text-align: center;
-    flex: 1;
-}
-
-header {
-    display: flex;
-    justify-content: space-between;
-    padding: 15px;
-}
-
-.ms-logo img, .hospital-logo img {
-    width: 120px;
-}
+    gap: 10px;
+  }
+  
