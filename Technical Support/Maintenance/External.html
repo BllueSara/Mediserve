@@ -49,19 +49,21 @@
         <p class="section-title">Device Information</p>
         <div class="device-container">
             <div class="device-box">
-                <label>Device Type <span class="required">*</span></label> <!-- Required field -->
-                <select required>
-                    <option value="" disabled selected>Select device type</option>
+                <label>Device Type <span class="required">*</span></label>
+                <select id="device-type" required>
+                  <option value="" disabled selected>Select device type</option>
                 </select>
-            </div>
-            <div class="device-box">
-                <label>Device Specifications <span class="required">*</span></label> <!-- Required field -->
-                <select id="device-spec" required>
-                    <option value="" disabled selected>Select specifications</option>
-                  </select>
-                  
-            </div>
-        </div>
+              </div>
+              
+              <div class="device-box">
+                <label>Printer Specifications</label>
+                <select id="device-spec">
+                  <option value="" disabled selected>Select printer</option>
+                </select>
+              </div>
+              
+              
+        </div>              
 
         <!-- Ticket Information Section -->
         <p class="section-title">Ticket Information</p>
