@@ -20,13 +20,14 @@ body, html {
 
 /* Back and Home buttons */
 .back-button, 
-.home-button {
-    position: absolute;
-    top: 20px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    width: fit-content;
+.Home-button {
+    position: absolute; /* Position the buttons absolutely */
+    top: 20px; /* Place buttons near the top */
+    display: flex; /* Use flexbox for alignment */
+    align-items: center; /* Align icons and text */
+    gap: 8px; /* Space between icon and text */
+    width: fit-content; /* Adjust width based on content */
+    height: 150px; /* Set button height */
 }
 
 /* Back button */
@@ -84,18 +85,18 @@ header {
 }
 
 .ms-logo img {
-    width: 120px;
+    width: 120px; /* تم التطابق مع الكود الثاني */
 }
 
 /* Hospital Logo */
 .hospital-logo {
     position: absolute;
-    right: 10px;
+    right: 40px;
     top: 5px;
 }
 
 .hospital-logo img {
-    height: 50px;
+    height: 50px; /* تم التطابق مع الكود الثاني */
 }
 
 /* Page title */

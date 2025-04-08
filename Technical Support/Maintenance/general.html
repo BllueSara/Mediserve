@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Make the page responsive -->
     <title>General Maintenance</title> <!-- Page title -->
     <link rel="stylesheet" href="general.css"> <!-- Link external CSS file -->
+    
 </head>
 
 <body>
@@ -82,6 +83,13 @@
                         <option value="" disabled selected>Select section</option> <!-- Placeholder option -->
                     </select>
                 </div>
+                
+                <div> <!-- Select field for Problem Status -->
+                    <label>Device Specifications <span class="required">*</span></label> <!-- Label with required indicator -->
+                    <select id="device-spec" required> <!-- Dropdown select field with required attribute -->
+                        <option value="" disabled selected>Select status</option> <!-- Placeholder option -->
+                    </select>
+                </div>
 
                 <div> <!-- Select field for Floor -->
                     <label>Floor</label> <!-- Label -->
@@ -103,6 +111,7 @@
                         <option value="" disabled selected>Select status</option> <!-- Placeholder option -->
                     </select>
                 </div>
+                
 
             <!-- Buttons -->
             <div class="form-buttons"> <!-- Container for form buttons -->

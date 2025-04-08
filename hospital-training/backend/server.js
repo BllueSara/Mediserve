@@ -14,74 +14,115 @@ app.get("/", (req, res) => {
   res.send("🚀 Server is running!");
 });
 
-// ✅ Get all device types
-app.get("/api/device-types", (req, res) => {
-  const query = "SELECT id, type FROM Device_type";
+
+app.get("/floors", (req, res) => {
+  const query = "SELECT * FROM Floors";
   db.query(query, (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
     res.json(result);
   });
 });
 
-// ✅ Get devices by type (example: Printer)
-app.get("/api/devices/by-type/:type", (req, res) => {
-  const type = req.params.type;
 
-  let query = "";
-  switch (type) {
-    case "Printer":
-      query = "SELECT Serial_Number, Printer_name AS name FROM Printer_info";
-      break;
-    default:
-      return res.status(400).json({ error: "Invalid device type" });
-  }
-
-  db.query(query, (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
+app.get("/Technical" , (req, res) => {
+  const query = "SELECT * FROM Engineers";
+  db.query(query, (err, result)  => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
     res.json(result);
   });
 });
 
-// 🔹 Get all printer models
-app.get("/api/printers/models", (req, res) => {
-  const query = "SELECT DISTINCT Model FROM Printer_info";
-  db.query(query, (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
+
+
+app.get("/TypeProplem", (req, res) => {
+  const query = "SELECT * FROM DeviceType";
+  db.query(query, (err, result)  => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
     res.json(result);
   });
 });
 
-// 🔹 Get full printer details by selected model
-app.get("/api/printer/details/:model", (req, res) => {
-  const model = req.params.model;
-  const query = "SELECT * FROM Printer_info WHERE Model = ?";
-  db.query(query, [model], (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
+app.get("/ProblemStates", (req, res) => {
+  const query = "SELECT * FROM ProblemStates ";
+  db.query(query, (err, result)  => {
+    if (err) {
+      return res.status(500).json({ error: err.message });      
+    }    
     res.json(result);
   });
 });
 
-// 🔹 Get unique printer companies
-app.get("/api/printers/companies", (req, res) => {
-  const query = "SELECT DISTINCT company_name FROM Printer_info";
-  db.query(query, (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
+app.get("/Departments", (req, res) => {
+  const query = "SELECT * FROM Departments  ORDER BY name ASC ";
+  db.query(query, (err, result)  => { 
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
     res.json(result);
   });
 });
 
-// 🔹 Get printers by selected company
-app.get("/api/printers/by-company/:company", (req, res) => {
-  const company = req.params.company;
-  const query = "SELECT Serial_Number, Printer_name FROM Printer_info WHERE company_name = ?";
-  db.query(query, [company], (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
+
+
+
+app.get("/CPU_Types", (req, res) => {
+  const query = "SELECT * FROM CPU_Types";
+  db.query(query, (err, result)  => { 
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
     res.json(result);
   });
 });
+
+
+app.get("/RAM_Types", (req, res) => {
+  const query = "SELECT * FROM RAM_Types";
+  db.query(query, (err, result)  => { 
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(result);
+  });
+});
+
+app.get("/OS_Types", (req, res) => {
+  const query = "SELECT * FROM OS_Types";
+  db.query(query, (err, result)  => { 
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(result);
+  });
+});
+
+
+app.get("/Processor_Generations", (req, res) => {
+  const query = "SELECT * FROM Processor_Generations";
+  db.query(query, (err, result)  => { 
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(result);
+  });
+});
+
+
+
+
+
+
+
 
 app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
+  console.log(`✅ Server running on http://localhost:${port}`);
 });
+
 
 
