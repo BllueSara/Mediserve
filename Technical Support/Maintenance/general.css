@@ -146,7 +146,7 @@ input:focus, select:focus {
 }
 
 /* Styling for specific select fields */
-#technical, #floor, #section, #problem-status, #problem-type {
+#technical, #floor, #section, #problem-status, #problem-type, #device-spec {
     background-color: #EFEFEF; /* Gray background */
     border: 1px solid #D1D5DB; /* Border same as background */
     border-radius: 8px;
@@ -172,8 +172,9 @@ input:focus, select:focus {
     align-items: center; /* Align buttons properly */
     gap: 10px; /* Space between buttons */
     margin-top: 20px;
-    width: 200%; /* Ensure full width */
+    width: 100%; /* Ensure full width */
 }
+
 
 /* Cancel Button */
 .cancel-btn {
@@ -230,3 +231,5 @@ input:focus, select:focus {
         gap: 10px;
     }
 }
+
+
