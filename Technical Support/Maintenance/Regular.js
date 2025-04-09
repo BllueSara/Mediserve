@@ -338,7 +338,7 @@ function fetchDeviceSpecsByTypeAndDepartment() {
         return;
       }
       data.forEach(device => {
-        const name = device.Computer_Name || device.Printer_Name || device.Scanner_Name || "Unnamed";
+        const name = device.name || "Unnamed"; // ✅ التعديل هنا
         const option = document.createElement("option");
         option.value = `${device.Serial_Number} - ${name} - ${device.Governmental_Number}`;
         option.textContent = `${name} | ${device.Serial_Number} | ${device.Governmental_Number}`;
