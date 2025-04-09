@@ -48,15 +48,27 @@ app.get("/TypeProplem", (req, res) => {
   });
 });
 
-app.get("/ProblemStates", (req, res) => {
-  const query = "SELECT * FROM ProblemStates ";
-  db.query(query, (err, result)  => {
-    if (err) {
-      return res.status(500).json({ error: err.message });      
-    }    
+app.get("/problem-states/pc", (req, res) => {
+  db.query("SELECT * FROM ProblemStates_Pc", (err, result) => {
+    if (err) return res.status(500).json({ error: err.message });
     res.json(result);
   });
 });
+
+app.get("/problem-states/printer", (req, res) => {
+  db.query("SELECT * FROM ProblemStates_Printer", (err, result) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(result);
+  });
+});
+
+app.get("/problem-states/scanner", (req, res) => {
+  db.query("SELECT * FROM ProblemStates_Scanner", (err, result) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(result);
+  });
+});
+
 
 app.get("/Departments", (req, res) => {
   const query = "SELECT * FROM Departments  ORDER BY name ASC ";
