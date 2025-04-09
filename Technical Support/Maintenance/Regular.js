@@ -36,6 +36,11 @@ function updatePopupHeadingAndFields(type) {
       <label>Ministry Number:</label>
       <input type="text" name="ministry-id" required>
 
+        <label for="department">Department:</label>
+        <select id="department" name="department" required>
+         <option value=""> Select Department</option>
+       </select>
+
 
       <label>Processor Generation:</label>
       <select name="generation" id="generation-select" required>
@@ -68,11 +73,11 @@ function updatePopupHeadingAndFields(type) {
     fetchOS();
     fetchProcessorGen();
     fetchmodel();
-
+    fetchDepartments();
   }
   else if (typeCleaned === "printer") {
     popupHeading.textContent = "Enter Printer Specifications";
-  
+
     popupFieldsContainer.innerHTML = `
       <label>Printer Name:</label>
       <input type="text" name="device-name" required>
@@ -82,16 +87,22 @@ function updatePopupHeadingAndFields(type) {
   
       <label>Ministry Number:</label>
       <input type="text" name="ministry-id" required>
-  
+
+        <label for="department">Department:</label>
+        <select id="department" name="department" required>
+         <option value=""> Select Department</option>
+         </select>
+
       <label>Model:</label>
       <select name="model" id="Model-printer" required>
         <option disabled selected>Select Model</option>
       </select>
     `;
-  
+
 
     fetchPrinterModel();
-  
+    fetchDepartments();
+
   }
   else if (typeCleaned === "scanner") {
     popupHeading.textContent = "Enter Scanner Specifications";
@@ -106,11 +117,19 @@ function updatePopupHeadingAndFields(type) {
       <label>Ministry Number:</label>
       <input type="text" name="ministry-id" required>
 
+        <label for="department">Department:</label>
+        <select id="department" name="department" required>
+         <option value=""> Select Department</option>
+         </select>
+
+
       <label>Model:</label>
       <select name="model" required>
         <option disabled selected>Select Model</option>
       </select>
     `;
+    fetchDepartments();
+
   }
   else {
     popupHeading.textContent = "Enter Device Specifications";
@@ -128,16 +147,46 @@ function closePopup() {
 
 function savePCSpec() {
   const data = new FormData(popupForm);
-  let summary = "";
-  for (const [key, value] of data.entries()) {
-    summary += `${key}: ${value} | `;
-  }
-  const option = document.createElement("option");
-  option.value = summary;
-  option.textContent = "Custom - " + summary.slice(0, -3);
-  deviceSpecSelect.add(option, deviceSpecSelect.options.length - 1);
-  deviceSpecSelect.value = option.value;
-  closePopup();
+  const deviceData = {};
+
+  data.forEach((value, key) => {
+    deviceData[key] = value;
+  });
+
+  fetch("http://localhost:5050/AddPC", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(deviceData)
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.message) {
+      alert(result.message); // ✅ PC saved successfully
+      closePopup();
+    } else {
+      alert("❌ فشل في الحفظ: " + result.error);
+    }
+  })
+  .catch(err => {
+    console.error("❌ خطأ أثناء الحفظ:", err);
+    alert("حدث خطأ في الاتصال بالسيرفر");
+  });
+}
+
+
+
+function fetchDepartments() {
+  fetch("http://localhost:5050/Departments")
+    .then(response => response.json())
+    .then(data => {
+      const select = document.getElementById("department");
+      data.forEach(item => {
+        const option = document.createElement("option");
+        option.value = item.name;
+        option.textContent = item.name;
+        select.appendChild(option);
+      });
+    });
 }
 function fetchCPU() {
   fetch("http://localhost:5050/CPU_Types")
