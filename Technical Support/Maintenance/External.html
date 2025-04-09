@@ -1,118 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>External Maintenance</title>
     <link rel="stylesheet" href="external.css"> <!-- Link to external CSS file -->
 </head>
+
 <body>
 
-<!-- Navigation Buttons -->
-<div class="nav-buttons">
-    <!-- Back Button -->
-    <div class="back-button">
-        <a href="#" onclick="goBack()">
-            <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> Back
-        </a>
+    <!-- Navigation Buttons -->
+    <div class="nav-buttons">
+        <!-- Back Button -->
+        <div class="back-button">
+            <a href="#" onclick="goBack()">
+                <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> Back
+            </a>
+        </div>
+        <!-- Home Button -->
+        <div class="Home-button">
+            <a href="#">
+                <img src="/icon/Home.png" alt="Home Icon" class="Home-icon"> Home
+            </a>
+        </div>
     </div>
-    <!-- Home Button -->
-    <div class="Home-button">
-        <a href="#">
-            <img src="/icon/Home.png" alt="Home Icon" class="Home-icon"> Home
-        </a>
-    </div>
-</div>
 
-<!-- Header (Logos) -->
-<header>
-    <!-- MS Logo (Left) -->
-    <div class="ms-logo">
-        <img src="/icon/MS Logo.png" alt="MS Logo">
-    </div>
-    <!-- Hospital Logo (Right) -->
-    <div class="hospital-logo">
-        <img src="/icon/hospital-logo.png" alt="King Abdulaziz Hospital">
-    </div>
-</header>
-
-<!-- Form Container -->
-<div class="form-container">
-    <!-- Form Title -->
-    <h1 class="title">External Maintenance</h1>
-    <p class="subtitle">Please fill in the maintenance details below</p>
-
-    <!-- Form Start -->
-    <form action="#" method="POST">
-        
-        <!-- Device Information Section -->
-        <p class="section-title">Device Information</p>
-        <div class="device-container">
-            <div class="device-box">
-                <label>Device Type <span class="required">*</span></label>
-                <select id="device-type" required>
-                  <option value="" disabled selected>Select device type</option>
-                </select>
-              </div>
-              
-              <div class="device-box">
-                <label>Device Specifications</label>
-                <select id="device-spec">
-                  <option value="" disabled selected>Select printer</option>
-                </select>
-              </div>
-              
-              
-        </div>              
-
-        <!-- Ticket Information Section -->
-        <p class="section-title">Ticket Information</p>
-        <div>
-            <label>Ticket Number <span class="required">*</span></label> <!-- Required field -->
-            <input type="text" placeholder="Enter ticket number" required>
+    <!-- Header (Logos) -->
+    <header>
+        <!-- MS Logo (Left) -->
+        <div class="ms-logo">
+            <img src="/icon/MS Logo.png" alt="MS Logo">
         </div>
-        <div>
-            <label>Maintenance Manager <span class="required">*</span></label> <!-- Required field -->
-            <input type="text" placeholder="Enter manager name" required>
+        <!-- Hospital Logo (Right) -->
+        <div class="hospital-logo">
+            <img src="/icon/hospital-logo.png" alt="King Abdulaziz Hospital">
         </div>
-        <div>
-            <label>Reporter Name <span class="required">*</span></label> <!-- Required field -->
-            <select id="reporter-name" required>
-                <option value="" disabled selected>Select reporter</option>
-            </select>
-        </div>
+    </header>
 
-        <!-- Diagnosis Details Section -->
-        <p class="section-title">Diagnosis Details</p>
-        <div>
-            <label>Initial Diagnosis <span class="required">*</span></label> <!-- Required field -->
-            <textarea placeholder="Enter initial diagnosis" required></textarea>
-            <p class="input-helper">Please provide detailed initial assessment of the issue</p>
-        </div>
-        <div>
-            <label>Final Diagnosis</label>
-            <textarea placeholder="Enter final diagnosis"></textarea>
-            <p class="input-helper">Document the final diagnosis after maintenance completion</p>
-        </div>
+    <!-- Form Container -->
+    <div class="form-container">
+        <!-- Form Title -->
+        <h1 class="title">External Maintenance</h1>
+        <p class="subtitle">Please fill in the maintenance details below</p>
 
-        <!-- Form Buttons -->
-        <div class="form-buttons">
-            <!-- Save as Draft Button -->
-            <button type="button" class="draft-btn">
-                <img src="/icon/draft-icon.png" alt="Draft Icon" class="draft-icon"> Save as Draft
-            </button>
-            <div class="right-buttons">
-                <!-- Cancel Button -->
-                <button type="button" class="cancel-btn">Cancel</button>
-                <!-- Submit Button -->
-                <button type="submit" class="submit-btn">Submit Form</button>
+        <!-- Form Start -->
+        <form action="#" method="POST">
+
+            <!-- Device Information Section -->
+            <p class="section-title">Device Information</p>
+            <div class="device-container">
+                <div class="device-box">
+                    <label>Device Type <span class="required">*</span></label>
+                    <select id="device-type" required>
+                        <option value="" disabled selected>Select device type</option>
+                    </select>
+                </div>
+
+                <div class="device-box">
+                    <label>Section <span class="required">*</span></label>
+                    <select id="section" required>
+                        <option value="" disabled selected>Select section</option>
+                    </select>
+                </div>
+
+                <div class="device-box">
+                    <label>Device Specifications</label>
+                    <select id="device-spec">
+                        <option value="" disabled selected>Select Specifications</option>
+                    </select>
+                </div>
             </div>
-        </div>
 
-    </form> <!-- End of Form -->
-</div>
 
-<!-- JavaScript File -->
-<script src="Maintenance.js"></script> <!-- Link to external JavaScript file -->
+            <!-- Ticket Information Section -->
+            <p class="section-title">Ticket Information</p>
+            <div>
+                <label>Ticket Number <span class="required">*</span></label> <!-- Required field -->
+                <input type="text" placeholder="Enter ticket number" required>
+            </div>
+            <div>
+                <label>Maintenance Manager <span class="required">*</span></label> <!-- Required field -->
+                <input type="text" placeholder="Enter manager name" required>
+            </div>
+            <div>
+                <label>Reporter Name <span class="required">*</span></label> <!-- Required field -->
+                <select id="reporter-name" required>
+                    <option value="" disabled selected>Select reporter</option>
+                </select>
+            </div>
+
+            <!-- Diagnosis Details Section -->
+            <p class="section-title">Diagnosis Details</p>
+            <div>
+                <label>Initial Diagnosis <span class="required">*</span></label> <!-- Required field -->
+                <textarea placeholder="Enter initial diagnosis" required></textarea>
+                <p class="input-helper">Please provide detailed initial assessment of the issue</p>
+            </div>
+            <div>
+                <label>Final Diagnosis</label>
+                <textarea placeholder="Enter final diagnosis"></textarea>
+                <p class="input-helper">Document the final diagnosis after maintenance completion</p>
+            </div>
+
+            <!-- Form Buttons -->
+            <div class="form-buttons">
+                <!-- Save as Draft Button -->
+                <button type="button" class="draft-btn">
+                    <img src="/icon/draft-icon.png" alt="Draft Icon" class="draft-icon"> Save as Draft
+                </button>
+                <div class="right-buttons">
+                    <!-- Cancel Button -->
+                    <button type="button" class="cancel-btn">Cancel</button>
+                    <!-- Submit Button -->
+                    <button type="submit" class="submit-btn">Submit Form</button>
+                </div>
+            </div>
+
+        </form> <!-- End of Form -->
+    </div>
+
+    <!-- JavaScript File -->
+    <script src="Maintenance.js"></script> <!-- Link to external JavaScript file -->
 </body>
+
 </html>
