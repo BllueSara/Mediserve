@@ -145,22 +145,15 @@ app.get("/Printer_Model", (req, res) => {
     res.json(result);
   });
 });
-
-app.post('/AddPC', async (req, res) => {
-  const {
-    ["pc-name"]: Computer_Name,
-    serial: Serial_Number,
-    ["ministry-id"]: Governmental_Number,
-    department,
-    os,
-    processor,
-    generation,
-    ram,
-    model
-  } = req.body;
+app.post('/AddDevice/:type', async (req, res) => {
+  const deviceType = req.params.type.toLowerCase();
+  const Serial_Number = req.body.serial;
+  const Governmental_Number = req.body["ministry-id"];
+  const department = req.body.department;
+  const model = req.body.model;
+  const Device_Name = req.body["device-name"] || req.body["pc-name"] || null;
 
   try {
-    // دوال مساعدة تجيب الـ ID من الاسم
     const getId = async (table, column, value) => {
       return new Promise((resolve, reject) => {
         db.query(`SELECT id FROM ${table} WHERE ${column} = ?`, [value], (err, result) => {
@@ -171,48 +164,127 @@ app.post('/AddPC', async (req, res) => {
     };
 
     const Department_id = await getId('Departments', 'name', department);
-    const OS_id = await getId('OS_Types', 'os_name', os);
-    const Processor_id = await getId('CPU_Types', 'cpu_name', processor);
-    const Generation_id = await getId('Processor_Generations', 'generation_number', generation);
-    const RAM_id = await getId('RAM_Types', 'ram_type', ram);
-    const Model_id = await getId('PC_Model', 'model_name', model);
 
-    if (!Department_id || !OS_id || !Processor_id || !Generation_id || !RAM_id || !Model_id) {
-      return res.status(400).json({ error: "Invalid values provided" });
+    if (!Department_id || !Serial_Number || !Governmental_Number || !Device_Name) {
+      return res.status(400).json({ error: "❌ تأكد من تعبئة جميع الحقول المطلوبة" });
     }
 
-    const sql = `
-      INSERT INTO PC_info 
-      (Serial_Number, Computer_Name, Governmental_Number, Department, OS_id, Processor_id, Generation_id, RAM_id, Model_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+    let insertQuery = '';
+    let values = [];
 
-    const values = [
-      Serial_Number,
-      Computer_Name,
-      Governmental_Number,
-      Department_id,
-      OS_id,
-      Processor_id,
-      Generation_id,
-      RAM_id,
-      Model_id
-    ];
+    if (deviceType === 'pc') {
+      const OS_id = await getId('OS_Types', 'os_name', req.body.os);
+      const Processor_id = await getId('CPU_Types', 'cpu_name', req.body.processor);
+      const Generation_id = await getId('Processor_Generations', 'generation_number', req.body.generation);
+      const RAM_id = await getId('RAM_Types', 'ram_type', req.body.ram);
+      const Model_id = await getId("PC_Model", "model_name", model);
 
-    db.query(sql, values, (err, result) => {
-      if (err) {
-        console.error("❌ Error inserting PC:", err);
-        return res.status(500).json({ error: "Database error" });
+      if (!OS_id || !Processor_id || !Generation_id || !RAM_id || !Model_id) {
+        return res.status(400).json({ error: "❌ تأكد من اختيار كل الخيارات للجهاز (PC)" });
       }
-      res.json({ message: "✅ PC saved successfully" });
+
+      insertQuery = `
+        INSERT INTO PC_info 
+        (Serial_Number, Computer_Name, Governmental_Number, Department, OS_id, Processor_id, Generation_id, RAM_id, Model_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      values = [
+        Serial_Number,
+        Device_Name,
+        Governmental_Number,
+        Department_id,
+        OS_id,
+        Processor_id,
+        Generation_id,
+        RAM_id,
+        Model_id
+      ];
+    } else if (deviceType === 'printer') {
+      const Model_id = await getId("Printer_Model", "model_name", model);
+      if (!Model_id) {
+        return res.status(400).json({ error: "❌ لم يتم تحديد موديل الطابعة" });
+      }
+
+      insertQuery = `
+        INSERT INTO Printer_info 
+        (Serial_Number, Printer_Name, Governmental_Number, Department, Model_id)
+        VALUES (?, ?, ?, ?, ?)
+      `;
+      values = [
+        Serial_Number,
+        Device_Name,
+        Governmental_Number,
+        Department_id,
+        Model_id
+      ];
+    } else if (deviceType === 'scanner') {
+      const Model_id = await getId("Scanner_Model", "model_name", model);
+      if (!Model_id) {
+        return res.status(400).json({ error: "❌ لم يتم تحديد موديل الماسح" });
+      }
+
+      insertQuery = `
+        INSERT INTO Scanner_info 
+        (Serial_Number, Scanner_Name, Governmental_Number, Department, Model_id)
+        VALUES (?, ?, ?, ?, ?)
+      `;
+      values = [
+        Serial_Number,
+        Device_Name,
+        Governmental_Number,
+        Department_id,
+        Model_id
+      ];
+    } else {
+      return res.status(400).json({ error: "❌ نوع الجهاز غير مدعوم" });
+    }
+
+    db.query(insertQuery, values, (err, result) => {
+      if (err) {
+        console.error("❌ خطأ أثناء الإدخال:", err);
+        return res.status(500).json({ error: "❌ خطأ في قاعدة البيانات" });
+      }
+      res.json({ message: `✅ تم حفظ بيانات ${deviceType} بنجاح` });
     });
 
   } catch (err) {
-    console.error("❌ Error:", err);
-    res.status(500).json({ error: "Server error" });
+    console.error("❌ خطأ عام:", err);
+    res.status(500).json({ error: "❌ حدث خطأ أثناء المعالجة" });
   }
 });
 
+
+app.get("/devices/:type/:department", (req, res) => {
+  const type = req.params.type.toLowerCase();
+  const department = req.params.department;
+
+  const table = type === "pc" ? "PC_info"
+              : type === "printer" ? "Printer_info"
+              : type === "scanner" ? "Scanner_info"
+              : null;
+
+  const nameCol = type === "pc" ? "Computer_Name"
+               : type === "printer" ? "Printer_Name"
+               : type === "scanner" ? "Scanner_Name"
+               : null;
+
+  if (!table || !nameCol) return res.status(400).json({ error: "Invalid device type" });
+
+  const sql = `
+  SELECT Serial_Number, ${nameCol} AS name, Governmental_Number 
+  FROM ${table}
+  WHERE Department = (SELECT id FROM Departments WHERE name = ?)
+`;
+
+
+  db.query(sql, [department], (err, result) => {
+    if (err) {
+      console.error("❌ Error fetching devices:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(result);
+  });
+});
 
 app.listen(port, () => {
   console.log(`✅ Server running on http://localhost:${port}`);

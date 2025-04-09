@@ -97,3 +97,44 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
   
+
+
+  function fetchGeneralDeviceSpecs() {
+    const type = document.getElementById("problem-type").value.toLowerCase();
+    const dept = document.getElementById("section").value;
+    const dropdown = document.getElementById("device-spec");
+  
+    if (!type || !dept) return;
+  
+    fetch(`http://localhost:5050/devices/${type}/${encodeURIComponent(dept)}`)
+      .then(res => res.json())
+      .then(data => {
+        dropdown.innerHTML = `<option value="" disabled selected>Select Specifications</option>`;
+        if (!data.length) {
+          const opt = document.createElement("option");
+          opt.textContent = "No devices found in this department";
+          opt.disabled = true;
+          dropdown.appendChild(opt);
+          return;
+        }
+  
+        data.forEach(device => {
+          const option = document.createElement("option");
+          option.value = `${device.Serial_Number} - ${device.name} - ${device.Governmental_Number}`;
+          option.textContent = `${device.name} | ${device.Serial_Number} | ${device.Governmental_Number}`;
+          dropdown.appendChild(option);
+        });
+      })
+      .catch(err => console.error("❌ Error fetching devices:", err));
+  }
+  
+  document.addEventListener("DOMContentLoaded", () => {
+    const typeDropdown = document.getElementById("problem-type");
+    const sectionDropdown = document.getElementById("section");
+  
+    if (typeDropdown && sectionDropdown) {
+      typeDropdown.addEventListener("change", fetchGeneralDeviceSpecs);
+      sectionDropdown.addEventListener("change", fetchGeneralDeviceSpecs);
+    }
+  });
+  
