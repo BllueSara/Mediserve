@@ -338,12 +338,13 @@ function fetchDeviceSpecsByTypeAndDepartment() {
         return;
       }
       data.forEach(device => {
-        const name = device.Computer_Name || device.Printer_Name || device.Scanner_Name || "Unnamed";
+        const name = device.name || "Unnamed";
         const option = document.createElement("option");
         option.value = `${device.Serial_Number} - ${name} - ${device.Governmental_Number}`;
         option.textContent = `${name} | ${device.Serial_Number} | ${device.Governmental_Number}`;
         dropdown.appendChild(option);
       });
+      
     })
       
     .catch(err => {
@@ -351,7 +352,16 @@ function fetchDeviceSpecsByTypeAndDepartment() {
     });
 }
 
+
 document.addEventListener("DOMContentLoaded", () => {
   fetchDeviceTypes();
   fetchDepartments("section");
+
+  const typeDropdown = document.getElementById("device-type");
+  const sectionDropdown = document.getElementById("section");
+
+  if (typeDropdown && sectionDropdown) {
+    typeDropdown.addEventListener("change", fetchDeviceSpecsByTypeAndDepartment);
+    sectionDropdown.addEventListener("change", fetchDeviceSpecsByTypeAndDepartment);
+  }
 });
