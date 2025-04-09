@@ -125,7 +125,7 @@ document.addEventListener("DOMContentLoaded", () => {
           dropdown.appendChild(option);
         });
       })
-      .catch(err => console.error("❌ Error fetching devices:", err));
+      .catch(err => console.error(" Error fetching devices:", err));
   }
   
   document.addEventListener("DOMContentLoaded", () => {
