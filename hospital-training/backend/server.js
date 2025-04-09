@@ -277,6 +277,7 @@ app.get("/devices/:type/:department", (req, res) => {
 `;
 
 
+
   db.query(sql, [department], (err, result) => {
     if (err) {
       console.error("❌ Error fetching devices:", err);
