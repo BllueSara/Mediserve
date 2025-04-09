@@ -126,9 +126,25 @@ app.get("/Processor_Generations", (req, res) => {
 });
 
 
+app.get("/PC_Model", (req, res) => {
+  const query = "SELECT * FROM PC_Model";
+  db.query(query, (err, result)  => { 
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(result);
+  });
+});
 
-
-
+app.get("/Printer_Model", (req, res) => {
+  const query = "SELECT * FROM Printer_Model";
+  db.query(query, (err, result)  => { 
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(result);
+  });
+});
 
 
 
