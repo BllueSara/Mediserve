@@ -19,16 +19,16 @@ if (deviceSpecSelect) {
     }
   });
 }
+
 function updatePopupHeadingAndFields(type) {
   popupFieldsContainer.innerHTML = "";
   const typeCleaned = type.trim().toLowerCase();
 
   if (typeCleaned === "pc") {
     popupHeading.textContent = "Enter PC Specifications";
-
     popupFieldsContainer.innerHTML = `
       <label>Computer Name:</label>
-      <input type="text" name="pc-name" required>
+      <input type="text" name="device-name" required>
 
       <label>Serial Number:</label>
       <input type="text" name="serial" required>
@@ -36,11 +36,10 @@ function updatePopupHeadingAndFields(type) {
       <label>Ministry Number:</label>
       <input type="text" name="ministry-id" required>
 
-        <label for="department">Department:</label>
-        <select id="department" name="department" required>
-         <option value=""> Select Department</option>
-       </select>
-
+      <label for="department-pc">Department:</label>
+      <select id="department-pc" name="department" required>
+        <option value="">Select Department</option>
+      </select>
 
       <label>Processor Generation:</label>
       <select name="generation" id="generation-select" required>
@@ -58,7 +57,7 @@ function updatePopupHeadingAndFields(type) {
       </select>
 
       <label>Model:</label>
-      <select name="model"  id="model-select" required>
+      <select name="model" id="model-select" required>
         <option disabled selected>Select Model</option>
       </select>
 
@@ -67,46 +66,40 @@ function updatePopupHeadingAndFields(type) {
         <option disabled selected>Select OS</option>
       </select>
     `;
-
     fetchCPU();
     fetchRAM();
     fetchOS();
     fetchProcessorGen();
     fetchmodel();
-    fetchDepartments();
-  }
-  else if (typeCleaned === "printer") {
-    popupHeading.textContent = "Enter Printer Specifications";
+    fetchDepartments("department-pc");
 
+  } else if (typeCleaned === "printer") {
+    popupHeading.textContent = "Enter Printer Specifications";
     popupFieldsContainer.innerHTML = `
       <label>Printer Name:</label>
       <input type="text" name="device-name" required>
-  
+
       <label>Serial Number:</label>
       <input type="text" name="serial" required>
-  
+
       <label>Ministry Number:</label>
       <input type="text" name="ministry-id" required>
 
-        <label for="department">Department:</label>
-        <select id="department" name="department" required>
-         <option value=""> Select Department</option>
-         </select>
+      <label for="department-printer">Department:</label>
+      <select id="department-printer" name="department" required>
+        <option value="">Select Department</option>
+      </select>
 
       <label>Model:</label>
       <select name="model" id="Model-printer" required>
         <option disabled selected>Select Model</option>
       </select>
     `;
-
-
     fetchPrinterModel();
-    fetchDepartments();
+    fetchDepartments("department-printer");
 
-  }
-  else if (typeCleaned === "scanner") {
+  } else if (typeCleaned === "scanner") {
     popupHeading.textContent = "Enter Scanner Specifications";
-
     popupFieldsContainer.innerHTML = `
       <label>Scanner Name:</label>
       <input type="text" name="device-name" required>
@@ -117,27 +110,22 @@ function updatePopupHeadingAndFields(type) {
       <label>Ministry Number:</label>
       <input type="text" name="ministry-id" required>
 
-        <label for="department">Department:</label>
-        <select id="department" name="department" required>
-         <option value=""> Select Department</option>
-         </select>
-
+      <label for="department-scanner">Department:</label>
+      <select id="department-scanner" name="department" required>
+        <option value="">Select Department</option>
+      </select>
 
       <label>Model:</label>
-      <select name="model" required>
+      <select name="model" id="model-scanner" required>
         <option disabled selected>Select Model</option>
       </select>
     `;
-    fetchDepartments();
-
-  }
-  else {
+    fetchDepartments("department-scanner");
+  } else {
     popupHeading.textContent = "Enter Device Specifications";
     popupFieldsContainer.innerHTML = "<p>No fields available for this device type.</p>";
   }
 }
-
-
 
 function closePopup() {
   popup.style.display = "none";
@@ -148,38 +136,44 @@ function closePopup() {
 function savePCSpec() {
   const data = new FormData(popupForm);
   const deviceData = {};
-
   data.forEach((value, key) => {
     deviceData[key] = value;
   });
 
-  fetch("http://localhost:5050/AddPC", {
+  const deviceType = document.getElementById("device-type").value.toLowerCase();
+
+  fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(deviceData)
   })
-  .then(response => response.json())
-  .then(result => {
-    if (result.message) {
-      alert(result.message); // ✅ PC saved successfully
-      closePopup();
-    } else {
-      alert("❌ فشل في الحفظ: " + result.error);
-    }
-  })
-  .catch(err => {
-    console.error("❌ خطأ أثناء الحفظ:", err);
-    alert("حدث خطأ في الاتصال بالسيرفر");
-  });
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP Error: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(result => {
+      if (result.message) {
+        alert(result.message);
+        closePopup();
+      } else {
+        alert("❌ فشل في الحفظ: " + result.error);
+      }
+    })
+    .catch(err => {
+      console.error("❌ خطأ أثناء الاتصال بالسيرفر:", err);
+      alert("❌ حدث خطأ في الاتصال بالسيرفر. تأكد أن السيرفر يعمل");
+    });
 }
 
-
-
-function fetchDepartments() {
+function fetchDepartments(selectId = "department") {
   fetch("http://localhost:5050/Departments")
     .then(response => response.json())
     .then(data => {
-      const select = document.getElementById("department");
+      const select = document.getElementById(selectId);
+      if (!select) return;
+      select.innerHTML = '<option value="">Select Department</option>';
       data.forEach(item => {
         const option = document.createElement("option");
         option.value = item.name;
@@ -188,11 +182,13 @@ function fetchDepartments() {
       });
     });
 }
+
 function fetchCPU() {
   fetch("http://localhost:5050/CPU_Types")
     .then(response => response.json())
     .then(data => {
       const select = document.getElementById("cpu-select");
+      select.innerHTML = '<option disabled selected>Select processor</option>';
       data.forEach(item => {
         const option = document.createElement("option");
         option.value = item.cpu_name;
@@ -207,6 +203,7 @@ function fetchmodel() {
     .then(response => response.json())
     .then(data => {
       const select = document.getElementById("model-select");
+      select.innerHTML = '<option disabled selected>Select Model</option>';
       data.forEach(item => {
         const option = document.createElement("option");
         option.value = item.model_name;
@@ -221,32 +218,29 @@ function fetchPrinterModel() {
     .then(res => res.json())
     .then(data => {
       const dropdown = document.getElementById("Model-printer");
-      if (!dropdown) return;
+      dropdown.innerHTML = '<option disabled selected>Select Model</option>';
       data.forEach(item => {
         const option = document.createElement("option");
         option.value = item.model_name;
         option.textContent = item.model_name;
         dropdown.appendChild(option);
       });
-    })
-    .catch(err => console.error("❌ Error fetching Printer Models:", err));
+    });
 }
-
-
 
 function fetchRAM() {
   fetch("http://localhost:5050/RAM_Types")
     .then(response => response.json())
     .then(data => {
       const select = document.getElementById("ram-select");
+      select.innerHTML = '<option disabled selected>Select RAM</option>';
       data.forEach(item => {
         const option = document.createElement("option");
         option.value = item.ram_type;
         option.textContent = item.ram_type;
         select.appendChild(option);
       });
-    })
-    .catch(error => console.error("❌ RAM fetch error:", error));
+    });
 }
 
 function fetchOS() {
@@ -254,6 +248,7 @@ function fetchOS() {
     .then(response => response.json())
     .then(data => {
       const select = document.getElementById("os-select");
+      select.innerHTML = '<option disabled selected>Select OS</option>';
       data.forEach(item => {
         const option = document.createElement("option");
         option.value = item.os_name;
@@ -268,6 +263,7 @@ function fetchProcessorGen() {
     .then(response => response.json())
     .then(data => {
       const select = document.getElementById("generation-select");
+      select.innerHTML = '<option disabled selected>Select generation</option>';
       data.forEach(item => {
         const option = document.createElement("option");
         option.value = item.generation_number;
@@ -277,58 +273,85 @@ function fetchProcessorGen() {
     });
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+function fetchDeviceTypes() {
   fetch("http://localhost:5050/TypeProplem")
     .then(res => res.json())
     .then(data => {
-      console.log("TypeProplem data:", data);
       const dropdown = document.getElementById("device-type");
+      dropdown.innerHTML = '<option value="" disabled selected>Select device type</option>';
       data.forEach(item => {
         const option = document.createElement("option");
         option.value = item.DeviceType;
         option.textContent = item.DeviceType;
         dropdown.appendChild(option);
       });
-    })
-    .catch(err => console.error("❌ Error fetching DeviceType:", err));
-});
+    });
+}
 
 
-document.addEventListener("DOMContentLoaded", () => {
-  fetch("http://localhost:5050/Departments")
+function fetchDevicesBySection() {
+  const type = document.getElementById("device-type").value.toLowerCase();
+  const department = document.getElementById("section").value;
+
+  if (!type || !department) {
+    alert("❌ تأكد من اختيار نوع الجهاز والقسم");
+    return;
+  }
+
+  fetch(`http://localhost:5050/devices/${type}/${department}`)
     .then(res => res.json())
     .then(data => {
-      const dropdown = document.getElementById("section");
-      data.forEach(item => {
+      const dropdown = document.getElementById("device-spec");
+      dropdown.innerHTML = '<option disabled selected>Select specification</option>';
+      data.forEach(device => {
         const option = document.createElement("option");
-        option.value = item.name;
-        option.textContent = item.name;
+        option.value = device.Serial_Number;
+        option.textContent = `${device.Serial_Number} | ${device[type === 'pc' ? 'Computer_Name' : type === 'printer' ? 'Printer_Name' : 'Scanner_Name']}`;
         dropdown.appendChild(option);
       });
     })
+    .catch(err => console.error("❌ Error fetching device specs:", err));
+}
 
+function fetchDeviceSpecsByTypeAndDepartment() {
+  const type = document.getElementById("device-type").value.toLowerCase();
+  const dept = document.getElementById("section").value;
+  const dropdown = document.getElementById("device-spec");
 
-    .catch(err => console.error("❌ Error fetching DeviceType:", err));
-});
+  // ما نكمل إلا إذا النوع والقسم مختارين
+  if (!type || !dept) return;
 
-document.addEventListener("DOMContentLoaded", () => {
-  fetch("http://localhost:5050/Printer_Model")
+  fetch(`http://localhost:5050/devices/${type}/${encodeURIComponent(dept)}`)
     .then(res => res.json())
     .then(data => {
-      const dropdown = document.getElementById("Model-printer");
-      data.forEach(item => {
+      // تنظيف القائمة قبل ما نضيف الجديد
+      dropdown.innerHTML = `
+        <option value="" disabled selected>Select specification</option>
+        <option value="add-custom">+ Add New Specification</option>
+      `;
+
+      if (!Array.isArray(data) || data.length === 0) {
+        const noDataOption = document.createElement("option");
+        noDataOption.textContent = "No devices found in this department";
+        noDataOption.disabled = true;
+        dropdown.appendChild(noDataOption);
+        return;
+      }
+      data.forEach(device => {
+        const name = device.Computer_Name || device.Printer_Name || device.Scanner_Name || "Unnamed";
         const option = document.createElement("option");
-        option.value = item.model_name;
-        option.textContent = item.model_name;
+        option.value = `${device.Serial_Number} - ${name} - ${device.Governmental_Number}`;
+        option.textContent = `${name} | ${device.Serial_Number} | ${device.Governmental_Number}`;
         dropdown.appendChild(option);
       });
-
     })
+      
+    .catch(err => {
+      console.error("❌ Error fetching specs:", err);
+    });
+}
 
-
-    .catch(err => console.error("❌ Error fetching DeviceType:", err));
-
+document.addEventListener("DOMContentLoaded", () => {
+  fetchDeviceTypes();
+  fetchDepartments("section");
 });
-
-// تحميل القائمة عند فتح الصفحة
-window.addEventListener("DOMContentLoaded", fetchDeviceTypes);
