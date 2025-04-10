@@ -136,8 +136,9 @@ app.get("/PC_Model", (req, res) => {
   });
 });
 
-app.get("/Printer_Model", (req, res) => {
-  const query = "SELECT * FROM Printer_Model";
+
+app.get("/Scanner_Model", (req, res) => {
+  const query = "SELECT * FROM Scanner_Model";
   db.query(query, (err, result)  => { 
     if (err) {
       return res.status(500).json({ error: err.message });
@@ -145,6 +146,8 @@ app.get("/Printer_Model", (req, res) => {
     res.json(result);
   });
 });
+
+
 app.post('/AddDevice/:type', async (req, res) => {
   const deviceType = req.params.type.toLowerCase();
   const Serial_Number = req.body.serial;
@@ -287,9 +290,65 @@ app.get("/devices/:type/:department", (req, res) => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`✅ Server running on http://localhost:${port}`);
+app.post('/submit-regular-maintenance', async (req, res) => {
+  const {
+    "maintenance-date": maintenanceDate,
+    frequency,
+    "device-type": deviceType,
+    "device-spec": deviceSpec,
+    details,
+    notes,
+  } = req.body;
+
+  if (!maintenanceDate || !frequency || !deviceType || !deviceSpec) {
+    return res.status(400).json({ error: "❌ يجب تعبئة جميع الحقول المطلوبة" });
+  }
+
+  try {
+    const getDeviceIdQuery = `
+      SELECT id FROM Maintenance_Devices 
+      WHERE Serial_Number = ?
+    `;
+    db.query(getDeviceIdQuery, [deviceSpec.split(" - ")[0].trim()], (err, result) => {
+      if (err) {
+        console.error("❌ Error getting device ID:", err);
+        return res.status(500).json({ error: "Database error" });
+      }
+      if (result.length === 0) {
+        return res.status(404).json({ error: "❌ لم يتم العثور على الجهاز" });
+      }
+
+      const deviceId = result[0].id;
+
+      const checklistData = Array.isArray(details)
+        ? JSON.stringify(details)
+        : details
+        ? JSON.stringify([details])
+        : null;
+
+      const insertQuery = `
+        INSERT INTO Regular_Maintenance 
+        (device_id, last_maintenance_date, frequency, checklist, notes)
+        VALUES (?, ?, ?, ?, ?)
+      `;
+      const insertValues = [
+        deviceId,
+        maintenanceDate,
+        frequency,
+        checklistData,
+        notes || null,
+      ];
+
+      db.query(insertQuery, insertValues, (err, result) => {
+        if (err) {
+          console.error("❌ Error inserting regular maintenance:", err);
+          return res.status(500).json({ error: "Database insert error" });
+        }
+        res.json({ message: "✅ Regular maintenance saved successfully" });
+      });
+    });
+  } catch (err) {
+    console.error("❌ General error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
-
-
-

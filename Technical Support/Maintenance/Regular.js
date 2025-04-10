@@ -121,6 +121,7 @@ function updatePopupHeadingAndFields(type) {
       </select>
     `;
     fetchDepartments("department-scanner");
+    fetchScannerModel();
   } else {
     popupHeading.textContent = "Enter Device Specifications";
     popupFieldsContainer.innerHTML = "<p>No fields available for this device type.</p>";
@@ -218,6 +219,20 @@ function fetchPrinterModel() {
     .then(res => res.json())
     .then(data => {
       const dropdown = document.getElementById("Model-printer");
+      dropdown.innerHTML = '<option disabled selected>Select Model</option>';
+      data.forEach(item => {
+        const option = document.createElement("option");
+        option.value = item.model_name;
+        option.textContent = item.model_name;
+        dropdown.appendChild(option);
+      });
+    });
+}
+function fetchScannerModel() {
+  fetch("http://localhost:5050/Scanner_Model")
+    .then(res => res.json())
+    .then(data => {
+      const dropdown = document.getElementById("model-scanner");
       dropdown.innerHTML = '<option disabled selected>Select Model</option>';
       data.forEach(item => {
         const option = document.createElement("option");
@@ -365,3 +380,48 @@ document.addEventListener("DOMContentLoaded", () => {
     sectionDropdown.addEventListener("change", fetchDeviceSpecsByTypeAndDepartment);
   }
 });
+
+document.querySelector("form").addEventListener("submit", function (e) {
+  e.preventDefault(); // ما نعيد تحميل الصفحة
+
+  const form = e.target;
+  const formData = new FormData(form);
+
+  // نحول الـ FormData إلى JSON بشكل يدعم المصفوفات (مثل الـ checkbox)
+  const data = {};
+  formData.forEach((value, key) => {
+    if (data[key]) {
+      if (!Array.isArray(data[key])) {
+        data[key] = [data[key]];
+      }
+      data[key].push(value);
+    } else {
+      data[key] = value;
+    }
+  });
+
+  fetch("http://localhost:5050/submit-regular-maintenance", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(data)
+  })
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP error! ${res.status}`);
+      return res.json();
+    })
+    .then(result => {
+      if (result.message) {
+        alert(result.message);
+        form.reset();
+      } else {
+        alert("❌ فشل في الحفظ: " + (result.error || "Unknown error"));
+      }
+    })
+    .catch(err => {
+      console.error("❌ Error sending maintenance data:", err);
+      alert("❌ حدث خطأ أثناء إرسال البيانات للسيرفر");
+    });
+});
+
