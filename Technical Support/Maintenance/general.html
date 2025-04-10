@@ -70,6 +70,7 @@
                     <label>Type of Problem <span class="required">*</span></label> <!-- Label with required indicator -->
                     <select id="problem-type"> <!-- Dropdown select field -->
                         <option value="" disabled selected>Select problem type</option> <!-- Placeholder option -->
+                        <option value="add-custom">+ Add New Problem Type</option>
                     </select>
                 </div>
 
@@ -82,6 +83,7 @@
                     <label>Section <span class="required">*</span></label> <!-- Label -->
                     <select id="section"> <!-- Dropdown select field -->
                         <option value="" disabled selected>Select section</option> <!-- Placeholder option -->
+                        <option value="add-custom">+ Add New Section</option>
                     </select>
                 </div>
                 
@@ -89,6 +91,7 @@
                     <label>Device Specifications <span class="required">*</span></label> <!-- Label with required indicator -->
                     <select id="device-spec" required> <!-- Dropdown select field with required attribute -->
                         <option value="" disabled selected>Select Specifications</option> <!-- Placeholder option -->
+                        <option value="add-custom">+ Add New Specification</option>
                     </select>
                 </div>
 
@@ -96,6 +99,7 @@
                     <label>Floor</label> <!-- Label -->
                     <select id="floor"> <!-- Dropdown select field -->
                         <option value="" disabled selected>Select floor</option> <!-- Placeholder option -->
+                        <option value="add-custom">+ Add New Floor</option>
                     </select>
                 </div>
 
@@ -103,6 +107,7 @@
                     <label>Technical</label> <!-- Label -->
                     <select id="technical"> <!-- Dropdown select field -->
                         <option value="" disabled selected>Select technical</option> <!-- Placeholder option -->
+                        <option value="add-custom">+ Add New Technical</option>
                     </select>
                 </div>
 
@@ -110,6 +115,7 @@
                     <label>Problem Status <span class="required">*</span></label> <!-- Label with required indicator -->
                     <select id="problem-status" required> <!-- Dropdown select field with required attribute -->
                         <option value="" disabled selected>Select status</option> <!-- Placeholder option -->
+                        <option value="add-custom">+ Add New Status</option>
                     </select>
                 </div>
                 
@@ -121,11 +127,24 @@
             </div>
         </form>
     </div>            
+    <div id="popup-modal" class="popup-modal" style="display: none;">
+  <div class="popup-content">
+    <h2 id="popup-title">Enter Device Specifications</h2>
+    <div id="popup-fields">
+      <p>No fields available for this device type.</p>
+    </div>
+    <div class="popup-buttons">
+      <button onclick="savePCSpec()">Save</button>
+      <button onclick="closePopup()">Cancel</button>
+    </div>
+  </div>
+</div>
 
     <!-- JavaScript File -->
      <script src = "Maintenance.js"></script>
-    <script src="general.js"></script> <!-- Link to external JavaScript file -->
-
+     <script src="general.js"></script> <!-- External JavaScript file for functionality -->
 </body>
+
+</html>
 
 </html>
