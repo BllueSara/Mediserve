@@ -61,12 +61,14 @@
             <label for="device-type">Device Type <span class="required">*</span></label>
             <select id="device-type" name="device-type" required>
                 <option value="" disabled selected>Select device type</option>
+                <option value="add-custom">+ Add New Device </option>
             </select>
 
             <!-- Select field for Section -->
             <label>Section</label>
             <select id="section">
-                <option value="" disabled selected>Select section</option>
+                <option value="" disabled selected>Select section</option> <!-- Placeholder option -->
+                <option value="add-custom">+ Add New Section</option>
             </select>
 
 
@@ -121,7 +123,7 @@
         </div>
     </div>
 
-    
+
     <script src = "Maintenance.js"></script>
     <script src="Regular.js"></script> <!-- Link to external JavaScript file -->
 
