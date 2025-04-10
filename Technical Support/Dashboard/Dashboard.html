@@ -8,28 +8,43 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <div class="container">
-    <!-- Header -->
-    <div class="header">
-      <div class="logo">MS</div>
-      <div class="nav">
-        <button class="btn">← Back</button>
-        <button class="btn">🏠 Home</button>
-      </div>
-      <div class="hospital">
-        <h4>مستشفى الملك عبد العزيز</h4>
-        <p>King Abdulaziz Hospital</p>
-      </div>
+  <!-- Navigation Buttons -->
+  <div class="nav-buttons"> <!-- Container for navigation buttons -->
+    <div class="back-button"> <!-- Back button container -->
+        <a href="#" onclick="goBack()"> <!-- Back button with a click event -->
+            <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> Back <!-- Back button icon and text -->
+        </a>
     </div>
+</div>
 
-    <!-- Server Status -->
-    <div class="server-status">
-      <div class="card">
+<div class="Home-button"> <!-- Home button container -->
+    <a href="../Home/Home.html">
+        <img src="/icon/Home.png" alt="Home Icon"> Home
+      </a>
+              
+</div>
+</div>
+
+<!-- Header (Logos) -->
+<header> <!-- Header section -->
+    <div class="ms-logo"> <!-- MS Logo container -->
+        <img src="/icon/MS Logo.png" alt="MS Logo"> <!-- MS logo -->
+    </div>
+    <div class="hospital-logo"> <!-- Hospital logo container -->
+        <img src="/icon/hospital-logo.png" alt="King Abdulaziz Hospital"> <!-- Hospital logo -->
+    </div>
+<!-- Row: Server Status + Reports Overview -->
+<div class="grid-two-cols">
+  <!-- Server Status Grouped Inside One Card -->
+  <div class="card">
+    <h3>Server Status</h3>
+    <div class="server-status" style="justify-content: center;">
+      <div style="text-align: center;">
         <canvas id="activeChart"></canvas>
         <p class="label">Active Servers</p>
         <p class="value blue">85%</p>
       </div>
-      <div class="card">
+      <div style="text-align: center;">
         <canvas id="inactiveChart"></canvas>
         <p class="label">Inactive Servers</p>
         <p class="value gray">15%</p>
@@ -37,16 +52,16 @@
     </div>
   </div>
 
-  <script src="Dashboard.js"></script>
-</body>
-<!-- Row: Reports Overview + Critical & Faulty Devices -->
-<div class="grid-two-cols">
+
   <!-- Reports Overview -->
   <div class="card">
     <h3>Reports Overview</h3>
     <canvas id="reportChart"></canvas>
   </div>
 
+  <script src="Dashboard.js"></script>
+
+  
   <!-- Critical Devices -->
   <div class="card">
     <h3>Critical Devices</h3>
