@@ -381,47 +381,4 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-document.querySelector("form").addEventListener("submit", function (e) {
-  e.preventDefault(); // ما نعيد تحميل الصفحة
-
-  const form = e.target;
-  const formData = new FormData(form);
-
-  // نحول الـ FormData إلى JSON بشكل يدعم المصفوفات (مثل الـ checkbox)
-  const data = {};
-  formData.forEach((value, key) => {
-    if (data[key]) {
-      if (!Array.isArray(data[key])) {
-        data[key] = [data[key]];
-      }
-      data[key].push(value);
-    } else {
-      data[key] = value;
-    }
-  });
-
-  fetch("http://localhost:5050/submit-regular-maintenance", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(data)
-  })
-    .then(res => {
-      if (!res.ok) throw new Error(`HTTP error! ${res.status}`);
-      return res.json();
-    })
-    .then(result => {
-      if (result.message) {
-        alert(result.message);
-        form.reset();
-      } else {
-        alert("❌ فشل في الحفظ: " + (result.error || "Unknown error"));
-      }
-    })
-    .catch(err => {
-      console.error("❌ Error sending maintenance data:", err);
-      alert("❌ حدث خطأ أثناء إرسال البيانات للسيرفر");
-    });
-});
 
