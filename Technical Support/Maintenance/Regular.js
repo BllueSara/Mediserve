@@ -355,12 +355,11 @@ function fetchDeviceSpecsByTypeAndDepartment() {
       data.forEach(device => {
         const name = device.name || "Unnamed";
         const option = document.createElement("option");
-        option.value = `${device.Serial_Number} - ${name} - ${device.Governmental_Number}`;
+        option.value = device.id; // 👈 this is the real device_id from Maintenance_Devices
         option.textContent = `${name} | ${device.Serial_Number} | ${device.Governmental_Number}`;
         dropdown.appendChild(option);
       });
-      
-    })
+    })      
       
     .catch(err => {
       console.error("❌ Error fetching specs:", err);
@@ -382,13 +381,13 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 document.querySelector("form").addEventListener("submit", function (e) {
-  e.preventDefault(); // ما نعيد تحميل الصفحة
+  e.preventDefault();  // منع إعادة تحميل الصفحة
 
   const form = e.target;
   const formData = new FormData(form);
-
-  // نحول الـ FormData إلى JSON بشكل يدعم المصفوفات (مثل الـ checkbox)
   const data = {};
+
+  // تحويل بيانات الفورم إلى JSON
   formData.forEach((value, key) => {
     if (data[key]) {
       if (!Array.isArray(data[key])) {
@@ -400,28 +399,58 @@ document.querySelector("form").addEventListener("submit", function (e) {
     }
   });
 
-  fetch("http://localhost:5050/submit-regular-maintenance", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(data)
-  })
-    .then(res => {
-      if (!res.ok) throw new Error(`HTTP error! ${res.status}`);
-      return res.json();
-    })
-    .then(result => {
-      if (result.message) {
-        alert(result.message);
-        form.reset();
-      } else {
-        alert("❌ فشل في الحفظ: " + (result.error || "Unknown error"));
+  // إرسال البيانات إلى السيرفر
+  async function submitRegularMaintenance(data) {
+    try {
+      const response = await fetch("http://localhost:5050/submit-regular-maintenance", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Unknown server error");
       }
-    })
-    .catch(err => {
-      console.error("❌ Error sending maintenance data:", err);
-      alert("❌ حدث خطأ أثناء إرسال البيانات للسيرفر");
-    });
+
+      alert(result.message || "✅ Submitted successfully");
+
+      location.reload();  // إعادة تحميل الصفحة بعد الإرسال الناجح
+
+    } catch (err) {
+      console.error("❌ Submission error:", err);
+      alert("❌ Failed to submit: " + err.message);
+    }
+  }
+
+  submitRegularMaintenance(data);
 });
+
+async function submitRegularMaintenance(data) {
+  try {
+    const response = await fetch("http://localhost:5050/submit-regular-maintenance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || "Unknown server error");
+    }
+
+    alert(result.message || "✅ Submitted successfully");
+
+    // ✅ نعيد تحميل الصفحة بعد الحفظ
+    location.reload();
+
+  } catch (err) {
+    console.error("❌ Submission error:", err);
+    alert("❌ Failed to submit: " + err.message);
+  }
+}
 
