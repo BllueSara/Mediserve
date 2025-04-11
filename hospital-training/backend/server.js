@@ -424,6 +424,106 @@ app.post("/submit-general-maintenance", async (req, res) => {
 });
 
 
+app.post("/submit-external-maintenance", async (req, res) => {
+  const {
+    ticket_number,
+    device_type,
+    device_specifications,
+    section,
+    maintenance_manager,
+    reporter_name,
+    initial_diagnosis,
+    final_diagnosis
+  } = req.body;
+
+  try {
+    const getDeviceInfo = () =>
+      new Promise((resolve, reject) => {
+        const query = `
+          SELECT 
+            md.*,
+            COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name) AS device_name,
+            COALESCE(c.cpu_name, NULL) AS cpu_name,
+            COALESCE(r.ram_type, NULL) AS ram_type,
+            COALESCE(o.os_name, NULL) AS os_name,
+            COALESCE(g.generation_number, NULL) AS generation_number,
+            COALESCE(pm.model_name, prm.model_name, scm.model_name) AS model_name,
+            d.name AS department_name
+          FROM Maintenance_Devices md
+          LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.id = ?
+          LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.id = ?
+          LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.id = ?
+          LEFT JOIN CPU_Types c ON pc.Processor_id = c.id
+          LEFT JOIN RAM_Types r ON pc.RAM_id = r.id
+          LEFT JOIN OS_Types o ON pc.OS_id = o.id
+          LEFT JOIN Processor_Generations g ON pc.Generation_id = g.id
+          LEFT JOIN PC_Model pm ON pc.Model_id = pm.id
+          LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
+          LEFT JOIN Scanner_Model scm ON sc.Model_id = scm.id
+          LEFT JOIN Departments d ON md.department_id = d.id
+          WHERE md.id = ?
+        `;
+
+        db.query(query, [device_specifications, device_specifications, device_specifications, device_specifications], (err, result) => {
+          if (err) return reject(err);
+          resolve(result[0]);
+        });
+      });
+
+    const deviceInfo = await getDeviceInfo();
+
+    if (!deviceInfo) {
+      return res.status(404).json({ error: "❌ لم يتم العثور على معلومات الجهاز" });
+    }
+
+    const insertQuery = `
+      INSERT INTO External_Maintenance (
+        ticket_number, device_type, device_specifications, section,
+        maintenance_manager, reporter_name,
+        initial_diagnosis, final_diagnosis,
+        serial_number, governmental_number, device_name,
+        department_name, cpu_name, ram_type, os_name,
+        generation_number, model_name
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    db.query(
+      insertQuery,
+      [
+        ticket_number,
+        device_type,
+        device_specifications,
+        section,
+        maintenance_manager,
+        reporter_name,
+        initial_diagnosis,
+        final_diagnosis,
+        deviceInfo.serial_number,
+        deviceInfo.governmental_number,
+        deviceInfo.device_name,
+        deviceInfo.department_name,
+        deviceInfo.cpu_name,
+        deviceInfo.ram_type,
+        deviceInfo.os_name,
+        deviceInfo.generation_number,
+        deviceInfo.model_name
+      ],
+      (err, result) => {
+        if (err) {
+          console.error("❌ Error inserting external maintenance:", err);
+          return res.status(500).json({ error: "❌ Database error while inserting external maintenance" });
+        }
+        res.json({ message: "✅ External Maintenance saved successfully" });
+      }
+    );
+  } catch (error) {
+    console.error("❌ Error:", error);
+    res.status(500).json({ error: "❌ Internal server error" });
+  }
+});
+
+
 
 app.post('/AddDevice/:type', async (req, res) => {
   const deviceType = req.params.type.toLowerCase();
