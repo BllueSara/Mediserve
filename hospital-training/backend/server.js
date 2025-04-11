@@ -199,12 +199,15 @@ app.post("/submit-regular-maintenance", async (req, res) => {
   const {
     "maintenance-date": date,
     frequency,
-    "device-type": deviceType,
+    "device-type": rawDeviceType,
     section,
     "device-spec": deviceSpec,
     details = [],
     notes = ""
   } = req.body;
+  const deviceType = rawDeviceType.toLowerCase(); // 🔥 الحل هنا
+
+  
 
   console.log("Data received:", req.body); // تحقق من البيانات المستلمة
 
@@ -220,26 +223,50 @@ app.post("/submit-regular-maintenance", async (req, res) => {
 
     console.log("Department ID:", departmentId); // تحقق من الـ Department ID المسترجع
 
-    const deviceInfo = await new Promise((resolve, reject) => {
-      const table = deviceType === "pc" ? "PC_info" :
-                    deviceType === "printer" ? "Printer_info" : 
-                    deviceType === "scanner" ? "Scanner_info" : null;
-      if (!table) return reject(new Error("Invalid device type"));
-
-      const sql = `SELECT * FROM ${table} WHERE Serial_Number = ? AND Governmental_Number = ?`;
-      db.query(sql, [deviceSpec, req.body["ministry-id"]], (err, result) => {
-        if (err) return reject(err);
-        console.log("Device info fetched:", result); // تحقق من الجهاز المسترجع
-        resolve(result[0]);
-      });
+    const query = `
+    SELECT 
+      md.*, 
+      COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name) AS device_name,
+      COALESCE(c.cpu_name, NULL) AS cpu_name,
+      COALESCE(r.ram_type, NULL) AS ram_type,
+      COALESCE(o.os_name, NULL) AS os_name,
+      COALESCE(g.generation_number, NULL) AS generation_number,
+      COALESCE(pm.model_name, prm.model_name, scm.model_name) AS model_name,
+      d.name AS department_name
+    FROM Maintenance_Devices md
+    LEFT JOIN PC_info pc 
+      ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
+    LEFT JOIN Printer_info pr 
+      ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
+    LEFT JOIN Scanner_info sc 
+      ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
+    LEFT JOIN CPU_Types c ON pc.Processor_id = c.id
+    LEFT JOIN RAM_Types r ON pc.RAM_id = r.id
+    LEFT JOIN OS_Types o ON pc.OS_id = o.id
+    LEFT JOIN Processor_Generations g ON pc.Generation_id = g.id
+    LEFT JOIN PC_Model pm ON pc.Model_id = pm.id
+    LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
+    LEFT JOIN Scanner_Model scm ON sc.Model_id = scm.id
+    LEFT JOIN Departments d ON md.department_id = d.id
+    WHERE md.id = ?
+  `;
+  
+  const deviceInfo = await new Promise((resolve, reject) => {
+    db.query(query, [deviceSpec], (err, result) => {
+      if (err) return reject(err);
+      resolve(result[0]);
     });
-
+  });
+  
+  
+    
+    
     if (!deviceInfo) {
-      return res.status(404).json({ error: "❌ جهاز غير موجود في قاعدة البيانات" });
+      return res.status(404).json({ error: "❌ لم يتم العثور على معلومات الجهاز" });
     }
-
+    
     const checklist = JSON.stringify(details);
-
+    
     const insertQuery = `
       INSERT INTO Regular_Maintenance 
       (device_id, device_type, last_maintenance_date, frequency, checklist, notes, 
@@ -247,12 +274,23 @@ app.post("/submit-regular-maintenance", async (req, res) => {
        cpu_name, ram_type, os_name, generation_number, model_name)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
-
+    
     db.query(insertQuery, [
-      deviceSpec, deviceType, date, frequency, checklist, notes,
-      deviceInfo.Serial_Number, deviceInfo.Governmental_Number, deviceInfo[deviceType + "_Name"], 
-      deviceInfo.Department, deviceInfo.CPU_Name || null, deviceInfo.RAM_Type || null,
-      deviceInfo.OS_Name || null, deviceInfo.Generation_Number || null, deviceInfo.Model_Name || null
+      deviceSpec,
+      deviceType,
+      date,
+      frequency,
+      checklist,
+      notes,
+      deviceInfo.serial_number,
+      deviceInfo.governmental_number,
+      deviceInfo.device_name,
+      deviceInfo.department_name,
+      deviceInfo.cpu_name,
+      deviceInfo.ram_type,
+      deviceInfo.os_name,
+      deviceInfo.generation_number,
+      deviceInfo.model_name
     ], (err, result) => {
       if (err) {
         console.error("❌ Error inserting maintenance:", err);
@@ -260,11 +298,12 @@ app.post("/submit-regular-maintenance", async (req, res) => {
       }
       res.json({ message: "✅ Maintenance log saved successfully" });
     });
-  } catch (err) {
-    console.error("❌ General error:", err);
-    res.status(500).json({ error: "❌ Unexpected error while processing request" });
+  } catch (error) {
+    console.error("❌ Error:", error);
+    res.status(500).json({ error: "❌ Internal server error" });
   }
 });
+    
 
 
 
