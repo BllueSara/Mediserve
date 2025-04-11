@@ -304,9 +304,112 @@ app.post("/submit-regular-maintenance", async (req, res) => {
   }
 });
     
+// ✅ POST General Maintenance
 
+app.post("/submit-general-maintenance", async (req, res) => {
+  const {
+    "problem-type": rawDeviceType,
+    "device-spec": deviceSpec,
+    section,
+    floor,
+    "problem-status": problemStatus,
+    "initial-diagnosis": initialDiagnosis,
+    "final-diagnosis": finalDiagnosis,
+    "customer-name": customerName,
+    "id-number": idNumber,
+    "ext-number": extNumber,
+    technical
+  } = req.body;
 
+  const deviceType = rawDeviceType.toLowerCase();
+  console.log("🔧 General Maintenance Data:", req.body);
 
+  try {
+    const getDepartmentId = () =>
+      new Promise((resolve, reject) => {
+        db.query(
+          "SELECT id FROM Departments WHERE name = ?",
+          [section],
+          (err, result) => {
+            if (err) return reject(err);
+            resolve(result[0]?.id || null);
+          }
+        );
+      });
+
+    const departmentId = await getDepartmentId();
+
+    const query = `
+      SELECT 
+        md.*, 
+        COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name) AS device_name,
+        COALESCE(c.cpu_name, NULL) AS cpu_name,
+        COALESCE(r.ram_type, NULL) AS ram_type,
+        COALESCE(o.os_name, NULL) AS os_name,
+        COALESCE(g.generation_number, NULL) AS generation_number,
+        COALESCE(pm.model_name, prm.model_name, scm.model_name) AS model_name,
+        d.name AS department_name
+      FROM Maintenance_Devices md
+      LEFT JOIN PC_info pc 
+        ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
+      LEFT JOIN Printer_info pr 
+        ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
+      LEFT JOIN Scanner_info sc 
+        ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
+      LEFT JOIN CPU_Types c ON pc.Processor_id = c.id
+      LEFT JOIN RAM_Types r ON pc.RAM_id = r.id
+      LEFT JOIN OS_Types o ON pc.OS_id = o.id
+      LEFT JOIN Processor_Generations g ON pc.Generation_id = g.id
+      LEFT JOIN PC_Model pm ON pc.Model_id = pm.id
+      LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
+      LEFT JOIN Scanner_Model scm ON sc.Model_id = scm.id
+      LEFT JOIN Departments d ON md.department_id = d.id
+      WHERE md.id = ?
+    `;
+
+    const deviceInfo = await new Promise((resolve, reject) => {
+      db.query(query, [deviceSpec], (err, result) => {
+        if (err) return reject(err);
+        resolve(result[0]);
+      });
+    });
+
+    if (!deviceInfo) {
+      return res.status(404).json({ error: "❌ لم يتم العثور على معلومات الجهاز" });
+    }
+
+    const insertQuery = `
+      INSERT INTO General_Maintenance 
+      (maintenance_date, issue_type, diagnosis_initial, diagnosis_final, device_id, 
+       technician_name, floor, extension, problem_status, notes)
+      VALUES (CURDATE(), ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+    `;
+
+    db.query(
+      insertQuery,
+      [
+        deviceType,
+        initialDiagnosis,
+        finalDiagnosis,
+        deviceSpec,
+        technical,
+        floor,
+        extNumber,
+        problemStatus
+      ],
+      (err, result) => {
+        if (err) {
+          console.error("❌ Error inserting general maintenance:", err);
+          return res.status(500).json({ error: "❌ Database error while inserting general maintenance" });
+        }
+        res.json({ message: "✅ General Maintenance saved successfully" });
+      }
+    );
+  } catch (error) {
+    console.error("❌ Error:", error);
+    res.status(500).json({ error: "❌ Internal server error" });
+  }
+});
 
 
 
