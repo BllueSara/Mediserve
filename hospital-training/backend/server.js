@@ -305,21 +305,21 @@ app.post("/submit-regular-maintenance", async (req, res) => {
 });
     
 // ✅ POST General Maintenance
-
 app.post("/submit-general-maintenance", async (req, res) => {
   const {
-    "problem-type": rawDeviceType,
-    "device-spec": deviceSpec,
-    section,
-    floor,
-    "problem-status": problemStatus,
-    "initial-diagnosis": initialDiagnosis,
-    "final-diagnosis": finalDiagnosis,
-    "customer-name": customerName,
-    "id-number": idNumber,
-    "ext-number": extNumber,
-    technical
+    DeviceType: rawDeviceType,
+    DeviceID: deviceSpec,
+    Section: section,
+    Floor: floor,
+    ProblemStatus: problemStatus,
+    InitialDiagnosis: initialDiagnosis,
+    FinalDiagnosis: finalDiagnosis,
+    CustomerName: customerName,
+    IDNumber: idNumber,
+    ExtNumber: extNumber,
+    Technical: technical
   } = req.body;
+  
 
   const deviceType = rawDeviceType.toLowerCase();
   console.log("🔧 General Maintenance Data:", req.body);
@@ -381,8 +381,11 @@ app.post("/submit-general-maintenance", async (req, res) => {
     const insertQuery = `
       INSERT INTO General_Maintenance 
       (maintenance_date, issue_type, diagnosis_initial, diagnosis_final, device_id, 
-       technician_name, floor, extension, problem_status, notes)
-      VALUES (CURDATE(), ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+       technician_name, floor, extension, problem_status, notes,
+       serial_number, governmental_number, device_name, department_name,
+       cpu_name, ram_type, os_name, generation_number, model_name)
+      VALUES (CURDATE(), ?, ?, ?, ?, ?, ?, ?, ?, NULL,
+              ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     db.query(
@@ -395,7 +398,16 @@ app.post("/submit-general-maintenance", async (req, res) => {
         technical,
         floor,
         extNumber,
-        problemStatus
+        problemStatus,
+        deviceInfo.serial_number,
+        deviceInfo.governmental_number,
+        deviceInfo.device_name,
+        deviceInfo.department_name,
+        deviceInfo.cpu_name,
+        deviceInfo.ram_type,
+        deviceInfo.os_name,
+        deviceInfo.generation_number,
+        deviceInfo.model_name
       ],
       (err, result) => {
         if (err) {
