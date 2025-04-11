@@ -95,4 +95,41 @@ document.addEventListener("DOMContentLoaded", () => {
       })
       .catch(err => console.error("❌ Error fetching technical engineers:", err)); // Log any error
   });
+  document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("external-maintenance-form");
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const data = {
+        ticket_number: document.querySelector('input[placeholder="Enter ticket number"]').value,
+        device_type: document.getElementById("device-type").value,
+        device_specifications: document.getElementById("device-spec").value,
+        section: document.getElementById("section").value,
+        maintenance_manager: document.querySelector('input[placeholder="Enter manager name"]').value,
+        reporter_name: document.getElementById("reporter-name").value,
+        initial_diagnosis: document.querySelector('textarea[placeholder="Enter initial diagnosis"]').value,
+        final_diagnosis: document.querySelector('textarea[placeholder="Enter final diagnosis"]').value
+      };
+
+      console.log("📤 Sending data to server:", data); // للتأكد من البيانات
+
+      fetch("http://localhost:5050/submit-external-maintenance", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      })
+        .then((res) => res.json())
+        .then((result) => {
+          console.log("✅ Server response:", result);
+          alert(result.message || "تم الإرسال بنجاح");
+        })
+        .catch((err) => {
+          console.error("❌ Error sending data:", err);
+          alert("فشل في الإرسال");
+        });
+    });
+  });
   
