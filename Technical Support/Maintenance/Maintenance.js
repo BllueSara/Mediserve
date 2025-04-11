@@ -29,4 +29,3 @@ function goBack() {
     window.location.href = "Maintenance.html"; // Redirects to Maintenance home if there's no previous page
   }
 }
-
