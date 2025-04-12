@@ -1,139 +1,123 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>External Maintenance</title>
-    <link rel="stylesheet" href="external.css">
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>External Maintenance</title>
+  <link rel="stylesheet" href="external.css" />
 </head>
-
 <body>
-
-    <!-- Navigation Buttons -->
-    <div class="nav-buttons">
-        <div class="back-button">
-            <a href="#" onclick="goBack()">
-                <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> Back
-            </a>
-        </div>
-        <div class="Home-button">
-            <a href="#">
-                <img src="/icon/Home.png" alt="Home Icon" class="Home-icon"> Home
-            </a>
-        </div>
+  <!-- Navigation -->
+  <div class="nav-buttons">
+    <div class="back-button">
+      <a href="#" onclick="goBack()">
+        <img src="/icon/Back.png" alt="Back Icon" class="back-icon" /> Back
+      </a>
     </div>
-
-    <!-- Header -->
-    <header>
-        <div class="ms-logo">
-            <img src="/icon/MS Logo.png" alt="MS Logo">
-        </div>
-        <div class="hospital-logo">
-            <img src="/icon/hospital-logo.png" alt="King Abdulaziz Hospital">
-        </div>
-    </header>
-
-    <!-- Form -->
-    <div class="form-container">
-        <h1 class="title">External Maintenance</h1>
-        <p class="subtitle">Please fill in the maintenance details below</p>
-
-        <form id="external-maintenance-form">
-
-
-
-            <!-- Device Information -->
-            <p class="section-title">Device Information</p>
-            <div class="device-container">
-                <div class="device-box">
-                    <label>Device Type <span class="required">*</span></label>
-                    <select id="device-type" required>
-                        <option value="" disabled selected>Select device type</option>
-                        <option value="add-custom">+ Add New Device Type</option>
-                    </select>
-                </div>
-
-
-                <div class="device-box"> <!-- Select field for Section -->
-                    <label>Section <span class="required">*</span></label> <!-- Label -->
-                    <select id="section"> <!-- Dropdown select field -->
-                        <option value="" disabled selected>Select section</option> <!-- Placeholder option -->
-                        <option value="add-custom">+ Add New Section</option>
-                    </select>
-                </div>
-
-                <div class="device-box">
-                    <label>Device Specifications <span class="required">*</span></label>
-                    <select id="device-spec">
-                        <option value="" disabled selected>Select printer</option>
-                        <option value="add-custom">+ Add New Specification</option>
-                    </select>
-                </div>
-
-
-
-            </div>
-
-            <!-- Ticket Information -->
-            <p class="section-title">Ticket Information</p>
-            <div>
-                <label>Ticket Number <span class="required">*</span></label>
-                <input type="text" placeholder="Enter ticket number" required>
-            </div>
-            <div>
-                <label>Maintenance Manager <span class="required">*</span></label>
-                <input type="text" placeholder="Enter manager name" required>
-            </div>
-            <div>
-                <label>Reporter Name <span class="required">*</span></label>
-                <select id="reporter-name" required>
-                    <option value="" disabled selected>Select reporter</option>
-                    <option value="add-custom">+ Add New Reporter</option>
-                </select>
-            </div>
-
-            <!-- Diagnosis -->
-            <p class="section-title">Diagnosis Details</p>
-            <div>
-                <label>Initial Diagnosis <span class="required">*</span></label>
-                <textarea placeholder="Enter initial diagnosis" required></textarea>
-                <p class="input-helper">Please provide detailed initial assessment of the issue</p>
-            </div>
-            <div>
-                <label>Final Diagnosis</label>
-                <textarea placeholder="Enter final diagnosis"></textarea>
-                <p class="input-helper">Document the final diagnosis after maintenance completion</p>
-            </div>
-
-            <!-- Buttons -->
-            <div class="form-buttons">
-                <button type="button" class="draft-btn">
-                    <img src="/icon/draft-icon.png" alt="Draft Icon" class="draft-icon"> Save as Draft
-                </button>
-                <div class="right-buttons">
-                    <button type="button" class="cancel-btn">Cancel</button>
-                    <button type="submit" class="submit-btn">Submit Form</button>
-                </div>
-            </div>
-
-
-
-        </form>
+    <div class="Home-button">
+      <a href="#"><img src="/icon/Home.png" alt="Home Icon" class="Home-icon" /> Home</a>
     </div>
+  </div>
 
-    <!-- Popup Modal -->
-    <div id="popup-modal" class="popup-modal" style="display: none;">
-        <div class="popup-content">
-            <h2 id="popup-title">Add New Option</h2>
-            <input type="text" id="new-option-input" placeholder="Enter new value">
-            <div class="popup-buttons">
-                <button onclick="saveCustomOption()">Save</button>
-                <button onclick="closePopup()">Cancel</button>
-            </div>
+  <!-- Header -->
+  <header>
+    <div class="ms-logo"><img src="/icon/MS Logo.png" alt="MS Logo" /></div>
+    <div class="hospital-logo"><img src="/icon/hospital-logo.png" alt="King Abdulaziz Hospital" /></div>
+  </header>
+
+  <!-- Form -->
+  <div class="form-container">
+    <h1 class="title">External Maintenance</h1>
+    <p class="subtitle">Please fill in the maintenance details below</p>
+
+    <form id="external-maintenance-form">
+      <!-- Device Section -->
+      <p class="section-title">Device Information</p>
+      <div class="device-container">
+        <div class="device-box">
+          <label>Device Type <span class="required">*</span></label>
+          <select id="device-type" required>
+            <option value="" disabled selected>Select device type</option>
+            <option value="add-custom">+ Add New Device Type</option>
+          </select>
         </div>
+        <div class="device-box">
+          <label>Section <span class="required">*</span></label>
+          <select id="section" required>
+            <option value="" disabled selected>Select section</option>
+            <option value="add-custom">+ Add New Section</option>
+          </select>
+        </div>
+        <div class="device-box">
+          <label>Device Specifications <span class="required">*</span></label>
+          <select id="device-spec" required>
+            <option value="" disabled selected>Select specification</option>
+            <option value="add-custom">+ Add New Specification</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Ticket Info -->
+      <p class="section-title">Ticket Information</p>
+      <div>
+        <label>Ticket Number <span class="required">*</span></label>
+        <input type="text" id="ticket-number" placeholder="Enter ticket number" required />
+      </div>
+      <div>
+        <label>Maintenance Manager <span class="required">*</span></label>
+        <input type="text" id="maintenance-manager" placeholder="Enter manager name" required />
+      </div>
+      <div>
+        <label>Reporter Name <span class="required">*</span></label>
+        <select id="reporter-name" required>
+          <option value="" disabled selected>Select reporter</option>
+          <option value="add-custom">+ Add New Reporter</option>
+        </select>
+      </div>
+
+      <!-- Diagnosis -->
+      <p class="section-title">Diagnosis Details</p>
+      <div>
+        <label>Initial Diagnosis <span class="required">*</span></label>
+        <textarea id="initial-diagnosis" placeholder="Enter initial diagnosis" required></textarea>
+      </div>
+      <div>
+        <label>Final Diagnosis</label>
+        <textarea id="final-diagnosis" placeholder="Enter final diagnosis"></textarea>
+      </div>
+
+      <!-- Buttons -->
+      <div class="form-buttons">
+        <button type="button" class="cancel-btn">Cancel</button>
+        <button type="submit" class="submit-btn">Submit Form</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Modal -->
+  <div id="popup-modal" class="popup-modal" style="display: none;">
+    <div class="popup-content">
+      <h2 id="popup-title">Add New Option</h2>
+      <div id="popup-fields"></div>
+      <div class="popup-buttons">
+        <button onclick="savePCSpec()">Save</button>
+        <button onclick="closePopup()">Cancel</button>
+      </div>
     </div>
+  </div>
+<!-- Popup Modal for Adding Generic Options -->
+<div id="popup-modal" class="popup-modal" style="display: none;">
+    <div class="popup-content">
+      <h2 id="popup-title">Add New</h2>
+      <input type="text" id="popup-input" placeholder="Enter new value" required />
+      <input type="hidden" id="popup-target-id" />
+      <div class="popup-buttons">
+        <button onclick="saveGenericOption()">Save</button>
+        <button onclick="closePopup()">Cancel</button>
+      </div>
+    </div>
+  </div>
+  
 
 
     <!-- JS File -->

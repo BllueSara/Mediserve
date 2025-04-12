@@ -174,7 +174,19 @@ function fetchDepartments(selectId = "department") {
     .then(data => {
       const select = document.getElementById(selectId);
       if (!select) return;
-      select.innerHTML = '<option value="">Select Department</option>';
+
+      // العنوان الأساسي
+      select.innerHTML = `<option value="" disabled selected>${selectId === "section" ? "Select section" : "Select Department"}</option>`;
+
+      // ✅ أول شيء نضيف + Add New (فوق الكل)
+      if (selectId === "section") {
+        const addOption = document.createElement("option");
+        addOption.value = "add-custom";
+        addOption.textContent = "+ Add New Section";
+        select.appendChild(addOption);
+      }
+
+      // بعدين نضيف الخيارات الجاية من السيرفر
       data.forEach(item => {
         const option = document.createElement("option");
         option.value = item.name;
@@ -183,6 +195,8 @@ function fetchDepartments(selectId = "department") {
       });
     });
 }
+
+
 
 function fetchCPU() {
   fetch("http://localhost:5050/CPU_Types")
@@ -294,14 +308,23 @@ function fetchDeviceTypes() {
     .then(data => {
       const dropdown = document.getElementById("device-type");
       dropdown.innerHTML = '<option value="" disabled selected>Select device type</option>';
+   // أضف خيار إضافة جديد
+   const addOption = document.createElement("option");
+   addOption.value = "add-custom";
+   addOption.textContent = "+ Add New Device Type";
+   dropdown.appendChild(addOption);
       data.forEach(item => {
+        
         const option = document.createElement("option");
         option.value = item.DeviceType;
         option.textContent = item.DeviceType;
         dropdown.appendChild(option);
       });
+
+   
     });
 }
+
 
 
 function fetchDevicesBySection() {
@@ -318,6 +341,8 @@ function fetchDevicesBySection() {
     .then(data => {
       const dropdown = document.getElementById("device-spec");
       dropdown.innerHTML = '<option disabled selected>Select specification</option>';
+      
+      
       data.forEach(device => {
         const option = document.createElement("option");
         option.value = device.Serial_Number;
@@ -453,4 +478,58 @@ async function submitRegularMaintenance(data) {
     alert("❌ Failed to submit: " + err.message);
   }
 }
+const generalDropdowns = [
+  { id: "device-type", label: "Device Type" },
+  { id: "section", label: "Section" }
+];
 
+generalDropdowns.forEach(({ id, label }) => {
+  const dropdown = document.getElementById(id);
+  if (!dropdown) return;
+
+  dropdown.addEventListener("change", () => {
+    if (dropdown.value === "add-custom") {
+      openGenericPopup(label, id);
+    }
+  });
+});
+
+function openGenericPopup(label, targetId) {
+  document.getElementById("generic-popup-title").textContent = `Add New ${label}`;
+  document.getElementById("generic-label").textContent = `${label}:`;
+  document.getElementById("generic-popup-input").value = "";
+  document.getElementById("generic-popup-target-id").value = targetId;
+  document.getElementById("generic-popup").style.display = "flex";
+}
+
+function closeGenericPopup() {
+  document.getElementById("generic-popup").style.display = "none";
+}
+
+function saveGenericOption() {
+  const value = document.getElementById("generic-popup-input").value.trim();
+  const targetId = document.getElementById("generic-popup-target-id").value;
+  const dropdown = document.getElementById(targetId);
+
+  if (!value || !dropdown) return;
+
+  fetch("http://localhost:5050/add-options-regular", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target: targetId, value })
+  })
+    .then(res => res.json())
+    .then(result => {
+      alert(result.message || "✅ Option added successfully");
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = value;
+      dropdown.appendChild(option);
+      dropdown.value = value;
+      closeGenericPopup();
+    })
+    .catch(err => {
+      console.error("❌ Error saving option:", err);
+      alert("❌ Failed to save option");
+    });
+}
