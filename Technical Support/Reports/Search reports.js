@@ -47,10 +47,12 @@ function loadReports(page) {
 
         const statusClass = getStatusClass(report.status);
 
+        const maintenanceType = report.maintenance_type || "General"; // استخدم هنا الحقل الذي يحدد النوع
+
         card.innerHTML = `
           <div class="report-card-header">
             <img src="/icon/Maintenance.png" alt="Maintenance Icon" />
-            Maintenance 
+            ${maintenanceType} Maintenance
             <select onchange="updateReportStatus(${report.id}, this)" class="status-select ${statusClass}">
               <option value="Open" ${report.status === "Open" ? "selected" : ""}>Open</option>
               <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>In Progress</option>
