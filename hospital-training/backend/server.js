@@ -159,30 +159,43 @@ app.get("/Printer_Model", (req, res) => {
 
 
 // ✅ GET Devices with ID from Maintenance_Devices
+
 app.get("/devices/:type/:department", (req, res) => {
   const type = req.params.type.toLowerCase();
   const department = req.params.department;
 
-  const table = type === "pc" ? "PC_info"
-              : type === "printer" ? "Printer_info"
-              : type === "scanner" ? "Scanner_info"
-              : null;
-
-  const nameCol = type === "pc" ? "Computer_Name"
-               : type === "printer" ? "Printer_Name"
-               : type === "scanner" ? "Scanner_Name"
-               : null;
-
-  if (!table || !nameCol) return res.status(400).json({ error: "Invalid device type" });
-
-  const sql = `
-    SELECT md.id, d.Serial_Number, d.${nameCol} AS name, d.Governmental_Number
-    FROM ${table} d
-    JOIN Maintenance_Devices md
+  // جداول info لبعض الأنواع المشهورة
+  const tableMap = {
+    pc: { table: "PC_info", nameCol: "Computer_Name" },
+    printer: { table: "Printer_info", nameCol: "Printer_Name" },
+    scanner: { table: "Scanner_info", nameCol: "Scanner_Name" },
+  };
+  let joinClause = "";
+  let nameSelect = "md.device_name AS name";
+  
+  if (tableMap[type]) {
+    const table = tableMap[type].table;
+    const nameCol = tableMap[type].nameCol;
+  
+    joinClause = `
+      LEFT JOIN ${table} d
       ON md.serial_number = d.Serial_Number
       AND md.governmental_number = d.Governmental_Number
-      AND md.device_type = ?
-    WHERE d.Department = (SELECT id FROM Departments WHERE name = ?)
+    `;
+    nameSelect = `COALESCE(d.${nameCol}, md.device_name) AS name`;
+  }
+  
+
+  const sql = `
+    SELECT 
+      md.id,
+      md.serial_number AS Serial_Number,
+      md.governmental_number AS Governmental_Number,
+      ${nameSelect}
+    FROM Maintenance_Devices md
+    ${joinClause}
+    WHERE md.device_type = ?
+      AND md.department_id = (SELECT id FROM Departments WHERE name = ?)
   `;
 
   db.query(sql, [type, department], (err, result) => {
@@ -190,6 +203,7 @@ app.get("/devices/:type/:department", (req, res) => {
       console.error("❌ Error fetching devices:", err);
       return res.status(500).json({ error: "Database error" });
     }
+
     res.json(result);
   });
 });
@@ -617,6 +631,48 @@ app.post("/submit-external-maintenance", async (req, res) => {
 });
 
 
+app.post("/add-device-specification", async (req, res) => {
+  const { ministry, name, model, serial, department, type } = req.body;
+
+  try {
+    const getDeptId = () =>
+      new Promise((resolve, reject) => {
+        db.query("SELECT id FROM Departments WHERE name = ?", [department], (err, result) => {
+          if (err) return reject(err);
+          resolve(result[0]?.id || null);
+        });
+      });
+
+    const departmentId = await getDeptId();
+
+    if (!departmentId || !serial || !ministry || !name || !model) {
+      return res.status(400).json({ error: "❌ Missing fields" });
+    }
+
+    // Add to Maintenance_Devices directly
+    const insertQuery = `
+    INSERT INTO Maintenance_Devices 
+    (serial_number, governmental_number, device_type, device_name, department_id)
+    VALUES (?, ?, ?, ?, ?)
+  `;
+  
+  db.query(insertQuery, [serial, ministry, type, name, departmentId], (err, result) => {
+    if (err) {
+      console.error("❌ Error inserting spec:", err);
+      return res.status(500).json({ error: "DB error" });
+    }
+  
+    res.json({ message: "✅ Specification added successfully" });
+  });
+  
+
+  } catch (error) {
+    console.error("❌ Error:", error);
+    res.status(500).json({ error: "❌ Internal error" });
+  }
+});
+
+
 app.post('/AddDevice/:type', async (req, res) => {
   const deviceType = req.params.type.toLowerCase();
   const Serial_Number = req.body.serial;
@@ -769,3 +825,4 @@ app.get('/get-all-problems', async (req, res) => {
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
+
