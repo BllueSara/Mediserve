@@ -855,34 +855,20 @@ app.post("/add-device-model", (req, res) => {
   );
 });
 
-
 app.get('/regular-maintenance-summary', (req, res) => {
   const sql = `
     SELECT 
-      id, -- ✅ أضف هذا
+      id,
       device_name,
       device_type,
       last_maintenance_date,
       frequency,
-      CASE 
-        WHEN frequency = '3months' THEN DATE_ADD(last_maintenance_date, INTERVAL 3 MONTH)
-        WHEN frequency = '4months' THEN DATE_ADD(last_maintenance_date, INTERVAL 4 MONTH)
-      END AS next_due_date,
-      CASE
-        WHEN CURDATE() < 
-          (CASE 
-            WHEN frequency = '3months' THEN DATE_ADD(last_maintenance_date, INTERVAL 3 MONTH)
-            WHEN frequency = '4months' THEN DATE_ADD(last_maintenance_date, INTERVAL 4 MONTH)
-          END)
-        THEN 'Pending'
-        WHEN CURDATE() = 
-          (CASE 
-            WHEN frequency = '3months' THEN DATE_ADD(last_maintenance_date, INTERVAL 3 MONTH)
-            WHEN frequency = '4months' THEN DATE_ADD(last_maintenance_date, INTERVAL 4 MONTH)
-          END)
-        THEN 'Due Today'
-        ELSE 'Completed'
-      END AS status
+      status, -- ✅ نستخدم الحالة المخزنة، ما نحسبها
+      DATE_ADD(last_maintenance_date, INTERVAL 
+        CASE 
+          WHEN frequency = '3months' THEN 3
+          WHEN frequency = '4months' THEN 4
+        END MONTH) AS next_due_date
     FROM Regular_Maintenance
     WHERE frequency = '3months'
     ORDER BY next_due_date DESC
@@ -912,6 +898,7 @@ app.put('/update-maintenance-status/:id', (req, res) => {
 
 
 
+
 app.get('/maintenance-stats', (req, res) => {
   const sql = `
     SELECT
@@ -935,6 +922,26 @@ app.get('/maintenance-stats', (req, res) => {
 });
 
 
+app.get('/regular-maintenance-summary-4months', (req, res) => {
+  const sql = `
+    SELECT 
+      id,
+      device_name,
+      device_type,
+      last_maintenance_date,
+      frequency,
+      status,
+      DATE_ADD(last_maintenance_date, INTERVAL 4 MONTH) AS next_due_date
+    FROM Regular_Maintenance
+    WHERE frequency = '4months'
+    ORDER BY next_due_date DESC;
+  `;
+
+  db.query(sql, (err, result) => {
+    if (err) return res.status(500).json({ error: 'Error fetching 4-month data' });
+    res.json(result);
+  });
+});
 
 
 app.listen(port, () => {
