@@ -292,3 +292,33 @@ header {
     padding: 15px;
   }
 }
+
+.status-select {
+  border: none;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  appearance: none;
+  text-align: center;
+  font-size: 0.9rem;
+  margin-left: auto; /* يحرك العنصر إلى اليمين */
+  margin-right: 0;
+  display: inline-block; /* التأكد من أن العنصر سيتم محاذاته بشكل صحيح */
+}
+
+.status-select.pending {
+  background-color: #ffd84d;
+  color: #000;
+}
+
+.status-select.in-progress {
+  background-color: #00bfff;
+  color: #fff;
+}
+
+.status-select.completed,
+.status-select.closed {
+  background-color: #4caf50;
+  color: #fff;
+}
