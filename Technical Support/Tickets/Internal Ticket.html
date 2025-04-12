@@ -1,165 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Meta tags for encoding and responsiveness -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>External Ticket</title>
+    <!-- Link to the external stylesheet -->
     <link rel="stylesheet" href="Internal Ticket.css">
 </head>
-<body>
 
-    <!-- أزرار التنقل -->
+<body>
+    <div class="container" id="container">
+    
+    <!-- 🔁 Navigation buttons: Back and Home -->
     <div class="nav-buttons">
+        <!-- Back Button: Takes the user to the previous page -->
         <div class="back-button">
-            <a href="Ticket.html" onclick="goBack()">
+            <a href="#" onclick="goBack()">
                 <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> Back
             </a>
         </div>
+
+        <!-- Home Button: Redirects to home screen -->
         <div class="home-button">
-            <a href="ticket1.html">
-                <img src="/ome.png" alt="Home Icon" class="home-icon"> Home
+            <a href="Home.html">
+                <img src="/icon/home.png" alt="Home Icon" class="home-icon"> Home
             </a>
         </div>
     </div>
 
-    <!-- الهيدر (الشعارات) -->
+    <!-- 🏥 Header: Company and hospital logos -->
     <header>
         <div class="ms-logo">
-            <img src="mc.PNG" alt="MS Logo">
+            <img src="/icon/Ms Logo.png" alt="MS Logo">
         </div>
         <div class="hospital-logo">
-            <img src="logo.PNG" alt="Hospital Logo">
+            <img src="/icon/hospital-logo.png" alt="Hospital Logo">
         </div>
     </header>
 
-    <!-- نموذج التذكرة -->
+    <!-- 📝 Ticket Form Section -->
     <div class="ticket-container">
         <h1 class="title">Internal Ticket</h1>
         <p class="subtitle">Fill in the details below to create a new Internal ticket</p>
 
         <form action="#" method="POST" class="ticket-form">
-            
-            <!-- رقم التذكرة -->
+
+            <!-- Ticket Number Input -->
             <div class="form-group">
-                <label>Ticket Number </label>
+                <label>Ticket Number</label>
                 <input type="text" placeholder="Enter ticket number" required>
             </div>
 
-            <!-- رقم التقرير -->
+            <!-- Report Number Input -->
             <div class="form-group">
-                <label>Report Number </label>
+                <label>Report Number</label>
                 <input type="text" placeholder="Enter report number" required>
             </div>
 
-            <!-- رفع نسخة من البريد مع مربع Drag & Drop -->
+            <!-- 📎 Email Upload: Drag & Drop box for uploading email copy -->
             <div class="form-group">
-                <label>Upload a Copy of the Email </label>
+                <label>Upload a Copy of the Email</label>
                 <div id="drop-area" class="upload-box">
-                    <img src="upload.png" alt="Upload Icon" class="upload-icon">
+                    <img src="/icon/upload.png" alt="Upload Icon" class="upload-icon">
                     <p>Drop files here or click to upload</p>
                     <span class="file-format-info">Supported formats: PDF, DOC, DOCX, EML</span>
                     <input type="file" id="upload-file" hidden>
                 </div>
             </div>
 
-            <!-- حالة التقرير -->
+            <!-- Report Status Dropdown (Open / Closed) -->
             <div class="form-group">
-                <label>Report Status </label>
+                <label>Report Status</label>
                 <select>
                     <option>Open</option>
                     <option>Closed</option>
                 </select>
             </div>
 
-            <!-- التشخيص الأولي -->
+            <!-- Initial Diagnosis Dropdown -->
             <div class="form-group">
-                <label>Initial Diagnosis </label>
-                <select>
+                <label>Initial Diagnosis</label>
+                <select id="initial-diagnosis">
                     <option>Select diagnosis</option>
-                </select>
+                  </select>
+                  
+           
             </div>
 
-            <!-- تفاصيل التقرير -->
+            <!-- Report Details (Issue Description) -->
             <div class="form-group">
                 <label>Report Details</label>
                 <textarea placeholder="Enter detailed description of the issue"></textarea>
             </div>
 
-            <!-- التشخيص النهائي -->
+            <!-- Final Diagnosis (After Investigation) -->
             <div class="form-group">
                 <label>Final Diagnosis</label>
                 <textarea placeholder="Enter final diagnosis after investigation"></textarea>
             </div>
 
-            <!-- وصف إضافي -->
+            <!-- Additional Information (Optional if 'Other' is selected) -->
             <div class="form-group">
                 <label>Other Description</label>
                 <textarea placeholder="Please provide additional details if 'Other' is selected"></textarea>
             </div>
 
-            <!-- زر الحفظ -->
+            <!-- 💾 Save Button -->
             <button type="submit" class="submit-btn">Save Ticket</button>
-
         </form>
     </div>
+</div>
 
-    <script src="script2.js"></script>
 
-    <script>
-        // إضافة دعم السحب والإفلات
-        const dropArea = document.getElementById('drop-area');
-        const fileInput = document.getElementById('upload-file');
-
-        dropArea.addEventListener('click', () => fileInput.click());
-
-        dropArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropArea.classList.add('drag-over');
-        });
-
-        dropArea.addEventListener('dragleave', () => {
-            dropArea.classList.remove('drag-over');
-        });
-
-        dropArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropArea.classList.remove('drag-over');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                fileInput.files = files;
-                dropArea.innerHTML = `<p>${files[0].name}</p>`;
-            }
-        });
-    </script>
-
-    <style>
-        /* تصميم مربع رفع الملفات */
-        .upload-box {
-            border: 2px dashed #ccc;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: 0.3s;
-            border-radius: 10px;
-        }
-
-        .upload-box:hover, .drag-over {
-            background-color: #f9f9f9;
-            border-color: #333;
-        }
-
-        .upload-icon {
-            width: 40px;
-            height: 40px;
-            margin-bottom: 10px;
-        }
-
-        .file-format-info {
-            font-size: 12px;
-            color: #999;
-        }
-    </style>
-
+<!-- 📜 External JavaScript for drag & drop or form logic -->
+<script src="Internal Ticket.js"></script>
 </body>
 </html>
+
 

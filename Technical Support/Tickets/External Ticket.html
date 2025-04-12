@@ -1,99 +1,110 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Internal Ticket</title>
-    <link rel="stylesheet" href="External Ticket.css">
+  <!-- Basic setup -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Internal Ticket</title>
+
+  <!-- External CSS file -->
+  <link rel="stylesheet" href="External Ticket.css">
 </head>
+
 <body>
 
-    <!-- أزرار التنقل -->
-    <div class="nav-buttons">
-        <div class="back-button">
-            <a href="Ticket.html">
-                <img src="arrow.png" alt="Back Icon" class="back-icon"> Back
-            </a>
-        </div>
-        <div class="home-button">
-            <a href="ticket1.html">
-                <img src="home.png" alt="Home Icon" class="home-icon"> Home
-            </a>
-        </div>
+  <!-- Back button -->
+<div class="back-button">
+  <a href="#" onclick="history.back(); return false;">
+    <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> Back
+  </a>
+</div>
+
+
+    <!-- Home button -->
+    <div class="home-button">
+        <a href="Home.html">
+        <img src="/icon/Home.png" alt="Home Icon" class="home-icon"> Home
+      </a>
     </div>
+  </div>
 
-    <!-- الهيدر (الشعارات) -->
-    <header>
-        <div class="ms-logo">
-            <img src="mc.PNG" alt="MS Logo">
-        </div>
-        <div class="hospital-logo">
-            <img src="logo.PNG" alt="Hospital Logo">
-        </div>
-    </header>
-
-    <!-- نموذج التيكت -->
-    <div class="ticket-container">
-        <h1 class="title">External Ticket</h1>
-        <p class="subtitle">Fill in the details below to create a new support ticket</p>
-
-        <form action="#" method="POST" class="ticket-form">
-            <!-- رقم التذكرة -->
-            <div class="form-group">
-                <label>Ticket Number</label>
-                <input type="text" value="#TK-2024-001" disabled class="disabled-input">
-            </div>
-
-            <!-- اسم المبلغ -->
-            <div class="form-group">
-                <label>Reporter Name <span class="required">*</span></label>
-                <input type="text" placeholder="Enter reporter name" required>
-            </div>
-
-            <!-- القسم -->
-            <div class="form-group">
-                <label>Department <span class="required">*</span></label>
-                <select required>
-                    <option value="" disabled selected>Select department</option>
-                </select>
-            </div>
-
-            <!-- الأولوية -->
-            <div class="form-group">
-                <label>Priority <span class="required">*</span></label>
-                <div class="priority-options">
-                    <label>
-                        <input type="radio" name="priority" value="high" required> 
-                        <img src="high.png" alt="High Icon" class="priority-icon"> High
-                    </label>
-                    <label>
-                        <input type="radio" name="priority" value="medium"> 
-                        <img src="medium.png" alt="Medium Icon" class="priority-icon"> Medium
-                    </label>
-                    <label>
-                        <input type="radio" name="priority" value="low"> 
-                        <img src="low.png" alt="Low Icon" class="priority-icon"> Low
-                    </label>
-                </div>
-            </div>
-
-            <!-- وصف المشكلة -->
-            <div class="form-group">
-                <label>Issue Description <span class="required">*</span></label>
-                <textarea placeholder="Describe the issue in detail..." required></textarea>
-            </div>
-
-            <!-- التاريخ -->
-            <div class="form-group">
-                <label>Report Date/Time <span class="required">*</span></label>
-                <input type="datetime-local" required>
-            </div>
-
-            <!-- زر الحفظ -->
-            <button type="submit" class="submit-btn">Save Ticket</button>
-        </form>
+  <!-- 🏥 Header with logos -->
+  <header>
+    <div class="ms-logo">
+      <img src="/icon/Ms Logo.png" alt="MS Logo">
     </div>
+    <div class="hospital-logo">
+      <img src="/icon/hospital-logo.png" alt="Hospital Logo">
+    </div>
+  </header>
 
-    <script src="script.js"></script>
+  <!-- 📝 Ticket Form Container -->
+  <div class="ticket-container">
+    <h1 class="title">External Ticket</h1>
+    <p class="subtitle">Fill in the details below to create a new support ticket</p>
+
+    <!-- 📋 Ticket form -->
+    <form action="#" method="POST" class="ticket-form">
+      
+<!-- Ticket Number (editable) -->
+<div class="form-group">
+  <label>Ticket Number</label>
+  <input type="text" placeholder="Enter Ticket Number" class="form-control">
+</div>
+
+      <!-- Reporter Name -->
+      <div class="form-group">
+        <label>Reporter Name <span class="required">*</span></label>
+        <input type="text" placeholder="Enter reporter name" required>
+      </div>
+
+      <!-- Department Selection -->
+      <div class="form-group">
+      
+        <label>Section <span class="required">*</span></label>
+        <select id="section" required>
+          <option value="" disabled selected>Select section</option>
+          <option value="add-custom">+ Add New Section</option>
+        </select>
+      </div>
+
+      <!-- Priority Radio Options with Icons -->
+      <div class="form-group">
+        <label>Priority <span class="required">*</span></label>
+        <div class="priority-options">
+          <label>
+            <input type="radio" name="priority" value="high" required> 
+            <img src="/icon/high.png" alt="High Icon" class="priority-icon"> High
+          </label>
+          <label>
+            <input type="radio" name="priority" value="medium"> 
+            <img src="/icon/Medium.png" alt="Medium Icon" class="priority-icon"> Medium
+          </label>
+          <label>
+            <input type="radio" name="priority" value="low"> 
+            <img src="/icon/low.png" alt="Low Icon" class="priority-icon"> Low
+          </label>
+        </div>
+      </div>
+
+      <!-- Issue Description -->
+      <div class="form-group">
+        <label>Issue Description <span class="required">*</span></label>
+        <textarea placeholder="Describe the issue in detail..." required></textarea>
+      </div>
+
+      <!-- Report Date and Time -->
+      <div class="form-group">
+        <label>Report Date/Time <span class="required">*</span></label>
+        <input type="datetime-local" required>
+      </div>
+
+      <!-- Submit Button -->
+      <button type="submit" class="submit-btn">Save Ticket</button>
+    </form>
+  </div>
+
+  <!-- External JavaScript (for extra functionality if needed) -->
+  <script src="External Ticket.js"></script>
 </body>
 </html>
