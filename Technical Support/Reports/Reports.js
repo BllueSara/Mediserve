@@ -14,6 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
   
+
+
+    
     // 🔁 Elements with specific class names that redirect to corresponding pages
     const classBasedLinks = {
       container1: "/Technical Support/Reports/ReportsType2.html",
