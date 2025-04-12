@@ -256,3 +256,26 @@ th {
 .progress-box:nth-child(2) .progress-count {
     color: #673AB7;
 }
+
+
+.status-select {
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    color: white;
+    font-weight: bold;
+  }
+  
+  .status-select.completed {
+    background-color: #4caf50;
+  }
+  
+  .status-select.pending {
+    background-color: #f39c12;
+  }
+  
+  .status-select.overdue {
+    background-color: #e74c3c;
+  }
+  
