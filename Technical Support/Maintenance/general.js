@@ -145,6 +145,68 @@ function closePopup() {
   document.getElementById("device-spec").value = "";
 }
 
+const generalDropdowns = [
+  { id: "problem-type", label: "Problem Type" },
+  { id: "section", label: "Section" },
+  { id: "floor", label: "Floor" },
+  { id: "technical", label: "Technical" },
+  { id: "problem-status", label: "Problem Status" },
+];
+
+generalDropdowns.forEach(({ id, label }) => {
+  const dropdown = document.getElementById(id);
+  if (!dropdown) return;
+
+  dropdown.addEventListener("change", () => {
+    if (dropdown.value === "add-custom") {
+      openGenericPopup(label, id);
+    }
+  });
+});
+
+function openGenericPopup(label, targetId) {
+  popupTitle.textContent = `Add New ${label}`;
+  popupFields.innerHTML = `
+    <label>${label}:</label>
+    <input type="text" id="popup-input" placeholder="Enter ${label}" required>
+    <input type="hidden" id="popup-target-id" value="${targetId}">
+  `;
+  popup.style.display = "flex";
+
+  // استبدال زر الحفظ ليستخدم حفظ عام
+  const saveBtn = popup.querySelector("button[onclick^='savePCSpec']");
+  saveBtn.setAttribute("onclick", "saveGenericOption()");
+}
+
+function saveGenericOption() {
+  const value = document.getElementById("popup-input").value.trim();
+  const targetId = document.getElementById("popup-target-id").value;
+  const dropdown = document.getElementById(targetId);
+
+  if (!value || !dropdown) return;
+
+  fetch("http://localhost:5050/add-option-general", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target: targetId, value })
+  })
+    .then(res => res.json())
+    .then(result => {
+      alert(result.message);
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = value;
+      dropdown.appendChild(option);
+      dropdown.value = value;
+      closePopup();
+    })
+    .catch(err => {
+      console.error("❌ Error saving option:", err);
+      alert("❌ Failed to save new option");
+    });
+}
+
+
 // ================== الحقول حسب النوع =====================
 function generateFieldsForDeviceType(type) {
   popupFields.innerHTML = "";
@@ -246,6 +308,8 @@ document.querySelector("form").addEventListener("submit", function (e) {
     .then(res => res.json())
     .then(result => {
       alert(result.message);
+      location.reload();  // إعادة تحميل الصفحة بعد الإرسال الناجح
+
     })
     .catch(err => {
       console.error("❌ Failed to submit form:", err);

@@ -303,7 +303,98 @@ app.post("/submit-regular-maintenance", async (req, res) => {
     res.status(500).json({ error: "❌ Internal server error" });
   }
 });
-    
+
+
+app.post("/add-option-general", (req, res) => {
+  const { target, value } = req.body;
+
+  const tableMap = {
+    "problem-type": { table: "DeviceType", column: "DeviceType" },
+    "section": { table: "Departments", column: "name" },
+    "floor": { table: "Floors", column: "FloorNum" },
+    "technical": { table: "Engineers", column: "name" },
+    "problem-status": { table: "ProblemStates_Pc", column: "problem_text" } // عدّل حسب النوع
+  };
+
+  const mapping = tableMap[target];
+
+  if (!mapping) return res.status(400).json({ error: "Invalid target field" });
+
+  const query = `INSERT INTO ${mapping.table} (${mapping.column}) VALUES (?)`;
+
+  db.query(query, [value], (err, result) => {
+    if (err) {
+      console.error("❌ DB Insert Error:", err);
+      return res.status(500).json({ error: "Database error while inserting option" });
+    }
+    res.json({ message: `✅ ${value} added to ${mapping.table}` });
+  });
+});
+
+app.post("/add-options-external", (req, res) => {
+  const { target, value } = req.body;
+  if (!target || !value) {
+    return res.status(400).json({ error: "Missing target or value" });
+  }
+
+  let table = "";
+  let column = "";
+
+  switch (target) {
+    case "device-type":
+      table = "DeviceType";
+      column = "DeviceType";
+      break;
+    case "section":
+      table = "Departments";
+      column = "name";
+      break;
+    case "reporter-name":
+      table = "Engineers";
+      column = "name";
+      break;
+    default:
+      return res.status(400).json({ error: "Unsupported dropdown" });
+  }
+
+  const query = `INSERT INTO ${table} (${column}) VALUES (?)`;
+
+  db.query(query, [value], (err, result) => {
+    if (err) {
+      console.error("❌ Error inserting option:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json({ message: `✅ ${value} added successfully` });
+  });
+});
+// API في Node.js
+
+app.post("/add-options-regular", (req, res) => {
+  const { target, value } = req.body;
+
+  let table = "";
+  let column = "";
+
+  if (target === "device-type") {
+    table = "DeviceType";
+    column = "DeviceType";
+  } else if (target === "section") {
+    table = "Departments";
+    column = "name";
+  } else {
+    return res.status(400).json({ error: "Invalid target" });
+  }
+
+  const query = `INSERT INTO ${table} (${column}) VALUES (?)`;
+  db.query(query, [value], (err, result) => {
+    if (err) {
+      console.error("❌ DB Error:", err);
+      return res.status(500).json({ error: "Database insert failed" });
+    }
+    res.json({ message: `✅ Added to ${table}: ${value}` });
+  });
+});
+
 // ✅ POST General Maintenance
 app.post("/submit-general-maintenance", async (req, res) => {
   const {
@@ -423,12 +514,11 @@ app.post("/submit-general-maintenance", async (req, res) => {
   }
 });
 
-
 app.post("/submit-external-maintenance", async (req, res) => {
   const {
     ticket_number,
     device_type,
-    device_specifications,
+    device_specifications, // <- هذا هو ID من Maintenance_Devices
     section,
     maintenance_manager,
     reporter_name,
@@ -450,9 +540,12 @@ app.post("/submit-external-maintenance", async (req, res) => {
             COALESCE(pm.model_name, prm.model_name, scm.model_name) AS model_name,
             d.name AS department_name
           FROM Maintenance_Devices md
-          LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.id = ?
-          LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.id = ?
-          LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.id = ?
+          LEFT JOIN PC_info pc 
+            ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
+          LEFT JOIN Printer_info pr 
+            ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
+          LEFT JOIN Scanner_info sc 
+            ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
           LEFT JOIN CPU_Types c ON pc.Processor_id = c.id
           LEFT JOIN RAM_Types r ON pc.RAM_id = r.id
           LEFT JOIN OS_Types o ON pc.OS_id = o.id
@@ -464,7 +557,7 @@ app.post("/submit-external-maintenance", async (req, res) => {
           WHERE md.id = ?
         `;
 
-        db.query(query, [device_specifications, device_specifications, device_specifications, device_specifications], (err, result) => {
+        db.query(query, [device_specifications], (err, result) => {
           if (err) return reject(err);
           resolve(result[0]);
         });
@@ -522,7 +615,6 @@ app.post("/submit-external-maintenance", async (req, res) => {
     res.status(500).json({ error: "❌ Internal server error" });
   }
 });
-
 
 
 app.post('/AddDevice/:type', async (req, res) => {
