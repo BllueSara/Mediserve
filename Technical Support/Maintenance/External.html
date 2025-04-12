@@ -1,39 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Metadata and page setup -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>External Maintenance</title>
+
+  <!-- External CSS file for styling -->
   <link rel="stylesheet" href="external.css" />
 </head>
 <body>
-  <!-- Navigation -->
+  <!-- Navigation buttons section (Back & Home) -->
   <div class="nav-buttons">
+    <!-- Back button -->
     <div class="back-button">
       <a href="#" onclick="goBack()">
         <img src="/icon/Back.png" alt="Back Icon" class="back-icon" /> Back
       </a>
     </div>
+    <!-- Home button -->
     <div class="Home-button">
-      <a href="#"><img src="/icon/Home.png" alt="Home Icon" class="Home-icon" /> Home</a>
+      <a href="#">
+        <img src="/icon/Home.png" alt="Home Icon" class="Home-icon" /> Home
+      </a>
     </div>
   </div>
 
-  <!-- Header -->
+  <!-- Header section (Logos) -->
   <header>
+    <!-- MS logo -->
     <div class="ms-logo"><img src="/icon/MS Logo.png" alt="MS Logo" /></div>
+    <!-- Hospital logo -->
     <div class="hospital-logo"><img src="/icon/hospital-logo.png" alt="King Abdulaziz Hospital" /></div>
   </header>
 
-  <!-- Form -->
+  <!-- Main form container -->
   <div class="form-container">
+    <!-- Form title and subtitle -->
     <h1 class="title">External Maintenance</h1>
     <p class="subtitle">Please fill in the maintenance details below</p>
 
+    <!-- Form start -->
     <form id="external-maintenance-form">
-      <!-- Device Section -->
+      <!-- Section title for device info -->
       <p class="section-title">Device Information</p>
+      
+      <!-- Device input fields -->
       <div class="device-container">
+        <!-- Device Type dropdown -->
         <div class="device-box">
           <label>Device Type <span class="required">*</span></label>
           <select id="device-type" required>
@@ -41,6 +55,8 @@
             <option value="add-custom">+ Add New Device Type</option>
           </select>
         </div>
+
+        <!-- Section dropdown -->
         <div class="device-box">
           <label>Section <span class="required">*</span></label>
           <select id="section" required>
@@ -48,6 +64,8 @@
             <option value="add-custom">+ Add New Section</option>
           </select>
         </div>
+
+        <!-- Device specification dropdown -->
         <div class="device-box">
           <label>Device Specifications <span class="required">*</span></label>
           <select id="device-spec" required>
@@ -57,16 +75,22 @@
         </div>
       </div>
 
-      <!-- Ticket Info -->
+      <!-- Section title for ticket info -->
       <p class="section-title">Ticket Information</p>
+      
+      <!-- Ticket number input -->
       <div>
         <label>Ticket Number <span class="required">*</span></label>
         <input type="text" id="ticket-number" placeholder="Enter ticket number" required />
       </div>
+
+      <!-- Maintenance manager name -->
       <div>
         <label>Maintenance Manager <span class="required">*</span></label>
         <input type="text" id="maintenance-manager" placeholder="Enter manager name" required />
       </div>
+
+      <!-- Reporter dropdown -->
       <div>
         <label>Reporter Name <span class="required">*</span></label>
         <select id="reporter-name" required>
@@ -74,18 +98,22 @@
         </select>
       </div>
 
-      <!-- Diagnosis -->
+      <!-- Section title for diagnosis -->
       <p class="section-title">Diagnosis Details</p>
+      
+      <!-- Initial diagnosis textarea -->
       <div>
         <label>Initial Diagnosis <span class="required">*</span></label>
         <textarea id="initial-diagnosis" placeholder="Enter initial diagnosis" required></textarea>
       </div>
+
+      <!-- Final diagnosis textarea -->
       <div>
         <label>Final Diagnosis</label>
         <textarea id="final-diagnosis" placeholder="Enter final diagnosis"></textarea>
       </div>
 
-      <!-- Buttons -->
+      <!-- Submit and cancel buttons -->
       <div class="form-buttons">
         <button type="button" class="cancel-btn">Cancel</button>
         <button type="submit" class="submit-btn">Submit Form</button>
@@ -93,27 +121,26 @@
     </form>
   </div>
 
- <!-- ✅ Popup عام لإضافة الخيارات (section, type...) -->
-<div id="popup-modal" class="popup-modal" style="display: none;">
-  <div class="popup-content">
-    <h2 id="popup-title">Add New</h2>
-    <div id="popup-fields">
-      <!-- هنا يتغير حسب النوع -->
-    </div>
-    <div class="popup-buttons">
-      <button id="popup-save-button">Save</button>
-      <button onclick="closePopup()">Cancel</button>
+  <!-- ✅ Generic popup modal for adding new values (device type, section, etc.) -->
+  <div id="popup-modal" class="popup-modal" style="display: none;">
+    <div class="popup-content">
+      <!-- Popup title -->
+      <h2 id="popup-title">Add New</h2>
+
+      <!-- Dynamic popup fields will be injected here -->
+      <div id="popup-fields"></div>
+
+      <!-- Buttons to save or cancel popup -->
+      <div class="popup-buttons">
+        <button id="popup-save-button">Save</button>
+        <button onclick="closePopup()">Cancel</button>
+      </div>
     </div>
   </div>
-</div>
 
-  
-
-
-    <!-- JS File -->
-    <script src="Maintenance.js"></script>
-    <script src="External.js"></script>
+  <!-- JavaScript files -->
+  <script src="Maintenance.js"></script>
+  <script src="External.js"></script>
 
 </body>
-
 </html>
