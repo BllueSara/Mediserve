@@ -8,17 +8,12 @@ const popupFieldsContainer = document.getElementById("popup-fields");
 if (deviceTypeSelect) {
   deviceTypeSelect.addEventListener("change", function () {
     deviceSpecSelect.value = "";
+    fetchDeviceSpecsByTypeAndDepartment(); // ✅ ضروري عشان يعرض الأجهزة حسب النوع الجديد
+
   });
 }
 
-if (deviceSpecSelect) {
-  deviceSpecSelect.addEventListener("change", function () {
-    if (this.value === "add-custom") {
-      popup.style.display = "flex";
-      updatePopupHeadingAndFields(deviceTypeSelect.value);
-    }
-  });
-}
+
 
 function updatePopupHeadingAndFields(type) {
   popupFieldsContainer.innerHTML = "";
@@ -157,7 +152,16 @@ function savePCSpec() {
     .then(result => {
       if (result.message) {
         alert(result.message);
-        closePopup();
+
+        const dropdown = document.getElementById("device-spec");
+        const option = document.createElement("option");
+        option.value = result.insertedId || deviceData.serial || deviceData["device-name"]; // fallback
+        option.textContent = `${deviceData["device-name"]} | ${deviceData.serial} | ${deviceData["ministry-id"]}`;
+        dropdown.appendChild(option);
+        dropdown.value = option.value;
+
+    popup.style.display = "none";
+
       } else {
         alert("❌ فشل في الحفظ: " + result.error);
       }
@@ -167,6 +171,7 @@ function savePCSpec() {
       alert("❌ حدث خطأ في الاتصال بالسيرفر. تأكد أن السيرفر يعمل");
     });
 }
+
 
 function fetchDepartments(selectId = "department") {
   fetch("http://localhost:5050/Departments")
@@ -354,6 +359,7 @@ function fetchDevicesBySection() {
 }
 
 function fetchDeviceSpecsByTypeAndDepartment() {
+  
   const type = document.getElementById("device-type").value.toLowerCase();
   const dept = document.getElementById("section").value;
   const dropdown = document.getElementById("device-spec");
@@ -480,7 +486,9 @@ async function submitRegularMaintenance(data) {
 }
 const generalDropdowns = [
   { id: "device-type", label: "Device Type" },
-  { id: "section", label: "Section" }
+  { id: "section", label: "Section" },
+  { id: "device-spec", label: "Device Specification" } // ✅ أضف هذا
+
 ];
 
 generalDropdowns.forEach(({ id, label }) => {
@@ -495,12 +503,136 @@ generalDropdowns.forEach(({ id, label }) => {
 });
 
 function openGenericPopup(label, targetId) {
-  document.getElementById("generic-popup-title").textContent = `Add New ${label}`;
-  document.getElementById("generic-label").textContent = `${label}:`;
-  document.getElementById("generic-popup-input").value = "";
-  document.getElementById("generic-popup-target-id").value = targetId;
-  document.getElementById("generic-popup").style.display = "flex";
+  const popup = document.getElementById("generic-popup");
+
+  if (label === "Device Specification") {
+    // نسحب الأقسام من السيرفر
+    fetch("http://localhost:5050/Departments")
+      .then(res => res.json())
+      .then(departments => {
+        const optionsHTML = departments.map(dep => `<option value="${dep.name}">${dep.name}</option>`).join("");
+
+        popup.innerHTML = `
+          <div class="popup-content">
+            <h3>Add Device Specification</h3>
+
+            <label>Ministry Number:</label>
+            <input type="text" id="spec-ministry" />
+
+            <label>Device Name:</label>
+            <input type="text" id="spec-name" />
+
+            <label>Model:</label>
+            <input type="text" id="spec-model" />
+
+            <label>Serial Number:</label>
+            <input type="text" id="spec-serial" />
+
+            <label>Department:</label>
+            <select id="spec-department">
+              <option value="" disabled selected>Select department</option>
+              ${optionsHTML}
+            </select>
+
+            <input type="hidden" id="generic-popup-target-id" value="${targetId}" />
+
+            <div class="popup-buttons">
+              <button onclick="saveDeviceSpecification()">Save</button>
+              <button onclick="closeGenericPopup()">Cancel</button>
+            </div>
+          </div>
+        `;
+
+        popup.style.display = "flex";
+      });
+  } else {
+    // الحقول العادية
+    popup.innerHTML = `
+      <div class="popup-content">
+        <h3 id="generic-popup-title">Add New ${label}</h3>
+        <label for="generic-popup-input" id="generic-label">${label}:</label>
+        <input type="text" id="generic-popup-input" placeholder="Enter ${label}" required />
+        <input type="hidden" id="generic-popup-target-id" value="${targetId}" />
+        <div class="popup-buttons">
+          <button type="button" class="save-btn" onclick="saveGenericOption()">Save</button>
+          <button type="button" class="cancel-btn" onclick="closeGenericPopup()">Cancel</button>
+        </div>
+      </div>
+    `;
+
+    popup.style.display = "flex";
+  }
 }
+
+
+function saveDeviceSpecification() {
+  const ministry = document.getElementById("spec-ministry").value.trim();
+  const name = document.getElementById("spec-name").value.trim();
+  const model = document.getElementById("spec-model").value.trim();
+  const serial = document.getElementById("spec-serial").value.trim();
+  const department = document.getElementById("spec-department").value.trim();
+  const deviceType = document.getElementById("device-type").value.toLowerCase();
+  const dropdown = document.getElementById("device-spec");
+
+  if (!ministry || !name || !model || !serial || !department || !deviceType) {
+    alert("❌ Please fill all fields.");
+    return;
+  }
+
+  const specData = {
+    ministry,
+    name,
+    model,
+    serial,
+    department,
+    type: deviceType
+  };
+
+  fetch("http://localhost:5050/add-device-specification", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(specData)
+  })
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+      return res.json();
+    })
+    .then(result => {
+      if (result.message) {
+        alert(result.message);
+
+        // ✅ إنشاء الخيار الجديد مباشرة بدون إعادة تحميل القائمة
+        const option = document.createElement("option");
+        option.value = result.insertedId || specData.serial;
+        option.textContent = `${specData.name} | ${specData.serial} | ${specData.ministry}`;
+        dropdown.appendChild(option);
+        dropdown.value = option.value;
+
+        // ✅ إغلاق الـ popup بأمان
+        const popup = document.getElementById("generic-popup");
+        if (popup) popup.style.display = "none";
+
+        // ✅ تنظيف الحقول
+        document.getElementById("spec-ministry").value = "";
+        document.getElementById("spec-name").value = "";
+        document.getElementById("spec-model").value = "";
+        document.getElementById("spec-serial").value = "";
+        document.getElementById("spec-department").value = "";
+
+      } else {
+        alert("❌ فشل في الحفظ: " + result.error);
+      }
+    })
+    .catch(err => {
+      console.error("❌ Error saving specification:", err);
+      alert("❌ Failed to save specification");
+    });
+}
+
+
+
+
+
 
 function closeGenericPopup() {
   document.getElementById("generic-popup").style.display = "none";
@@ -526,6 +658,9 @@ function saveGenericOption() {
       option.textContent = value;
       dropdown.appendChild(option);
       dropdown.value = value;
+      if (targetId === "device-type") {
+        fetchDeviceSpecsByTypeAndDepartment();
+      }
       closeGenericPopup();
     })
     .catch(err => {

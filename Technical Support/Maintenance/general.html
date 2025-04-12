@@ -126,7 +126,8 @@
                 <button type="submit" class="submit-btn">Submit Form</button> <!-- Submit button -->
             </div>
         </form>
-    </div>            
+    </div>
+                
     <div id="popup-modal" class="popup-modal" style="display: none;">
   <div class="popup-content">
     <h2 id="popup-title">Enter Device Specifications</h2>
@@ -134,8 +135,8 @@
       <p>No fields available for this device type.</p>
     </div>
     <div class="popup-buttons">
-      <button onclick="savePCSpec()">Save</button>
-      <button onclick="closePopup()">Cancel</button>
+        <button id="popup-save-btn">Save</button>
+        <button onclick="closePopup()">Cancel</button>
     </div>
   </div>
 </div>

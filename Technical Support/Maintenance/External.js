@@ -165,7 +165,8 @@ const popupTarget = document.getElementById("popup-target-id");
 const dropdownsWithPopup = [
   { id: "device-type", label: "Device Type" },
   { id: "section", label: "Section" },
-  { id: "reporter-name", label: "Reporter Name" }
+  { id: "device-spec", label: "Device Specification" } // ✅ أضف هذا
+
 ];
 
 dropdownsWithPopup.forEach(({ id, label }) => {
@@ -180,14 +181,95 @@ dropdownsWithPopup.forEach(({ id, label }) => {
 });
 
 function openGenericPopup(label, targetId) {
-  popupTitle.textContent = `Add New ${label}`;
-  popupFields.innerHTML = `
-    <label>${label}:</label>
-    <input type="text" id="popup-input" placeholder="Enter ${label}" required>
-    <input type="hidden" id="popup-target-id" value="${targetId}">
-    
-  `;
-  popup.style.display = "flex";
+  const saveBtn = document.getElementById("popup-save-button");
+
+  if (label === "Device Specification") {
+    fetch("http://localhost:5050/Departments")
+      .then(res => res.json())
+      .then(departments => {
+        const optionsHTML = departments
+          .map(dep => `<option value="${dep.name}">${dep.name}</option>`)
+          .join("");
+
+        popupTitle.textContent = "Add Device Specification";
+        popupFields.innerHTML = `
+          <label>Ministry Number:</label><input type="text" id="spec-ministry" />
+          <label>Device Name:</label><input type="text" id="spec-name" />
+          <label>Model:</label><input type="text" id="spec-model" />
+          <label>Serial Number:</label><input type="text" id="spec-serial" />
+          <label>Department:</label>
+          <select id="spec-department">
+            <option value="" disabled selected>Select department</option>
+            ${optionsHTML}
+          </select>
+          <input type="hidden" id="popup-target-id" value="${targetId}" />
+        `;
+
+        saveBtn.onclick = saveDeviceSpecification;
+        popup.style.display = "flex";
+      });
+  } else {
+    popupTitle.textContent = `Add New ${label}`;
+    popupFields.innerHTML = `
+      <label for="popup-input">${label}:</label>
+      <input type="text" id="popup-input" placeholder="Enter ${label}" required>
+      <input type="hidden" id="popup-target-id" value="${targetId}">
+    `;
+    saveBtn.onclick = saveGenericOption;
+    popup.style.display = "flex";
+  }
+}
+function saveDeviceSpecification() {
+  const ministry = document.getElementById("spec-ministry").value.trim();
+  const name = document.getElementById("spec-name").value.trim();
+  const model = document.getElementById("spec-model").value.trim();
+  const serial = document.getElementById("spec-serial").value.trim();
+  const department = document.getElementById("spec-department").value.trim();
+  const deviceType = document.getElementById("device-type").value.toLowerCase(); // external
+  const dropdown = document.getElementById("device-spec");
+
+  if (!ministry || !name || !model || !serial || !department || !deviceType) {
+    alert("❌ Please fill all fields.");
+    return;
+  }
+
+  const specData = {
+    ministry,
+    name,
+    model,
+    serial,
+    department,
+    type: deviceType
+  };
+
+  fetch("http://localhost:5050/add-device-specification", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(specData)
+  })
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+      return res.json();
+    })
+    .then(result => {
+      if (result.message) {
+        alert(result.message);
+
+        const option = document.createElement("option");
+        option.value = result.insertedId || specData.serial;
+        option.textContent = `${specData.name} | ${specData.serial} | ${specData.ministry}`;
+        dropdown.appendChild(option);
+        dropdown.value = option.value;
+
+        popup.style.display = "none";
+      } else {
+        alert("❌ فشل في الحفظ: " + result.error);
+      }
+    })
+    .catch(err => {
+      console.error("❌ Error saving specification:", err);
+      alert("❌ Failed to save specification");
+    });
 }
 
 function closePopup() {
@@ -197,8 +279,8 @@ function closePopup() {
 }
 
 function saveGenericOption() {
-  const value = popupInput.value.trim();
-  const targetId = popupTarget.value;
+  const value = document.getElementById("popup-input").value.trim();
+  const targetId = document.getElementById("popup-target-id").value;
   const dropdown = document.getElementById(targetId);
 
   if (!value || !dropdown) return;
@@ -219,10 +301,11 @@ function saveGenericOption() {
       closePopup();
     })
     .catch(err => {
-      console.error("❌ Error saving:", err);
-      alert("❌ Error while saving value");
+      console.error("❌ Error saving option:", err);
+      alert("❌ Failed to save new option");
     });
 }
+
 
 // ================== النافذة المنبثقة للمواصفات =====================
 const deviceSpecSelect = document.getElementById("device-spec");
@@ -233,6 +316,8 @@ if (deviceSpecSelect) {
       const type = document.getElementById("device-type").value.toLowerCase();
       popup.style.display = "flex";
       generateFieldsForDeviceType(type);
+      const saveBtn = document.getElementById("popup-save-button");
+      saveBtn.onclick = savePCSpec; // 👈 هذا خاص بحفظ الجهاز
     }
   });
 }
@@ -298,19 +383,24 @@ function savePCSpec() {
   })
     .then(res => res.json())
     .then(result => {
-      if (result.message) {
-        alert(result.message);
-        closePopup();
-        fetchExternalDeviceSpecs();
-      } else {
-        alert("❌ Failed to save: " + result.error);
-      }
+      alert(result.message || "✅ Device saved successfully");
+
+      // ✅ أضف العنصر الجديد مباشرة للدروبداون
+      const specDropdown = document.getElementById("device-spec");
+      const newOption = document.createElement("option");
+      newOption.value = result.insertedId || data.serial || data["device-name"]; // حسب الموجود
+      newOption.textContent = `${data["device-name"]} | ${data.serial} | ${data["ministry-id"]}`;
+      specDropdown.appendChild(newOption);
+      specDropdown.value = newOption.value;
+
+      popup.style.display = "none"; // إغلاق البوب أب
     })
     .catch(err => {
       console.error("❌ Error saving device:", err);
       alert("❌ Server connection failed");
     });
 }
+
 
 
 // ================== دوال الموديلات والخصائص =====================
