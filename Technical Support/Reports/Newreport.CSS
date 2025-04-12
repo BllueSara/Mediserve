@@ -1,3 +1,4 @@
+/* Set base styles for the body */
 body {
   font-family: 'Inter', sans-serif;
   background-color: #f9fbfc;
@@ -5,7 +6,7 @@ body {
   padding: 0;
 }
 
-/* Navigation Buttons */
+/* ===== Navigation Buttons (Back & Home) ===== */
 .nav-buttons {
   position: relative;
 }
@@ -30,6 +31,7 @@ body {
   transform: translateX(-50%);
 }
 
+/* Style links inside nav buttons */
 .back-button a,
 .Home-button a {
   text-decoration: none;
@@ -39,6 +41,7 @@ body {
   gap: 5px;
 }
 
+/* Set individual colors for each button */
 .back-button a {
   color: #4A5568;
 }
@@ -47,13 +50,14 @@ body {
   color: #3BAAE0;
 }
 
+/* Icon size for navigation buttons */
 .back-icon,
 .Home-icon {
   width: 20px;
   height: 20px;
 }
 
-/* Header - Contains MS and Hospital Logos */
+/* ===== Header with logos ===== */
 header {
   display: flex;
   justify-content: space-between;
@@ -63,6 +67,7 @@ header {
   position: relative;
 }
 
+/* Microsoft logo */
 .ms-logo {
   position: absolute;
   left: 5px;
@@ -73,6 +78,7 @@ header {
   width: 120px;
 }
 
+/* Hospital logo */
 .hospital-logo {
   position: absolute;
   right: 10px;
@@ -83,7 +89,7 @@ header {
   height: 50px;
 }
 
-/* Main Container */
+/* ===== Main Form Container ===== */
 .container {
   max-width: 900px;
   margin: 90px auto 20px auto;
@@ -93,6 +99,7 @@ header {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
+/* Title and layout */
 .header {
   display: flex;
   align-items: center;
@@ -110,7 +117,16 @@ header {
   font-weight: 600;
   margin-top: 30px;
 }
+/* تنسيق الجملة اللي توضح صيغ الملفات */
+.file-format-info {
+  display: block;            /* عشان تبدا في سطر جديد */
+  margin-top: 40px;          /* تعطي مسافة من الفقرة اللي فوقها */
+  font-size: 13px;           /* تصغير الخط */
+  color: #888888;            /* لون رمادي ناعم */
+  text-align: center;        /* وسط السطر */
+}
 
+/* ===== Form Labels and Inputs ===== */
 label {
   display: block;
   margin-bottom: 8px;
@@ -129,7 +145,7 @@ textarea {
   box-sizing: border-box;
 }
 
-/* Highlight fields with sky blue border on focus */
+/* Highlight input fields on focus */
 input:focus,
 select:focus,
 textarea:focus {
@@ -137,7 +153,7 @@ textarea:focus {
   outline: none;
 }
 
-/* Submit button sky blue */
+/* Submit button with blue color */
 .submit-btn {
   background-color: #3BAAE0;
   display: flex;
@@ -151,11 +167,13 @@ textarea:focus {
   cursor: pointer;
 }
 
+/* Textarea height and resizability */
 textarea {
   resize: vertical;
   height: 100px;
 }
 
+/* Row layout for form fields */
 .row {
   display: flex;
   gap: 20px;
@@ -165,6 +183,7 @@ textarea {
   flex: 1;
 }
 
+/* ===== File Upload Box ===== */
 .upload-box {
   border: 2px dashed #ccc;
   padding: 30px;
@@ -177,6 +196,7 @@ textarea {
   margin: 10px 0;
 }
 
+/* File preview styling */
 .file-preview {
   margin-top: 10px;
   padding: 10px;
@@ -185,6 +205,7 @@ textarea {
   background: #f0f0f0;
 }
 
+/* ===== Signature Pad ===== */
 .signature-box {
   margin-top: 20px;
 }
@@ -196,12 +217,14 @@ textarea {
   border-radius: 8px;
 }
 
+/* ===== Bottom Buttons (Submit, Save, etc.) ===== */
 .buttons {
   display: flex;
   justify-content: space-between;
   margin-top: 30px;
 }
 
+/* General button style */
 button {
   padding: 12px 24px;
   border: none;
@@ -212,6 +235,7 @@ button {
   cursor: pointer;
 }
 
+/* Save button variation */
 .save-btn {
   background-color: #3fa3ff;
 }
