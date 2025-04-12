@@ -501,52 +501,96 @@ generalDropdowns.forEach(({ id, label }) => {
     }
   });
 });
-
 function openGenericPopup(label, targetId) {
   const popup = document.getElementById("generic-popup");
 
   if (label === "Device Specification") {
-    // نسحب الأقسام من السيرفر
-    fetch("http://localhost:5050/Departments")
-      .then(res => res.json())
-      .then(departments => {
-        const optionsHTML = departments.map(dep => `<option value="${dep.name}">${dep.name}</option>`).join("");
+    const deviceType = document.getElementById("device-type")?.value;
 
-        popup.innerHTML = `
-          <div class="popup-content">
-            <h3>Add Device Specification</h3>
+    // جلب الأقسام والموديلات حسب نوع الجهاز
+    Promise.all([
+      fetch("http://localhost:5050/Departments").then(res => res.json()),
+      fetch(`http://localhost:5050/models-by-type/${deviceType}`).then(res => res.json())
+    ]).then(([departments, models]) => {
+      const departmentsOptions = departments.map(dep => `<option value="${dep.name}">${dep.name}</option>`).join("");
+      const modelsOptions = models.map(model => `<option value="${model.model_name}">${model.model_name}</option>`).join("");
 
-            <label>Ministry Number:</label>
-            <input type="text" id="spec-ministry" />
+      popup.innerHTML = `
+        <div class="popup-content">
+          <h3>Add Device Specification</h3>
 
-            <label>Device Name:</label>
-            <input type="text" id="spec-name" />
+          <label>Ministry Number:</label>
+          <input type="text" id="spec-ministry" />
 
-            <label>Model:</label>
-            <input type="text" id="spec-model" />
+          <label>Device Name:</label>
+          <input type="text" id="spec-name" />
 
-            <label>Serial Number:</label>
-            <input type="text" id="spec-serial" />
+          <label>Model:</label>
+          <select id="spec-model">
+            <option value="" disabled selected>Select model</option>
+            ${modelsOptions}
+            <option value="add-new-model">+ Add New Model</option>
+          </select>
 
-            <label>Department:</label>
-            <select id="spec-department">
-              <option value="" disabled selected>Select department</option>
-              ${optionsHTML}
-            </select>
+          <label>Serial Number:</label>
+          <input type="text" id="spec-serial" />
 
-            <input type="hidden" id="generic-popup-target-id" value="${targetId}" />
+          <label>Department:</label>
+          <select id="spec-department">
+            <option value="" disabled selected>Select department</option>
+            ${departmentsOptions}
+          </select>
 
-            <div class="popup-buttons">
-              <button onclick="saveDeviceSpecification()">Save</button>
-              <button onclick="closeGenericPopup()">Cancel</button>
-            </div>
+          <input type="hidden" id="generic-popup-target-id" value="${targetId}" />
+
+          <div class="popup-buttons">
+            <button onclick="saveDeviceSpecification()">Save</button>
+            <button onclick="closeGenericPopup()">Cancel</button>
           </div>
-        `;
+        </div>
+      `;
 
-        popup.style.display = "flex";
+      popup.style.display = "flex";
+
+      // ✅ استرجاع القيم المحفوظة مؤقتًا
+      setTimeout(() => {
+        const fields = ["spec-ministry", "spec-name", "spec-serial", "spec-department"];
+        fields.forEach(id => {
+          const el = document.getElementById(id);
+          const saved = sessionStorage.getItem(id);
+          if (el && saved) {
+            el.value = saved;
+            sessionStorage.removeItem(id);
+          }
+        });
+
+        const lastModel = sessionStorage.getItem("lastAddedModel");
+        if (lastModel) {
+          document.getElementById("spec-model").value = lastModel;
+          sessionStorage.removeItem("lastAddedModel");
+        }
+      }, 0);
+
+      // ✅ فتح نافذة إضافة موديل جديد عند الاختيار
+      document.getElementById("spec-model").addEventListener("change", (e) => {
+        if (e.target.value === "add-new-model") {
+          // حفظ القيم قبل الخروج
+          const fields = ["spec-ministry", "spec-name", "spec-serial", "spec-department"];
+          fields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) sessionStorage.setItem(id, el.value);
+          });
+          openAddModelPopup(deviceType);
+        }
       });
+
+    }).catch(err => {
+      console.error("❌ Error loading data:", err);
+      alert("فشل في تحميل البيانات");
+    });
+
   } else {
-    // الحقول العادية
+    // الحقول العامة
     popup.innerHTML = `
       <div class="popup-content">
         <h3 id="generic-popup-title">Add New ${label}</h3>
@@ -559,10 +603,60 @@ function openGenericPopup(label, targetId) {
         </div>
       </div>
     `;
-
     popup.style.display = "flex";
   }
 }
+
+function openAddModelPopup(deviceType) {
+  const popup = document.getElementById("generic-popup");
+
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>Add New Model for ${deviceType}</h3>
+      <label>Model Name:</label>
+      <input type="text" id="new-model-name" placeholder="Enter model name" />
+      <div class="popup-buttons">
+        <button onclick="saveNewModel('${deviceType}')">Save</button>
+        <button onclick="closeGenericPopup()">Cancel</button>
+      </div>
+    </div>
+  `;
+
+  popup.style.display = "flex";
+}
+
+function saveNewModel(deviceType) {
+  const modelName = document.getElementById("new-model-name").value.trim();
+  if (!modelName) {
+    alert("❌ اكتب اسم الموديل");
+    return;
+  }
+
+  // ✅ حفظ القيم الحالية من حقول Device Specification قبل إغلاقها
+  const fieldsToSave = ["spec-ministry", "spec-name", "spec-serial", "spec-department"];
+  fieldsToSave.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) sessionStorage.setItem(id, el.value);
+  });
+
+  fetch("http://localhost:5050/add-device-model", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model_name: modelName, device_type_name: deviceType })
+  })
+    .then(res => res.json())
+    .then(result => {
+      alert(result.message);
+
+      sessionStorage.setItem("lastAddedModel", modelName);
+      openGenericPopup("Device Specification", "device-spec");
+    })
+    .catch(err => {
+      console.error("❌ Failed to save model:", err);
+      alert("❌ فشل في إضافة الموديل");
+    });
+}
+
 
 
 function saveDeviceSpecification() {

@@ -170,28 +170,67 @@ function openGenericPopup(label, targetId) {
   const saveBtn = document.getElementById("popup-save-btn");
 
   if (label === "Device Specification") {
-    fetch("http://localhost:5050/Departments")
-      .then(res => res.json())
-      .then(departments => {
-        const optionsHTML = departments.map(dep => `<option value="${dep.name}">${dep.name}</option>`).join("");
+    const deviceType = document.getElementById("problem-type")?.value?.toLowerCase();
 
-        popupTitle.textContent = "Add Device Specification";
-        popupFields.innerHTML = `
-          <label>Ministry Number:</label><input type="text" id="spec-ministry" />
-          <label>Device Name:</label><input type="text" id="spec-name" />
-          <label>Model:</label><input type="text" id="spec-model" />
-          <label>Serial Number:</label><input type="text" id="spec-serial" />
-          <label>Department:</label>
-          <select id="spec-department">
-            <option value="" disabled selected>Select department</option>
-            ${optionsHTML}
-          </select>
-          <input type="hidden" id="popup-target-id" value="${targetId}" />
-        `;
+    Promise.all([
+      fetch("http://localhost:5050/Departments").then(res => res.json()),
+      fetch(`http://localhost:5050/models-by-type/${deviceType}`).then(res => res.json())
+    ]).then(([departments, models]) => {
+      const departmentsOptions = departments.map(dep => `<option value="${dep.name}">${dep.name}</option>`).join("");
+      const modelsOptions = models.map(model => `<option value="${model.model_name}">${model.model_name}</option>`).join("");
 
-        saveBtn.onclick = saveDeviceSpecification;
-        popup.style.display = "flex";
+      popupTitle.textContent = "Add Device Specification";
+      popupFields.innerHTML = `
+        <label>Ministry Number:</label><input type="text" id="spec-ministry" />
+        <label>Device Name:</label><input type="text" id="spec-name" />
+        <label>Model:</label>
+        <select id="spec-model">
+          <option value="" disabled selected>Select model</option>
+          ${modelsOptions}
+          <option value="add-new-model">+ Add New Model</option>
+        </select>
+        <label>Serial Number:</label><input type="text" id="spec-serial" />
+        <label>Department:</label>
+        <select id="spec-department">
+          <option value="" disabled selected>Select department</option>
+          ${departmentsOptions}
+        </select>
+        <input type="hidden" id="popup-target-id" value="${targetId}" />
+      `;
+
+      saveBtn.onclick = saveDeviceSpecification;
+      popup.style.display = "flex";
+
+      // ✅ استرجاع البيانات السابقة إن وجدت
+      const fields = ["spec-ministry", "spec-name", "spec-serial", "spec-department"];
+      fields.forEach(id => {
+        const val = sessionStorage.getItem(id);
+        if (val) {
+          document.getElementById(id).value = val;
+          sessionStorage.removeItem(id);
+        }
       });
+
+      const lastModel = sessionStorage.getItem("lastAddedModel");
+      if (lastModel) {
+        setTimeout(() => {
+          document.getElementById("spec-model").value = lastModel;
+          sessionStorage.removeItem("lastAddedModel");
+        }, 0);
+      }
+
+      // ✅ فتح نافذة لإضافة موديل
+      document.getElementById("spec-model").addEventListener("change", (e) => {
+        if (e.target.value === "add-new-model") {
+          const fields = ["spec-ministry", "spec-name", "spec-serial", "spec-department"];
+          fields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) sessionStorage.setItem(id, el.value);
+          });
+          openAddModelPopup(deviceType);
+        }
+      });
+    });
   } else {
     popupTitle.textContent = `Add New ${label}`;
     popupFields.innerHTML = `
@@ -205,6 +244,39 @@ function openGenericPopup(label, targetId) {
   }
 }
 
+function openAddModelPopup(deviceType) {
+  popupTitle.textContent = `Add New Model for ${deviceType}`;
+  popupFields.innerHTML = `
+    <label>Model Name:</label>
+    <input type="text" id="new-model-name" placeholder="Enter model name" />
+  `;
+
+  document.getElementById("popup-save-btn").onclick = () => saveNewModel(deviceType);
+}
+
+function saveNewModel(deviceType) {
+  const modelName = document.getElementById("new-model-name").value.trim();
+  if (!modelName) {
+    alert("❌ Please enter a model name");
+    return;
+  }
+
+  fetch("http://localhost:5050/add-device-model", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model_name: modelName, device_type_name: deviceType })
+  })
+    .then(res => res.json())
+    .then(result => {
+      alert(result.message);
+      sessionStorage.setItem("lastAddedModel", modelName);
+      openGenericPopup("Device Specification", "device-spec");
+    })
+    .catch(err => {
+      console.error("❌ Error saving model:", err);
+      alert("❌ Failed to add model");
+    });
+}
 
 
 function saveDeviceSpecification() {
