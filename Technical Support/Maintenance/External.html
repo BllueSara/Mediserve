@@ -71,7 +71,6 @@
         <label>Reporter Name <span class="required">*</span></label>
         <select id="reporter-name" required>
           <option value="" disabled selected>Select reporter</option>
-          <option value="add-custom">+ Add New Reporter</option>
         </select>
       </div>
 
@@ -94,29 +93,20 @@
     </form>
   </div>
 
-  <!-- Modal -->
-  <div id="popup-modal" class="popup-modal" style="display: none;">
-    <div class="popup-content">
-      <h2 id="popup-title">Add New Option</h2>
-      <div id="popup-fields"></div>
-      <div class="popup-buttons">
-        <button onclick="savePCSpec()">Save</button>
-        <button onclick="closePopup()">Cancel</button>
-      </div>
-    </div>
-  </div>
-<!-- Popup Modal for Adding Generic Options -->
+ <!-- ✅ Popup عام لإضافة الخيارات (section, type...) -->
 <div id="popup-modal" class="popup-modal" style="display: none;">
-    <div class="popup-content">
-      <h2 id="popup-title">Add New</h2>
-      <input type="text" id="popup-input" placeholder="Enter new value" required />
-      <input type="hidden" id="popup-target-id" />
-      <div class="popup-buttons">
-        <button onclick="saveGenericOption()">Save</button>
-        <button onclick="closePopup()">Cancel</button>
-      </div>
+  <div class="popup-content">
+    <h2 id="popup-title">Add New</h2>
+    <div id="popup-fields">
+      <!-- هنا يتغير حسب النوع -->
+    </div>
+    <div class="popup-buttons">
+      <button id="popup-save-button">Save</button>
+      <button onclick="closePopup()">Cancel</button>
     </div>
   </div>
+</div>
+
   
 
 
