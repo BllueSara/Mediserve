@@ -207,8 +207,6 @@ app.get("/devices/:type/:department", (req, res) => {
     res.json(result);
   });
 });
-
-// ✅ POST Regular Maintenance
 app.post("/submit-regular-maintenance", async (req, res) => {
   const {
     "maintenance-date": date,
@@ -219,104 +217,157 @@ app.post("/submit-regular-maintenance", async (req, res) => {
     details = [],
     notes = ""
   } = req.body;
-  const deviceType = rawDeviceType.toLowerCase(); // 🔥 الحل هنا
 
-  
-
-  console.log("Data received:", req.body); // تحقق من البيانات المستلمة
+  const deviceType = rawDeviceType.toLowerCase();
 
   try {
-    const getDepartmentId = () => new Promise((resolve, reject) => {
-      db.query("SELECT id FROM Departments WHERE name = ?", [section], (err, result) => {
+    // 🔍 Get department ID
+    const departmentId = await new Promise((resolve, reject) => {
+      db.query(
+        "SELECT id FROM Departments WHERE name = ?",
+        [section],
+        (err, result) => {
+          if (err) return reject(err);
+          resolve(result[0]?.id || null);
+        }
+      );
+    });
+
+    // 🔍 Get device info
+    const query = `
+      SELECT 
+        md.*, 
+        COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name) AS device_name,
+        COALESCE(c.cpu_name, NULL) AS cpu_name,
+        COALESCE(r.ram_type, NULL) AS ram_type,
+        COALESCE(o.os_name, NULL) AS os_name,
+        COALESCE(g.generation_number, NULL) AS generation_number,
+        COALESCE(pm.model_name, prm.model_name, scm.model_name) AS model_name,
+        d.name AS department_name
+      FROM Maintenance_Devices md
+      LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
+      LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
+      LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
+      LEFT JOIN CPU_Types c ON pc.Processor_id = c.id
+      LEFT JOIN RAM_Types r ON pc.RAM_id = r.id
+      LEFT JOIN OS_Types o ON pc.OS_id = o.id
+      LEFT JOIN Processor_Generations g ON pc.Generation_id = g.id
+      LEFT JOIN PC_Model pm ON pc.Model_id = pm.id
+      LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
+      LEFT JOIN Scanner_Model scm ON sc.Model_id = scm.id
+      LEFT JOIN Departments d ON md.department_id = d.id
+      WHERE md.id = ?
+    `;
+
+    const deviceInfo = await new Promise((resolve, reject) => {
+      db.query(query, [deviceSpec], (err, result) => {
         if (err) return reject(err);
-        resolve(result[0]?.id || null);
+        resolve(result[0]);
       });
     });
 
-    const departmentId = await getDepartmentId();
-
-    console.log("Department ID:", departmentId); // تحقق من الـ Department ID المسترجع
-
-    const query = `
-    SELECT 
-      md.*, 
-      COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name) AS device_name,
-      COALESCE(c.cpu_name, NULL) AS cpu_name,
-      COALESCE(r.ram_type, NULL) AS ram_type,
-      COALESCE(o.os_name, NULL) AS os_name,
-      COALESCE(g.generation_number, NULL) AS generation_number,
-      COALESCE(pm.model_name, prm.model_name, scm.model_name) AS model_name,
-      d.name AS department_name
-    FROM Maintenance_Devices md
-    LEFT JOIN PC_info pc 
-      ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
-    LEFT JOIN Printer_info pr 
-      ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
-    LEFT JOIN Scanner_info sc 
-      ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
-    LEFT JOIN CPU_Types c ON pc.Processor_id = c.id
-    LEFT JOIN RAM_Types r ON pc.RAM_id = r.id
-    LEFT JOIN OS_Types o ON pc.OS_id = o.id
-    LEFT JOIN Processor_Generations g ON pc.Generation_id = g.id
-    LEFT JOIN PC_Model pm ON pc.Model_id = pm.id
-    LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
-    LEFT JOIN Scanner_Model scm ON sc.Model_id = scm.id
-    LEFT JOIN Departments d ON md.department_id = d.id
-    WHERE md.id = ?
-  `;
-  
-  const deviceInfo = await new Promise((resolve, reject) => {
-    db.query(query, [deviceSpec], (err, result) => {
-      if (err) return reject(err);
-      resolve(result[0]);
-    });
-  });
-  
-  
-    
-    
     if (!deviceInfo) {
-      return res.status(404).json({ error: "❌ لم يتم العثور على معلومات الجهاز" });
+      return res.status(404).json({ error: "❌ Device info not found" });
     }
-    
+
+    // ✅ Step 1: Save Regular Maintenance
     const checklist = JSON.stringify(details);
-    
-    const insertQuery = `
-      INSERT INTO Regular_Maintenance 
-      (device_id, device_type, last_maintenance_date, frequency, checklist, notes, 
-       serial_number, governmental_number, device_name, department_name, 
-       cpu_name, ram_type, os_name, generation_number, model_name)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-    
-    db.query(insertQuery, [
-      deviceSpec,
-      deviceType,
-      date,
-      frequency,
-      checklist,
-      notes,
-      deviceInfo.serial_number,
-      deviceInfo.governmental_number,
-      deviceInfo.device_name,
-      deviceInfo.department_name,
-      deviceInfo.cpu_name,
-      deviceInfo.ram_type,
-      deviceInfo.os_name,
-      deviceInfo.generation_number,
-      deviceInfo.model_name
-    ], (err, result) => {
-      if (err) {
-        console.error("❌ Error inserting maintenance:", err);
-        return res.status(500).json({ error: "❌ Database error while inserting maintenance" });
-      }
-      res.json({ message: "✅ Maintenance log saved successfully" });
+
+    await new Promise((resolve, reject) => {
+      const insertQuery = `
+        INSERT INTO Regular_Maintenance 
+        (device_id, device_type, last_maintenance_date, frequency, checklist, notes, 
+        serial_number, governmental_number, device_name, department_name, 
+        cpu_name, ram_type, os_name, generation_number, model_name)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      db.query(
+        insertQuery,
+        [
+          deviceSpec,
+          deviceType,
+          date,
+          frequency,
+          checklist,
+          notes,
+          deviceInfo.serial_number,
+          deviceInfo.governmental_number,
+          deviceInfo.device_name,
+          deviceInfo.department_name,
+          deviceInfo.cpu_name,
+          deviceInfo.ram_type,
+          deviceInfo.os_name,
+          deviceInfo.generation_number,
+          deviceInfo.model_name
+        ],
+        (err, result) => {
+          if (err) return reject(err);
+          resolve(result);
+        }
+      );
     });
+
+    // ✅ Step 2: Create Ticket
+    const ticketNumber = `TIC-${Date.now()}`;
+    const priority = "Low"; // You can change this as needed
+
+    const ticketId = await new Promise((resolve, reject) => {
+      db.query(
+        `INSERT INTO Internal_Tickets (ticket_number, priority, department_id, issue_description)
+         VALUES (?, ?, ?, ?)`,
+        [ticketNumber, priority, departmentId, notes || "Routine periodic check"],
+        (err, result) => {
+          if (err) return reject(err);
+          resolve(result.insertId);
+        }
+      );
+    });
+
+    // ✅ Step 3: Create Report
+    const reportNumber = `REP-${Date.now()}`;
+    const status = "Closed";
+
+    await new Promise((resolve, reject) => {
+      db.query(
+        `INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          reportNumber,
+          ticketId,
+          deviceSpec,
+          "Scheduled periodic maintenance",
+          notes || "Performed routine maintenance",
+          status
+        ],
+        (err, result) => {
+          if (err) return reject(err);
+          resolve(result);
+        }
+      );
+    });
+
+    res.json({ message: "✅ Regular Maintenance + Report + Ticket saved successfully" });
   } catch (error) {
-    console.error("❌ Error:", error);
+    console.error("❌ Error in regular maintenance submission:", error);
     res.status(500).json({ error: "❌ Internal server error" });
   }
 });
+app.put("/update-report-status/:id", (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  const sql = `UPDATE Maintenance_Reports SET status = ? WHERE id = ?`;
+
+  db.query(sql, [status, id], (err) => {
+    if (err) {
+      console.error("❌ Error updating report status:", err);
+      return res.status(500).json({ message: "Error updating report status" });
+    }
+    res.json({ message: "✅ Report status updated successfully" });
+  });
+});
+
+
 
 
 app.post("/add-option-general", (req, res) => {
