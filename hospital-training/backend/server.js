@@ -802,23 +802,29 @@ app.post('/AddDevice/:type', async (req, res) => {
     res.status(500).json({ error: "❌ حدث خطأ أثناء المعالجة" });
   }
 });
-app.get('/get-all-problems', async (req, res) => {
-  try {
-    const result = await db.execute(`
-      SELECT problem_text FROM ProblemStates_Pc
-      UNION
-      SELECT problem_text FROM ProblemStates_Printer
-      UNION
-      SELECT problem_text FROM ProblemStates_Scanner
-    `);
+app.get('/get-all-problems', (req, res) => {
+  const sql = `
+    SELECT problem_text FROM ProblemStates_Pc
+    UNION ALL
+    SELECT problem_text FROM ProblemStates_Printer
+    UNION ALL
+    SELECT problem_text FROM ProblemStates_Scanner
+  `;
 
-    const rows = result[0]; // ✅ هذا هو المهم
-    res.json(rows);
-  } catch (error) {
-    console.error("❌ Error while fetching problems:", error);
-    res.status(500).json({ error: 'Server error' });
-  }
+  db.query(sql, (err, result) => {
+    if (err) {
+      console.error("❌ Error while fetching problems:", err);
+      return res.status(500).json({ error: 'Server error' });
+    }
+
+    console.log("✅ Fetched problems:", result);
+    res.json(result);
+  });
 });
+
+
+
+
 
 
 
