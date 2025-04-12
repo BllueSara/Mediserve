@@ -351,7 +351,39 @@ app.post("/submit-regular-maintenance", async (req, res) => {
     console.error("❌ Error in regular maintenance submission:", error);
     res.status(500).json({ error: "❌ Internal server error" });
   }
+  // ✅ 1. توليد رقم تذكرة عشوائي
+const randomNumber = Math.floor(Math.random() * 10000); // بين 0 و 9999
+const ticketNumber = `Tec-${randomNumber.toString().padStart(4, '0')}`;
+
+// ✅ 2. جلب department_id من جدول Departments
+const getDepartmentId = () => new Promise((resolve, reject) => {
+  db.query("SELECT id FROM Departments WHERE name = ?", [deviceInfo.department_name], (err, result) => {
+    if (err) return reject(err);
+    resolve(result[0]?.id || null);
+  });
 });
+
+const departmentId = await getDepartmentId();
+
+// ✅ 3. إضافة التذكرة إلى Internal_Tickets
+if (departmentId) {
+  const insertTicket = `
+    INSERT INTO Internal_Tickets (ticket_number, priority, department_id, issue_description)
+    VALUES (?, 'Medium', ?, ?)
+  `;
+  await new Promise((resolve, reject) => {
+    db.query(insertTicket, [ticketNumber, departmentId, deviceInfo.device_name + " - Created via regular maintenance"], (err) => {
+      if (err) {
+        console.error("❌ Error inserting internal ticket:", err);
+        return reject(err);
+      }
+      resolve();
+    });
+  });
+}
+
+});
+
 app.put("/update-report-status/:id", (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
@@ -614,6 +646,37 @@ app.post("/submit-general-maintenance", async (req, res) => {
     console.error("❌ Error:", error);
     res.status(500).json({ error: "❌ Internal server error" });
   }
+  // ✅ 1. توليد رقم تذكرة عشوائي
+const randomNumber = Math.floor(Math.random() * 10000); // بين 0 و 9999
+const ticketNumber = `Tec-${randomNumber.toString().padStart(4, '0')}`;
+
+// ✅ 2. جلب department_id من جدول Departments
+const getDepartmentId = () => new Promise((resolve, reject) => {
+  db.query("SELECT id FROM Departments WHERE name = ?", [deviceInfo.department_name], (err, result) => {
+    if (err) return reject(err);
+    resolve(result[0]?.id || null);
+  });
+});
+
+const departmentId = await getDepartmentId();
+
+// ✅ 3. إضافة التذكرة إلى Internal_Tickets
+if (departmentId) {
+  const insertTicket = `
+    INSERT INTO Internal_Tickets (ticket_number, priority, department_id, issue_description)
+    VALUES (?, 'Medium', ?, ?)
+  `;
+  await new Promise((resolve, reject) => {
+    db.query(insertTicket, [ticketNumber, departmentId, deviceInfo.device_name + " - Created via regular maintenance"], (err) => {
+      if (err) {
+        console.error("❌ Error inserting internal ticket:", err);
+        return reject(err);
+      }
+      resolve();
+    });
+  });
+}
+
 });
 
 
