@@ -10,7 +10,7 @@ body, html {
 
 /* Back and Home buttons */
 .back-button, 
-.Home-button {
+.home-button {
     position: absolute;
     top: 20px;
     display: flex;
@@ -24,13 +24,13 @@ body, html {
     left: 20px;
 }
 
-.Home-button {
-    left: 50%;
-    transform: translateX(-50%);
+.home-button {
+    left: 620px;
+    margin: auto;
 }
 
 .back-button a,
-.Home-button a {
+.home-button a {
     text-decoration: none;
     font-size: 14px;
     display: flex;
@@ -42,63 +42,32 @@ body, html {
     color: #4A5568;
 }
 
-.Home-button a {
+.home-button a {
     color: #3BAAE0;
 }
 
-.back-icon, 
-.Home-icon {
-    width: 20px;
-    height: 20px;
+/* تصغير الأيقونات داخل الأزرار */
+.back-button img,
+.home-button img {
+    width: 20px;  /* تحديد العرض */
+    height: 20px; /* تحديد الارتفاع */
 }
 
-/* Page title */
+/* Page title styling */
 .title {
     font-size: 28px;
     font-weight: bold;
     margin-top: 100px;
 }
 
-/* Header */
-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    width: 100%;
-    position: relative;
-}
-
-/* MS Logo (left side) */
-.ms-logo {
-    position: absolute;
-    left: 5px;
-    top: 10px;
-}
-
-.ms-logo img {
-    width: 120px;
-}
-
-/* Hospital Logo (right side) */
-.hospital-logo {
-    position: absolute;
-    right: 40px;
-    top: 5px;
-}
-
-.hospital-logo img {
-    height: 50px;
-}
-
-/* Reports container */
+/* Main container for the content */
 .reports-container {
     width: 80%;
     margin: auto;
     position: relative;
 }
 
-/* Reports options layout */
+/* Layout for the clickable report options */
 .reports-options {
     display: flex;
     justify-content: center;
@@ -109,7 +78,7 @@ header {
     transform: translateX(-50%);
 }
 
-/* Option box styles */
+/* Each individual option box style */
 .option {
     background-color: #f8f9fa;
     padding: 10px;
@@ -126,48 +95,40 @@ header {
     justify-content: center;
 }
 
-/* Option icon size */
-.icon-container img {
-    width: 70px;
-    transition: transform 0.3s;
-    margin-bottom: 10px;
-}
-
-/* Option title */
+/* Title inside options */
 .option h3 {
-    margin-bottom: 4px; /* المسافة بين العنوان والوصف */
+    margin-bottom: 4px;
     font-size: 18px;
     font-weight: bold;
     color: #333;
 }
 
-/* Option sub-title (description) */
+/* Description text in option */
 .option p {
     font-size: 14px;
-    color: #6c757d; /* رمادي */
+    color: #6c757d;
     margin: 0;
     text-align: center;
 }
 
-/* Hover effect */
+/* Hover and active behavior */
 .option:hover {
     background-color: #EFF6FF;
     transform: scale(1.05);
     box-shadow: 0 6px 12px rgba(0, 123, 255, 0.2);
 }
 
-/* Click effect */
 .option:active {
     background-color: #EFF6FF;
 }
 
-/* Responsive design for tablets */
+/* Tablet screen responsive styles */
 @media screen and (max-width: 768px) {
     .back-button {
         left: 10px;
     }
 
-    .Home-button {
+    .home-button {
         left: 50%;
         transform: translateX(-50%);
     }
@@ -188,13 +149,13 @@ header {
     }
 }
 
-/* Responsive design for mobile */
+/* Mobile screen responsive styles */
 @media screen and (max-width: 480px) {
     .back-button {
         left: 5px;
     }
 
-    .Home-button {
+    .home-button {
         left: 50%;
         transform: translateX(-50%);
     }

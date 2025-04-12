@@ -1,261 +1,119 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Maintenance System</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: #f9f9f9;
-      color: #333;
-    }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px;
-      background-color: white;
-      border-bottom: 1px solid #ddd;
-    }
-    .logo {
-      font-size: 24px;
-      font-weight: bold;
-      color: #007bff;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .content {
-      padding: 20px;
-    }
-    .cards {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
-    .card {
-      flex: 1;
-      background-color: white;
-      padding: 16px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-      min-width: 250px;
-    }
-    .progress-bar {
-      height: 10px;
-      background-color: #eee;
-      border-radius: 5px;
-      overflow: hidden;
-      margin-top: 10px;
-    }
-    .progress-fill {
-      height: 100%;
-    }
-    .blue { background-color: #2196f3; }
-    .purple { background-color: #7e57c2; }
-
-    .tabs {
-      margin-top: 20px;
-      display: flex;
-      gap: 15px;
-    }
-    .tabs button {
-      background: none;
-      border: none;
-      font-weight: bold;
-      color: #2196f3;
-      border-bottom: 2px solid #2196f3;
-      padding-bottom: 5px;
-      cursor: pointer;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      background-color: white;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    th, td {
-      padding: 12px 16px;
-      text-align: left;
-      border-bottom: 1px solid #eee;
-    }
-    th {
-      background-color: #f2f2f2;
-    }
-    .status-completed {
-      color: green;
-      font-weight: bold;
-    }
-    .status-pending {
-      color: orange;
-      font-weight: bold;
-    }
-    .status-overdue {
-      color: red;
-      font-weight: bold;
-    }
-
-    .form-section {
-      display: flex;
-      flex-wrap: wrap;
-      margin-top: 20px;
-      gap: 20px;
-    }
-    .form-card {
-      background-color: white;
-      padding: 20px;
-      border-radius: 8px;
-      flex: 1;
-      min-width: 300px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    }
-    .form-card form {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    input, select, textarea {
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    button {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .btn-create {
-      background-color: #2196f3;
-      color: white;
-    }
-    .btn-print {
-      background-color: transparent;
-      border: 1px solid #999;
-      color: #555;
-      margin-top: 10px;
-    }
-
-
-    .report-grid {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
-    .report-card {
-      background-color: white;
-      border: 1px solid #eee;
-      border-radius: 8px;
-      padding: 16px;
-      flex: 1;
-      min-width: 250px;
-    }
-    .report-card p {
-      margin: 5px 0;
-    }
-    .view-details {
-      color: #2196f3;
-      text-decoration: none;
-      font-weight: bold;
-      display: inline-block;
-      margin-top: 10px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance Dashboard</title>
+    <link rel="stylesheet" href="periodic.css">
+    <style>
+      
+    </style>
 </head>
+<link rel="stylesheet" href="/Maintenance.CSS">
 <body>
-
- 
-
-  <div class="content">
-    <!-- Progress Cards -->
-    <div class="cards">
-      <div class="card">
-        <h3>3-Month Maintenance</h3>
-        <p>Printers & Scanners</p>
-        <div class="progress-bar">
-          <div class="progress-fill blue" style="width: 60%;"></div>
-        </div>
-        <p style="text-align: right; color: #2196f3; font-weight: bold;">12/20</p>
-      </div>
-      <div class="card">
-        <h3>6-Month Maintenance</h3>
-        <p>Data Center Equipment</p>
-        <div class="progress-bar">
-          <div class="progress-fill purple" style="width: 53%;"></div>
-        </div>
-        <p style="text-align: right; color: #7e57c2; font-weight: bold;">8/15</p>
-      </div>
+  <header>
+    <div class="ms-logo">
+      <img src="/icon/Ms Logo.png" alt="MS Logo">
     </div>
-
-    <!-- Tabs -->
-    <div class="tabs">
-      <button>3-Month Schedule</button>
-      <button style="color: #777; border: none;">6-Month Schedule</button>
+  
+    <div class="hospital-logo">
+      <img src="/icon/hospital-logo.png" alt="Hospital Logo">
     </div>
+  
+    <div class="back-button">
+      <a href="#">
+        <img src="/icon/Back.png" class="back-icon" alt="back">
+        Back
+      </a>
+    </div>
+  
+    <div class="home-button">
+      <a href="Home.html">
+        <img src="/icon/Home.png" class="home-icon" alt="Home">
+        Home
+      </a>
+    </div>
+  </header>
+  
+    <div class="container">
+        <div class="progress-container">
+            
+            <!-- 3-Month Maintenance -->
+            <div class="progress-box">
+                <div class="progress-header">
+                    <h3>3-Month Maintenance</h3>
+                    <span class="progress-count">12/20</span>
+                </div>
+                
+                <p>Printers & Scanners</p>
+                <div class="progress-bar">
+                    <div class="completed" style="width: 60%;"></div>
+                </div>
+            </div>
+        
+            <!-- 6-Month Maintenance -->
+            <div class="progress-box">
+                <div class="progress-header">
+                    <h3>6-Month Maintenance</h3>
+                    <span class="progress-count">8/15</span>
+                </div>
+                <p>Data Centre Equipment</p>
+                <div class="progress-bar">
+                    <div class="pending" style="width: 53%;"></div>
+                </div>
+            </div>
+        </div>
+        
 
-    <!-- Table -->
-    <table>
-      <thead>
-        <tr>
-          <th>Device Name</th>
-          <th>Category</th>
-          <th>Last Maintenance</th>
-          <th>Next Due Date</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>HP LaserJet Pro M404n</td>
-          <td>Printer</td>
-          <td>2024-01-15</td>
-          <td>2024-04-15</td>
-          <td class="status-completed">Completed</td>
-        </tr>
-        <tr>
-          <td>Epson WorkForce DS-970</td>
-          <td>Scanner</td>
-          <td>2024-01-20</td>
-          <td>2024-04-20</td>
-          <td class="status-pending">Pending</td>
-        </tr>
-        <tr>
-          <td>Canon imageRUNNER</td>
-          <td>Printer</td>
-          <td>2023-12-01</td>
-          <td>2024-03-01</td>
-          <td class="status-overdue">Overdue</td>
-        </tr>
-      </tbody>
-    </table>
+        <!-- Added Schedule Tabs -->
+        <div class="schedule-tabs">
+            <button class="active">3-Month Schedule</button>
+            <button>4-Month Schedule</button>
+        </div>
 
-    <!-- New Report Form -->
-    <div class="form-section">
-      <div class="form-card">
-        <h3>Create New Report</h3>
-        <form>
-          <select required>
-            <option value="">Select category...</option>
-            <option value="printer">Printer</option>
-            <option value="scanner">Scanner</option>
-          </select>
-          <input type="date" required />
-          <textarea placeholder="Add maintenance notes..."></textarea>
-        </form>
-      </div>
-      <div>
-        <button class="btn-create">+ Create New Report</button><br />
-        <button class="btn-print">Print Report</button>
-      </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Device Name</th>
+                    <th>Category</th>
+                    <th>Last Maintenance</th>
+                    <th>Next Due Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>HP LaserJet Pro M404n</td>
+                    <td>Printer</td>
+                    <td>2024-01-15</td>
+                    <td>2024-04-15</td>
+                    <td><span class="status completed">Completed</span></td>
+                </tr>
+                <tr>
+                    <td>Epson WorkForce DS-970</td>
+                    <td>Scanner</td>
+                    <td>2024-01-20</td>
+                    <td>2024-04-20</td>
+                    <td><span class="status pending">Pending</span></td>
+                </tr>
+                <tr>
+                    <td>Canon ImageRUNNER</td>
+                    <td>Printer</td>
+                    <td>2023-12-01</td>
+                    <td>2024-03-01</td>
+                    <td><span class="status overdue">Overdue</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+            </div>
+        </div>
+
+       
+            </div>
+        </div>
     </div>
     
-  </div>
-
 </body>
+<script src="Reports.js"></script>
 </html>

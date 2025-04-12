@@ -1,13 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Sets character encoding and page scaling for responsive design -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Page title -->
   <title>Maintenance Report</title>
+  
+  <!-- Importing Google Fonts (Inter) -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  
+  <!-- Linking external CSS file for styling -->
   <link rel="stylesheet" href="report-details.CSS" />
 </head>
 <body>
+
+  <!-- Navigation buttons: Back and Home -->
   <div class="nav-buttons">
     <div class="back-button">
       <a href="#" onclick="goBack()">
@@ -15,12 +24,13 @@
       </a>
     </div>
     <div class="Home-button">
-      <a href="#">
+      <a href="Home.html">
         <img src="/icon/Home.png" alt="Home Icon" class="Home-icon"> Home
       </a>
     </div>
   </div>
 
+  <!-- Page header with logos -->
   <header>
     <div class="ms-logo">
       <img src="/icon/MS Logo.png" alt="MS Logo">
@@ -30,7 +40,10 @@
     </div>
   </header>
 
+  <!-- Main container for the report content -->
   <div class="container">
+    
+    <!-- Report header section with title, status, and action buttons -->
     <div class="report-header">
       <div>
         <h2>Maintenance Report #MR-2024-001</h2>
@@ -38,26 +51,32 @@
         <p style="font-size: 13px; color: gray;">Submitted on Jan 15, 2024 at 10:30 AM</p>
       </div>
       <div class="action-buttons">
+        <!-- Action buttons for report -->
         <button class="download-btn"> Download PDF</button>
         <button class="edit-btn"> Edit Report</button>
+        <button class="save-btn" style="display: none;">Save Changes</button>
         <button class="close-btn"> Close Report</button>
       </div>
     </div>
 
+    <!-- Basic information about the maintenance report -->
     <div class="grid">
-      <div><strong>Report ID</strong><br>MR-2024-001</div>
-      <div><strong>Priority</strong><br>High</div>
-      <div><strong>Device Type</strong><br>Laptop XPS 15</div>
-      <div><strong>Assigned To</strong><br>Technical Team A</div>
-      <div><strong>Department</strong><br>IT Support</div>
-      <div><strong>Category</strong><br>Hardware Issue</div>
+      <div><strong>Report ID</strong><br><span class="editable">MR-2024-001</span></div>
+      <div><strong>Priority</strong><br><span class="editable">High</span></div>
+      <div><strong>Device Type</strong><br><span class="editable">Laptop XPS 15</span></div>
+      <div><strong>Assigned To</strong><br><span class="editable">Technical Team A</span></div>
+      <div><strong>Department</strong><br><span class="editable">IT Support</span></div>
+      <div><strong>Category</strong><br><span class="editable">Hardware Issue</span></div>
     </div>
+    
 
+    <!-- Description section detailing the issue -->
     <div class="section-title">Description</div>
     <div class="description">
       Device experiencing frequent overheating issues during normal operation. The laptop shuts down unexpectedly when running multiple applications. Cooling fans are making unusual noises. Required immediate inspection and maintenance to prevent potential hardware damage.
     </div>
 
+    <!-- Specifications of the device being serviced -->
     <div class="section-title">Device Specifications</div>
     <div class="grid">
       <div class="spec-box">🧠 Intel Core i7-11800H</div>
@@ -69,6 +88,7 @@
       <div class="spec-box">🖥️ 15.6" 4K OLED Display</div>
     </div>
 
+    <!-- Notes from the technical team -->
     <div class="section-title">Additional Notes</div>
     <div class="note">
       <strong>Technical Team Note:</strong><br>
@@ -80,10 +100,132 @@
     </div>
   </div>
 
+  
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
+    // ⬅️ زر الرجوع للخلف
     function goBack() {
       window.history.back();
     }
-  </script>
+  
+    document.addEventListener("DOMContentLoaded", () => {
+      const saveBtn = document.querySelector(".save-btn");
+
+      
+const downloadBtn = document.querySelector(".download-btn");
+downloadBtn?.addEventListener("click", async () => {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF("p", "mm", "a4");
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  // ✅ Blue Header with Logos
+  doc.setFillColor(0, 90, 156); // Blue background
+  doc.rect(0, 0, pageWidth, 30, "F"); // Full-width rectangle
+  doc.addImage("logo2.png", "PNG", 3, 8, 25, 12); // حجم أصغر ورفع للأعلى
+doc.addImage("logo4.png", "PNG", pageWidth - 35, 8, 25, 12); // تحقيق التوازن بنفس التعديلات
+
+
+
+
+  doc.setTextColor(255, 255, 255); // White text
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text("Maintenance Report", pageWidth / 2, 20, { align: "center" });
+
+  // ✅ Report Details
+  doc.setTextColor(0, 0, 0); // Reset to black
+  doc.setFontSize(12);
+  let y = 40;
+  const details = [
+    ["Report ID", "MR-2024-001"],
+    ["Priority", "High"],
+    ["Device Type", "Laptop XPS 15"],
+    ["Assigned To", "Technical Team A"],
+    ["Department", "IT Support"],
+    ["Category", "Hardware Issue"]
+  ];
+
+  details.forEach(([label, value]) => {
+    doc.text(`${label}:`, 15, y);
+    doc.text(value, 60, y);
+    y += 8;
+  });
+
+  // ✅ Description
+  y += 5;
+  doc.setFont("helvetica", "bold");
+  doc.text("Description:", 15, y);
+  y += 6;
+  doc.setFont("helvetica", "normal");
+  const desc = document.querySelector(".description")?.innerText || "N/A";
+  const descLines = doc.splitTextToSize(desc, pageWidth - 30);
+  doc.text(descLines, 15, y);
+  y += descLines.length * 6;
+
+  // ✅ Notes
+  y += 5;
+  doc.setFont("helvetica", "bold");
+  doc.text("Technical Notes:", 15, y);
+  y += 6;
+  doc.setFont("helvetica", "normal");
+
+  const notes = Array.from(document.querySelectorAll(".note")).map(n => n.innerText);
+  notes.forEach(note => {
+    const noteLines = doc.splitTextToSize(note, pageWidth - 30);
+    doc.text(noteLines, 15, y);
+    y += noteLines.length * 6 + 4;
+  });
+
+  // ✅ Signature and Stamp at the bottom
+  const footerY = 270;
+  doc.setFont("helvetica", "bold");
+  doc.text("Signature", 20, footerY);
+  doc.text("Stamp", pageWidth - 50, footerY);
+  doc.line(15, footerY - 5, 60, footerY - 5); // Signature line
+  doc.line(pageWidth - 55, footerY - 5, pageWidth - 10, footerY - 5); // Stamp line
+
+  doc.save("Maintenance_Report.pdf");
+});
+
+
+      // ✏️ تعديل التقرير
+      const editBtn = document.querySelector(".edit-btn");
+      editBtn?.addEventListener("click", () => {
+  const editableElements = document.querySelectorAll(".editable, .description, .note");
+  editableElements.forEach(el => {
+    el.setAttribute("contenteditable", "true");
+    el.style.border = "1px dashed #aaa";
+    el.style.backgroundColor = "#fdfdfd";
+    el.style.padding = "4px";
+  });
+  saveBtn.style.display = "inline-block"; // عرض زر الحفظ
+  editBtn.style.display = "none"; // إخفاء زر التعديل
+  alert("Edit mode activated. You can now edit the report fields.");
+});
+saveBtn?.addEventListener("click", () => {
+  const editableElements = document.querySelectorAll(".grid div, .description, .note, h2");
+  editableElements.forEach(el => {
+    el.removeAttribute("contenteditable");
+    el.style.border = "none";
+    el.style.backgroundColor = "transparent";
+    el.style.padding = "0";
+  });
+  saveBtn.style.display = "none"; // إخفاء زر الحفظ
+  editBtn.style.display = "inline-block"; // إرجاع زر التعديل
+  alert("Changes saved successfully.");
+});
+
+  
+     // ❌ إغلاق التقرير ➜ تحويل لصفحة Search Report.html
+    const closeBtn = document.querySelector(".close-btn");
+    closeBtn?.addEventListener("click", () => {
+      const confirmed = confirm("Are you sure you want to close this report?");
+      if (confirmed) {
+        window.location.href = "Search Reports.html"; // ✅ الانتقال للصفحة
+      }
+    });
+  });
+</script>
 </body>
 </html>
