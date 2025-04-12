@@ -407,9 +407,11 @@ app.post("/add-options-regular", (req, res) => {
     }
     res.json({ message: `✅ Added to ${table}: ${value}` });
   });
+
+
 });
 
-// ✅ POST General Maintenance
+
 app.post("/submit-general-maintenance", async (req, res) => {
   const {
     DeviceType: rawDeviceType,
@@ -424,7 +426,6 @@ app.post("/submit-general-maintenance", async (req, res) => {
     ExtNumber: extNumber,
     Technical: technical
   } = req.body;
-  
 
   const deviceType = rawDeviceType.toLowerCase();
   console.log("🔧 General Maintenance Data:", req.body);
@@ -480,53 +481,90 @@ app.post("/submit-general-maintenance", async (req, res) => {
     });
 
     if (!deviceInfo) {
-      return res.status(404).json({ error: "❌ لم يتم العثور على معلومات الجهاز" });
+      return res.status(404).json({ error: "❌ Device info not found" });
     }
 
-    const insertQuery = `
-      INSERT INTO General_Maintenance 
-      (maintenance_date, issue_type, diagnosis_initial, diagnosis_final, device_id, 
-       technician_name, floor, extension, problem_status, notes,
-       serial_number, governmental_number, device_name, department_name,
-       cpu_name, ram_type, os_name, generation_number, model_name)
-      VALUES (CURDATE(), ?, ?, ?, ?, ?, ?, ?, ?, NULL,
-              ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+    // ✅ Step 1: Insert General Maintenance
+    const insertMaintenance = () =>
+      new Promise((resolve, reject) => {
+        const insertQuery = `
+          INSERT INTO General_Maintenance 
+          (maintenance_date, issue_type, diagnosis_initial, diagnosis_final, device_id, 
+          technician_name, floor, extension, problem_status, notes,
+          serial_number, governmental_number, device_name, department_name,
+          cpu_name, ram_type, os_name, generation_number, model_name)
+          VALUES (CURDATE(), ?, ?, ?, ?, ?, ?, ?, ?, NULL,
+                  ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        db.query(
+          insertQuery,
+          [
+            deviceType,
+            initialDiagnosis,
+            finalDiagnosis,
+            deviceSpec,
+            technical,
+            floor,
+            extNumber,
+            problemStatus,
+            deviceInfo.serial_number,
+            deviceInfo.governmental_number,
+            deviceInfo.device_name,
+            deviceInfo.department_name,
+            deviceInfo.cpu_name,
+            deviceInfo.ram_type,
+            deviceInfo.os_name,
+            deviceInfo.generation_number,
+            deviceInfo.model_name
+          ],
+          (err, result) => {
+            if (err) return reject(err);
+            resolve(result);
+          }
+        );
+      });
 
-    db.query(
-      insertQuery,
-      [
-        deviceType,
-        initialDiagnosis,
-        finalDiagnosis,
-        deviceSpec,
-        technical,
-        floor,
-        extNumber,
-        problemStatus,
-        deviceInfo.serial_number,
-        deviceInfo.governmental_number,
-        deviceInfo.device_name,
-        deviceInfo.department_name,
-        deviceInfo.cpu_name,
-        deviceInfo.ram_type,
-        deviceInfo.os_name,
-        deviceInfo.generation_number,
-        deviceInfo.model_name
-      ],
-      (err, result) => {
-        if (err) {
-          console.error("❌ Error inserting general maintenance:", err);
-          return res.status(500).json({ error: "❌ Database error while inserting general maintenance" });
+    await insertMaintenance();
+
+    // ✅ Step 2: Insert Ticket
+    const ticketNumber = `TIC-${Date.now()}`;
+    const priority = "Medium"; // can be changed later
+    const ticketId = await new Promise((resolve, reject) => {
+      db.query(
+        `INSERT INTO Internal_Tickets (ticket_number, priority, department_id, issue_description)
+         VALUES (?, ?, ?, ?)`,
+        [ticketNumber, priority, departmentId, initialDiagnosis],
+        (err, result) => {
+          if (err) return reject(err);
+          resolve(result.insertId);
         }
-        res.json({ message: "✅ General Maintenance saved successfully" });
-      }
-    );
+      );
+    });
+
+    // ✅ Step 3: Insert Report
+    const reportNumber = `REP-${Date.now()}`;
+    const reportStatus = "Open";
+
+    await new Promise((resolve, reject) => {
+      db.query(
+        `INSERT INTO Maintenance_Reports 
+         (report_number, ticket_id, device_id, issue_summary, full_description, status)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [reportNumber, ticketId, deviceSpec, initialDiagnosis, finalDiagnosis, reportStatus],
+        (err, result) => {
+          if (err) return reject(err);
+          resolve(result);
+        }
+      );
+    });
+
+    res.json({ message: "✅ Maintenance + Ticket + Report saved successfully" });
   } catch (error) {
     console.error("❌ Error:", error);
     res.status(500).json({ error: "❌ Internal server error" });
   }
 });
+
 
 app.post("/submit-external-maintenance", async (req, res) => {
   const {
@@ -940,6 +978,39 @@ app.get('/regular-maintenance-summary-4months', (req, res) => {
   db.query(sql, (err, result) => {
     if (err) return res.status(500).json({ error: 'Error fetching 4-month data' });
     res.json(result);
+  });
+});
+
+app.get('/get-internal-reports', (req, res) => {
+  const sql = `
+    SELECT 
+      R.id,
+      R.created_at,
+      R.issue_summary,
+      R.full_description,
+      R.status,
+      R.device_id,
+      R.report_number,
+      R.ticket_id,
+      T.ticket_number,
+      T.issue_description,
+      T.priority,
+      D.name AS department_name,
+      M.device_name
+    FROM Maintenance_Reports R
+    LEFT JOIN Internal_Tickets T ON R.ticket_id = T.id
+    LEFT JOIN Departments D ON T.department_id = D.id
+    LEFT JOIN Maintenance_Devices M ON R.device_id = M.id
+    ORDER BY R.created_at DESC
+  `;
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("❌ Failed to fetch reports:", err);
+      return res.status(500).json({ error: "Error fetching reports" });
+    }
+
+    res.json(results);
   });
 });
 
