@@ -1,16 +1,13 @@
 document.addEventListener("DOMContentLoaded", function () {
-  // 🔄 عناصر مهمة في الصفحة
+  // ========== رفع الملفات ==========
   const fileInput = document.getElementById("upload-file");
   const fileLabel = document.querySelector(".upload-box");
   const saveButton = document.querySelector(".submit-btn");
 
-  // ✅ فتح نافذة اختيار الملف عند الضغط على الصندوق
   fileLabel.addEventListener("click", () => fileInput.click());
 
-  // ✅ التحقق من نوع الملف عند اختياره
   fileInput.addEventListener("change", function (event) {
     const file = event.target.files[0];
-
     if (file) {
       const allowedExtensions = ["pdf", "doc", "docx", "eml"];
       const fileExtension = file.name.split(".").pop().toLowerCase();
@@ -25,7 +22,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // ✅ دعم السحب والإفلات
   ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
     fileLabel.addEventListener(eventName, (e) => {
       e.preventDefault();
@@ -41,10 +37,10 @@ document.addEventListener("DOMContentLoaded", function () {
   fileLabel.addEventListener("drop", (e) => {
     const droppedFile = e.dataTransfer.files[0];
     fileInput.files = e.dataTransfer.files;
-    fileInput.dispatchEvent(new Event("change")); // Triggers change event to validate
+    fileInput.dispatchEvent(new Event("change"));
   });
 
-  // ✅ زر الرجوع
+  // ========== الرجوع للخلف ==========
   const backButton = document.querySelector(".back-button");
   if (backButton) {
     backButton.addEventListener("click", (e) => {
@@ -53,7 +49,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // ✅ التحقق من الحقول المطلوبة قبل الحفظ
+  // ========== تحقق من الحقول ==========
   saveButton.addEventListener("click", function (event) {
     const ticketNumber = document.querySelector('input[placeholder="Enter ticket number"]').value.trim();
     const reportNumber = document.querySelector('input[placeholder="Enter report number"]').value.trim();
@@ -64,17 +60,17 @@ document.addEventListener("DOMContentLoaded", function () {
       alert("Please fill in all required fields.");
     }
   });
-});
-function goBack() {
-  window.history.back();
-}
 
-
-window.addEventListener('DOMContentLoaded', () => {
-  fetch('http://localhost:5050/get-all-problems') // ✅ تأكدي الرابط مو فيه "/http"
+  // ========== جلب التشخيصات من السيرفر ==========
+  fetch('http://localhost:5050/get-all-problems')
     .then(response => response.json())
     .then(data => {
       const diagnosisSelect = document.getElementById('initial-diagnosis');
+      if (!diagnosisSelect) {
+        console.warn("⚠️ عنصر #initial-diagnosis غير موجود في الصفحة");
+        return;
+      }
+
       diagnosisSelect.innerHTML = '<option disabled selected>Select diagnosis</option>';
       data.forEach(problem => {
         const option = document.createElement('option');
