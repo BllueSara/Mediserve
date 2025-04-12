@@ -823,7 +823,37 @@ app.get('/get-all-problems', (req, res) => {
 });
 
 
+app.get("/models-by-type/:type", (req, res) => {
+  const { type } = req.params;
+  db.query("SELECT model_name FROM Maintance_Device_Model WHERE device_type_name = ?", [type], (err, result) => {
+    if (err) {
+      console.error("❌ Error fetching models:", err);
+      return res.status(500).json({ error: "DB error" });
+    }
+    res.json(result);
+  });
+});
 
+app.post("/add-device-model", (req, res) => {
+  const { model_name, device_type_name } = req.body;
+
+  if (!model_name || !device_type_name) {
+    return res.status(400).json({ error: "Missing model name or type" });
+  }
+
+  db.query(
+    "INSERT INTO Maintance_Device_Model (model_name, device_type_name) VALUES (?, ?)",
+    [model_name, device_type_name],
+    (err) => {
+      if (err) {
+        console.error("❌ Insert model error:", err);
+        return res.status(500).json({ error: "Insert failed" });
+      }
+
+      res.json({ message: `✅ Model ${model_name} added successfully` });
+    }
+  );
+});
 
 
 
