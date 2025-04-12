@@ -859,6 +859,7 @@ app.post("/add-device-model", (req, res) => {
 app.get('/regular-maintenance-summary', (req, res) => {
   const sql = `
     SELECT 
+      id, -- ✅ أضف هذا
       device_name,
       device_type,
       last_maintenance_date,
@@ -880,10 +881,10 @@ app.get('/regular-maintenance-summary', (req, res) => {
             WHEN frequency = '4months' THEN DATE_ADD(last_maintenance_date, INTERVAL 4 MONTH)
           END)
         THEN 'Due Today'
-        ELSE 'Overdue'
+        ELSE 'Completed'
       END AS status
     FROM Regular_Maintenance
-    WHERE frequency = '3months' -- ✅ فلترة مباشرة من هنا
+    WHERE frequency = '3months'
     ORDER BY next_due_date DESC
   `;
 
@@ -892,6 +893,23 @@ app.get('/regular-maintenance-summary', (req, res) => {
     res.json(result);
   });
 });
+
+
+app.put('/update-maintenance-status/:id', (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  const sql = `UPDATE Regular_Maintenance SET status = ? WHERE id = ?`;
+
+  db.query(sql, [status, id], (err) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Error updating status" });
+    }
+    res.json({ message: "✅ Status updated successfully" });
+  });
+});
+
 
 
 app.get('/maintenance-stats', (req, res) => {
