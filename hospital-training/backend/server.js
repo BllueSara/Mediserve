@@ -857,6 +857,44 @@ app.post("/add-device-model", (req, res) => {
 
 
 
+app.get('/regular-maintenance-summary', (req, res) => {
+  const sql = `
+    SELECT 
+      device_name,
+      device_type,
+      last_maintenance_date,
+      frequency,
+      CASE 
+        WHEN frequency = '3months' THEN DATE_ADD(last_maintenance_date, INTERVAL 3 MONTH)
+        WHEN frequency = '4months' THEN DATE_ADD(last_maintenance_date, INTERVAL 4 MONTH)
+      END AS next_due_date,
+      CASE
+        WHEN CURDATE() < 
+          (CASE 
+            WHEN frequency = '3months' THEN DATE_ADD(last_maintenance_date, INTERVAL 3 MONTH)
+            WHEN frequency = '4months' THEN DATE_ADD(last_maintenance_date, INTERVAL 4 MONTH)
+          END)
+        THEN 'Pending'
+        WHEN CURDATE() = 
+          (CASE 
+            WHEN frequency = '3months' THEN DATE_ADD(last_maintenance_date, INTERVAL 3 MONTH)
+            WHEN frequency = '4months' THEN DATE_ADD(last_maintenance_date, INTERVAL 4 MONTH)
+          END)
+        THEN 'Due Today'
+        ELSE 'Overdue'
+      END AS status
+    FROM Regular_Maintenance
+    WHERE frequency = '3months' -- ✅ فلترة مباشرة من هنا
+    ORDER BY next_due_date DESC
+  `;
+
+  db.query(sql, (err, result) => {
+    if (err) return res.status(500).json({ error: 'Error fetching data' });
+    res.json(result);
+  });
+});
+
+
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
