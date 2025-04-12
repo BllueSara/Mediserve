@@ -7,66 +7,6 @@ body, html {
     background-color: white;
     text-align: center;
 }
-
-/* Navigation buttons */
-.nav-buttons {
-    position: absolute;
-    top: 20px;
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    padding: 0 20px;
-}
-
-/* Back and Home buttons */
-.back-button, 
-.Home-button {
-    position: absolute; /* Position the buttons absolutely */
-    top: 20px; /* Place buttons near the top */
-    display: flex; /* Use flexbox for alignment */
-    align-items: center; /* Align icons and text */
-    gap: 8px; /* Space between icon and text */
-    width: fit-content; /* Adjust width based on content */
-    height: 150px; /* Set button height */
-}
-
-/* Back button */
-.back-button {
-    left: 20px;
-}
-
-/* Home button */
-.home-button {
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-/* Button links */
-.back-button a,
-.home-button a {
-    text-decoration: none;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-/* Button text colors */
-.back-button a {
-    color: #4A5568;
-}
-
-.home-button a {
-    color: #3BAAE0;
-}
-
-/* Icons */
-.back-icon, 
-.home-icon {
-    width: 20px;
-    height: 20px;
-}
-
 /* Header */
 header {
     display: flex;
@@ -75,6 +15,56 @@ header {
     padding: 20px;
     width: 100%;
     position: relative;
+}
+
+/* أزرار Home و Back - كود موحد */
+.back-button,
+.home-button {
+  position: absolute;
+  top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  height: 150px;
+}
+
+/* زر الرجوع - جهة اليسار */
+.back-button {
+  left: 20px;
+}
+
+/* زر الهوم - في منتصف الصفحة */
+.home-button {
+  left: 0;
+  right: 15px;
+  margin: auto;
+}
+
+/* تنسيق روابط الأزرار */
+.back-button a,
+.home-button a {
+  text-decoration: none;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ألوان النص */
+.back-button a {
+  color: #4A5568;
+}
+
+.home-button a {
+  color: #3BAAE0;
+}
+
+/* الأيقونات */
+.back-icon,
+.home-icon {
+  width: 20px;
+  height: 20px;
 }
 
 /* MS Logo */
@@ -101,17 +91,18 @@ header {
 
 /* Page title */
 .title {
-    font-size: 28px;
+    font-size: 40px;
     font-weight: bold;
-    margin-top: 100px;
-    margin-bottom: 50px; /* تعديل التطابق */
+    margin-top: 140px;
+    margin-bottom: 15px; /* تعديل التطابق */
 }
 
 /* Description */
 .description {
-    font-size: 16px;
+    font-size: 14px;
     color: #4A5568;
-    margin-bottom: 40px;
+    margin-bottom: 30px;
+   
 }
 
 /* Ticket container */
@@ -140,18 +131,23 @@ header {
 /* Ticket option */
 .option {
     background-color: #f8f9fa;
-    padding: 5px; /* مطابق للكود الثاني */
+    padding: 20px; /* إضافة padding أفضل للتوسيط */
     border-radius: 10px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
     cursor: pointer;
     text-align: center;
-    width: 180px;
+    width: 250px;
+    height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* محاذاة العناصر عمودياً */
+    align-items: center; /* محاذاة العناصر أفقياً */
 }
 
 /* Icon container */
 .icon-container img {
-    width: 50px;
+    width: 60px;
     transition: transform 0.3s;
 }
 
