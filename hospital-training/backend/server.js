@@ -157,20 +157,6 @@ app.get("/Printer_Model", (req, res) => {
   });
 });
 
-app.get("/models-by-type/:type", (req, res) => {
-  const { type } = req.params;
-  db.query(
-    "SELECT model_name FROM Maintance_Device_Model WHERE LOWER(device_type_name) = ?",
-    [type.toLowerCase()],
-    (err, result) => {
-      if (err) {
-        console.error("❌ Error fetching models:", err);
-        return res.status(500).json({ error: "DB error" });
-      }
-      res.json(result);
-    }
-  );
-});
 
 
 // ✅ GET Devices with ID from Maintenance_Devices
@@ -222,9 +208,6 @@ app.get("/devices/:type/:department", (req, res) => {
     res.json(result);
   });
 });
-
-
-
 app.post("/submit-regular-maintenance", async (req, res) => {
   const {
     "maintenance-date": date,
@@ -1076,4 +1059,3 @@ app.get('/get-internal-reports', (req, res) => {
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-
