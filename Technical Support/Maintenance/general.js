@@ -118,23 +118,37 @@ document.addEventListener("DOMContentLoaded", () => {
       if (selected === "pc") endpoint = "/problem-states/pc";
       else if (selected === "printer") endpoint = "/problem-states/printer";
       else if (selected === "scanner") endpoint = "/problem-states/scanner";
-      else return;
+      else endpoint = `/problem-states/maintenance/${selected}`; // ✅ جلب حالات جهاز جديد
 
-      problemStatus.innerHTML = `<option value="" disabled selected>Select status</option>`;
+      // إعادة تعيين القائمة
+      problemStatus.innerHTML = `
+        <option value="" disabled selected>Select status</option>
+        <option value="add-custom">+ Add New Status</option>
+      `;
 
       fetch(`http://localhost:5050${endpoint}`)
         .then(res => res.json())
         .then(data => {
           data.forEach(item => {
             const option = document.createElement("option");
-            option.value = item.problem_text;
-            option.textContent = item.problem_text;
+            option.value = item.problem_text || item.problemStates_Maintance_device_name;
+            option.textContent = item.problem_text || item.problemStates_Maintance_device_name;
             problemStatus.appendChild(option);
           });
+        })
+        .catch(err => {
+          console.error("❌ Error loading problem states:", err);
         });
+    });
+
+    problemStatus.addEventListener("change", () => {
+      if (problemStatus.value === "add-custom") {
+        openGenericPopup("Problem Status", "problem-status");
+      }
     });
   }
 });
+
 
 // ================== تعبئة المواصفات حسب النوع والقسم =====================
 function fetchGeneralDeviceSpecs() {
@@ -406,13 +420,14 @@ function saveGenericOption() {
   const value = document.getElementById("popup-input").value.trim();
   const targetId = document.getElementById("popup-target-id").value;
   const dropdown = document.getElementById(targetId);
+  const type = document.getElementById("problem-type")?.value?.toLowerCase();
 
   if (!value || !dropdown) return;
 
   fetch("http://localhost:5050/add-option-general", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ target: targetId, value })
+    body: JSON.stringify({ target: targetId, value, type })
   })
     .then(res => res.json())
     .then(result => {
@@ -429,6 +444,7 @@ function saveGenericOption() {
       alert("❌ Failed to save new option");
     });
 }
+
 
 
 // ================== الحقول حسب النوع =====================
