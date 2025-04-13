@@ -35,14 +35,20 @@ header {
   }
   
   /* أزرار الرجوع والرئيسية */
-  .back-button,
-  .home-button {
-    top: 20px;
-    display: flex;
-    gap: 8px;
-    width: fit-content;
-    height: 150px;
+  .back-button {
+    position: absolute;
+    left: 20px; /* أو صفر إذا تبغاه يكون على الحافة اليسرى */
+    top: 60px;
   }
+  
+  .home-button {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 60px;
+  }
+  
+
   
   .back-button a,
   .home-button a {
