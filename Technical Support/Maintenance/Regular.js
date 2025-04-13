@@ -13,42 +13,22 @@ if (deviceTypeSelect) {
   });
 }
 
-function fetchModelsByType(type, selectId) {
-  let endpoint = "";
-  const cleanedType = type.trim().toLowerCase();
+function fetchAndRenderModels(deviceType, selectId) {
+  const cleanedType = deviceType.trim().toLowerCase();
+  const dropdown = document.getElementById(selectId);
+  if (!dropdown) return;
 
+  let endpoint = "";
   if (cleanedType === "pc") endpoint = "/PC_Model";
   else if (cleanedType === "printer") endpoint = "/Printer_Model";
   else if (cleanedType === "scanner") endpoint = "/Scanner_Model";
-  else return;
+  else endpoint = `/models-by-type/${cleanedType}`;
 
   fetch(`http://localhost:5050${endpoint}`)
     .then(res => res.json())
     .then(data => {
-      const dropdown = document.getElementById(selectId);
-      if (!dropdown) return;
+      dropdown.innerHTML = `<option value="" disabled selected>Select Model</option>`;
 
-      dropdown.innerHTML = '<option disabled selected>Select Model</option>';
-      data.forEach(item => {
-        const option = document.createElement("option");
-        option.value = item.model_name;
-        option.textContent = item.model_name;
-        dropdown.appendChild(option);
-      });
-    })
-    .catch(err => {
-      console.error(`❌ Failed to fetch models for ${type}:`, err);
-    });
-}
-
-function fetchModelsForNewDevices(type, selectId) {
-  fetch(`http://localhost:5050/models-by-type/${type}`)
-    .then(res => res.json())
-    .then(data => {
-      const dropdown = document.getElementById(selectId);
-      if (!dropdown) return;
-
-      dropdown.innerHTML = '<option disabled selected>Select Model</option>';
       data.forEach(item => {
         const option = document.createElement("option");
         option.value = item.model_name;
@@ -56,18 +36,22 @@ function fetchModelsForNewDevices(type, selectId) {
         dropdown.appendChild(option);
       });
 
-      // لو فيه اختيار + Add New
-      if (selectId === "spec-model") {
-        const addNew = document.createElement("option");
-        addNew.value = "add-new-model";
-        addNew.textContent = "+ Add New Model";
-        dropdown.appendChild(addNew);
+      const addOption = document.createElement("option");
+      addOption.value = "add-new-model";
+      addOption.textContent = "+ Add New Model";
+      dropdown.appendChild(addOption);
+
+      const lastModel = sessionStorage.getItem("lastAddedModel");
+      if (lastModel) {
+        dropdown.value = lastModel;
+        sessionStorage.removeItem("lastAddedModel");
       }
     })
     .catch(err => {
-      console.error(`❌ Error loading new device models (${type}):`, err);
+      console.error("❌ Error fetching models:", err);
     });
 }
+
 
 
 function updatePopupHeadingAndFields(type) {
@@ -120,7 +104,8 @@ function updatePopupHeadingAndFields(type) {
     fetchRAM();
     fetchOS();
     fetchProcessorGen();
-    fetchModelsByType("pc", "model-select"); // ✅    fetchDepartments("department-pc");
+    fetchAndRenderModels("pc", "model-select");
+ // ✅    fetchDepartments("department-pc");
 
   } else if (typeCleaned === "printer") {
     popupHeading.textContent = "Enter Printer Specifications";
@@ -144,7 +129,9 @@ function updatePopupHeadingAndFields(type) {
         <option disabled selected>Select Model</option>
       </select>
     `;
-    fetchModelsByType("printer", "Model-printer"); // ✅
+    fetchAndRenderModels("printer", "Model-printer");
+    
+    
     fetchDepartments("department-printer");
 
   } else if (typeCleaned === "scanner") {
@@ -170,7 +157,7 @@ function updatePopupHeadingAndFields(type) {
       </select>
     `;
     fetchDepartments("department-scanner");
-    fetchModelsByType("scanner", "model-scanner"); // ✅
+    fetchAndRenderModels("scanner", "model-scanner");
   } else {
     popupHeading.textContent = "Enter Device Specifications";
     popupFieldsContainer.innerHTML = "<p>No fields available for this device type.</p>";
@@ -510,6 +497,8 @@ generalDropdowns.forEach(({ id, label }) => {
     }
   });
 });
+
+
 function openGenericPopup(label, targetId) {
   const popup = document.getElementById("generic-popup");
 
@@ -538,7 +527,7 @@ function openGenericPopup(label, targetId) {
 
             <label>Model:</label>
             <select id="spec-model">
-              <option value="" disabled selected>Loading models...</option>
+              <option value="" disabled selected>Select Model</option>
               <option value="add-new-model">+ Add New Model</option>
             </select>
 
@@ -563,11 +552,8 @@ function openGenericPopup(label, targetId) {
         popup.style.display = "flex";
 
         // 🟢 جلب الموديلات حسب نوع الجهاز (قديم أو جديد)
-        if (["pc", "printer", "scanner"].includes(cleanedType)) {
-          fetchModelsByType(cleanedType, "spec-model"); // الأجهزة القديمة
-        } else {
-          fetchModelsForNewDevices(cleanedType, "spec-model"); // الأجهزة الجديدة
-        }
+        fetchAndRenderModels(cleanedType, "spec-model");
+
 
         // ✅ استرجاع القيم المؤقتة
         setTimeout(() => {
@@ -622,27 +608,28 @@ function openGenericPopup(label, targetId) {
     popup.style.display = "flex";
   }
 }
+function openAddModelPopup() {
+  const deviceType = document.getElementById("device-type").value.trim();
 
-function openAddModelPopup(deviceType) {
   const popup = document.getElementById("generic-popup");
-
   popup.innerHTML = `
     <div class="popup-content">
       <h3>Add New Model for ${deviceType}</h3>
       <label>Model Name:</label>
       <input type="text" id="new-model-name" placeholder="Enter model name" />
       <div class="popup-buttons">
-        <button onclick="saveNewModel('${deviceType}')">Save</button>
+        <button onclick="saveNewModel()">Save</button>
         <button onclick="closeGenericPopup()">Cancel</button>
       </div>
     </div>
   `;
-
   popup.style.display = "flex";
 }
 
-function saveNewModel(deviceType) {
+function saveNewModel() {
+  const deviceType = document.getElementById("device-type").value.trim().toLowerCase();
   const modelName = document.getElementById("new-model-name").value.trim();
+
   if (!modelName) {
     alert("❌ اكتب اسم الموديل");
     return;
@@ -662,9 +649,14 @@ function saveNewModel(deviceType) {
   })
     .then(res => res.json())
     .then(result => {
-      alert(result.message);
+      if (result.error) {
+        alert(result.error);
+        return;
+      }
 
+      alert(result.message);
       sessionStorage.setItem("lastAddedModel", modelName);
+      fetchAndRenderModels(deviceType, "spec-model");
       openGenericPopup("Device Specification", "device-spec");
     })
     .catch(err => {
@@ -672,7 +664,6 @@ function saveNewModel(deviceType) {
       alert("❌ فشل في إضافة الموديل");
     });
 }
-
 
 
 function saveDeviceSpecification() {

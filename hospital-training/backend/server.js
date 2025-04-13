@@ -451,7 +451,6 @@ app.post("/add-options-external", (req, res) => {
   });
 });
 // API في Node.js
-
 app.post("/add-options-regular", (req, res) => {
   const { target, value } = req.body;
 
@@ -476,8 +475,6 @@ app.post("/add-options-regular", (req, res) => {
     }
     res.json({ message: `✅ Added to ${table}: ${value}` });
   });
-
-
 });
 
 app.post("/submit-general-maintenance", async (req, res) => {
@@ -942,27 +939,58 @@ app.get("/models-by-type/:type", (req, res) => {
     res.json(result);
   });
 });
-
 app.post("/add-device-model", (req, res) => {
   const { model_name, device_type_name } = req.body;
 
   if (!model_name || !device_type_name) {
-    return res.status(400).json({ error: "Missing model name or type" });
+    return res.status(400).json({ error: "❌ Missing model name or type" });
   }
 
-  db.query(
-    "INSERT INTO Maintance_Device_Model (model_name, device_type_name) VALUES (?, ?)",
-    [model_name, device_type_name],
-    (err) => {
-      if (err) {
-        console.error("❌ Insert model error:", err);
-        return res.status(500).json({ error: "Insert failed" });
+  const cleanedType = device_type_name.trim().toLowerCase();
+
+  let table = "";
+  if (cleanedType === "pc") table = "PC_Model";
+  else if (cleanedType === "printer") table = "Printer_Model";
+  else if (cleanedType === "scanner") table = "Scanner_Model";
+  else table = "Maintance_Device_Model";
+
+  const checkQuery = table === "Maintance_Device_Model"
+    ? `SELECT * FROM ${table} WHERE model_name = ? AND device_type_name = ?`
+    : `SELECT * FROM ${table} WHERE model_name = ?`;
+
+  const checkValues = table === "Maintance_Device_Model"
+    ? [model_name, device_type_name]
+    : [model_name];
+
+  db.query(checkQuery, checkValues, (err, existing) => {
+    if (err) {
+      console.error("❌ Error checking model:", err);
+      return res.status(500).json({ error: "❌ Failed to check model" });
+    }
+
+    if (existing.length > 0) {
+      return res.status(400).json({ error: "❌ Model already exists" });
+    }
+
+    const insertQuery = table === "Maintance_Device_Model"
+      ? `INSERT INTO ${table} (model_name, device_type_name) VALUES (?, ?)`
+      : `INSERT INTO ${table} (model_name) VALUES (?)`;
+
+    const insertValues = table === "Maintance_Device_Model"
+      ? [model_name, device_type_name]
+      : [model_name];
+
+    db.query(insertQuery, insertValues, (err2) => {
+      if (err2) {
+        console.error("❌ Error inserting model:", err2);
+        return res.status(500).json({ error: "❌ Failed to insert model" });
       }
 
-      res.json({ message: `✅ Model ${model_name} added successfully` });
-    }
-  );
+      res.json({ message: `✅ Model '${model_name}' added successfully` });
+    });
+  });
 });
+
 
 app.get('/regular-maintenance-summary', (req, res) => {
   const sql = `
