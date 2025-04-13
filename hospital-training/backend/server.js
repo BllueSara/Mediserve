@@ -207,6 +207,9 @@ app.get("/devices/:type/:department", (req, res) => {
     res.json(result);
   });
 });
+
+
+
 app.post("/submit-regular-maintenance", async (req, res) => {
   const {
     "maintenance-date": date,
