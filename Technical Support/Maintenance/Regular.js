@@ -105,7 +105,6 @@ function updatePopupHeadingAndFields(type) {
     fetchOS();
     fetchProcessorGen();
     fetchAndRenderModels("pc", "model-select");
- // ✅    fetchDepartments("department-pc");
 
   } else if (typeCleaned === "printer") {
     popupHeading.textContent = "Enter Printer Specifications";
@@ -130,8 +129,8 @@ function updatePopupHeadingAndFields(type) {
       </select>
     `;
     fetchAndRenderModels("printer", "Model-printer");
-    
-    
+
+
     fetchDepartments("department-printer");
 
   } else if (typeCleaned === "scanner") {
@@ -201,7 +200,7 @@ function savePCSpec() {
         dropdown.appendChild(option);
         dropdown.value = option.value;
 
-    popup.style.display = "none";
+        popup.style.display = "none";
 
       } else {
         alert("❌ فشل في الحفظ: " + result.error);
@@ -309,20 +308,20 @@ function fetchDeviceTypes() {
     .then(data => {
       const dropdown = document.getElementById("device-type");
       dropdown.innerHTML = '<option value="" disabled selected>Select device type</option>';
-   // أضف خيار إضافة جديد
-   const addOption = document.createElement("option");
-   addOption.value = "add-custom";
-   addOption.textContent = "+ Add New Device Type";
-   dropdown.appendChild(addOption);
+      // أضف خيار إضافة جديد
+      const addOption = document.createElement("option");
+      addOption.value = "add-custom";
+      addOption.textContent = "+ Add New Device Type";
+      dropdown.appendChild(addOption);
       data.forEach(item => {
-        
+
         const option = document.createElement("option");
         option.value = item.DeviceType;
         option.textContent = item.DeviceType;
         dropdown.appendChild(option);
       });
 
-   
+
     });
 }
 
@@ -342,8 +341,8 @@ function fetchDevicesBySection() {
     .then(data => {
       const dropdown = document.getElementById("device-spec");
       dropdown.innerHTML = '<option disabled selected>Select specification</option>';
-      
-      
+
+
       data.forEach(device => {
         const option = document.createElement("option");
         option.value = device.Serial_Number;
@@ -355,7 +354,7 @@ function fetchDevicesBySection() {
 }
 
 function fetchDeviceSpecsByTypeAndDepartment() {
-  
+
   const type = document.getElementById("device-type").value.toLowerCase();
   const dept = document.getElementById("section").value;
   const dropdown = document.getElementById("device-spec");
@@ -386,8 +385,8 @@ function fetchDeviceSpecsByTypeAndDepartment() {
         option.textContent = `${name} | ${device.Serial_Number} | ${device.Governmental_Number}`;
         dropdown.appendChild(option);
       });
-    })      
-      
+    })
+
     .catch(err => {
       console.error("❌ Error fetching specs:", err);
     });
@@ -534,11 +533,12 @@ function openGenericPopup(label, targetId) {
             <label>Serial Number:</label>
             <input type="text" id="spec-serial" />
 
-            <label>Department:</label>
-            <select id="spec-department">
-              <option value="" disabled selected>Select department</option>
-              ${departmentsOptions}
-            </select>
+           <label>Department:</label>
+<select id="spec-department">
+  <option value="" disabled selected>Select department</option>
+  ${departmentsOptions}
+  <option value="add-new-department">+ Add New Section</option> <!-- ✅ أضف هذا -->
+</select>
 
             <input type="hidden" id="generic-popup-target-id" value="${targetId}" />
 
@@ -550,6 +550,18 @@ function openGenericPopup(label, targetId) {
         `;
 
         popup.style.display = "flex";
+
+        document.getElementById("spec-department").addEventListener("change", function (e) {
+          if (e.target.value === "add-new-department") {
+            const currentFields = ["spec-ministry", "spec-name", "spec-serial", "spec-model"];
+            currentFields.forEach(id => {
+              const el = document.getElementById(id);
+              if (el) sessionStorage.setItem(id, el.value);
+            });
+            openAddSectionPopup(); // ✅ استدعاء البوب أب الجديد
+          }
+        });
+        
 
         // 🟢 جلب الموديلات حسب نوع الجهاز (قديم أو جديد)
         fetchAndRenderModels(cleanedType, "spec-model");
@@ -625,6 +637,58 @@ function openAddModelPopup() {
   `;
   popup.style.display = "flex";
 }
+
+
+function openAddSectionPopup() {
+  const popup = document.getElementById("generic-popup");
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>Add New Section</h3>
+      <label>Section Name:</label>
+      <input type="text" id="new-section-name" placeholder="Enter section name" />
+      <div class="popup-buttons">
+        <button onclick="saveNewSection()">Save</button>
+        <button onclick="closeGenericPopup()">Cancel</button>
+      </div>
+    </div>
+  `;
+  popup.style.display = "flex";
+}
+
+
+function saveNewSection() {
+  const sectionName = document.getElementById("new-section-name").value.trim();
+  if (!sectionName) {
+    alert("❌ Please enter a section name");
+    return;
+  }
+
+  fetch("http://localhost:5050/add-options-regular", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target: "section", value: sectionName })
+  })
+    .then(res => res.json())
+    .then(result => {
+      if (result.error) {
+        alert(result.error);
+        return;
+      }
+
+      alert(result.message || "✅ Section added successfully");
+
+      // ✅ احفظ اسم القسم في sessionStorage عشان نرجعه بعد الإضافة
+      sessionStorage.setItem("spec-department", sectionName);
+
+      // ✅ أعد فتح بوب أب المواصفات
+      openGenericPopup("Device Specification", "device-spec");
+    })
+    .catch(err => {
+      console.error("❌ Failed to save section:", err);
+      alert("❌ Error saving new section");
+    });
+}
+
 
 function saveNewModel() {
   const deviceType = document.getElementById("device-type").value.trim().toLowerCase();
