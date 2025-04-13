@@ -230,11 +230,27 @@ generalDropdowns.forEach(({ id, label }) => {
   if (!dropdown) return;
 
   dropdown.addEventListener("change", () => {
-    if (dropdown.value === "add-custom") {
+    const selected = dropdown.value;
+    const type = document.getElementById("problem-type")?.value?.trim().toLowerCase();
+
+    if (selected !== "add-custom") return;
+
+    if (label === "Device Specification") {
+      if (["pc", "printer", "scanner"].includes(type)) {
+        // ✅ الأجهزة المعروفة → افتح popup-modal
+        popup.style.display = "flex";
+        generateFieldsForDeviceType(type);
+      } else {
+        // ✅ أي نوع جديد (غير معروف) → افتح generic-popup
+        openGenericPopup(label, id);
+      }
+    } else {
+      // ✅ بقية الحقول مثل القسم، الفني، الطابق...
       openGenericPopup(label, id);
     }
   });
 });
+
 
 function openGenericPopup(label, targetId) {
   const saveBtn = document.getElementById("popup-save-btn");

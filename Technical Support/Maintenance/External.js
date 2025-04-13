@@ -235,16 +235,30 @@ const dropdownsWithPopup = [
   { id: "reporter-name", label: "Reporter Name" } // ✅ أضف هذا
 ];
 
+
 dropdownsWithPopup.forEach(({ id, label }) => {
   const dropdown = document.getElementById(id);
-  if (dropdown) {
-    dropdown.addEventListener("change", () => {
-      if (dropdown.value === "add-custom") {
+  if (!dropdown) return;
+
+  dropdown.addEventListener("change", () => {
+    const selected = dropdown.value;
+    const type = document.getElementById("device-type")?.value?.trim().toLowerCase(); // ✅ الصحيح هنا
+
+    if (selected !== "add-custom") return;
+
+    if (label === "Device Specification") {
+      if (["pc", "printer", "scanner"].includes(type)) {
+        popup.style.display = "flex";
+        generateFieldsForDeviceType(type);
+      } else {
         openGenericPopup(label, id);
       }
-    });
-  }
+    } else {
+      openGenericPopup(label, id);
+    }
+  });
 });
+
 
 function openGenericPopup(label, targetId) {
   const saveBtn = document.getElementById("popup-save-button");
