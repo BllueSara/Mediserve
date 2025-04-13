@@ -552,27 +552,24 @@ function openGenericPopup(label, targetId) {
           <div class="popup-content">
             <h3>Add Device Specification</h3>
 
-            <label>Ministry Number:</label>
-            <input type="text" id="spec-ministry" />
-
             <label>Device Name:</label>
             <input type="text" id="spec-name" />
+            <label>Serial Number:</label>
+            <input type="text" id="spec-serial" />
+            <label>Ministry Number:</label>
+            <input type="text" id="spec-ministry" />
 
             <label>Model:</label>
             <select id="spec-model">
               <option value="" disabled selected>Select Model</option>
               <option value="add-new-model">+ Add New Model</option>
             </select>
-
-            <label>Serial Number:</label>
-            <input type="text" id="spec-serial" />
-
            <label>Department:</label>
-<select id="spec-department">
-  <option value="" disabled selected>Select department</option>
-  ${departmentsOptions}
-  <option value="add-new-department">+ Add New Section</option> <!-- ✅ أضف هذا -->
-</select>
+           <select id="spec-department">
+         <option value="" disabled selected>Select department</option>
+          ${departmentsOptions}
+          <option value="add-new-department">+ Add New Section</option> 
+        </select>
 
             <input type="hidden" id="generic-popup-target-id" value="${targetId}" />
 
@@ -595,7 +592,7 @@ function openGenericPopup(label, targetId) {
             openAddSectionPopup(); // ✅ استدعاء البوب أب الجديد
           }
         });
-        
+
 
         // 🟢 جلب الموديلات حسب نوع الجهاز (قديم أو جديد)
         fetchAndRenderModels(cleanedType, "spec-model");
