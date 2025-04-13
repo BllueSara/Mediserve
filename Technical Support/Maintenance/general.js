@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
 
-    
+
   fetch("http://localhost:5050/floors")
     .then(res => res.json())
     .then(data => {
@@ -221,7 +221,7 @@ const generalDropdowns = [
   { id: "floor", label: "Floor" },
   { id: "technical", label: "Technical" },
   { id: "problem-status", label: "Problem Status" },
-  { id: "device-spec", label: "Device Specification" } // ✅ أضف هذا
+  { id: "device-spec", label: "Device Specification" }
 
 ];
 
@@ -266,24 +266,77 @@ function openGenericPopup(label, targetId) {
 
         popupTitle.textContent = "Add Device Specification";
         popupFields.innerHTML = `
-          <label>Ministry Number:</label><input type="text" id="spec-ministry" />
+
           <label>Device Name:</label><input type="text" id="spec-name" />
+          <label>Serial Number:</label><input type="text" id="spec-serial" />
+          <label>Ministry Number:</label><input type="text" id="spec-ministry" />
+
           <label>Model:</label>
           <select id="spec-model">
-            <option value="" disabled selected>Loading models...</option>
+            <option value="" disabled selected>Select Model</option>
             <option value="add-new-model">+ Add New Model</option>
           </select>
-          <label>Serial Number:</label><input type="text" id="spec-serial" />
           <label>Department:</label>
           <select id="spec-department">
-            <option value="" disabled selected>Select department</option>
-            ${departmentsOptions}
-          </select>
+         <option value="" disabled selected>Select department</option>
+         ${departmentsOptions}
+         <option value="add-new-department">+ Add New Section</option> 
+</select>
+
           <input type="hidden" id="popup-target-id" value="${targetId}" />
         `;
 
         saveBtn.onclick = saveDeviceSpecification;
         popup.style.display = "flex";
+
+        document.getElementById("spec-department").addEventListener("change", function (e) {
+          if (e.target.value === "add-new-department") {
+            const fields = ["spec-ministry", "spec-name", "spec-serial"];
+            fields.forEach(id => {
+              const el = document.getElementById(id);
+              if (el) sessionStorage.setItem(id, el.value);
+            });
+            openAddSectionPopup(); // ✅ استدعاء البوب أب لإضافة القسم
+          }
+        });
+
+
+        function openAddSectionPopup() {
+          popupTitle.textContent = "Add New Section";
+          popupFields.innerHTML = `
+            <label>Section Name:</label>
+            <input type="text" id="new-section-name" placeholder="Enter section name" />
+          `;
+
+          document.getElementById("popup-save-btn").onclick = saveNewSection;
+          popup.style.display = "flex";
+        }
+
+
+        function saveNewSection() {
+          const sectionName = document.getElementById("new-section-name").value.trim();
+          if (!sectionName) {
+            alert("❌ Please enter a section name");
+            return;
+          }
+
+          fetch("http://localhost:5050/add-option-general", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ target: "section", value: sectionName })
+          })
+            .then(res => res.json())
+            .then(result => {
+              alert(result.message);
+              sessionStorage.setItem("spec-department", sectionName);
+              openGenericPopup("Device Specification", "device-spec");
+            })
+            .catch(err => {
+              console.error("❌ Failed to save section:", err);
+              alert("❌ Error saving section");
+            });
+        }
+
 
         // ✅ جلب الموديلات حسب نوع الجهاز
         if (["pc", "printer", "scanner"].includes(deviceType)) {
