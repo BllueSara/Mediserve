@@ -5,12 +5,9 @@ body {
     font-family: Arial, sans-serif;
 }
 
-
-
 /* تنسيق الهيدر والشعارات */
 header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
     padding: 20px;
     width: 100%;
@@ -40,23 +37,11 @@ header {
   /* أزرار الرجوع والرئيسية */
   .back-button,
   .home-button {
-    position: absolute;
     top: 20px;
     display: flex;
-    align-items: center;
     gap: 8px;
     width: fit-content;
     height: 150px;
-  }
-  
-  .back-button {
-    left: 20px;
-  }
-  
-  .home-button {
-    left: 604px;
-   
-    margin: auto;
   }
   
   .back-button a,

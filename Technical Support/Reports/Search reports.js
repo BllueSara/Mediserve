@@ -51,14 +51,15 @@ function loadReports(page) {
 
         card.innerHTML = `
           <div class="report-card-header">
-            <img src="/icon/Maintenance.png" alt="Maintenance Icon" />
-            ${maintenanceType} Maintenance
-            <select onchange="updateReportStatus(${report.id}, this)" class="status-select ${statusClass}">
-              <option value="Open" ${report.status === "Open" ? "selected" : ""}>Open</option>
-              <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>In Progress</option>
-              <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>Closed</option>
-            </select>
-          </div>
+  <img src="/icon/Maintenance.png" alt="Maintenance Icon" />
+  <span>${maintenanceType} Maintenance</span>
+  <select onchange="updateReportStatus(${report.id}, this)" class="status-select ${statusClass}">
+    <option value="Open" ${report.status === "Open" ? "selected" : ""}>Open</option>
+    <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>In Progress</option>
+    <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>Closed</option>
+  </select>
+</div>
+
 
           <div class="report-details">
             <img src="/icon/desktop.png" alt="Device Icon" />

@@ -500,17 +500,35 @@ generalDropdowns.forEach(({ id, label }) => {
       openGenericPopup(label, id);
     }
   });
-});
-function openGenericPopup(label, targetId) {
+});function openGenericPopup(label, targetId) {
   const popup = document.getElementById("generic-popup");
 
   if (label === "Device Specification") {
-    const deviceType = document.getElementById("device-type")?.value;
+    const deviceType = document.getElementById("device-type")?.value?.toLowerCase();
 
-    // جلب الأقسام والموديلات حسب نوع الجهاز
+    // ✅ تأكد من وجود النوع
+    if (!deviceType) {
+      alert("❌ Please select a device type first.");
+      return;
+    }
+
+    // ✅ حدد رابط الموديلات حسب النوع
+    let modelUrl = "";
+    if (deviceType === "pc") {
+      modelUrl = "http://localhost:5050/PC_Model";
+    } else if (deviceType === "printer") {
+      modelUrl = "http://localhost:5050/Printer_Model";
+    } else if (deviceType === "scanner") {
+      modelUrl = "http://localhost:5050/Scanner_Model";
+    } else {
+      alert("❌ Unknown device type");
+      return;
+    }
+
+    // ✅ جلب الأقسام والموديلات معًا
     Promise.all([
       fetch("http://localhost:5050/Departments").then(res => res.json()),
-      fetch(`http://localhost:5050/models-by-type/${deviceType}`).then(res => res.json())
+      fetch(modelUrl).then(res => res.json())
     ]).then(([departments, models]) => {
       const departmentsOptions = departments.map(dep => `<option value="${dep.name}">${dep.name}</option>`).join("");
       const modelsOptions = models.map(model => `<option value="${model.model_name}">${model.model_name}</option>`).join("");
@@ -552,7 +570,7 @@ function openGenericPopup(label, targetId) {
 
       popup.style.display = "flex";
 
-      // ✅ استرجاع القيم المحفوظة مؤقتًا
+      // استرجاع القيم المحفوظة
       setTimeout(() => {
         const fields = ["spec-ministry", "spec-name", "spec-serial", "spec-department"];
         fields.forEach(id => {
@@ -571,10 +589,9 @@ function openGenericPopup(label, targetId) {
         }
       }, 0);
 
-      // ✅ فتح نافذة إضافة موديل جديد عند الاختيار
+      // فتح نافذة إضافة موديل جديد عند الحاجة
       document.getElementById("spec-model").addEventListener("change", (e) => {
         if (e.target.value === "add-new-model") {
-          // حفظ القيم قبل الخروج
           const fields = ["spec-ministry", "spec-name", "spec-serial", "spec-department"];
           fields.forEach(id => {
             const el = document.getElementById(id);
@@ -586,11 +603,11 @@ function openGenericPopup(label, targetId) {
 
     }).catch(err => {
       console.error("❌ Error loading data:", err);
-      alert("فشل في تحميل البيانات");
+      alert("❌ Failed to load departments or models");
     });
 
   } else {
-    // الحقول العامة
+    // باقي الحقول العامة
     popup.innerHTML = `
       <div class="popup-content">
         <h3 id="generic-popup-title">Add New ${label}</h3>
@@ -606,6 +623,7 @@ function openGenericPopup(label, targetId) {
     popup.style.display = "flex";
   }
 }
+
 
 function openAddModelPopup(deviceType) {
   const popup = document.getElementById("generic-popup");

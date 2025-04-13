@@ -48,7 +48,6 @@ function loadMaintenance(type) {
     });
 }
 
-
 // ✅ تحديث العداد والشريط حسب النوع
 function updateHeaderCounts(completed, total, type = '3months') {
   const percentage = total > 0 ? (completed / total) * 100 : 0;
@@ -61,7 +60,6 @@ function updateHeaderCounts(completed, total, type = '3months') {
     document.querySelector('.progress-bar-4months').style.width = `${percentage}%`;
   }
 }
-
 
 // ✅ تحديث الحالة في قاعدة البيانات
 function updateStatus(id, selectElement) {
@@ -84,12 +82,10 @@ function updateStatus(id, selectElement) {
     });
 }
 
-
 // ✅ إعادة تحميل الجدول الحالي بعد التحديث
 function reloadTable() {
   loadMaintenance(currentType);
 }
-
 
 // ✅ تحديد ألوان الحالة
 function getStatusClass(status) {
@@ -98,13 +94,11 @@ function getStatusClass(status) {
   return 'overdue';
 }
 
-
 // ✅ تنسيق التاريخ
 function formatDate(dateString) {
   const date = new Date(dateString);
   return date.toISOString().split("T")[0];
 }
-
 
 // ✅ تغيير الزر النشط في الأعلى
 function updateActiveButton(type) {
@@ -113,11 +107,31 @@ function updateActiveButton(type) {
   document.getElementById(`btn-${type}`).classList.add("active");
 }
 
-
 // ✅ عند بداية التشغيل
 document.addEventListener("DOMContentLoaded", () => {
+  // تحميل جدول 3 شهور افتراضيًا
   loadMaintenance("3months");
 
+  // ✅ تحميل عدادات 4 شهور مباشرة (بدون جدول)
+  fetch('http://localhost:5050/regular-maintenance-summary-4months')
+    .then(res => res.json())
+    .then(data => {
+      let total = 0;
+      let completed = 0;
+
+      data.forEach(item => {
+        if (!item.device_name) return;
+        total++;
+        if (item.status === 'Completed') completed++;
+      });
+
+      updateHeaderCounts(completed, total, "4months");
+    })
+    .catch(err => {
+      console.error("❌ Error loading 4-month summary:", err);
+    });
+
+  // أزرار التبديل بين الجداول
   document.getElementById("btn-3months").addEventListener("click", () => {
     loadMaintenance("3months");
   });
