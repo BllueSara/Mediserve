@@ -174,7 +174,7 @@ function openGenericPopup(label, targetId) {
 
     Promise.all([
       fetch("http://localhost:5050/Departments").then(res => res.json()),
-      fetch(`http://localhost:5050/models-by-type/${deviceType}`).then(res => res.json())
+      fetch(`http://localhost:5050//models-by-type/:type`).then(res => res.json())
     ]).then(([departments, models]) => {
       const departmentsOptions = departments.map(dep => `<option value="${dep.name}">${dep.name}</option>`).join("");
       const modelsOptions = models.map(model => `<option value="${model.model_name}">${model.model_name}</option>`).join("");
