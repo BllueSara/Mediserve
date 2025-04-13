@@ -69,6 +69,22 @@ app.get("/problem-states/scanner", (req, res) => {
   });
 });
 
+app.get("/problem-states/maintenance/:deviceType", (req, res) => {
+  const { deviceType } = req.params;
+
+  db.query(
+  "SELECT problemStates_Maintance_device_name FROM `problemStates_Maintance_device` WHERE device_type_name = ?",
+    [deviceType],
+    (err, results) => {
+      if (err) {
+        console.error("❌ DB Error:", err);
+        return res.status(500).json({ error: "DB error" });
+      }
+      res.json(results);
+    }
+  );
+});
+
 
 app.get("/Departments", (req, res) => {
   const query = "SELECT * FROM Departments  ORDER BY name ASC ";
@@ -357,25 +373,38 @@ app.put("/update-report-status/:id", (req, res) => {
 
 
 
-
 app.post("/add-option-general", (req, res) => {
-  const { target, value } = req.body;
+  const { target, value, type } = req.body;
 
   const tableMap = {
     "problem-type": { table: "DeviceType", column: "DeviceType" },
     "section": { table: "Departments", column: "name" },
     "floor": { table: "Floors", column: "FloorNum" },
     "technical": { table: "Engineers", column: "name" },
-    "problem-status": { table: "ProblemStates_Pc", column: "problem_text" } // عدّل حسب النوع
+    "problem-status": type === "pc"
+      ? { table: "ProblemStates_Pc", column: "problem_text" }
+      : type === "printer"
+      ? { table: "ProblemStates_Printer", column: "problem_text" }
+      : type === "scanner"
+      ? { table: "ProblemStates_Scanner", column: "problem_text" }
+      : { table: "problemStates_Maintance_device", column: "problemStates_Maintance_device_name", extra: "device_type_name" }
   };
 
   const mapping = tableMap[target];
-
   if (!mapping) return res.status(400).json({ error: "Invalid target field" });
 
-  const query = `INSERT INTO ${mapping.table} (${mapping.column}) VALUES (?)`;
+  let query = "";
+  let params = [];
 
-  db.query(query, [value], (err, result) => {
+  if (mapping.extra) {
+    query = `INSERT INTO ${mapping.table} (${mapping.column}, ${mapping.extra}) VALUES (?, ?)`;
+    params = [value, type];
+  } else {
+    query = `INSERT INTO ${mapping.table} (${mapping.column}) VALUES (?)`;
+    params = [value];
+  }
+
+  db.query(query, params, (err, result) => {
     if (err) {
       console.error("❌ DB Insert Error:", err);
       return res.status(500).json({ error: "Database error while inserting option" });
@@ -383,6 +412,7 @@ app.post("/add-option-general", (req, res) => {
     res.json({ message: `✅ ${value} added to ${mapping.table}` });
   });
 });
+
 
 app.post("/add-options-external", (req, res) => {
   const { target, value } = req.body;
