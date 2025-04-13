@@ -80,6 +80,7 @@
     });
     
   });
+
 // ================== تعبئة القوائم =====================
 document.addEventListener("DOMContentLoaded", () => {
   fetch("http://localhost:5050/TypeProplem")
@@ -106,10 +107,18 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
 
-  fetch("http://localhost:5050/Technical")
+    fetch("http://localhost:5050/Technical")
     .then(res => res.json())
     .then(data => {
       const dropdown = document.getElementById("reporter-name");
+  
+      // أولاً نحط + Add New كأول عنصر
+      const addNew = document.createElement("option");
+      addNew.value = "add-custom";
+      addNew.textContent = "+ Add New Reporter";
+      dropdown.appendChild(addNew); // نحطّه أول
+  
+      // بعدين نضيف العناصر الباقية
       data.forEach(item => {
         const option = document.createElement("option");
         option.value = item.name;
@@ -117,6 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
         dropdown.appendChild(option);
       });
     });
+  
 });
 
 function fetchModelsByType(type, selectId) {
@@ -221,8 +231,8 @@ const popupTarget = document.getElementById("popup-target-id");
 const dropdownsWithPopup = [
   { id: "device-type", label: "Device Type" },
   { id: "section", label: "Section" },
-  { id: "device-spec", label: "Device Specification" } // ✅ أضف هذا
-
+  { id: "device-spec", label: "Device Specification" }, // ✅ أضف هذا
+  { id: "reporter-name", label: "Reporter Name" } // ✅ أضف هذا
 ];
 
 dropdownsWithPopup.forEach(({ id, label }) => {
@@ -235,6 +245,7 @@ dropdownsWithPopup.forEach(({ id, label }) => {
     });
   }
 });
+
 function openGenericPopup(label, targetId) {
   const saveBtn = document.getElementById("popup-save-button");
 
