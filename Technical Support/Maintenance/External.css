@@ -340,7 +340,7 @@ textarea:focus {
 .popup-content {
     background: white;
     padding: 30px;
-    width: 600px;
+    width: 450px;
     max-height: 90vh;
     overflow-y: auto;
     border-radius: 10px;
