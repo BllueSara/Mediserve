@@ -486,7 +486,6 @@ const generalDropdowns = [
   { id: "device-spec", label: "Device Specification" } // ✅ أضف هذا
 
 ];
-
 generalDropdowns.forEach(({ id, label }) => {
   const dropdown = document.getElementById(id);
   if (!dropdown) return;
@@ -494,42 +493,21 @@ generalDropdowns.forEach(({ id, label }) => {
   dropdown.addEventListener("change", () => {
     if (dropdown.value !== "add-custom") return;
 
+    const type = deviceTypeSelect?.value?.trim().toLowerCase();
+
     if (label === "Device Specification") {
-      const type = deviceTypeSelect?.value?.trim().toLowerCase();
-      
-      // ✅ إذا النوع معروف (pc, printer, scanner) → افتح popup-modal
-      if (type === "pc" || type === "printer" || type === "scanner") {
+      if (["pc", "printer", "scanner"].includes(type)) {
         popup.style.display = "flex";
         updatePopupHeadingAndFields(type);
       } else {
-        // ❗️وإلا افتح البوب أب العام
         openGenericPopup(label, id);
       }
-    } 
-  });
-});
-
-
-generalDropdowns.forEach(({ id, label }) => {
-  const dropdown = document.getElementById(id);
-  if (!dropdown) return;
-
-  dropdown.addEventListener("change", () => {
-    const type = deviceTypeSelect?.value?.trim().toLowerCase();
-    
-    // ✅ تحقق هل هو من الأنواع المحددة
-    if (["pc", "printer", "scanner"].includes(deviceTypeSelect)) {
-      updatePopupHeadingAndFields(deviceTypeSelect);
-      document.getElementById("popup-modal").style.display = "flex";
-      return;
-    }
-
-    // ✅ فتح البوب أب العادي إذا كان "add-custom"
-    if (deviceTypeSelect === "add-custom") {
+    } else {
       openGenericPopup(label, id);
     }
   });
 });
+
 
 
 function openGenericPopup(label, targetId) {
