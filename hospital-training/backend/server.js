@@ -225,6 +225,8 @@ app.get("/devices/:type/:department", (req, res) => {
   });
 });
 app.post("/submit-regular-maintenance", async (req, res) => {
+  console.log("📥 Data received for maintenance:", req.body);
+
   const {
     "maintenance-date": date,
     frequency,
@@ -768,7 +770,7 @@ app.post("/add-device-specification", async (req, res) => {
       return res.status(500).json({ error: "DB error" });
     }
   
-    res.json({ message: "✅ Specification added successfully" });
+    res.json({ message: "✅ Specification added successfully", insertedId: result.insertId });
   });
   
 
@@ -890,16 +892,21 @@ app.post('/AddDevice/:type', async (req, res) => {
    db.query(
     insertMaintenanceDevice,
     [Serial_Number, Governmental_Number, deviceType, Device_Name, Department_id],
-    (err2) => {
+    (err2, result2) => {
       if (err2) {
         console.error("⚠️ خطأ أثناء إدخال Maintenance_Devices:", err2);
-      } else {
-        console.log("✅ تم إدخال الجهاز في Maintenance_Devices بنجاح");
+        return res.status(500).json({ error: "❌ خطأ في إضافة Maintenance_Devices" });
       }
   
-      res.json({ message: `✅ تم حفظ بيانات ${deviceType} بنجاح` });
+      console.log("✅ تم إدخال الجهاز في Maintenance_Devices بنجاح، ID:", result2.insertId);
+  
+      res.json({
+        message: `✅ تم حفظ بيانات ${deviceType} بنجاح`,
+        insertedId: result2.insertId // ✅ نرجع الـ ID الصحيح هنا
+      });
     }
   );
+  
   
 
     });

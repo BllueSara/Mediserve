@@ -452,34 +452,13 @@ document.querySelector("form").addEventListener("submit", function (e) {
       alert("❌ Failed to submit: " + err.message);
     }
   }
+  console.log("🔍 Sending device ID:", data["device-spec"]);
 
   submitRegularMaintenance(data);
 });
 
-async function submitRegularMaintenance(data) {
-  try {
-    const response = await fetch("http://localhost:5050/submit-regular-maintenance", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data)
-    });
 
-    const result = await response.json();
 
-    if (!response.ok) {
-      throw new Error(result.error || "Unknown server error");
-    }
-
-    alert(result.message || "✅ Submitted successfully");
-
-    // ✅ نعيد تحميل الصفحة بعد الحفظ
-    location.reload();
-
-  } catch (err) {
-    console.error("❌ Submission error:", err);
-    alert("❌ Failed to submit: " + err.message);
-  }
-}
 const generalDropdowns = [
   { id: "device-type", label: "Device Type" },
   { id: "section", label: "Section" },
@@ -774,34 +753,42 @@ function saveDeviceSpecification() {
     .then(result => {
       if (result.message) {
         alert(result.message);
-
+    
+        if (!result.insertedId) {
+          alert("❌ لم يتم استرجاع ID من السيرفر. لا يمكن ربط الجهاز بالصيانة.");
+          return;
+        }
+    
+        console.log("✅ Inserted Device ID:", result.insertedId);
+    
         // ✅ إنشاء الخيار الجديد مباشرة بدون إعادة تحميل القائمة
         const option = document.createElement("option");
-        option.value = result.insertedId || specData.serial;
+        option.value = result.insertedId;
         option.textContent = `${specData.name} | ${specData.serial} | ${specData.ministry}`;
         dropdown.appendChild(option);
-        dropdown.value = option.value;
-
+        dropdown.value = result.insertedId;
+    
         // ✅ إغلاق الـ popup بأمان
         const popup = document.getElementById("generic-popup");
         if (popup) popup.style.display = "none";
-
+    
         // ✅ تنظيف الحقول
         document.getElementById("spec-ministry").value = "";
         document.getElementById("spec-name").value = "";
         document.getElementById("spec-model").value = "";
         document.getElementById("spec-serial").value = "";
         document.getElementById("spec-department").value = "";
-
+    
       } else {
         alert("❌ فشل في الحفظ: " + result.error);
       }
     })
     .catch(err => {
-      console.error("❌ Error saving specification:", err);
-      alert("❌ Failed to save specification");
+      console.error("❌ Error saving device specification:", err);
+      alert("❌ Error saving device specification");
     });
 }
+    
 
 function closeGenericPopup() {
   document.getElementById("generic-popup").style.display = "none";
