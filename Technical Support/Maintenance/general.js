@@ -538,6 +538,17 @@ function generateFieldsForDeviceType(type) {
     fetchCPU(); fetchRAM(); fetchOS(); fetchProcessorGen(); fetchModelsByType("pc", "model-select");
     fetchDepartments("department-pc");
 
+    document.getElementById("department-pc").addEventListener("change", function (e) {
+      if (e.target.value === "add-new-department") {
+        const fields = ["ministry-id", "device-name", "serial"];
+        fields.forEach(id => {
+          const el = document.querySelector(`[name="${id}"]`);
+          if (el) sessionStorage.setItem(id, el.value);
+        });
+        openAddSectionPopup();
+      }
+    });
+    
   } else if (type === "printer") {
     popupTitle.textContent = "Enter Printer Specifications";
     popupFields.innerHTML = `
@@ -551,6 +562,17 @@ function generateFieldsForDeviceType(type) {
     fetchModelsByType("printer", "Model-printer");
     fetchDepartments("department-printer");
 
+    document.getElementById("department-printer").addEventListener("change", function (e) {
+      if (e.target.value === "add-new-department") {
+        const fields = ["ministry-id", "device-name", "serial"];
+        fields.forEach(id => {
+          const el = document.querySelector(`[name="${id}"]`);
+          if (el) sessionStorage.setItem(id, el.value);
+        });
+        openAddSectionPopup();
+      }
+    });
+    
   } else if (type === "scanner") {
     popupTitle.textContent = "Enter Scanner Specifications";
     popupFields.innerHTML = `
@@ -564,6 +586,18 @@ function generateFieldsForDeviceType(type) {
     fetchModelsByType("scanner", "model-scanner");
     fetchDepartments("department-scanner");
 
+    document.getElementById("department-scanner").addEventListener("change", function (e) {
+      if (e.target.value === "add-new-department") {
+        const fields = ["ministry-id", "device-name", "serial"];
+        fields.forEach(id => {
+          const el = document.querySelector(`[name="${id}"]`);
+          if (el) sessionStorage.setItem(id, el.value);
+        });
+        openAddSectionPopup();
+      }
+    }
+    );
+
   } else {
     popupFields.innerHTML = "<p>No fields for this type</p>";
   }
@@ -571,6 +605,50 @@ function generateFieldsForDeviceType(type) {
   popup.style.display = "flex";
 }
 
+
+function openAddSectionPopup() {
+  const popup = document.getElementById("popup-modal");
+  const popupTitle = document.getElementById("popup-title");
+  const popupFields = document.getElementById("popup-fields");
+  const saveBtn = document.getElementById("popup-save-btn");
+
+  popupTitle.textContent = "Add New Section";
+  popupFields.innerHTML = `
+    <label>Section Name:</label>
+    <input type="text" id="new-section-name" placeholder="Enter section name" />
+  `;
+
+  saveBtn.onclick = saveNewSection;
+  popup.style.display = "flex";
+}
+
+function saveNewSection() {
+  const sectionName = document.getElementById("new-section-name").value.trim();
+  if (!sectionName) {
+    alert("❌ Please enter a section name");
+    return;
+  }
+
+  fetch("http://localhost:5050/add-option-general", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target: "section", value: sectionName })
+  })
+    .then(res => res.json())
+    .then(result => {
+      alert(result.message);
+
+      // ✅ احفظ القيمة في sessionStorage
+      sessionStorage.setItem("spec-department", sectionName);
+
+      // ✅ أعد فتح البوب أب مع القيمة المضافة
+      openGenericPopup("Device Specification", "device-spec");
+    })
+    .catch(err => {
+      console.error("❌ Failed to save section:", err);
+      alert("❌ Error saving section");
+    });
+}
 
 // ================== حفظ الجهاز =====================
 function savePCSpec() {
@@ -714,7 +792,17 @@ function fetchDepartments(selectId = "department") {
     .then(data => {
       const select = document.getElementById(selectId);
       if (!select) return;
-      select.innerHTML = '<option value="">Select Department</option>';
+
+      // 🟢 الخيار الأساسي
+      select.innerHTML = '<option value="" disabled selected>Select Department</option>';
+
+      // ✅ أضف زر + Add New
+      const addOption = document.createElement("option");
+      addOption.value = "add-new-department";
+      addOption.textContent = "+ Add New Section";
+      select.appendChild(addOption);
+
+      // 🟢 أضف الأقسام
       data.forEach(item => {
         const option = document.createElement("option");
         option.value = item.name;
@@ -723,6 +811,7 @@ function fetchDepartments(selectId = "department") {
       });
     });
 }
+
 function fetchDeviceSpecsByTypeAndDepartment() {
   const type = document.getElementById("problem-type").value.toLowerCase();
   const dept = document.getElementById("section").value;
