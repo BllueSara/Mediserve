@@ -221,26 +221,79 @@ function fetchDepartments(selectId = "department") {
       const select = document.getElementById(selectId);
       if (!select) return;
 
-      // العنوان الأساسي
+      // 🟢 عنوان القائمة
       select.innerHTML = `<option value="" disabled selected>${selectId === "section" ? "Select section" : "Select Department"}</option>`;
 
-      // ✅ أول شيء نضيف + Add New (فوق الكل)
-      if (selectId === "section") {
-        const addOption = document.createElement("option");
-        addOption.value = "add-custom";
-        addOption.textContent = "+ Add New Section";
-        select.appendChild(addOption);
-      }
+      // 🟢 Add New دائمًا (حتى لو مو section رئيسي)
+      const addOption = document.createElement("option");
+      addOption.value = "add-new-department";
+      addOption.textContent = "+ Add New Section";
+      select.appendChild(addOption);
 
-      // بعدين نضيف الخيارات الجاية من السيرفر
+      // 🟢 الأقسام
       data.forEach(item => {
         const option = document.createElement("option");
         option.value = item.name;
         option.textContent = item.name;
         select.appendChild(option);
       });
+
+      // ✅ تحديد القسم المختار تلقائيًا (إن وجد)
+      const savedDept = sessionStorage.getItem(selectId);
+      if (savedDept) {
+        select.value = savedDept;
+        sessionStorage.removeItem(selectId);
+      }
+
+      // ✅ إذا المستخدم اختار Add New Section
+      select.addEventListener("change", function (e) {
+        if (e.target.value === "add-new-department") {
+          openAddSectionPopup();
+          sessionStorage.setItem("lastDepartmentSelectId", selectId);
+        }
+      });
     });
 }
+
+
+function saveNewSection() {
+  const sectionName = document.getElementById("new-section-name").value.trim();
+  if (!sectionName) {
+    alert("❌ Please enter a section name");
+    return;
+  }
+
+  fetch("http://localhost:5050/add-options-regular", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target: "section", value: sectionName })
+  })
+    .then(res => res.json())
+    .then(result => {
+      if (result.error) {
+        alert(result.error);
+        return;
+      }
+
+      alert(result.message || "✅ Section added successfully");
+
+      // ✅ استرجع ID الـ dropdown الي أضفنا منه القسم
+      const lastSelectId = sessionStorage.getItem("lastDepartmentSelectId");
+
+      if (lastSelectId) {
+        sessionStorage.setItem(lastSelectId, sectionName); // لتحديده تلقائيًا
+        fetchDepartments(lastSelectId); // إعادة تحميل الخيارات
+        sessionStorage.removeItem("lastDepartmentSelectId");
+      }
+
+      closeGenericPopup(); // ✅ أغلق البوب أب مباشرة
+    })
+    .catch(err => {
+      console.error("❌ Failed to save section:", err);
+      alert("❌ Error saving new section");
+    });
+}
+
 
 
 
@@ -608,6 +661,7 @@ function openGenericPopup(label, targetId) {
     popup.style.display = "flex";
   }
 }
+
 function openAddModelPopup() {
   const deviceType = document.getElementById("device-type").value.trim();
 
@@ -644,38 +698,6 @@ function openAddSectionPopup() {
 }
 
 
-function saveNewSection() {
-  const sectionName = document.getElementById("new-section-name").value.trim();
-  if (!sectionName) {
-    alert("❌ Please enter a section name");
-    return;
-  }
-
-  fetch("http://localhost:5050/add-options-regular", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ target: "section", value: sectionName })
-  })
-    .then(res => res.json())
-    .then(result => {
-      if (result.error) {
-        alert(result.error);
-        return;
-      }
-
-      alert(result.message || "✅ Section added successfully");
-
-      // ✅ احفظ اسم القسم في sessionStorage عشان نرجعه بعد الإضافة
-      sessionStorage.setItem("spec-department", sectionName);
-
-      // ✅ أعد فتح بوب أب المواصفات
-      openGenericPopup("Device Specification", "device-spec");
-    })
-    .catch(err => {
-      console.error("❌ Failed to save section:", err);
-      alert("❌ Error saving new section");
-    });
-}
 
 
 function saveNewModel() {
