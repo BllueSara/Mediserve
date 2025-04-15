@@ -421,26 +421,27 @@ function openGenericPopup(label, targetId) {
 
 
 function openAddModelPopup(type, origin = 'generic') {
-  const popupTitle = document.getElementById("popup-title");
-  const popupFields = document.getElementById("popup-fields");
-  const saveBtn = document.getElementById("popup-save-btn");
-
-  popupTitle.textContent = `Add New Model for ${type}`;
-  popupFields.innerHTML = `
-    <label>Model Name:</label>
-    <input type="text" id="new-model-name" placeholder="Enter model name" />
-    <input type="hidden" id="model-origin" value="${origin}" />
+  const popup = document.getElementById("generic-popup");
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>Add New Model for ${type}</h3>
+      <label for="new-model-name">Model Name:</label>
+      <input type="text" id="new-model-name" placeholder="Enter model name" />
+      <input type="hidden" id="model-origin" value="${origin}" />
+      <div class="popup-buttons">
+        <button onclick="saveNewModel('${type}')">Save</button>
+        <button onclick="closeGenericPopup()">Cancel</button>
+      </div>
+    </div>
   `;
+  popup.style.display = "flex";
 
-  saveBtn.onclick = () => saveNewModel(type);
-  document.getElementById("popup-modal").style.display = "flex";
-  closeGenericPopup(); // <-- تأكد أنه يغلق generic إذا مفتوح
-  if (origin === "generic") {
-    resetDropdownValue("spec-model");
-  } else {
-    resetDropdownValue("model-select");
-  }
-  
+  // 🟡 حفظ القيم الحالية مؤقتًا في حال المستخدم رجع
+  const fieldsToSave = ["spec-ministry", "spec-name", "spec-serial", "spec-department"];
+  fieldsToSave.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) sessionStorage.setItem(id, el.value);
+  });
 }
 
 function saveNewModel(type) {
@@ -451,12 +452,6 @@ function saveNewModel(type) {
     alert("❌ Please enter a model name");
     return;
   }
-
-  const fieldsToSave = ["spec-ministry", "spec-name", "spec-serial", "spec-department"];
-  fieldsToSave.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) sessionStorage.setItem(id, el.value);
-  });
 
   fetch("http://localhost:5050/add-device-model", {
     method: "POST",
@@ -472,16 +467,16 @@ function saveNewModel(type) {
 
       alert(result.message || "✅ Model added successfully");
       sessionStorage.setItem("lastAddedModel", modelName);
-      document.getElementById("popup-modal").style.display = "none";
+      document.getElementById("generic-popup").style.display = "none"; // ✅ نقفل بوب أب الموديل فقط
 
-      // ✅ إعادة تحميل الموديلات وتحديد القيمة الجديدة
+      // ✅ بعد الحفظ نرجّع للمكان الصحيح حسب origin
       setTimeout(() => {
         if (origin === 'fields') {
           generateFieldsForDeviceType(type);
           setTimeout(() => {
             const modelDropdown = document.getElementById("model-select") || document.getElementById(`model-${type}`);
             if (modelDropdown) modelDropdown.value = modelName;
-          },  100);
+          }, 100);
         } else {
           openGenericPopup("Device Specification", "device-spec");
           setTimeout(() => {
@@ -496,6 +491,7 @@ function saveNewModel(type) {
       alert("❌ Error saving new model");
     });
 }
+
 function saveDeviceSpecification() {
   const ministry = document.getElementById("spec-ministry").value.trim();
   const name = document.getElementById("spec-name").value.trim();
