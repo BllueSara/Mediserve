@@ -140,6 +140,20 @@
     </div>
   </div>
 </div>
+  <!-- ✅ Popup for Adding Generic Options -->
+  <div id="generic-popup" class="popup-overlay" style="display: none;">
+    <div class="popup-content">
+      <h3 id="generic-popup-title">Add New</h3>
+      <label for="generic-popup-input" id="generic-label">New Value</label>
+      <input type="text" id="generic-popup-input" placeholder="Enter new value..." required />
+      <input type="hidden" id="generic-popup-target-id" />
+      <div class="popup-buttons">
+        <button id="popup-save-btn">Save</button>
+        <button type="button" class="cancel-btn" onclick="closeGenericPopup()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
 
     <!-- JavaScript File -->
      <script src = "Maintenance.js"></script>
