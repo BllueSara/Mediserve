@@ -452,19 +452,32 @@ app.post("/add-options-external", (req, res) => {
     res.json({ message: `✅ ${value} added successfully` });
   });
 });
-// API في Node.js
+
 app.post("/add-options-regular", (req, res) => {
   const { target, value } = req.body;
 
   let table = "";
   let column = "";
 
+  // ✅ دعم الحقول الجديدة
   if (target === "device-type") {
     table = "DeviceType";
     column = "DeviceType";
   } else if (target === "section") {
     table = "Departments";
     column = "name";
+  } else if (target === "OS_Types") {
+    table = "OS_Types";
+    column = "os_name";
+  } else if (target === "RAM_Types") {
+    table = "RAM_Types";
+    column = "ram_type";
+  } else if (target === "CPU_Types") {
+    table = "CPU_Types";
+    column = "cpu_name";
+  } else if (target === "Processor_Generations") {
+    table = "Processor_Generations";
+    column = "generation_number";
   } else {
     return res.status(400).json({ error: "Invalid target" });
   }
