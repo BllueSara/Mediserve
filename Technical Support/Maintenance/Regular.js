@@ -827,7 +827,6 @@ function openAddSectionPopup() {
 
 
 
-
 function saveNewModel() {
   const deviceType = document.getElementById("device-type").value.trim().toLowerCase();
   const modelName = document.getElementById("new-model-name").value.trim();
@@ -837,7 +836,6 @@ function saveNewModel() {
     return;
   }
 
-  // ✅ حفظ القيم الحالية من حقول Device Specification قبل إغلاقها
   const fieldsToSave = ["spec-ministry", "spec-name", "spec-serial", "spec-department"];
   fieldsToSave.forEach(id => {
     const el = document.getElementById(id);
@@ -858,14 +856,19 @@ function saveNewModel() {
 
       alert(result.message);
       sessionStorage.setItem("lastAddedModel", modelName);
+
+      // ✅ مجرد تحديث القائمة فقط بدون فتح البوب مرة ثانية
       fetchAndRenderModels(deviceType, "spec-model");
-      openGenericPopup("Device Specification", "device-spec");
+
+      // ✅ إغلاق البوب الحالي
+      closeGenericPopup();
     })
     .catch(err => {
       console.error("❌ Failed to save model:", err);
       alert("❌ فشل في إضافة الموديل");
     });
 }
+
 
 
 function saveDeviceSpecification() {
@@ -938,24 +941,49 @@ function saveDeviceSpecification() {
       alert("❌ Error saving device specification");
     });
 }
+
+
 function closeGenericPopup() {
   const popup = document.getElementById("generic-popup");
   popup.style.display = "none";
 
-  // استرجاع الـ ID اللي فتح البوب أب
-  const targetId = document.getElementById("generic-popup-target-id")?.value;
+  // ✅ تنظيف الحقول النصية داخل البوب
+  const inputs = popup.querySelectorAll("input, select");
+  inputs.forEach(el => {
+    if (el.tagName === "SELECT") {
+      el.selectedIndex = 0;
+    } else {
+      el.value = "";
+    }
+  });
 
-  // ✅ أي dropdown كان فيه add-new يرجعه لأول خيار
+  // ✅ تنظيف الـ sessionStorage لأي قيم محفوظة
+  const savedKeys = [
+    "spec-ministry",
+    "spec-name",
+    "spec-serial",
+    "spec-model",
+    "spec-department",
+    "lastAddedModel",
+    "lastDepartmentSelectId"
+  ];
+  savedKeys.forEach(key => sessionStorage.removeItem(key));
+
+  // ✅ إعادة تعيين أي dropdown كان على add-new أو add-custom
   const allSelects = document.querySelectorAll("select");
   allSelects.forEach(select => {
-    if (select.value && select.value.startsWith("add-new")) {
+    if (select.value && (select.value.startsWith("add-new") || select.value === "add-custom")) {
       select.selectedIndex = 0;
     }
   });
 
-  // إفراغ الحقول لو موجودة
-  const input = document.getElementById("generic-popup-input");
-  if (input) input.value = "";
+  // ✅ تنظيف اسم الموديل لو فيه
+  const modelInput = document.getElementById("new-model-name");
+  if (modelInput) modelInput.value = "";
+
+  // ✅ تنظيف الحقل العام (Generic input)
+  const genericInput = document.getElementById("generic-popup-input");
+  if (genericInput) genericInput.value = "";
 }
 
 
