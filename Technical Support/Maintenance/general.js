@@ -240,19 +240,66 @@ if (deviceSpecDropdown) {
     }
   });
 }
-
 function closePopup() {
   popup.style.display = "none";
 
   const targetId = document.getElementById("popup-target-id").value;
   const dropdown = document.getElementById(targetId);
-  if (dropdown && (dropdown.value === "add-custom" || dropdown.value === "add-new-model")) {
-    dropdown.value = ""; // ترجع الاختيار للوضع الطبيعي
+  const deviceType = document.getElementById("problem-type")?.value?.toLowerCase();
+
+  if (targetId === "device-spec" && dropdown) {
+    // إعادة تعيين القائمة حسب نوع الجهاز
+    if (["pc", "printer", "scanner"].includes(deviceType)) {
+      dropdown.innerHTML = '<option value="" disabled selected>Select Specification</option>';
+      dropdown.value = "";
+      
+      // إضافة خيار "Add New" فقط إذا كان الجهاز معروفًا
+      const addNewOption = document.createElement("option");
+      addNewOption.value = "add-custom";
+      addNewOption.textContent = "+ Add New Specification";
+      dropdown.appendChild(addNewOption);
+    } else {
+      // للأجهزة غير المعروفة
+      dropdown.innerHTML = '<option value="" disabled selected>Select Specification</option>';
+      dropdown.value = "";
+    }
   }
 
-  document.getElementById("popup-input").value = "";
+  // تنظيف الحقول المؤقتة
+  const input = document.getElementById("popup-input");
+  if (input) input.value = "";
   document.getElementById("popup-target-id").value = "";
 }
+
+function closeGenericPopup() {
+  const popup = document.getElementById("generic-popup");
+  popup.style.display = "none";
+
+  const lastSelectId = sessionStorage.getItem("lastDropdownOpened");
+  if (lastSelectId) {
+    const dropdown = document.getElementById(lastSelectId);
+    if (dropdown) {
+      // إعادة التعيين بناءً على نوع الحقل
+      if (lastSelectId.includes("department")) {
+        dropdown.selectedIndex = 0; // للأقسام
+      } else if (lastSelectId === "device-spec") {
+        dropdown.innerHTML = '<option value="" disabled selected>Select Specification</option>';
+        dropdown.value = "";
+      } else {
+        dropdown.selectedIndex = 0; // لباقي الحقول
+      }
+    }
+    sessionStorage.removeItem("lastDropdownOpened");
+  }
+  
+  // إعادة تحميل القوائم إذا لزم الأمر
+  const deviceType = document.getElementById("problem-type")?.value?.toLowerCase();
+  if (["pc", "printer", "scanner"].includes(deviceType)) {
+    fetchDeviceSpecsByTypeAndDepartment();
+  }
+}
+
+
 
 const generalDropdowns = [
   { id: "problem-type", label: "Problem Type" },
@@ -327,42 +374,15 @@ function openGenericPopup(label, targetId) {
         saveBtn.onclick = saveDeviceSpecification;
         popup.style.display = "flex";
 
-        // 🟢 عند اختيار + Add New Section
+        // ✅ فتح Popup لإضافة قسم بدل prompt
         document.getElementById("spec-department").addEventListener("change", function (e) {
           if (e.target.value === "add-new-department") {
-            const deptInput = prompt("Enter new section name:");
-            if (!deptInput) {
-              // ✅ يرجع السلكت لأول خيار إذا ألغى
-              setTimeout(() => {
-                e.target.selectedIndex = 0;
-              }, 0);
-              return;
-            }
-
-            fetch("http://localhost:5050/add-option-general", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ target: "section", value: deptInput })
-            })
-              .then(res => res.json())
-              .then(result => {
-                alert(result.message || "✅ Section added");
-
-                const option = document.createElement("option");
-                option.value = deptInput;
-                option.textContent = deptInput;
-
-                e.target.insertBefore(option, e.target.lastElementChild);
-                e.target.value = deptInput;
-              })
-              .catch(err => {
-                console.error("❌ Error adding section:", err);
-                alert("❌ Failed to add section");
-              });
+            sessionStorage.setItem("lastDepartmentSelectId", "spec-department"); // نحفظ اسم السلكت اللي ضغط عليه
+            openAddSectionPopup(); // نفتح البوب أب العادي
           }
         });
 
-        // 🟢 جلب الموديلات وتعيين آخر إضافة
+        // ✅ جلب الموديلات وتعيين آخر موديل
         const assignLastModel = () => {
           const last = sessionStorage.getItem("lastAddedModel");
           const modelDropdown = document.getElementById("spec-model");
@@ -381,7 +401,7 @@ function openGenericPopup(label, targetId) {
           setTimeout(assignLastModel, 150);
         }
 
-        // 🟢 استرجاع القيم المؤقتة
+        // ✅ استرجاع القيم المؤقتة
         const fields = ["spec-ministry", "spec-name", "spec-serial", "spec-department"];
         fields.forEach(id => {
           const val = sessionStorage.getItem(id);
@@ -391,7 +411,7 @@ function openGenericPopup(label, targetId) {
           }
         });
 
-        // 🟢 إذا المستخدم ضغط على + Add New Model
+        // ✅ فتح بوب أب الموديل إذا اختار + Add New Model
         document.getElementById("spec-model").addEventListener("change", (e) => {
           if (e.target.value === "add-new-model") {
             fields.forEach(id => {
@@ -408,7 +428,7 @@ function openGenericPopup(label, targetId) {
       });
 
   } else {
-    // ✅ باقي الحقول العادية
+    // ✅ الحقول العادية
     popupTitle.textContent = `Add New ${label}`;
     popupFields.innerHTML = `
       <label for="popup-input">${label}:</label>
@@ -420,6 +440,7 @@ function openGenericPopup(label, targetId) {
     popup.style.display = "flex";
   }
 }
+
 
 
 function openAddModelPopup(type, origin = 'generic') {
@@ -598,85 +619,79 @@ function generateFieldsForDeviceType(type) {
   const saveBtn = document.getElementById("popup-save-btn");
   popupFields.innerHTML = "";
 
+  // Common fields for all device types
+  const commonFields = `
+    <label>Device Name:</label><input type="text" name="device-name" required>
+    <label>Serial Number:</label><input type="text" name="serial" required>
+    <label>Ministry Number:</label><input type="text" name="ministry-id" required>
+    <label>Department:</label><select name="department" id="department-${type}"></select>
+    <label>Model:</label><select name="model" id="model-${type}"></select>
+  `;
+
+  // Device-specific fields
+  let deviceSpecificFields = '';
   if (type === "pc") {
-    popupTitle.textContent = "Enter PC Specifications";
-    popupFields.innerHTML = `
-      <label>Computer Name:</label><input type="text" name="device-name" required>
-      <label>Serial Number:</label><input type="text" name="serial" required>
-      <label>Ministry Number:</label><input type="text" name="ministry-id" required>
-      <label>Department:</label><select name="department" id="department-pc"></select>
+    deviceSpecificFields = `
       <label>Processor Generation:</label><select name="generation" id="generation-select"></select>
       <label>CPU:</label><select name="processor" id="cpu-select"></select>
       <label>RAM:</label><select name="ram" id="ram-select"></select>
-      <label>Model:</label><select name="model" id="model-select"></select>
       <label>OS:</label><select name="os" id="os-select"></select>
     `;
-    saveBtn.onclick = savePCSpec;
-    fetchCPU(); fetchRAM(); fetchOS(); fetchProcessorGen(); fetchModelsByType("pc", "model-select");
-    fetchDepartments("department-pc");
+  }
 
-    document.getElementById("department-pc").addEventListener("change", function (e) {
-      if (e.target.value === "add-new-department") {
-        const fields = ["ministry-id", "device-name", "serial"];
-        fields.forEach(id => {
-          const el = document.querySelector(`[name="${id}"]`);
-          if (el) sessionStorage.setItem(id, el.value);
-        });
-        openAddSectionPopup();
-      }
-    });
-    
-  } else if (type === "printer") {
-    popupTitle.textContent = "Enter Printer Specifications";
-    popupFields.innerHTML = `
-      <label>Printer Name:</label><input type="text" name="device-name" required>
-      <label>Serial Number:</label><input type="text" name="serial" required>
-      <label>Ministry Number:</label><input type="text" name="ministry-id" required>
-      <label>Department:</label><select name="department" id="department-printer"></select>
-      <label>Model:</label><select name="model" id="Model-printer"></select>
-    `;
-    saveBtn.onclick = savePCSpec;
-    fetchModelsByType("printer", "Model-printer");
-    fetchDepartments("department-printer");
+  // Set the popup content
+  popupTitle.textContent = `Enter ${type.charAt(0).toUpperCase() + type.slice(1)} Specifications`;
+  popupFields.innerHTML = commonFields + deviceSpecificFields;
+  saveBtn.onclick = savePCSpec;
 
-    document.getElementById("department-printer").addEventListener("change", function (e) {
-      if (e.target.value === "add-new-department") {
-        const fields = ["ministry-id", "device-name", "serial"];
-        fields.forEach(id => {
-          const el = document.querySelector(`[name="${id}"]`);
-          if (el) sessionStorage.setItem(id, el.value);
-        });
-        openAddSectionPopup();
-      }
-    });
-    
-  } else if (type === "scanner") {
-    popupTitle.textContent = "Enter Scanner Specifications";
-    popupFields.innerHTML = `
-      <label>Scanner Name:</label><input type="text" name="device-name" required>
-      <label>Serial Number:</label><input type="text" name="serial" required>
-      <label>Ministry Number:</label><input type="text" name="ministry-id" required>
-      <label>Department:</label><select name="department" id="department-scanner"></select>
-      <label>Model:</label><select name="model" id="model-scanner"></select>
-    `;
-    saveBtn.onclick = savePCSpec;
-    fetchModelsByType("scanner", "model-scanner");
-    fetchDepartments("department-scanner");
+  // Initialize common components
+  fetchModelsByType(type, `model-${type}`);
+  fetchDepartments(`department-${type}`);
 
-    document.getElementById("department-scanner").addEventListener("change", function (e) {
-      if (e.target.value === "add-new-department") {
-        const fields = ["ministry-id", "device-name", "serial"];
-        fields.forEach(id => {
-          const el = document.querySelector(`[name="${id}"]`);
-          if (el) sessionStorage.setItem(id, el.value);
-        });
-        openAddSectionPopup();
-      }
+  // Initialize PC-specific components
+  if (type === "pc") {
+    fetchCPU();
+    fetchRAM();
+    fetchOS();
+    fetchProcessorGen();
+  }
+
+  // Handle department change for all device types
+  document.getElementById(`department-${type}`).addEventListener("change", function(e) {
+    if (e.target.value === "add-new-department") {
+      // Save current field values
+      ["ministry-id", "device-name", "serial"].forEach(id => {
+        const el = document.querySelector(`[name="${id}"]`);
+        if (el) sessionStorage.setItem(id, el.value);
+      });
+      
+      // Mark which department select triggered this
+      sessionStorage.setItem("lastDepartmentSelectId", `department-${type}`);
+      openAddSectionPopup();
     }
-    );
+  });
 
-  } else {
-    popupFields.innerHTML = "<p>No fields for this type</p>";
+  // Handle model change for all device types
+  document.getElementById(`model-${type}`).addEventListener("change", function(e) {
+    if (e.target.value === "add-new") {
+      // Save current field values
+      ["ministry-id", "device-name", "serial"].forEach(id => {
+        const el = document.querySelector(`[name="${id}"]`);
+        if (el) sessionStorage.setItem(id, el.value);
+      });
+      
+      openAddModelPopup(type, 'fields');
+    }
+  });
+
+  // Reset the device-spec dropdown to default state
+  const deviceSpecDropdown = document.getElementById("device-spec");
+  if (deviceSpecDropdown) {
+    deviceSpecDropdown.innerHTML = `
+      <option value="" disabled selected>Select Specification</option>
+      <option value="add-custom">+ Add New Specification</option>
+    `;
+    deviceSpecDropdown.value = "";
   }
 
   popup.style.display = "flex";
@@ -943,20 +958,7 @@ function openAddOptionPopup(targetId) {
   `;
   popup.style.display = "flex";
 }
-function closeGenericPopup() {
-  const popup = document.getElementById("generic-popup");
-  popup.style.display = "none";
 
-  const lastSelectId = sessionStorage.getItem("lastDropdownOpened");
-  if (lastSelectId) {
-    const dropdown = document.getElementById(lastSelectId);
-    if (dropdown) {
-      // ✅ يرجع السلكت للخيار الافتراضي
-      dropdown.selectedIndex = 0;
-    }
-    sessionStorage.removeItem("lastDropdownOpened");
-  }
-}
 
 
 
