@@ -675,20 +675,21 @@ function generateFieldsForDeviceType(type) {
 
 
 function openAddSectionPopup() {
-  const popup = document.getElementById("popup-modal");
-  const popupTitle = document.getElementById("popup-title");
-  const popupFields = document.getElementById("popup-fields");
-  const saveBtn = document.getElementById("popup-save-btn");
-
-  popupTitle.textContent = "Add New Section";
-  popupFields.innerHTML = `
-    <label>Section Name:</label>
-    <input type="text" id="new-section-name" placeholder="Enter section name" />
+  const popup = document.getElementById("generic-popup");
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>Add New Section</h3>
+      <label>Section Name:</label>
+      <input type="text" id="new-section-name" placeholder="Enter section name" />
+      <div class="popup-buttons">
+        <button onclick="saveNewSection()">Save</button>
+        <button onclick="closeGenericPopup()">Cancel</button>
+      </div>
+    </div>
   `;
-
-  saveBtn.onclick = saveNewSection;
   popup.style.display = "flex";
 }
+
 
 function saveNewSection() {
   const sectionName = document.getElementById("new-section-name").value.trim();
@@ -928,9 +929,9 @@ function openAddOptionPopup(targetId) {
 
 function closeGenericPopup() {
   const popup = document.getElementById("generic-popup");
-  if (popup) popup.style.display = "none";
-
+  popup.style.display = "none";
 }
+
 
 
 function saveOptionForSelect() {
