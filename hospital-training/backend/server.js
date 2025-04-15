@@ -452,14 +452,13 @@ app.post("/add-options-external", (req, res) => {
     res.json({ message: `✅ ${value} added successfully` });
   });
 });
-
 app.post("/add-options-regular", (req, res) => {
-  const { target, value } = req.body;
+  const { target, value } = req.body; // Extract target field and value from request
 
-  let table = "";
-  let column = "";
+  let table = ""; // Initialize table name
+  let column = ""; // Initialize column name
 
-  // ✅ دعم الحقول الجديدة
+  // Map target fields to database tables and columns
   if (target === "device-type") {
     table = "DeviceType";
     column = "DeviceType";
@@ -479,18 +478,32 @@ app.post("/add-options-regular", (req, res) => {
     table = "Processor_Generations";
     column = "generation_number";
   } else {
-    return res.status(400).json({ error: "Invalid target" });
+    return res.status(400).json({ error: "❌ Invalid target" }); // Invalid target
   }
 
-  const query = `INSERT INTO ${table} (${column}) VALUES (?)`;
-  db.query(query, [value], (err, result) => {
-    if (err) {
-      console.error("❌ DB Error:", err);
-      return res.status(500).json({ error: "Database insert failed" });
+  // Check if value already exists
+  db.query(`SELECT * FROM ${table} WHERE ${column} = ?`, [value], (checkErr, checkResults) => {
+    if (checkErr) {
+      console.error("❌ DB Check Error:", checkErr); // Log DB error
+      return res.status(500).json({ error: "Database check failed" }); // Send DB error response
     }
-    res.json({ message: `✅ Added to ${table}: ${value}` });
+
+    if (checkResults.length > 0) {
+      return res.status(400).json({ error: `⚠️ "${value}" already exists!` }); // Value already exists
+    }
+
+    // Insert if value does not exist
+    const query = `INSERT INTO ${table} (${column}) VALUES (?)`; // Prepare insert query
+    db.query(query, [value], (err, result) => {
+      if (err) {
+        console.error("❌ DB Insert Error:", err); // Log DB error
+        return res.status(500).json({ error: "Database insert failed" }); // Send DB error response
+      }
+      res.json({ message: `✅ Added to ${table}: ${value}` }); // Success message
+    });
   });
 });
+
 
 app.post("/submit-general-maintenance", async (req, res) => {
   const {
@@ -959,16 +972,17 @@ app.get("/models-by-type/:type", (req, res) => {
     res.json(result);
   });
 });
+
 app.post("/add-device-model", (req, res) => {
-  const { model_name, device_type_name } = req.body;
+  const { model_name, device_type_name } = req.body; // Extract model name and type from request
 
   if (!model_name || !device_type_name) {
-    return res.status(400).json({ error: "❌ Missing model name or type" });
+    return res.status(400).json({ error: "❌ Missing model name or type" }); // Check required fields
   }
 
-  const cleanedType = device_type_name.trim().toLowerCase();
+  const cleanedType = device_type_name.trim().toLowerCase(); // Normalize type
 
-  let table = "";
+  let table = ""; // Determine appropriate table based on device type
   if (cleanedType === "pc") table = "PC_Model";
   else if (cleanedType === "printer") table = "Printer_Model";
   else if (cleanedType === "scanner") table = "Scanner_Model";
@@ -982,16 +996,18 @@ app.post("/add-device-model", (req, res) => {
     ? [model_name, device_type_name]
     : [model_name];
 
+  // Check for existing model
   db.query(checkQuery, checkValues, (err, existing) => {
     if (err) {
-      console.error("❌ Error checking model:", err);
-      return res.status(500).json({ error: "❌ Failed to check model" });
+      console.error("❌ Error checking model:", err); // Log check error
+      return res.status(500).json({ error: "Database check failed" }); // Check failed response
     }
 
     if (existing.length > 0) {
-      return res.status(400).json({ error: "❌ Model already exists" });
+      return res.status(400).json({ error: "⚠️ Model already exists!" }); // Model already exists
     }
 
+    // Insert new model if not existing
     const insertQuery = table === "Maintance_Device_Model"
       ? `INSERT INTO ${table} (model_name, device_type_name) VALUES (?, ?)`
       : `INSERT INTO ${table} (model_name) VALUES (?)`;
@@ -1002,11 +1018,11 @@ app.post("/add-device-model", (req, res) => {
 
     db.query(insertQuery, insertValues, (err2) => {
       if (err2) {
-        console.error("❌ Error inserting model:", err2);
-        return res.status(500).json({ error: "❌ Failed to insert model" });
+        console.error("❌ Error inserting model:", err2); // Log insert error
+        return res.status(500).json({ error: "Database insert failed" }); // Insert failed response
       }
 
-      res.json({ message: `✅ Model '${model_name}' added successfully` });
+      res.json({ message: `✅ Model '${model_name}' added successfully` }); // Success message
     });
   });
 });
