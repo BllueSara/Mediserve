@@ -336,8 +336,7 @@ textarea:focus {
     align-items: center;
     z-index: 1000;
 }
-
-.popup-content {
+  .popup-content {
     background: white;
     padding: 30px;
     width: 450px;
@@ -345,30 +344,47 @@ textarea:focus {
     overflow-y: auto;
     border-radius: 10px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-
-.popup-content input {
+    
+  }
+  
+  .popup-content label {
+    margin-top: 15px;
+    display: block;
+    font-size: 14px;
+    
+  }
+  
+.popup-content input, .popup-content select {
     width: 100%;
+    margin: 5px auto;
     padding: 10px;
-    margin-top: 5px;
+    display: block;
     border: 1px solid #ccc;
     border-radius: 5px;
-}
 
+}
+  
 .popup-buttons button {
-    padding: 8px 20px;
-    margin: 0 10px;
+    padding: 5px 10px;
+    font-size: 14px;
+    width: auto;
+    min-width: 100px;
     border: none;
-    border-radius: 4px;
-    background-color: #2196F3;
-    color: white;
+    border-radius: 5px;
+    background-color: #3BAAE0;
+    color: white; /* ✅ يخلي النص أبيض */
     cursor: pointer;
-    
-
+    transition: background-color 0.3s ease;
 }
 
-.popup-buttons button:hover {
-    background-color: #0b7dda;
-}
-
-
+  
+  .popup-buttons button:hover {
+    background-color: #007bb8; /* لون عند التحويم */
+  }
+  
+  .popup-buttons {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center; /* ✅ هذا يخلي الأزرار بالوسط */
+    gap: 15px;                /* ✅ مسافة بين الزرين */
+  }

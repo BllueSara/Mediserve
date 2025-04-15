@@ -231,21 +231,21 @@ input:focus, select:focus {
         gap: 10px;
     }
 }
+
 /*pop up*/
 .popup-modal {
+    display: none;
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.5);
-    display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1000;
 }
-
-.popup-content {
+  .popup-content {
     background: white;
     padding: 30px;
     width: 450px;
@@ -253,60 +253,47 @@ input:focus, select:focus {
     overflow-y: auto;
     border-radius: 10px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-
-.popup-content h2 {
-    margin-top: 0;
-    font-size: 1.5rem;
-    color: #333;
-}
-
-.popup-content label {
+    
+  }
+  
+  .popup-content label {
     margin-top: 15px;
     display: block;
     font-size: 14px;
-    color: #555;
-}
-
-.popup-content input, 
-.popup-content select {
+    
+  }
+  
+.popup-content input, .popup-content select {
     width: 100%;
+    margin: 5px auto;
     padding: 10px;
-    margin-top: 5px;
+    display: block;
     border: 1px solid #ccc;
     border-radius: 5px;
-    font-size: 14px;
-}
 
-.popup-buttons {
-    margin-top: 20px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 15px;
 }
-
+  
 .popup-buttons button {
-    padding: 12px 24px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background 0.3s ease;
+    padding: 5px 10px;
+    font-size: 14px;
     width: auto;
     min-width: 100px;
-}
-
-.popup-buttons button:first-child {
+    border: none;
+    border-radius: 5px;
     background-color: #3BAAE0;
-    color: white;
+    color: white; /* ✅ يخلي النص أبيض */
+    cursor: pointer;
+    transition: background-color 0.3s ease;
 }
 
-.popup-buttons button:last-child {
-    background-color: #f0f0f0;
-    color: #333;
-}
-
-.popup-buttons button:hover {
-    opacity: 0.9;
-}
- 
+  
+  .popup-buttons button:hover {
+    background-color: #007bb8; /* لون عند التحويم */
+  }
+  
+  .popup-buttons {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center; /* ✅ هذا يخلي الأزرار بالوسط */
+    gap: 15px;                /* ✅ مسافة بين الزرين */
+  }
