@@ -1,3 +1,6 @@
+document.querySelector(".cancel-btn").addEventListener("click", function () {
+  window.location.href = "Maintenance.html"; // أو حط رابط صفحة الصيانة حسب المسار الصحيح عندك
+});
 
   // Function to fetch devices for selected type and department
   function fetchDeviceSpecsByTypeAndDepartment() {
@@ -129,6 +132,23 @@ document.addEventListener("DOMContentLoaded", () => {
   
 });
 
+function insertAddNewOptionAtTop(selectId, value, labelText) {
+  const dropdown = document.getElementById(selectId);
+  if (!dropdown) return;
+
+  // أولاً، تأكد أن فيه عنصر placeholder أول
+  const placeholderExists = dropdown.options.length > 0 && dropdown.options[0].disabled;
+
+  const newOption = document.createElement("option");
+  newOption.value = value;
+  newOption.textContent = labelText;
+
+  // أدخل الخيار بعد placeholder مباشرة أو كأول عنصر
+  const insertPosition = placeholderExists ? 1 : 0;
+  dropdown.insertBefore(newOption, dropdown.options[insertPosition]);
+}
+
+
 function fetchModelsByType(type, selectId) {
   let endpoint = "";
   const cleanedType = type.trim().toLowerCase();
@@ -174,10 +194,7 @@ function fetchModelsForNewDevices(type, selectId) {
 
       // لو فيه اختيار + Add New
       if (selectId === "spec-model") {
-        const addNew = document.createElement("option");
-        addNew.value = "add-new-model";
-        addNew.textContent = "+ Add New Model";
-        dropdown.appendChild(addNew);
+        insertAddNewOptionAtTop(selectId, "add-new-model", "+ Add New Model");
       }
     })
     .catch(err => {
@@ -775,11 +792,13 @@ function saveNewSection() {
 
 
 // ================== دوال الموديلات والخصائص =====================
-function fetchCPU(callback) {
+function fetchCPU() {
   fetch("http://localhost:5050/CPU_Types")
     .then(res => res.json())
     .then(data => {
       const select = document.getElementById("cpu-select");
+      if (!select) return;
+
       select.innerHTML = '<option disabled selected>Select CPU</option>';
       data.forEach(item => {
         const option = document.createElement("option");
@@ -787,14 +806,21 @@ function fetchCPU(callback) {
         option.textContent = item.cpu_name;
         select.appendChild(option);
       });
-      if (callback) callback(); // 👍 هنا نضيف + Add New بعد التعبئة
+
+      // ✅ أضف + Add New في الأعلى
+      insertAddNewOptionAtTop("cpu-select", "add-new", "+ Add New CPU");
+    })
+    .catch(err => {
+      console.error("❌ Error fetching CPU types:", err);
     });
 }
-function fetchRAM(callback) {
+function fetchRAM() {
   fetch("http://localhost:5050/RAM_Types")
     .then(res => res.json())
     .then(data => {
       const select = document.getElementById("ram-select");
+      if (!select) return;
+
       select.innerHTML = '<option disabled selected>Select RAM</option>';
       data.forEach(item => {
         const option = document.createElement("option");
@@ -802,14 +828,21 @@ function fetchRAM(callback) {
         option.textContent = item.ram_type;
         select.appendChild(option);
       });
-      if (callback) callback();
+
+      // ✅ أضف + Add New في الأعلى
+      insertAddNewOptionAtTop("ram-select", "add-new", "+ Add New RAM");
+    })
+    .catch(err => {
+      console.error("❌ Error fetching RAM types:", err);
     });
 }
-function fetchOS(callback) {
+function fetchOS() {
   fetch("http://localhost:5050/OS_Types")
     .then(res => res.json())
     .then(data => {
       const select = document.getElementById("os-select");
+      if (!select) return;
+
       select.innerHTML = '<option disabled selected>Select OS</option>';
       data.forEach(item => {
         const option = document.createElement("option");
@@ -817,14 +850,20 @@ function fetchOS(callback) {
         option.textContent = item.os_name;
         select.appendChild(option);
       });
-      if (callback) callback();
+
+      insertAddNewOptionAtTop("os-select", "add-new", "+ Add New OS");
+    })
+    .catch(err => {
+      console.error("❌ Error fetching OS types:", err);
     });
 }
-function fetchProcessorGen(callback) {
+function fetchProcessorGen() {
   fetch("http://localhost:5050/Processor_Generations")
     .then(res => res.json())
     .then(data => {
       const select = document.getElementById("generation-select");
+      if (!select) return;
+
       select.innerHTML = '<option disabled selected>Select Generation</option>';
       data.forEach(item => {
         const option = document.createElement("option");
@@ -832,21 +871,20 @@ function fetchProcessorGen(callback) {
         option.textContent = item.generation_number;
         select.appendChild(option);
       });
-      if (callback) callback();
+
+      insertAddNewOptionAtTop("generation-select", "add-new", "+ Add New Generation");
+    })
+    .catch(err => {
+      console.error("❌ Error fetching processor generations:", err);
     });
-}
-
-function fetchModelsByType(type, selectId) {
-  let endpoint = "";
-
-  // استخدم المسار الخاص إذا كان النوع معروف، أو استخدم مسار عام
+}function fetchModelsByType(type, selectId) {
   const knownEndpoints = {
     pc: "/PC_Model",
     printer: "/Printer_Model",
     scanner: "/Scanner_Model"
   };
 
-  endpoint = knownEndpoints[type] || `/models-by-type/${type}`;
+  const endpoint = knownEndpoints[type] || `/models-by-type/${type}`;
 
   fetch(`http://localhost:5050${endpoint}`)
     .then(res => res.json())
@@ -862,25 +900,12 @@ function fetchModelsByType(type, selectId) {
         dropdown.appendChild(option);
       });
 
-      // أضف خيار "إضافة موديل جديد"
-      const addNew = document.createElement("option");
-      addNew.value = "add-new-model";
-      addNew.textContent = "+ Add New Model";
-      dropdown.appendChild(addNew);
+      insertAddNewOptionAtTop(selectId, "add-new-model", "+ Add New Model");
     })
     .catch(err => {
       console.error(`❌ فشل تحميل موديلات ${type}:`, err);
     });
 }
-
-document.addEventListener("change", (e) => {
-  if (e.target && e.target.value === "add-new-model") {
-    const deviceType = document.getElementById("device-type")?.value?.toLowerCase();
-    sessionStorage.setItem("modelTarget", e.target.id); // حفظ مكان الإضافة
-    openAddModelPopup(deviceType); // فتح النافذة المنبثقة لإضافة الموديل
-  }
-});
-
 
 function fetchDepartments(selectId = "department") {
   fetch("http://localhost:5050/Departments")
@@ -890,20 +915,17 @@ function fetchDepartments(selectId = "department") {
       if (!select) return;
 
       select.innerHTML = '<option value="" disabled selected>Select Department</option>';
-
-      // ✅ زر الإضافة
-      const addOption = document.createElement("option");
-      addOption.value = "add-new-department";
-      addOption.textContent = "+ Add New Section";
-      select.appendChild(addOption);
-
-      // ✅ الأقسام
       data.forEach(item => {
         const option = document.createElement("option");
         option.value = item.name;
         option.textContent = item.name;
         select.appendChild(option);
       });
+
+      insertAddNewOptionAtTop(selectId, "add-new-department", "+ Add New Section");
+    })
+    .catch(err => {
+      console.error("❌ Error fetching departments:", err);
     });
 }
 
