@@ -82,7 +82,10 @@ function fetchModelsByType(type, selectId, origin = 'fields') {
       const dropdown = document.getElementById(selectId);
       if (!dropdown) return;
 
-      dropdown.innerHTML = '<option disabled selected>Select Model</option>';
+      // 🟢 تعبئة القائمة مع إعادة تعيين القيمة
+      dropdown.innerHTML = '<option value="" disabled selected>Select Model</option>';
+      dropdown.value = ""; // ✅ يرجع الوضع الافتراضي
+
       const addOption = document.createElement("option");
       addOption.value = "add-new";
       addOption.textContent = "+ Add New Model";
@@ -94,13 +97,16 @@ function fetchModelsByType(type, selectId, origin = 'fields') {
         option.textContent = item.model_name;
         dropdown.appendChild(option);
       });
+
+      // ✅ فتح نافذة الإضافة عند اختيار "+ Add New Model"
       dropdown.addEventListener("change", (e) => {
         if (e.target.value === "add-new") {
-          openAddModelPopup(type, origin); // ✅ مرر origin هنا
+          openAddModelPopup(type, origin);
         }
       });
     });
 }
+
 function fetchModelsForNewDevices(type, selectId) {
   fetch(`http://localhost:5050/models-by-type/${type}`)
     .then(res => res.json())
@@ -422,6 +428,11 @@ function openGenericPopup(label, targetId) {
 
 function openAddModelPopup(type, origin = 'generic') {
   const popup = document.getElementById("generic-popup");
+
+  // 🟢 نحدد الـ ID الخاص بالقائمة اللي فتحنا منها البوب أب
+  const selectId = origin === 'fields' ? "model-select" : "spec-model";
+  sessionStorage.setItem("lastDropdownOpened", selectId); // ⬅️ هذا السطر الجديد
+
   popup.innerHTML = `
     <div class="popup-content">
       <h3>Add New Model for ${type}</h3>
@@ -672,6 +683,11 @@ function generateFieldsForDeviceType(type) {
 
 function openAddSectionPopup() {
   const popup = document.getElementById("generic-popup");
+
+  // 🟢 نحفظ اسم السلكت اللي جاي منه المستخدم (لو موجود)
+  const deptSelectId = sessionStorage.getItem("lastDepartmentSelectId") || "department";
+  sessionStorage.setItem("lastDropdownOpened", deptSelectId);
+
   popup.innerHTML = `
     <div class="popup-content">
       <h3>Add New Section</h3>
@@ -685,6 +701,7 @@ function openAddSectionPopup() {
   `;
   popup.style.display = "flex";
 }
+
 
 
 function saveNewSection() {
@@ -812,12 +829,13 @@ function fetchCPU() {
       const select = document.getElementById("cpu-select");
       if (!select) return;
 
-      select.innerHTML = '<option disabled selected>Select CPU</option>';
-         // ✅ Add New Option
-         const addOption = document.createElement("option");
-         addOption.value = "add-new";
-         addOption.textContent = "+ Add New CPU";
-         select.appendChild(addOption);
+      select.innerHTML = '<option value="" disabled selected>Select CPU</option>';
+      select.value = ""; // ✅ يرجع للسطر الأول تلقائيًا
+
+      const addOption = document.createElement("option");
+      addOption.value = "add-new";
+      addOption.textContent = "+ Add New CPU";
+      select.appendChild(addOption);
 
       data.forEach(item => {
         const option = document.createElement("option");
@@ -826,9 +844,6 @@ function fetchCPU() {
         select.appendChild(option);
       });
 
-   
-
-      // ✅ Event to open popup
       select.addEventListener("change", (e) => {
         if (e.target.value === "add-new") {
           openAddOptionPopup("cpu-select");
@@ -837,6 +852,7 @@ function fetchCPU() {
     });
 }
 
+
 function fetchRAM() {
   fetch("http://localhost:5050/RAM_Types")
     .then(res => res.json())
@@ -844,7 +860,8 @@ function fetchRAM() {
       const select = document.getElementById("ram-select");
       if (!select) return;
 
-      select.innerHTML = '<option disabled selected>Select RAM</option>';
+      select.innerHTML = '<option value="" disabled selected>Select RAM</option>';
+      select.value = ""; // ✅ يرجع للسطر الأول تلقائيًا
 
       const addOption = document.createElement("option");
       addOption.value = "add-new";
@@ -857,8 +874,6 @@ function fetchRAM() {
         option.textContent = item.ram_type;
         select.appendChild(option);
       });
-
-   
 
       select.addEventListener("change", (e) => {
         if (e.target.value === "add-new") {
@@ -876,7 +891,8 @@ function fetchOS() {
       const select = document.getElementById("os-select");
       if (!select) return;
 
-      select.innerHTML = '<option disabled selected>Select OS</option>';
+      select.innerHTML = '<option value="" disabled selected>Select OS</option>';
+      select.value = ""; // ✅ يرجع للسطر الأول تلقائيًا
 
       const addOption = document.createElement("option");
       addOption.value = "add-new";
@@ -890,8 +906,6 @@ function fetchOS() {
         select.appendChild(option);
       });
 
-  
-
       select.addEventListener("change", (e) => {
         if (e.target.value === "add-new") {
           openAddOptionPopup("os-select");
@@ -899,7 +913,11 @@ function fetchOS() {
       });
     });
 }
+
+
 function openAddOptionPopup(targetId) {
+  // 🟡 نحفظ اسم السلكت المفتوح حاليًا عشان نرجعه إذا ضغط Cancel
+  sessionStorage.setItem("lastDropdownOpened", targetId);
 
   let label = "New Option";
   if (targetId === "ram-select") label = "RAM";
@@ -922,10 +940,17 @@ function openAddOptionPopup(targetId) {
   `;
   popup.style.display = "flex";
 }
-
 function closeGenericPopup() {
   const popup = document.getElementById("generic-popup");
   popup.style.display = "none";
+
+  // ✅ نرجّع آخر سلكت للقيمة الافتراضية
+  const lastSelectId = sessionStorage.getItem("lastDropdownOpened");
+  if (lastSelectId) {
+    const dropdown = document.getElementById(lastSelectId);
+    if (dropdown) dropdown.value = ""; // رجوع للحالة الافتراضية
+    sessionStorage.removeItem("lastDropdownOpened");
+  }
 }
 
 
@@ -981,7 +1006,8 @@ function fetchProcessorGen() {
       const select = document.getElementById("generation-select");
       if (!select) return;
 
-      select.innerHTML = '<option disabled selected>Select Generation</option>';
+      select.innerHTML = '<option value="" disabled selected>Select Generation</option>';
+      select.value = ""; // ✅ يرجع للسطر الأول تلقائيًا
 
       const addOption = document.createElement("option");
       addOption.value = "add-new";
@@ -995,7 +1021,6 @@ function fetchProcessorGen() {
         select.appendChild(option);
       });
 
-  
       select.addEventListener("change", (e) => {
         if (e.target.value === "add-new") {
           openAddOptionPopup("generation-select");
@@ -1003,6 +1028,7 @@ function fetchProcessorGen() {
       });
     });
 }
+
 
 function fetchDepartments(selectId = "department") {
   fetch("http://localhost:5050/Departments")
