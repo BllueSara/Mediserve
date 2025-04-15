@@ -312,31 +312,9 @@ function openGenericPopup(label, targetId) {
           popup.style.display = "flex";
         }
 
+        document.getElementById("popup-save-btn").onclick = saveNewSection;
 
-        function saveNewSection() {
-          const sectionName = document.getElementById("new-section-name").value.trim();
-          if (!sectionName) {
-            alert("❌ Please enter a section name");
-            return;
-          }
-
-          fetch("http://localhost:5050/add-option-general", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ target: "section", value: sectionName })
-          })
-            .then(res => res.json())
-            .then(result => {
-              alert(result.message);
-              sessionStorage.setItem("spec-department", sectionName);
-              openGenericPopup("Device Specification", "device-spec");
-            })
-            .catch(err => {
-              console.error("❌ Failed to save section:", err);
-              alert("❌ Error saving section");
-            });
-        }
-
+        
 
         // ✅ جلب الموديلات حسب نوع الجهاز
         if (["pc", "printer", "scanner"].includes(deviceType)) {
@@ -637,18 +615,24 @@ function saveNewSection() {
     .then(res => res.json())
     .then(result => {
       alert(result.message);
-
-      // ✅ احفظ القيمة في sessionStorage
       sessionStorage.setItem("spec-department", sectionName);
 
-      // ✅ أعد فتح البوب أب مع القيمة المضافة
-      openGenericPopup("Device Specification", "device-spec");
+      // ✅ نتحقق من نوع الجهاز ونفتح البوب أب المناسب
+      const deviceType = document.getElementById("problem-type")?.value?.toLowerCase();
+      if (["pc", "printer", "scanner"].includes(deviceType)) {
+        generateFieldsForDeviceType(deviceType); // ✅ افتح الحقول المناسبة
+        sessionStorage.setItem("department-" + deviceType, sectionName);
+
+      } else {
+        openGenericPopup("Device Specification", "device-spec"); // ✅ فقط للأجهزة الجديدة
+      }
     })
     .catch(err => {
       console.error("❌ Failed to save section:", err);
       alert("❌ Error saving section");
     });
 }
+
 
 // ================== حفظ الجهاز =====================
 function savePCSpec() {
@@ -793,21 +777,36 @@ function fetchDepartments(selectId = "department") {
       const select = document.getElementById(selectId);
       if (!select) return;
 
-      // 🟢 الخيار الأساسي
-      select.innerHTML = '<option value="" disabled selected>Select Department</option>';
+      // 🟢 عنوان القائمة
+      select.innerHTML = `<option value="" disabled selected>${selectId === "section" ? "Select section" : "Select Department"}</option>`;
 
-      // ✅ أضف زر + Add New
+      // 🟢 Add New دائمًا (حتى لو مو section رئيسي)
       const addOption = document.createElement("option");
       addOption.value = "add-new-department";
       addOption.textContent = "+ Add New Section";
       select.appendChild(addOption);
 
-      // 🟢 أضف الأقسام
+      // 🟢 الأقسام
       data.forEach(item => {
         const option = document.createElement("option");
         option.value = item.name;
         option.textContent = item.name;
         select.appendChild(option);
+      });
+
+      // ✅ تحديد القسم المختار تلقائيًا (إن وجد)
+      const savedDept = sessionStorage.getItem(selectId);
+      if (savedDept) {
+        select.value = savedDept;
+        sessionStorage.removeItem(selectId);
+      }
+
+      // ✅ إذا المستخدم اختار Add New Section
+      select.addEventListener("change", function (e) {
+        if (e.target.value === "add-new-department") {
+          openAddSectionPopup();
+          sessionStorage.setItem("lastDepartmentSelectId", selectId);
+        }
       });
     });
 }
