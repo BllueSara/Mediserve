@@ -513,6 +513,10 @@ function openGenericPopup(label, targetId) {
 
 // ✅ Popup جديد لإضافة موديل
 function openAddModelPopup(deviceType) {
+  // ✅ حفظ نسخة من الحقول الحالية للرجوع لها بعد الحفظ
+  sessionStorage.setItem("nestedPopupFields", popupFields.innerHTML);
+  sessionStorage.setItem("nestedPopupTitle", popupTitle.textContent);
+
   popupTitle.textContent = `Add New Model for ${deviceType}`;
   popupFields.innerHTML = `
     <label>Model Name:</label>
@@ -521,6 +525,7 @@ function openAddModelPopup(deviceType) {
 
   document.getElementById("popup-save-button").onclick = () => saveNewModel(deviceType);
 }
+
 
 // ✅ حفظ موديل جديد وإعادة فتح نافذة Device Specification
 
@@ -531,9 +536,6 @@ function saveNewModel(deviceType) {
     return;
   }
 
-  // ✅ احفظ القيم قبل ما تعيد بناء الفورم
-  saveAllSpecFieldValues();
-
   fetch("http://localhost:5050/add-device-model", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -543,24 +545,62 @@ function saveNewModel(deviceType) {
     .then(result => {
       alert(result.message || "✅ Model added successfully");
 
-      // ✅ احفظ الموديل المضاف مؤقتًا عشان نحدده لاحقًا
+      // ✅ احفظ اسم الموديل في sessionStorage مؤقتًا
       sessionStorage.setItem("lastAddedModel", modelName);
 
-      // ✅ أعد بناء النموذج بالكامل
-      generateFieldsForDeviceType(deviceType);
+      const previousFields = sessionStorage.getItem("nestedPopupFields");
+      const previousTitle = sessionStorage.getItem("nestedPopupTitle");
 
-      // ✅ انتظر شوي عشان القوائم تنبني، بعدين استرجع القيم
-      setTimeout(() => {
-        restoreAllSpecFieldValues();
-
-        // ✅ حدد الموديل الجديد تلقائيًا
-        const modelSelect = document.getElementById("model-select");
-        if (modelSelect) {
-          modelSelect.value = modelName;
-        }
-
+      if (previousFields && previousTitle) {
+        popupFields.innerHTML = previousFields;
+        popupTitle.textContent = previousTitle;
         popup.style.display = "flex";
-      }, 300); // ← تأخير بسيط حتى يكتمل البناء
+
+        // ✅ استرجاع القيم المحفوظة وتشغيل الأحداث
+        setTimeout(() => {
+          restoreAllSpecFieldValues();
+
+          const modelDropdown = document.getElementById("spec-model");
+          if (modelDropdown) {
+            // تأكد أن الخيار الجديد موجود، لو لا أضفه
+            const exists = [...modelDropdown.options].some(opt => opt.value === modelName);
+            if (!exists) {
+              const newOption = document.createElement("option");
+              newOption.value = modelName;
+              newOption.textContent = modelName;
+              modelDropdown.appendChild(newOption);
+            }
+
+            // حدده
+            modelDropdown.value = modelName;
+
+            // أعد ربط الحدث الخاص بـ + Add New
+            modelDropdown.addEventListener("change", (e) => {
+              if (e.target.value === "add-new-model") {
+                openAddModelPopup(deviceType);
+              }
+            });
+          }
+
+          const deptDropdown = document.getElementById("spec-department");
+          if (deptDropdown) {
+            deptDropdown.addEventListener("change", (e) => {
+              if (e.target.value === "add-new-department") {
+                openAddSectionPopup();
+              }
+            });
+          }
+
+          // تنظيف الجلسة
+          sessionStorage.removeItem("nestedPopupFields");
+          sessionStorage.removeItem("nestedPopupTitle");
+          sessionStorage.removeItem("lastAddedModel");
+        }, 200);
+
+      } else {
+        // fallback إذا ما فيه pop-up سابق
+        generateFieldsForDeviceType(deviceType);
+      }
     })
     .catch(err => {
       console.error("❌ Error saving model:", err);
