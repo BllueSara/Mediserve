@@ -341,12 +341,78 @@ function saveNewSection() {
       }
       
 
+        alert(result.error);
+        return;
+      }
+
+      alert(result.message || "✅ Section added successfully");
+
+      const selectId = sessionStorage.getItem("lastDepartmentSelectId") || "spec-department";
+      const select = document.getElementById(selectId);
+      if (select) {
+        const exists = Array.from(select.options).some(opt => opt.value === sectionName);
+        if (!exists) {
+          const option = document.createElement("option");
+          option.value = sectionName;
+          option.textContent = sectionName;
+
+          const addNewIndex = Array.from(select.options).findIndex(opt => opt.value === "add-new-department");
+          if (addNewIndex !== -1) {
+            select.insertBefore(option, select.options[addNewIndex]);
+          } else {
+            select.appendChild(option);
+          }
+        }
+
+        select.value = sectionName;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+
+      sessionStorage.removeItem("lastDepartmentSelectId");
+      sessionStorage.setItem(selectId, sectionName);
+      sessionStorage.removeItem("returnToPopup");
+
+      // ✅ أغلق البوب أب
+      document.getElementById("generic-popup").style.display = "none";
+
+      // ✅ فقط إذا الإضافة كانت داخل popup المواصفات + الجهاز غير معروف → ارجع لبوب أب المواصفات
+      const deviceType = document.getElementById("device-type")?.value?.toLowerCase();
+      const isSpecContext = ["spec-department", "department-pc", "department-printer", "department-scanner"].includes(selectId);
+
+      if (isSpecContext && !["pc", "printer", "scanner"].includes(deviceType)) {
+        const modelName = document.getElementById("spec-model")?.value;
+        if (modelName) sessionStorage.setItem("spec-model", modelName);
+      
+        setTimeout(() => {
+          openGenericPopup("Device Specification", "device-spec");
+      
+          setTimeout(() => {
+            const deptSelect = document.getElementById("spec-department");
+            if (deptSelect) {
+              deptSelect.value = sectionName;
+              deptSelect.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+      
+            const modelSelect = document.getElementById("spec-model");
+            const savedModel = sessionStorage.getItem("spec-model");
+            if (modelSelect && savedModel) {
+              modelSelect.value = savedModel;
+              modelSelect.dispatchEvent(new Event("change", { bubbles: true }));
+              sessionStorage.removeItem("spec-model");
+            }
+          }, 150);
+        }, 100);
+      }
+      
+
     })
     .catch(err => {
       console.error("❌ Failed to save section:", err);
       alert("❌ Error saving section");
+      alert("❌ Error saving section");
     });
 }
+
 
 
 function renderSelectOptionsWithAddFirst(selectElement, optionsArray, valueKey, textKey, addNewValue, addNewLabel, placeholderText) {
@@ -375,7 +441,9 @@ function renderSelectOptionsWithAddFirst(selectElement, optionsArray, valueKey, 
     option.textContent = item[textKey];
     selectElement.appendChild(option);
     
+    
   });
+}function fetchCPU() {
 }function fetchCPU() {
   fetch("http://localhost:5050/CPU_Types")
     .then(res => res.json())
@@ -399,13 +467,27 @@ function renderSelectOptionsWithAddFirst(selectElement, optionsArray, valueKey, 
         sessionStorage.removeItem("cpu-select");
       }
 
+      // ✅ تحديد القيمة الجديدة إن وجدت
+      const saved = sessionStorage.getItem("cpu-select");
+      if (saved) {
+        select.value = saved;
+        sessionStorage.removeItem("cpu-select");
+      }
+
       select.addEventListener("change", (e) => {
+        if (e.target.value === "add-new") {
+          sessionStorage.setItem("cpu-select", ""); // تحديد العودة لاحقًا
+          openAddOptionPopup("cpu-select");
+        }
         if (e.target.value === "add-new") {
           sessionStorage.setItem("cpu-select", ""); // تحديد العودة لاحقًا
           openAddOptionPopup("cpu-select");
         }
       });
     });
+}
+
+function fetchRAM() {
 }
 
 function fetchRAM() {
@@ -430,14 +512,22 @@ function fetchRAM() {
         sessionStorage.removeItem("ram-select");
       }
 
+      const saved = sessionStorage.getItem("ram-select");
+      if (saved) {
+        select.value = saved;
+        sessionStorage.removeItem("ram-select");
+      }
+
       select.addEventListener("change", (e) => {
         if (e.target.value === "add-new") {
+          sessionStorage.setItem("ram-select", "");
           sessionStorage.setItem("ram-select", "");
           openAddOptionPopup("ram-select");
         }
       });
     });
 }
+
 
 
 function fetchOS() {
@@ -462,14 +552,22 @@ function fetchOS() {
         sessionStorage.removeItem("os-select");
       }
 
+      const saved = sessionStorage.getItem("os-select");
+      if (saved) {
+        select.value = saved;
+        sessionStorage.removeItem("os-select");
+      }
+
       select.addEventListener("change", (e) => {
         if (e.target.value === "add-new") {
+          sessionStorage.setItem("os-select", "");
           sessionStorage.setItem("os-select", "");
           openAddOptionPopup("os-select");
         }
       });
     });
 }
+
 
 
 function fetchProcessorGen() {
@@ -494,14 +592,22 @@ function fetchProcessorGen() {
         sessionStorage.removeItem("generation-select");
       }
 
+      const saved = sessionStorage.getItem("generation-select");
+      if (saved) {
+        select.value = saved;
+        sessionStorage.removeItem("generation-select");
+      }
+
       select.addEventListener("change", (e) => {
         if (e.target.value === "add-new") {
+          sessionStorage.setItem("generation-select", "");
           sessionStorage.setItem("generation-select", "");
           openAddOptionPopup("generation-select");
         }
       });
     });
 }
+
 
 
 
@@ -558,6 +664,8 @@ function saveOptionForSelect() {
         else if (targetId === "ram-select") fetchRAM();
         else if (targetId === "cpu-select") fetchCPU();
         else if (targetId === "generation-select") fetchProcessorGen();
+        sessionStorage.setItem(targetId, value); // حفظ القيمة الجديدة لتحديدها لاحقًا
+
         sessionStorage.setItem(targetId, value); // حفظ القيمة الجديدة لتحديدها لاحقًا
 
         closeGenericPopup();
@@ -898,6 +1006,7 @@ function openAddSectionPopup(selectId = "section") {
   sessionStorage.setItem("returnToPopup", selectId);
   const popup = document.getElementById("generic-popup");
 
+
   popup.innerHTML = `
     <div class="popup-content">
       <h3>Add New Section</h3>
@@ -913,6 +1022,7 @@ function openAddSectionPopup(selectId = "section") {
   `;
   popup.style.display = "flex";
 }
+
 
 
 
@@ -935,8 +1045,52 @@ function saveNewModel() {
     .then(result => {
       if (result.error) {
         alert(result.error);
+        alert(result.error);
       } else {
         alert(result.message);
+
+        const modelSelect = document.getElementById("spec-model") ||
+                            document.getElementById("model-select") ||
+                            document.getElementById(`Model-${deviceType}`) ||
+                            document.getElementById(`model-${deviceType}`);
+
+        if (modelSelect) {
+          const exists = Array.from(modelSelect.options).some(opt => opt.value === modelName);
+          if (!exists) {
+            const option = document.createElement("option");
+            option.value = modelName;
+            option.textContent = modelName;
+
+            const addNewIndex = Array.from(modelSelect.options).findIndex(opt => opt.value === "add-new-model" || opt.value === "add-new");
+            if (addNewIndex !== -1) {
+              modelSelect.insertBefore(option, modelSelect.options[addNewIndex]);
+            } else {
+              modelSelect.appendChild(option);
+            }
+
+            modelSelect.value = modelName;
+            modelSelect.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        }
+
+        sessionStorage.removeItem("returnToPopup");
+
+        // ✅ أغلق بوب أب الموديل فقط
+        document.getElementById("generic-popup").style.display = "none";
+
+        // ✅ إذا الجهاز غير معروف → رجع المستخدم لبوب أب المواصفات
+        if (!["pc", "printer", "scanner"].includes(deviceType)) {
+          setTimeout(() => {
+            openGenericPopup("Device Specification", "device-spec");
+            setTimeout(() => {
+              const modelDropdown = document.getElementById("spec-model");
+              if (modelDropdown) {
+                modelDropdown.value = modelName;
+                modelDropdown.dispatchEvent(new Event("change", { bubbles: true }));
+              }
+            }, 100);
+          }, 100);
+        }
 
         const modelSelect = document.getElementById("spec-model") ||
                             document.getElementById("model-select") ||
@@ -1078,8 +1232,23 @@ function closeGenericPopup() {
   }
 
   // ✅ 2. أخفِ البوب أب
+
+  // ✅ 1. احفظ القيم المؤقتة إذا بنرجع لبوب أب المواصفات
+  const returnTo = sessionStorage.getItem("returnToPopup");
+  const specContextFields = ["spec-model", "spec-department", "department-pc", "department-printer", "department-scanner"];
+
+  if (returnTo && specContextFields.includes(returnTo)) {
+    const fieldsToPreserve = ["spec-ministry", "spec-name", "spec-serial", "spec-department", "spec-model"];
+    fieldsToPreserve.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) sessionStorage.setItem(id, el.value);
+    });
+  }
+
+  // ✅ 2. أخفِ البوب أب
   popup.style.display = "none";
 
+  // ✅ 3. نظّف جميع الحقول
   // ✅ 3. نظّف جميع الحقول
   const inputs = popup.querySelectorAll("input, select");
   inputs.forEach(el => {
@@ -1106,11 +1275,57 @@ function closeGenericPopup() {
   // ✅ 4. لا تحذف القيم المؤقتة هنا — نحتاجها بعدين
   // ✅ 5. إذا بنرجع إلى Popup المواصفات
   if (returnTo && specContextFields.includes(returnTo)) {
+  // ✅ 4. لا تحذف القيم المؤقتة هنا — نحتاجها بعدين
+  // ✅ 5. إذا بنرجع إلى Popup المواصفات
+  if (returnTo && specContextFields.includes(returnTo)) {
     sessionStorage.removeItem("returnToPopup");
 
     const deviceType = document.getElementById("device-type")?.value?.toLowerCase();
     if (!["pc", "printer", "scanner"].includes(deviceType)) {
+
+    const deviceType = document.getElementById("device-type")?.value?.toLowerCase();
+    if (!["pc", "printer", "scanner"].includes(deviceType)) {
       openGenericPopup("Device Specification", "device-spec");
+
+      setTimeout(() => {
+        const targetSelect = document.getElementById(returnTo);
+        const savedValue = sessionStorage.getItem(returnTo);
+        if (targetSelect && savedValue) {
+          targetSelect.value = savedValue;
+          targetSelect.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+
+        // ✅ استرجاع باقي القيم
+        const fieldsToRestore = ["spec-ministry", "spec-name", "spec-serial", "spec-model", "spec-department"];
+        fieldsToRestore.forEach(id => {
+          const el = document.getElementById(id);
+          const val = sessionStorage.getItem(id);
+          if (el && val) {
+            el.value = val;
+            sessionStorage.removeItem(id);
+          }
+        });
+
+        // ✅ امسح القيم بعد الاسترجاع
+        sessionStorage.removeItem("spec-model");
+        sessionStorage.removeItem("spec-department");
+      }, 100);
+    }
+  } else {
+    // ✅ حذف القيم المؤقتة بشكل طبيعي إذا ما في رجوع
+    const savedKeys = [
+      "spec-ministry",
+      "spec-name",
+      "spec-serial",
+      "spec-model",
+      "spec-department",
+      "lastAddedModel",
+      "lastDepartmentSelectId"
+    ];
+    savedKeys.forEach(key => sessionStorage.removeItem(key));
+  }
+}
+
 
       setTimeout(() => {
         const targetSelect = document.getElementById(returnTo);
