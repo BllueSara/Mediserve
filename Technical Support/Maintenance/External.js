@@ -665,24 +665,55 @@ function saveDeviceSpecification() {
     });
 }
 function closePopup() {
-  popup.style.display = "none";
+  const previousFields = sessionStorage.getItem("nestedPopupFields");
+  const previousTitle = sessionStorage.getItem("nestedPopupTitle");
 
-  const targetInput = document.getElementById("popup-target-id");
-  const targetId = targetInput ? targetInput.value : null;
+  if (previousFields && previousTitle) {
+    // ✅ رجوع إلى البوب أب السابق بدل الإغلاق النهائي
+    popupFields.innerHTML = previousFields;
+    popupTitle.textContent = previousTitle;
+    popup.style.display = "flex";
 
-  if (targetId) {
-    const dropdown = document.getElementById(targetId);
-    if (dropdown && (dropdown.value === "add-custom" || dropdown.value === "add-new-model")) {
-      dropdown.value = ""; // ترجع الاختيار للوضع الطبيعي
-    }
+    // ✅ استرجاع الحقول المؤقتة
+    setTimeout(() => {
+      restoreAllSpecFieldValues();
+
+      // إعادة الأحداث الخاصة بالموديل
+      const deviceType = document.getElementById("device-type")?.value?.toLowerCase();
+      const modelDropdown = document.getElementById("spec-model");
+      if (modelDropdown) {
+        modelDropdown.addEventListener("change", (e) => {
+          if (e.target.value === "add-new-model") {
+            openAddModelPopup(deviceType);
+          }
+        });
+      }
+
+      const deptDropdown = document.getElementById("spec-department");
+      if (deptDropdown) {
+        deptDropdown.addEventListener("change", (e) => {
+          if (e.target.value === "add-new-department") {
+            openAddSectionPopup();
+          }
+        });
+      }
+
+      sessionStorage.removeItem("nestedPopupFields");
+      sessionStorage.removeItem("nestedPopupTitle");
+    }, 150);
+
+  } else {
+    // ⛔️ لا يوجد popup سابق، اغلق كليًا
+    popup.style.display = "none";
   }
 
-  // ✳️ تأكد إن العنصر موجود قبل محاولة تصفيره
+  const targetInput = document.getElementById("popup-target-id");
   if (targetInput) targetInput.value = "";
 
   const input = document.getElementById("popup-input");
   if (input) input.value = "";
 }
+
 
 function saveGenericOption() {
   const value = document.getElementById("popup-input").value.trim();
