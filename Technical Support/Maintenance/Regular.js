@@ -780,6 +780,9 @@ function openGenericPopup(label, targetId) {
 function openAddModelPopup() {
   const deviceType = document.getElementById("device-type").value.trim();
 
+  // ✅ علشان نرجع للمواصفات لو ضغط Cancel
+  sessionStorage.setItem("returnToPopup", "true");
+
   const popup = document.getElementById("generic-popup");
   popup.innerHTML = `
     <div class="popup-content">
@@ -798,7 +801,11 @@ function openAddModelPopup() {
 }
 
 
+
 function openAddSectionPopup() {
+  // ✅ علشان نرجع إلى popup المواصفات بعد الإلغاء
+  sessionStorage.setItem("returnToPopup", "true");
+
   const popup = document.getElementById("generic-popup");
   popup.innerHTML = `
     <div class="popup-content">
@@ -815,6 +822,7 @@ function openAddSectionPopup() {
   `;
   popup.style.display = "flex";
 }
+
 
 
 function saveNewModel() {
@@ -929,7 +937,6 @@ function closeGenericPopup() {
   const popup = document.getElementById("generic-popup");
   popup.style.display = "none";
 
-  // ✅ تنظيف الحقول النصية داخل البوب
   const inputs = popup.querySelectorAll("input, select");
   inputs.forEach(el => {
     if (el.tagName === "SELECT") {
@@ -939,7 +946,6 @@ function closeGenericPopup() {
     }
   });
 
-  // ✅ تنظيف الـ sessionStorage لأي قيم محفوظة
   const savedKeys = [
     "spec-ministry",
     "spec-name",
@@ -951,7 +957,6 @@ function closeGenericPopup() {
   ];
   savedKeys.forEach(key => sessionStorage.removeItem(key));
 
-  // ✅ إعادة تعيين أي dropdown كان على add-new أو add-custom
   const allSelects = document.querySelectorAll("select");
   allSelects.forEach(select => {
     if (select.value && (select.value.startsWith("add-new") || select.value === "add-custom")) {
@@ -959,14 +964,23 @@ function closeGenericPopup() {
     }
   });
 
-  // ✅ تنظيف اسم الموديل لو فيه
   const modelInput = document.getElementById("new-model-name");
   if (modelInput) modelInput.value = "";
 
-  // ✅ تنظيف الحقل العام (Generic input)
   const genericInput = document.getElementById("generic-popup-input");
   if (genericInput) genericInput.value = "";
+
+  // ✅ إذا كنا داخل Add Model أو Add Section من Add Specification، نرجع للبوب أب الأساسي
+  if (sessionStorage.getItem("returnToPopup") === "true") {
+    sessionStorage.removeItem("returnToPopup");
+    const deviceType = document.getElementById("device-type")?.value;
+    if (deviceType) {
+      openGenericPopup("Device Specification", "device-spec");
+    }
+  }
 }
+
+
 
 
 function prependAddNewOption(selectElement, value = "add-new", text = "+ Add New") {
