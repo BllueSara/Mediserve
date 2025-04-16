@@ -224,6 +224,7 @@ app.get("/devices/:type/:department", (req, res) => {
     res.json(result);
   });
 });
+
 app.post("/submit-regular-maintenance", async (req, res) => {
   console.log("📥 Data received for maintenance:", req.body);
 
@@ -389,7 +390,11 @@ app.post("/add-option-general", (req, res) => {
       ? { table: "ProblemStates_Printer", column: "problem_text" }
       : type === "scanner"
       ? { table: "ProblemStates_Scanner", column: "problem_text" }
-      : { table: "problemStates_Maintance_device", column: "problemStates_Maintance_device_name", extra: "device_type_name" }
+      : { table: "problemStates_Maintance_device", column: "problemStates_Maintance_device_name", extra: "device_type_name" },
+      "os-select": { table: "OS_Types", column: "os_name" },
+      "ram-select": { table: "RAM_Types", column: "ram_type" },
+      "cpu-select": { table: "CPU_Types", column: "cpu_name" },
+      "generation-select": { table: "Processor_Generations", column: "generation_number" }
   };
 
   const mapping = tableMap[target];
@@ -414,6 +419,7 @@ app.post("/add-option-general", (req, res) => {
     res.json({ message: `✅ ${value} added to ${mapping.table}` });
   });
 });
+
 
 
 app.post("/add-options-external", (req, res) => {
@@ -442,16 +448,30 @@ app.post("/add-options-external", (req, res) => {
       return res.status(400).json({ error: "Unsupported dropdown" });
   }
 
-  const query = `INSERT INTO ${table} (${column}) VALUES (?)`;
-
-  db.query(query, [value], (err, result) => {
-    if (err) {
-      console.error("❌ Error inserting option:", err);
+  // ✅ تحقق أولاً إذا كانت القيمة موجودة مسبقًا
+  const checkQuery = `SELECT * FROM ${table} WHERE ${column} = ? LIMIT 1`;
+  db.query(checkQuery, [value], (checkErr, checkResult) => {
+    if (checkErr) {
+      console.error("❌ Error checking existing value:", checkErr);
       return res.status(500).json({ error: "Database error" });
     }
-    res.json({ message: `✅ ${value} added successfully` });
+
+    if (checkResult.length > 0) {
+      return res.status(400).json({ error: `⚠️ "${value}" already exists!` });
+    }
+
+    // ✅ إذا ما كانت موجودة، أضفها
+    const insertQuery = `INSERT INTO ${table} (${column}) VALUES (?)`;
+    db.query(insertQuery, [value], (insertErr, insertResult) => {
+      if (insertErr) {
+        console.error("❌ Error inserting option:", insertErr);
+        return res.status(500).json({ error: "Database insert error" });
+      }
+      res.json({ message: `✅ ${value} added successfully` });
+    });
   });
 });
+
 app.post("/add-options-regular", (req, res) => {
   const { target, value } = req.body; // Extract target field and value from request
 
