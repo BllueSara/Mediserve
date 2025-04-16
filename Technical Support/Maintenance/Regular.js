@@ -776,12 +776,12 @@ function openGenericPopup(label, targetId) {
     popup.style.display = "flex";
   }
 }
-
 function openAddModelPopup() {
   const deviceType = document.getElementById("device-type").value.trim();
-
-  // ✅ علشان نرجع للمواصفات لو ضغط Cancel
-  sessionStorage.setItem("returnToPopup", "true");
+  const origin = document.getElementById("generic-popup-target-id")?.value;
+  if (origin === "device-spec") {
+    sessionStorage.setItem("returnToPopup", "true");
+  }
 
   const popup = document.getElementById("generic-popup");
   popup.innerHTML = `
@@ -790,7 +790,6 @@ function openAddModelPopup() {
       <label>Model Name:</label>
       <input type="text" id="new-model-name" placeholder="Enter model name" />
       <input type="hidden" id="generic-popup-target-id" value="model" />
-
       <div class="popup-buttons">
         <button onclick="saveNewModel()">Save</button>
         <button onclick="closeGenericPopup()">Cancel</button>
@@ -801,10 +800,11 @@ function openAddModelPopup() {
 }
 
 
-
 function openAddSectionPopup() {
-  // ✅ علشان نرجع إلى popup المواصفات بعد الإلغاء
-  sessionStorage.setItem("returnToPopup", "true");
+  const origin = document.getElementById("generic-popup-target-id")?.value;
+  if (origin === "device-spec") {
+    sessionStorage.setItem("returnToPopup", "true");
+  }
 
   const popup = document.getElementById("generic-popup");
   popup.innerHTML = `
@@ -813,7 +813,6 @@ function openAddSectionPopup() {
       <label>Section Name:</label>
       <input type="text" id="new-section-name" placeholder="Enter section name" />
       <input type="hidden" id="generic-popup-target-id" value="section" />
-
       <div class="popup-buttons">
         <button onclick="saveNewSection()">Save</button>
         <button onclick="closeGenericPopup()">Cancel</button>
