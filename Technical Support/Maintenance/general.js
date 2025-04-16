@@ -68,13 +68,10 @@ function insertAddNewOptionAtTop(selectId, value, labelText) {
   const insertPosition = placeholderExists ? 1 : 0;
   dropdown.insertBefore(newOption, dropdown.options[insertPosition]);
 }
+
+
 function fetchModelsByType(type, selectId, origin = 'fields') {
-  let endpoint = "";
-  const cleanedType = type.trim().toLowerCase();
-  if (cleanedType === "pc") endpoint = "/PC_Model";
-  else if (cleanedType === "printer") endpoint = "/Printer_Model";
-  else if (cleanedType === "scanner") endpoint = "/Scanner_Model";
-  else return;
+  let endpoint = `/models-by-type/${type.toLowerCase()}`; // 🟢 دعم لكل الأنواع من السيرفر
 
   fetch(`http://localhost:5050${endpoint}`)
     .then(res => res.json())
@@ -82,9 +79,8 @@ function fetchModelsByType(type, selectId, origin = 'fields') {
       const dropdown = document.getElementById(selectId);
       if (!dropdown) return;
 
-      // 🟢 تعبئة القائمة مع إعادة تعيين القيمة
       dropdown.innerHTML = '<option value="" disabled selected>Select Model</option>';
-      dropdown.value = ""; // ✅ يرجع الوضع الافتراضي
+      dropdown.value = "";
 
       const addOption = document.createElement("option");
       addOption.value = "add-new";
@@ -98,14 +94,17 @@ function fetchModelsByType(type, selectId, origin = 'fields') {
         dropdown.appendChild(option);
       });
 
-      // ✅ فتح نافذة الإضافة عند اختيار "+ Add New Model"
       dropdown.addEventListener("change", (e) => {
         if (e.target.value === "add-new") {
           openAddModelPopup(type, origin);
         }
       });
+    })
+    .catch(err => {
+      console.error(`❌ Error fetching models for type "${type}":`, err);
     });
 }
+
 
 function fetchModelsForNewDevices(type, selectId) {
   fetch(`http://localhost:5050/models-by-type/${type}`)
