@@ -489,40 +489,58 @@ app.post("/add-options-external", (req, res) => {
 });
 
 
-// ✅ Endpoint لإضافة الخيارات (Dropdown Options) بعد التحقق
 app.post("/add-options-regular", (req, res) => {
-  const { target, value } = req.body; // 🟢 Extract target and value from body
-  let table = "", column = "";
+  const { target, value, type } = req.body; // 🟢 استخراج القيم من الطلب
 
-  // 🟢 Determine target table and column
-  if (target === "device-type") {
-    table = "DeviceType"; column = "DeviceType";
-  } else if (target === "section") {
-    table = "Departments"; column = "name";
-  } else if (target === "OS_Types") {
-    table = "OS_Types"; column = "os_name";
-  } else if (target === "RAM_Types") {
-    table = "RAM_Types"; column = "ram_type";
-  } else if (target === "CPU_Types") {
-    table = "CPU_Types"; column = "cpu_name";
-  } else if (target === "Processor_Generations") {
-    table = "Processor_Generations"; column = "generation_number";
+  // 🟢 تحديد الجدول والعمود لكل نوع خيار في القوائم المنسدلة
+  const tableMap = {
+    "device-type": { table: "DeviceType", column: "DeviceType" },
+    "section": { table: "Departments", column: "name" },
+    "os-select": { table: "OS_Types", column: "os_name" },
+    "ram-select": { table: "RAM_Types", column: "ram_type" },
+    "cpu-select": { table: "CPU_Types", column: "cpu_name" },
+    "generation-select": { table: "Processor_Generations", column: "generation_number" },
+    "problem-status": type === "pc"
+      ? { table: "ProblemStates_Pc", column: "problem_text" }
+      : type === "printer"
+      ? { table: "ProblemStates_Printer", column: "problem_text" }
+      : type === "scanner"
+      ? { table: "ProblemStates_Scanner", column: "problem_text" }
+      : { table: "problemStates_Maintance_device", column: "problemStates_Maintance_device_name", extra: "device_type_name" },
+  };
+
+  const mapping = tableMap[target];
+  if (!mapping) return res.status(400).json({ error: "Invalid target field" }); // 🔴 إذا النوع غير موجود نرجع خطأ
+
+  let query = "";
+  let params = [];
+
+  if (mapping.extra) {
+    query = `INSERT INTO ${mapping.table} (${mapping.column}, ${mapping.extra}) VALUES (?, ?)`;
+    params = [value, type];
   } else {
-    return res.status(400).json({ error: "❌ Invalid target" }); // 🔴 Invalid target
+    query = `INSERT INTO ${mapping.table} (${mapping.column}) VALUES (?)`;
+    params = [value];
   }
 
-  // 🔍 Check for duplicates
-  db.query(`SELECT * FROM ${table} WHERE ${column} = ?`, [value], (checkErr, checkResults) => {
-    if (checkErr) return res.status(500).json({ error: "Database check failed" });
-    if (checkResults.length > 0) {
-      return res.status(400).json({ error: `⚠️ \"${value}\" already exists!` });
+  // 🔍 تحقق من عدم وجود القيمة مسبقًا
+  const checkQuery = mapping.extra
+    ? `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ? AND ${mapping.extra} = ?`
+    : `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ?`;
+
+  db.query(checkQuery, params, (err, existing) => {
+    if (err) return res.status(500).json({ error: "DB check error" });
+    if (existing.length > 0) {
+      return res.status(400).json({ error: `⚠️ \"${value}\" already exists in ${mapping.table}` });
     }
 
-    // ✅ Insert if not exists
-    const query = `INSERT INTO ${table} (${column}) VALUES (?)`;
-    db.query(query, [value], (err, result) => {
-      if (err) return res.status(500).json({ error: "Database insert failed" });
-      res.json({ message: `✅ Added to ${table}: ${value}` });
+    // ✅ إضافة إذا لم تكن موجودة مسبقًا
+    db.query(query, params, (err2, result) => {
+      if (err2) {
+        console.error("❌ DB Insert Error:", err2);
+        return res.status(500).json({ error: "Database error while inserting option" });
+      }
+      res.json({ message: `✅ ${value} added to ${mapping.table}` });
     });
   });
 });
