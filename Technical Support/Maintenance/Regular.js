@@ -1144,6 +1144,23 @@ function closeGenericPopup() {
     }
   });
 
+  // ✅ إضافي: تأكد من أن القوائم العامة أيضًا يتم تصفيرها إذا كانت add-custom
+  const generalDropdowns = ["device-type", "device-spec", "section"];
+  generalDropdowns.forEach(id => {
+    const dropdown = document.getElementById(id);
+    if (dropdown && dropdown.value === "add-custom") {
+      const placeholder = Array.from(dropdown.options).find(opt =>
+        opt.disabled && opt.textContent.toLowerCase().includes("select")
+      );
+      if (placeholder) {
+        placeholder.selected = true;
+      } else {
+        dropdown.selectedIndex = 0;
+      }
+      dropdown.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  });
+
   // ✅ رجع للبُوب أب إذا الجهاز غير معروف
   if (returnToSpec && !["pc", "printer", "scanner"].includes(deviceType)) {
     sessionStorage.removeItem("returnToPopup");
@@ -1191,6 +1208,7 @@ function closeGenericPopup() {
   ["spec-ministry", "spec-name", "spec-serial", "spec-model", "spec-department", "lastAddedModel", "returnToPopup"]
     .forEach(k => sessionStorage.removeItem(k));
 }
+
 
 
 
