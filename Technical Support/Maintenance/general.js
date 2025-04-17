@@ -825,14 +825,18 @@ function saveNewSection() {
   })
     .then(res => res.json())
     .then(result => {
+      // ✅ تحقق إذا القسم موجود مسبقًا
+      if (result.error) {
+        alert(result.error); // ⛔ "هذا القسم موجود مسبقًا"
+        return; // 🛑 لا تكمل باقي الكود
+      }
+
       alert(result.message);
       const selectId = sessionStorage.getItem("lastDepartmentSelectId") || "spec-department";
       const isKnownDevice = ["pc", "printer", "scanner"].includes(document.getElementById("problem-type")?.value?.toLowerCase());
 
-      // ✅ خزّن القسم مؤقتًا لتحديده لاحقًا
       sessionStorage.setItem(selectId, sectionName);
 
-      // ✅ خزّن القيم الأخرى في حال احتجنا نرجعها
       const restoreFields = isKnownDevice
         ? ["ministry-id", "device-name", "serial", ...(document.getElementById("problem-type").value.toLowerCase() === "pc"
             ? ["cpu-select", "ram-select", "os-select", "generation-select"]
@@ -844,14 +848,11 @@ function saveNewSection() {
         if (el) sessionStorage.setItem(id, el.value);
       });
 
-      // ✅ إعادة تحميل القائمة وتحديد القسم الجديد فورًا
       fetchDepartments(selectId);
 
-      // ✅ أغلق النافذة فقط بعد تحميل القائمة
       setTimeout(() => {
         closeGenericPopup();
 
-        // ✅ إذا جهاز جديد افتح نافذة المواصفات تلقائيًا
         if (!isKnownDevice) {
           setTimeout(() => {
             const popupVisible = document.getElementById("popup-modal")?.style.display === "flex";
@@ -1077,44 +1078,45 @@ function saveOptionForSelect() {
   const value = document.getElementById("generic-popup-input").value.trim();
   const targetId = document.getElementById("generic-popup-target-id").value;
   const dropdown = document.getElementById(targetId);
-
   if (!value || !dropdown) return;
 
-  fetch("http://localhost:5050/add-option-general", {
+  let endpoint = "http://localhost:5050/add-option-general";
+  if (targetId === "os-select") endpoint = "http://localhost:5050/add-os";
+  else if (targetId === "ram-select") endpoint = "http://localhost:5050/add-ram";
+  else if (targetId === "cpu-select") endpoint = "http://localhost:5050/add-cpu";
+  else if (targetId === "generation-select") endpoint = "http://localhost:5050/add-generation";
+  else if (targetId === "section") endpoint = "http://localhost:5050/add-department";
+
+  fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ target: targetId, value })
   })
-    .then(res => res.json())
-    .then(result => {
-      alert(result.message || "✅ Added successfully");
+    .then(async res => {
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "❌ This option already exists");
+        return;
+      }
+
+      alert(data.message || "✅ Added successfully");
+
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = value;
+      dropdown.appendChild(option);
+      dropdown.value = value;
 
       closeGenericPopup();
-
-      // تحديث القائمة بالكامل ثم تعيين القيمة المضافة
-      const applyValue = () => {
-        if (dropdown) dropdown.value = value;
-      };
-
-      if (targetId === "os-select") {
-        fetchOS();
-        setTimeout(applyValue, 100);
-      } else if (targetId === "ram-select") {
-        fetchRAM();
-        setTimeout(applyValue, 100);
-      } else if (targetId === "cpu-select") {
-        fetchCPU();
-        setTimeout(applyValue, 100);
-      } else if (targetId === "generation-select") {
-        fetchProcessorGen();
-        setTimeout(applyValue, 100);
-      }
     })
     .catch(err => {
-      console.error("❌ Error saving new option:", err);
+      console.error("❌ Error:", err);
       alert("❌ Failed to save option");
     });
 }
+
+
 
 
 function fetchProcessorGen() {
@@ -1155,16 +1157,13 @@ function fetchDepartments(selectId = "department") {
       const select = document.getElementById(selectId);
       if (!select) return;
 
-      // 🟢 عنوان القائمة
       select.innerHTML = `<option value="" disabled selected>${selectId === "section" ? "Select section" : "Select Department"}</option>`;
 
-      // 🟢 Add New دائمًا (حتى لو مو section رئيسي)
       const addOption = document.createElement("option");
       addOption.value = "add-new-department";
       addOption.textContent = "+ Add New Section";
       select.appendChild(addOption);
 
-      // 🟢 الأقسام
       data.forEach(item => {
         const option = document.createElement("option");
         option.value = item.name;
@@ -1172,20 +1171,17 @@ function fetchDepartments(selectId = "department") {
         select.appendChild(option);
       });
 
-      // ✅ تحديد القسم المختار تلقائيًا (إن وجد)
+      // ✅ هنا نرجع القيمة المختارة إذا كانت محفوظة
       const savedDept = sessionStorage.getItem(selectId);
       if (savedDept) {
         select.value = savedDept;
         sessionStorage.removeItem(selectId);
       }
 
-      // ✅ إذا المستخدم اختار Add New Section
       select.addEventListener("change", function (e) {
         if (e.target.value === "add-new-department") {
-
           const popupVisible = document.getElementById("generic-popup")?.style.display === "flex";
           if (!popupVisible) {
-
             openAddSectionPopup();
             sessionStorage.setItem("lastDepartmentSelectId", selectId);
           }
@@ -1193,6 +1189,7 @@ function fetchDepartments(selectId = "department") {
       });
     });
 }
+
 
 function fetchDeviceSpecsByTypeAndDepartment() {
   const type = document.getElementById("problem-type").value.toLowerCase();

@@ -1169,7 +1169,87 @@ app.get('/get-internal-reports', (req, res) => {
 });
 
 
+// ✅ إضافة خيار جديد في جدول OS_Types بعد التحقق
+app.post("/add-os", (req, res) => {
+  const { value } = req.body; // استخراج القيمة من الطلب
+  if (!value) return res.status(400).json({ error: "❌ Missing OS value" }); // التحقق أن القيمة موجودة
 
+  // التحقق من التكرار
+  db.query("SELECT * FROM OS_Types WHERE os_name = ?", [value], (err, result) => {
+    if (err) return res.status(500).json({ error: "DB error" });
+    if (result.length > 0) return res.status(400).json({ error: "⚠️ OS already exists" });
+
+    // إدخال القيمة إذا لم تكن مكررة
+    db.query("INSERT INTO OS_Types (os_name) VALUES (?)", [value], (err2) => {
+      if (err2) return res.status(500).json({ error: "Insert error" });
+      res.json({ message: "✅ OS added successfully" }); // رسالة نجاح
+    });
+  });
+});
+
+// ✅ إضافة خيار جديد في جدول RAM_Types
+app.post("/add-ram", (req, res) => {
+  const { value } = req.body;
+  if (!value) return res.status(400).json({ error: "❌ Missing RAM value" });
+
+  db.query("SELECT * FROM RAM_Types WHERE ram_type = ?", [value], (err, result) => {
+    if (err) return res.status(500).json({ error: "DB error" });
+    if (result.length > 0) return res.status(400).json({ error: "⚠️ RAM already exists" });
+
+    db.query("INSERT INTO RAM_Types (ram_type) VALUES (?)", [value], (err2) => {
+      if (err2) return res.status(500).json({ error: "Insert error" });
+      res.json({ message: "✅ RAM added successfully" });
+    });
+  });
+});
+
+// ✅ إضافة خيار جديد في جدول CPU_Types
+app.post("/add-cpu", (req, res) => {
+  const { value } = req.body;
+  if (!value) return res.status(400).json({ error: "❌ Missing CPU value" });
+
+  db.query("SELECT * FROM CPU_Types WHERE cpu_name = ?", [value], (err, result) => {
+    if (err) return res.status(500).json({ error: "DB error" });
+    if (result.length > 0) return res.status(400).json({ error: "⚠️ CPU already exists" });
+
+    db.query("INSERT INTO CPU_Types (cpu_name) VALUES (?)", [value], (err2) => {
+      if (err2) return res.status(500).json({ error: "Insert error" });
+      res.json({ message: "✅ CPU added successfully" });
+    });
+  });
+});
+
+// ✅ إضافة خيار جديد في جدول Processor_Generations
+app.post("/add-generation", (req, res) => {
+  const { value } = req.body;
+  if (!value) return res.status(400).json({ error: "❌ Missing generation value" });
+
+  db.query("SELECT * FROM Processor_Generations WHERE generation_number = ?", [value], (err, result) => {
+    if (err) return res.status(500).json({ error: "DB error" });
+    if (result.length > 0) return res.status(400).json({ error: "⚠️ Generation already exists" });
+
+    db.query("INSERT INTO Processor_Generations (generation_number) VALUES (?)", [value], (err2) => {
+      if (err2) return res.status(500).json({ error: "Insert error" });
+      res.json({ message: "✅ Generation added successfully" });
+    });
+  });
+});
+
+// ✅ إضافة قسم جديد في جدول Departments
+app.post("/add-department", (req, res) => {
+  const { value } = req.body;
+  if (!value) return res.status(400).json({ error: "❌ Missing department value" });
+
+  db.query("SELECT * FROM Departments WHERE name = ?", [value], (err, result) => {
+    if (err) return res.status(500).json({ error: "DB error" });
+    if (result.length > 0) return res.status(400).json({ error: "⚠️ Department already exists" });
+
+    db.query("INSERT INTO Departments (name) VALUES (?)", [value], (err2) => {
+      if (err2) return res.status(500).json({ error: "Insert error" });
+      res.json({ message: "✅ Department added successfully" });
+    });
+  });
+});
 
 
 
