@@ -658,34 +658,48 @@ function saveDeviceSpecification() {
 
 
 
+// ✅ تعديل شامل لواجهة البوب أب - منع التكرار قبل الإضافة
+
 function saveGenericOption() {
-  const value = document.getElementById("popup-input").value.trim();
-  const targetId = document.getElementById("popup-target-id").value;
-  const dropdown = document.getElementById(targetId);
-  const type = document.getElementById("problem-type")?.value?.toLowerCase();
+  const value = document.getElementById("popup-input").value.trim(); // 🟢 قيمة المدخلة من المستخدم
+  const targetId = document.getElementById("popup-target-id").value; // 🟢 اسم العنصر الهدف (dropdown id)
+  const dropdown = document.getElementById(targetId); // 🟢 الدروب داون اللي بنضيف فيه
+  const type = document.getElementById("problem-type")?.value?.toLowerCase(); // 🟢 نوع الجهاز (لو مرتبط)
 
-  if (!value || !dropdown) return;
+  if (!value || !dropdown) return; // 🔴 خروج لو ما في قيمة أو دروب داون غير معرف
 
+  // 🔄 تحقق أولاً من وجود الخيار قبل الإضافة
   fetch("http://localhost:5050/add-option-general", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ target: targetId, value, type })
   })
-    .then(res => res.json())
+    .then(async res => {
+      const payload = await res.json();
+      if (!res.ok) {
+        // ❌ إذا الرد مو OK، نعرض رسالة الخطأ الجاية من السيرفر
+        alert(payload.error || "❌ Failed to save new option");
+        throw new Error(payload.error);
+      }
+      return payload;
+    })
     .then(result => {
+      // ✅ إذا تمت الإضافة بنجاح نحدث القائمة ونعرض تنبيه
       alert(result.message);
+
       const option = document.createElement("option");
       option.value = value;
       option.textContent = value;
-      dropdown.appendChild(option);
-      dropdown.value = value;
+      dropdown.appendChild(option); // ✅ إضافة للخيار
+      dropdown.value = value; // ✅ تحديده تلقائيًا
       closePopup();
     })
     .catch(err => {
       console.error("❌ Error saving option:", err);
-      alert("❌ Failed to save new option");
     });
 }
+
+
 
 
 
