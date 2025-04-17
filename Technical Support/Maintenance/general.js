@@ -301,11 +301,19 @@ function closePopup() {
     }
   }
 
+  // ✅ إعادة السلكت للوضع الطبيعي إذا كان على "add-custom" أو "add-new"
+  if (dropdown && ["add-custom", "add-new", "add-new-department"].includes(dropdown.value)) {
+    dropdown.selectedIndex = 0;
+    dropdown.value = "";
+    dropdown.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
   // تنظيف الحقول المؤقتة
   const input = document.getElementById("popup-input");
   if (input) input.value = "";
   if (targetElement) targetElement.value = "";
 }
+
 
 function closeGenericPopup() {
   const popup = document.getElementById("generic-popup");
@@ -318,7 +326,12 @@ function closeGenericPopup() {
       const currentValue = dropdown.value;
 
       // ✅ إذا كان المستخدم على خيار الإضافة، نرجعه للقيمة الأساسية
-      if (currentValue === "add-new-model" || currentValue === "add-new" || currentValue === "add-new-department") {
+      if (
+        currentValue === "add-new-model" ||
+        currentValue === "add-new" ||
+        currentValue === "add-new-department" ||
+        currentValue === "add-custom"
+      ) {
         dropdown.selectedIndex = 0; // ترجع لأول خيار
         dropdown.value = ""; // تتأكد إن القيمة فعلاً رجعت فاضية
         dropdown.dispatchEvent(new Event("change", { bubbles: true })); // تفعيل الحدث يدويًا
@@ -334,6 +347,7 @@ function closeGenericPopup() {
     fetchDeviceSpecsByTypeAndDepartment();
   }
 }
+
 
 
 
