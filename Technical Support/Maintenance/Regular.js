@@ -1110,6 +1110,7 @@ function closeGenericPopup() {
 
   const returnToSpec = sessionStorage.getItem("returnToPopup");
   const deviceType = document.getElementById("device-type")?.value?.toLowerCase();
+  const lastDropdownId = sessionStorage.getItem("lastDropdownOpened");
 
   // ✅ احفظ القيم قبل ما ترجع
   const fieldsToPreserve = ["spec-ministry", "spec-name", "spec-serial", "spec-model", "spec-department"];
@@ -1119,9 +1120,8 @@ function closeGenericPopup() {
   });
 
   // ✅ إذا المستخدم اختار + Add New لأي dropdown، نرجعه إلى "Select"
-  const lastSelectId = sessionStorage.getItem("lastDropdownOpened");
-  if (lastSelectId) {
-    const select = document.getElementById(lastSelectId);
+  if (lastDropdownId) {
+    const select = document.getElementById(lastDropdownId);
     if (select && ["add-new", "add-new-model", "add-new-department", "add-custom"].includes(select.value)) {
       const firstOption = select.querySelector('option[disabled][selected]');
       if (firstOption) {
@@ -1161,8 +1161,8 @@ function closeGenericPopup() {
     }
   });
 
-  // ✅ رجع للبُوب أب إذا الجهاز غير معروف
-  if (returnToSpec && !["pc", "printer", "scanner"].includes(deviceType)) {
+  // ✅ رجع للبُوب أب إذا الجهاز غير معروف - بشرط ما يكون من section
+  if (returnToSpec && !["pc", "printer", "scanner"].includes(deviceType) && lastDropdownId !== "section") {
     sessionStorage.removeItem("returnToPopup");
 
     setTimeout(() => {
@@ -1208,7 +1208,6 @@ function closeGenericPopup() {
   ["spec-ministry", "spec-name", "spec-serial", "spec-model", "spec-department", "lastAddedModel", "returnToPopup"]
     .forEach(k => sessionStorage.removeItem(k));
 }
-
 
 
 
