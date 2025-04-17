@@ -68,29 +68,33 @@ function insertAddNewOptionAtTop(selectId, value, labelText) {
   const insertPosition = placeholderExists ? 1 : 0;
   dropdown.insertBefore(newOption, dropdown.options[insertPosition]);
 }
-function fetchModelsByType(type, selectId, origin = 'fields') {
-  let endpoint = "";
+function fetchModelsByType(type, selectId) {
   const cleanedType = type.trim().toLowerCase();
+  let endpoint = "";
 
-  if (["pc", "printer", "scanner"].includes(cleanedType)) {
-    if (cleanedType === "pc") endpoint = "/PC_Model";
-    else if (cleanedType === "printer") endpoint = "/Printer_Model";
-    else if (cleanedType === "scanner") endpoint = "/Scanner_Model";
+  if (cleanedType === "pc") endpoint = "/PC_Model";
+  else if (cleanedType === "printer") endpoint = "/Printer_Model";
+  else if (cleanedType === "scanner") endpoint = "/Scanner_Model";
 
+  if (endpoint) {
     fetch(`http://localhost:5050${endpoint}`)
       .then(res => res.json())
       .then(data => {
         const dropdown = document.getElementById(selectId);
         if (!dropdown) return;
 
-        dropdown.innerHTML = '<option value="" disabled selected>Select Model</option>';
-        dropdown.value = "";
+        // تهيئة القائمة
+        dropdown.innerHTML = '<option value="" disabled>Select Model</option>';
+        dropdown.value = "";  
+        dropdown.selectedIndex = 0;
 
+        // + Add New Model
         const addOption = document.createElement("option");
         addOption.value = "add-new";
         addOption.textContent = "+ Add New Model";
         dropdown.appendChild(addOption);
 
+        // باقي الموديلات
         data.forEach(item => {
           const option = document.createElement("option");
           option.value = item.model_name;
@@ -98,14 +102,26 @@ function fetchModelsByType(type, selectId, origin = 'fields') {
           dropdown.appendChild(option);
         });
 
-        dropdown.addEventListener("change", (e) => {
+        // شيل أي مستمع قديم
+        const newDropdown = dropdown.cloneNode(true);
+        dropdown.parentNode.replaceChild(newDropdown, dropdown);
+
+        // تأكد الخيار الأول محدد
+        newDropdown.value = "";
+        newDropdown.selectedIndex = 0;
+
+        // ربط الحدث
+        newDropdown.addEventListener("change", e => {
           if (e.target.value === "add-new") {
-            openAddModelPopup(type, origin);
+            sessionStorage.setItem("lastDropdownOpened", selectId);
+            saveTemporaryFields();
+            openAddModelPopup(type, selectId);
           }
         });
-      });
+      })
+      .catch(err => console.error("❌ Error fetching models:", err));
   } else {
-    // ✅ للأجهزة الجديدة
+    // أجهزة جديدة
     fetchModelsForNewDevices(type, selectId);
   }
 }
@@ -146,19 +162,28 @@ function fetchModelsForNewDevices(type, selectId) {
         });
       }
 
-      // ✅ اضبط الحدث مباشرة على السلكت (احرص إنه ما يتكرر)
-      dropdown.onchange = (e) => {
+      // 🧹 شيل أي مستمع قديم بإعادة إنشاء العنصر
+      dropdown.replaceWith(dropdown.cloneNode(true));
+      const newDropdown = document.getElementById(selectId);
+
+      // **تأكد من اختيار أول عنصر دائماً**
+      newDropdown.selectedIndex = 0;
+      newDropdown.value = "";
+
+      // ✅ اضبط الحدث مباشرة
+      newDropdown.addEventListener("change", e => {
         if (e.target.value === "add-new-model") {
-          sessionStorage.setItem("lastDropdownOpened", selectId); // عشان نرجع القيمة لو Cancel
+          sessionStorage.setItem("lastDropdownOpened", selectId);
           saveTemporaryFields();
-          openAddModelPopup(type, 'generic');
+          openAddModelPopup(type, selectId);
         }
-      };
+      });
     })
     .catch(err => {
       console.error("❌ Error fetching models:", err);
     });
 }
+
 
 
 
@@ -316,29 +341,26 @@ function closeGenericPopup() {
   if (lastSelectId) {
     const dropdown = document.getElementById(lastSelectId);
     if (dropdown) {
-      const currentValue = dropdown.value;
-
-      // ✅ رجع القيمة لأول خيار إذا المستخدم كان على خيار إضافة
-      if (
-        ["add-new-model", "add-new", "add-new-department", "add-custom"].includes(currentValue)
-      ) {
+      // لو المستخدم كان على خيار إضافة (model او غيره)
+      const addValues = ["add-new-model", "add-new", "add-new-department", "add-custom"];
+      if (addValues.includes(dropdown.value)) {
+        // رجع للسطر الأول
         dropdown.selectedIndex = 0;
+        // تأكد إن القيمة فعلاً خالية
         dropdown.value = "";
+        // لو محتاج تشغل onchange
         dropdown.dispatchEvent(new Event("change", { bubbles: true }));
       }
     }
-
     sessionStorage.removeItem("lastDropdownOpened");
   }
 
-  // ✅ إذا الجهاز معروف، حدّث المواصفات مباشرة
+  // لو تبغى تحدث موديل الأجهزة المعروفة بعد الإلغاء
   const deviceType = document.getElementById("problem-type")?.value?.toLowerCase();
   if (["pc", "printer", "scanner"].includes(deviceType)) {
     fetchDeviceSpecsByTypeAndDepartment();
   }
 }
-
-
 
 
 
@@ -516,28 +538,25 @@ function saveTemporaryFields() {
 
 
 
-function openAddModelPopup(type, origin = 'generic') {
+function openAddModelPopup(type, selectId) {
   const popup = document.getElementById("generic-popup");
-
-  const selectId = origin === 'fields' ? "model-select" : "spec-model";
+  // سجل أي سلكت نرجعه لو Cancel
   sessionStorage.setItem("lastDropdownOpened", selectId);
-
 
   popup.innerHTML = `
     <div class="popup-content">
       <h3>Add New Model for ${type}</h3>
       <label for="new-model-name">Model Name:</label>
       <input type="text" id="new-model-name" placeholder="Enter model name" />
-      <input type="hidden" id="model-origin" value="${origin}" />
       <div class="popup-buttons">
-        <button onclick="saveNewModel('${type}')">Save</button>
+        <button onclick="saveNewModel('${type}', '${selectId}')">Save</button>
         <button onclick="closeGenericPopup()">Cancel</button>
       </div>
     </div>
   `;
   popup.style.display = "flex";
 
-  // ✅ حفظ القيم
+  // حفظ القيم المؤقتة (لو مستخدم في فرم specifications)
   const fieldsToSave = ["spec-ministry", "spec-name", "spec-serial", "spec-department"];
   fieldsToSave.forEach(id => {
     const el = document.getElementById(id);
@@ -545,10 +564,9 @@ function openAddModelPopup(type, origin = 'generic') {
   });
 }
 
-function saveNewModel(type) {
-  const modelName = document.getElementById("new-model-name").value.trim();
-  const origin = document.getElementById("model-origin")?.value || 'generic';
 
+function saveNewModel(type, selectId) {
+  const modelName = document.getElementById("new-model-name").value.trim();
   if (!modelName) {
     alert("❌ Please enter a model name");
     return;
@@ -565,50 +583,18 @@ function saveNewModel(type) {
         alert(result.error);
         return;
       }
+      closeGenericPopup(); // يقفل البوب أب
 
-      alert(result.message || "✅ Model added successfully");
-      document.getElementById("generic-popup").style.display = "none"; // ✅ قفل نافذة الموديل
-
-      const targetSelectId = origin === "fields" ? `model-${type}` : "spec-model";
-
-      // ✅ إعادة تحميل الموديلات ثم تحديد الجديد بعد الانتظار
-      if (["pc", "printer", "scanner"].includes(type)) {
-        fetchModelsByType(type, targetSelectId);
-      } else {
-        fetchModelsForNewDevices(type, targetSelectId);
-      }
-
+      // إعادة تحميل القائمة وتحديد الموديل الجديد
+      fetchModelsForNewDevices(type, selectId);
       setTimeout(() => {
-        const dropdown = document.getElementById(targetSelectId);
-        if (dropdown) {
-          dropdown.value = modelName;
-          dropdown.dispatchEvent(new Event("change", { bubbles: true }));
-        }
-
-        // ✅ استرجاع الحقول السابقة (إذا من داخل PC form)
-        if (origin === "fields") {
-          const fields = [
-            "ministry-id",
-            "device-name",
-            "serial",
-            `department-${type}`,
-            ...(type === "pc" ? ["cpu-select", "ram-select", "os-select", "generation-select"] : [])
-          ];
-
-          fields.forEach(id => {
-            const val = sessionStorage.getItem(id);
-            if (val) {
-              const el = document.getElementById(id);
-              if (el) el.value = val;
-              sessionStorage.removeItem(id);
-            }
-          });
-        }
-
-      }, 300); // ⏱ وقت كافي لتحميل القائمة وتحديد الموديل
+        const dropdown = document.getElementById(selectId);
+        dropdown.value = modelName;
+        dropdown.dispatchEvent(new Event("change", { bubbles: true }));
+      }, 300);
     })
     .catch(err => {
-      console.error("❌ Failed to save model:", err);
+      console.error("❌ Error saving model:", err);
       alert("❌ Error saving new model");
     });
 }
