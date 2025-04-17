@@ -144,20 +144,14 @@ function fetchModelsForNewDevices(type, selectId) {
           option.textContent = item.model_name;
           dropdown.appendChild(option);
         });
-      } else {
-        const noDataOption = document.createElement("option");
-        noDataOption.textContent = "No models found";
-        noDataOption.disabled = true;
-        dropdown.appendChild(noDataOption);
       }
 
-      // ✅ اضبط الحدث مباشرة على السلكت (ما يتكرر)
+      // ✅ اضبط الحدث مباشرة على السلكت (احرص إنه ما يتكرر)
       dropdown.onchange = (e) => {
         if (e.target.value === "add-new-model") {
+          sessionStorage.setItem("lastDropdownOpened", selectId); // عشان نرجع القيمة لو Cancel
           saveTemporaryFields();
           openAddModelPopup(type, 'generic');
-          // نرجعه على "Add New Model" للتأكيد
-          e.target.selectedIndex = 1;
         }
       };
     })
