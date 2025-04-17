@@ -1065,65 +1065,29 @@ function saveDeviceSpecification() {
 
 function closeGenericPopup() {
   const popup = document.getElementById("generic-popup");
-
-  // ✅ 1. احفظ القيم المؤقتة إذا بنرجع لبوب أب المواصفات
-  const returnTo = sessionStorage.getItem("returnToPopup");
-  const specContextFields = ["spec-model", "spec-department", "department-pc", "department-printer", "department-scanner"];
-
-  if (returnTo && specContextFields.includes(returnTo)) {
-    const fieldsToPreserve = ["spec-ministry", "spec-name", "spec-serial", "spec-department", "spec-model"];
-    fieldsToPreserve.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) sessionStorage.setItem(id, el.value);
-    });
-  }
-
-  // ✅ 2. أخفِ البوب أب
   popup.style.display = "none";
 
-  // ✅ 3. نظّف جميع الحقول
-  const inputs = popup.querySelectorAll("input, select");
-  inputs.forEach(el => {
-    if (el.tagName === "SELECT") {
-      el.selectedIndex = 0;
-    } else {
-      el.value = "";
-    }
+  // ✅ إذا فيه عودة لبوب أب المواصفات
+  const returnToSpec = sessionStorage.getItem("returnToPopup");
+  const deviceType = document.getElementById("device-type")?.value?.toLowerCase();
+
+  // ✅ احفظ القيم قبل ما ترجع
+  const fieldsToPreserve = ["spec-ministry", "spec-name", "spec-serial", "spec-model", "spec-department"];
+  fieldsToPreserve.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) sessionStorage.setItem(id, el.value);
   });
 
-  const allSelects = document.querySelectorAll("select");
-  allSelects.forEach(select => {
-    if (select.value && (select.value.startsWith("add-new") || select.value === "add-custom")) {
-      select.selectedIndex = 0;
-    }
-  });
-
-  const modelInput = document.getElementById("new-model-name");
-  if (modelInput) modelInput.value = "";
-
-  const genericInput = document.getElementById("generic-popup-input");
-  if (genericInput) genericInput.value = "";
-
-  // ✅ 4. لا تحذف القيم المؤقتة هنا — نحتاجها بعدين
-  // ✅ 5. إذا بنرجع إلى Popup المواصفات
-  if (returnTo && specContextFields.includes(returnTo)) {
+  // ✅ رجّع للبُوب أب إذا الجهاز غير معروف
+  if (returnToSpec && !["pc", "printer", "scanner"].includes(deviceType)) {
     sessionStorage.removeItem("returnToPopup");
 
-    const deviceType = document.getElementById("device-type")?.value?.toLowerCase();
-    if (!["pc", "printer", "scanner"].includes(deviceType)) {
+    setTimeout(() => {
       openGenericPopup("Device Specification", "device-spec");
 
       setTimeout(() => {
-        const targetSelect = document.getElementById(returnTo);
-        const savedValue = sessionStorage.getItem(returnTo);
-        if (targetSelect && savedValue) {
-          targetSelect.value = savedValue;
-          targetSelect.dispatchEvent(new Event("change", { bubbles: true }));
-        }
-
-        // ✅ استرجاع باقي القيم
-        const fieldsToRestore = ["spec-ministry", "spec-name", "spec-serial", "spec-model", "spec-department"];
-        fieldsToRestore.forEach(id => {
+        // ✅ نرجع القيم داخل البوب أب بعد إعادة فتحه
+        fieldsToPreserve.forEach(id => {
           const el = document.getElementById(id);
           const val = sessionStorage.getItem(id);
           if (el && val) {
@@ -1132,26 +1096,38 @@ function closeGenericPopup() {
           }
         });
 
-        // ✅ امسح القيم بعد الاسترجاع
-        sessionStorage.removeItem("spec-model");
-        sessionStorage.removeItem("spec-department");
-      }, 100);
-    }
-  } else {
-    // ✅ حذف القيم المؤقتة بشكل طبيعي إذا ما في رجوع
-    const savedKeys = [
-      "spec-ministry",
-      "spec-name",
-      "spec-serial",
-      "spec-model",
-      "spec-department",
-      "lastAddedModel",
-      "lastDepartmentSelectId"
-    ];
-    savedKeys.forEach(key => sessionStorage.removeItem(key));
-  }
-}
+        // ✅ تحديد القسم إذا محفوظ
+        const dept = sessionStorage.getItem("spec-department");
+        if (dept) {
+          const deptSelect = document.getElementById("spec-department");
+          if (deptSelect) {
+            deptSelect.value = dept;
+            deptSelect.dispatchEvent(new Event("change", { bubbles: true }));
+            sessionStorage.removeItem("spec-department");
+          }
+        }
 
+        // ✅ تحديد الموديل إذا محفوظ
+        const model = sessionStorage.getItem("spec-model");
+        if (model) {
+          const modelSelect = document.getElementById("spec-model");
+          if (modelSelect) {
+            modelSelect.value = model;
+            modelSelect.dispatchEvent(new Event("change", { bubbles: true }));
+            sessionStorage.removeItem("spec-model");
+          }
+        }
+
+      }, 150);
+    }, 100);
+
+    return; // ⛔ لا تكمل بقية الكود
+  }
+
+  // ✅ مسح كل الحقول المؤقتة إذا ما في رجوع
+  ["spec-ministry", "spec-name", "spec-serial", "spec-model", "spec-department", "lastAddedModel", "returnToPopup"]
+    .forEach(k => sessionStorage.removeItem(k));
+}
 
 
 
