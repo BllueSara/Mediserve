@@ -878,9 +878,7 @@ app.post('/AddDevice/:type', async (req, res) => {
       return res.status(400).json({ error: "❌ تأكد من تعبئة جميع الحقول المطلوبة" });
     }
 
-    let insertQuery = '';
-    let values = [];
-
+    // ✅ إذا الجهاز من الأنواع المعروفة
     if (deviceType === 'pc') {
       const OS_id = await getId('OS_Types', 'os_name', req.body.os);
       const Processor_id = await getId('CPU_Types', 'cpu_name', req.body.processor);
@@ -892,12 +890,12 @@ app.post('/AddDevice/:type', async (req, res) => {
         return res.status(400).json({ error: "❌ تأكد من اختيار كل الخيارات للجهاز (PC)" });
       }
 
-      insertQuery = `
+      const insertQuery = `
         INSERT INTO PC_info 
         (Serial_Number, Computer_Name, Governmental_Number, Department, OS_id, Processor_id, Generation_id, RAM_id, Model_id)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
-      values = [
+      const values = [
         Serial_Number,
         Device_Name,
         Governmental_Number,
@@ -908,86 +906,100 @@ app.post('/AddDevice/:type', async (req, res) => {
         RAM_id,
         Model_id
       ];
+
+      await new Promise((resolve, reject) => {
+        db.query(insertQuery, values, (err, result) => {
+          if (err) return reject(err);
+          resolve(result);
+        });
+      });
+
     } else if (deviceType === 'printer') {
       const Model_id = await getId("Printer_Model", "model_name", model);
       if (!Model_id) {
         return res.status(400).json({ error: "❌ لم يتم تحديد موديل الطابعة" });
       }
 
-      insertQuery = `
+      const insertQuery = `
         INSERT INTO Printer_info 
         (Serial_Number, Printer_Name, Governmental_Number, Department, Model_id)
         VALUES (?, ?, ?, ?, ?)
       `;
-      values = [
+      const values = [
         Serial_Number,
         Device_Name,
         Governmental_Number,
         Department_id,
         Model_id
       ];
+
+      await new Promise((resolve, reject) => {
+        db.query(insertQuery, values, (err, result) => {
+          if (err) return reject(err);
+          resolve(result);
+        });
+      });
+
     } else if (deviceType === 'scanner') {
       const Model_id = await getId("Scanner_Model", "model_name", model);
       if (!Model_id) {
         return res.status(400).json({ error: "❌ لم يتم تحديد موديل الماسح" });
       }
 
-      insertQuery = `
+      const insertQuery = `
         INSERT INTO Scanner_info 
         (Serial_Number, Scanner_Name, Governmental_Number, Department, Model_id)
         VALUES (?, ?, ?, ?, ?)
       `;
-      values = [
+      const values = [
         Serial_Number,
         Device_Name,
         Governmental_Number,
         Department_id,
         Model_id
       ];
-    } else {
-      return res.status(400).json({ error: "❌ نوع الجهاز غير مدعوم" });
-    }
 
-    // تخزين الجهاز في الجدول الأساسي
-    db.query(insertQuery, values, (err, result) => {
-      if (err) {
-        console.error("❌ خطأ أثناء الإدخال:", err);
-        return res.status(500).json({ error: "❌ خطأ في قاعدة البيانات" });
-      }
-
-      // ✅ ثم إدخاله في Maintenance_Devices
-     // ✅ ثم إدخاله في Maintenance_Devices (مع التحقق من التكرار)
-     const insertMaintenanceDevice = `
-     INSERT INTO Maintenance_Devices (serial_number, governmental_number, device_type, device_name, department_id)
-     VALUES (?, ?, ?, ?, ?)
-   `;
-   
-   db.query(
-    insertMaintenanceDevice,
-    [Serial_Number, Governmental_Number, deviceType, Device_Name, Department_id],
-    (err2, result2) => {
-      if (err2) {
-        console.error("⚠️ خطأ أثناء إدخال Maintenance_Devices:", err2);
-        return res.status(500).json({ error: "❌ خطأ في إضافة Maintenance_Devices" });
-      }
-  
-      console.log("✅ تم إدخال الجهاز في Maintenance_Devices بنجاح، ID:", result2.insertId);
-  
-      res.json({
-        message: `✅ تم حفظ بيانات ${deviceType} بنجاح`,
-        insertedId: result2.insertId // ✅ نرجع الـ ID الصحيح هنا
+      await new Promise((resolve, reject) => {
+        db.query(insertQuery, values, (err, result) => {
+          if (err) return reject(err);
+          resolve(result);
+        });
       });
-    }
-  );
-  
-  
 
-    });
+    } else {
+      console.log(`🔶 نوع جديد سيتم تخزينه فقط في Maintenance_Devices: ${deviceType}`);
+    }
+
+    // ✅ إدخال الجهاز في Maintenance_Devices
+    const insertMaintenanceDevice = `
+      INSERT INTO Maintenance_Devices (serial_number, governmental_number, device_type, device_name, department_id)
+      VALUES (?, ?, ?, ?, ?)
+    `;
+
+    db.query(
+      insertMaintenanceDevice,
+      [Serial_Number, Governmental_Number, deviceType, Device_Name, Department_id],
+      (err2, result2) => {
+        if (err2) {
+          console.error("⚠️ خطأ أثناء إدخال Maintenance_Devices:", err2);
+          return res.status(500).json({ error: "❌ خطأ في إضافة Maintenance_Devices" });
+        }
+
+        console.log("✅ تم إدخال الجهاز في Maintenance_Devices بنجاح، ID:", result2.insertId);
+
+        res.json({
+          message: `✅ تم حفظ بيانات الجهاز (${deviceType}) بنجاح`,
+          insertedId: result2.insertId
+        });
+      }
+    );
+
   } catch (err) {
     console.error("❌ خطأ عام:", err);
     res.status(500).json({ error: "❌ حدث خطأ أثناء المعالجة" });
   }
 });
+
 
 
 app.get('/get-all-problems', (req, res) => {
