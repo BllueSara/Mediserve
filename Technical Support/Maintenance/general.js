@@ -68,6 +68,7 @@ function insertAddNewOptionAtTop(selectId, value, labelText) {
   const insertPosition = placeholderExists ? 1 : 0;
   dropdown.insertBefore(newOption, dropdown.options[insertPosition]);
 }
+
 function fetchModelsByType(type, selectId) {
   const cleanedType = type.trim().toLowerCase();
   let endpoint = "";
@@ -269,6 +270,7 @@ function fetchGeneralDeviceSpecs() {
       });
     });
 }
+
 
 document.addEventListener("DOMContentLoaded", () => {
   const typeDropdown = document.getElementById("problem-type");
@@ -583,21 +585,35 @@ function saveNewModel(type, selectId) {
         alert(result.error);
         return;
       }
+
+      // ✅ خزّن اسم الموديل في sessionStorage لاستخدامه بعد إغلاق البوب أب
+      sessionStorage.setItem("lastAddedModel", modelName);
+
       closeGenericPopup(); // يقفل البوب أب
 
-      // إعادة تحميل القائمة وتحديد الموديل الجديد
-      fetchModelsForNewDevices(type, selectId);
-      setTimeout(() => {
+      // ✅ أعد تحميل قائمة الموديلات
+      if (["pc", "printer", "scanner"].includes(type)) {
+        fetchModelsByType(type, selectId);
+      } else {
+        fetchModelsForNewDevices(type, selectId);
+      }
+
+      // ✅ عوضًا عن setTimeout ثابت، ننتظر عنصر القائمة يظهر فعلاً
+      const interval = setInterval(() => {
         const dropdown = document.getElementById(selectId);
-        dropdown.value = modelName;
-        dropdown.dispatchEvent(new Event("change", { bubbles: true }));
-      }, 300);
+        if (dropdown) {
+          clearInterval(interval);
+          dropdown.value = modelName;
+          dropdown.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      }, 100);
     })
     .catch(err => {
       console.error("❌ Error saving model:", err);
       alert("❌ Error saving new model");
     });
 }
+
 
 
 
