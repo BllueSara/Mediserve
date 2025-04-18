@@ -124,19 +124,29 @@
   <!-- ✅ Generic popup modal for adding new values (device type, section, etc.) -->
   <div id="popup-modal" class="popup-modal" style="display: none;">
     <div class="popup-content">
-      <!-- Popup title -->
-      <h2 id="popup-title">Add New</h2>
-
-      <!-- Dynamic popup fields will be injected here -->
-      <div id="popup-fields"></div>
-
-      <!-- Buttons to save or cancel popup -->
+      <h2 id="popup-title">Enter Device Specifications</h2>
+      <div id="popup-fields">
+        <p>No fields available for this device type.</p>
+      </div>
       <div class="popup-buttons">
-        <button id="popup-save-button">Save</button>
-        <button onclick="closePopup()">Cancel</button>
+          <button id="popup-save-btn">Save</button>
+          <button onclick="closePopup()">Cancel</button>
       </div>
     </div>
   </div>
+    <!-- ✅ Popup for Adding Generic Options -->
+    <div id="generic-popup" class="popup-overlay" style="display: none;">
+      <div class="popup-content">
+        <h3 id="generic-popup-title">Add New</h3>
+        <label for="generic-popup-input" id="generic-label">New Value</label>
+        <input type="text" id="generic-popup-input" placeholder="Enter new value..." required />
+        <input type="hidden" id="generic-popup-target-id" />
+        <div class="popup-buttons">
+          <button id="popup-save-btn">Save</button>
+          <button type="button" class="cancel-btn" onclick="closeGenericPopup()">Cancel</button>
+        </div>
+      </div>
+    </div>
 
   <!-- JavaScript files -->
   <script src="Maintenance.js"></script>
