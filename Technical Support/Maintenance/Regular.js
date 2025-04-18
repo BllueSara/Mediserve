@@ -567,16 +567,11 @@ function saveOptionForSelect() {
 
   if (!value || !dropdown) return;
 
-  let targetTable = "";
-  if (targetId === "os-select") targetTable = "OS_Types";
-  else if (targetId === "ram-select") targetTable = "RAM_Types";
-  else if (targetId === "cpu-select") targetTable = "CPU_Types";
-  else if (targetId === "generation-select") targetTable = "Processor_Generations";
-
+  // ✅ نرسل targetId مباشرة لأنه هو اللي السيرفر يتعامل معه
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ target: targetTable, value })
+    body: JSON.stringify({ target: targetId, value }) // لا تغير اسم الـ target
   })
     .then(res => res.json())
     .then(result => {
@@ -584,12 +579,15 @@ function saveOptionForSelect() {
         alert(result.error); // ✅ إظهار رسالة الخطأ لو القيمة موجودة
       } else {
         alert(result.message); // ✅ رسالة النجاح
-        // تحديث القائمة من السيرفر (مهم جدًا)
+
+        // ✅ تحديث القائمة من السيرفر حسب الـ target
         if (targetId === "os-select") fetchOS();
         else if (targetId === "ram-select") fetchRAM();
         else if (targetId === "cpu-select") fetchCPU();
         else if (targetId === "generation-select") fetchProcessorGen();
-        sessionStorage.setItem(targetId, value); // حفظ القيمة الجديدة لتحديدها لاحقًا
+
+        // ✅ نحفظ القيمة الجديدة عشان نرجع نحددها تلقائيًا
+        sessionStorage.setItem(targetId, value);
 
         closeGenericPopup();
       }
