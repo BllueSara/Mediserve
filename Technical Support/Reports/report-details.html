@@ -42,64 +42,38 @@
 
   <!-- Main container for the report content -->
   <div class="container">
-    
-    <!-- Report header section with title, status, and action buttons -->
     <div class="report-header">
       <div>
-        <h2>Maintenance Report #MR-2024-001</h2>
-        <span class="status">In Progress</span>
-        <p style="font-size: 13px; color: gray;">Submitted on Jan 15, 2024 at 10:30 AM</p>
+        <h2 id="report-title">Maintenance Report</h2>
+        <span class="status" id="report-status">...</span>
+        <p id="submitted-date" style="font-size: 13px; color: gray;"></p>
       </div>
       <div class="action-buttons">
-        <!-- Action buttons for report -->
-        <button class="download-btn"> Download PDF</button>
-        <button class="edit-btn"> Edit Report</button>
+        <button class="download-btn">Download PDF</button>
+        <button class="edit-btn">Edit Report</button>
         <button class="save-btn" style="display: none;">Save Changes</button>
-        <button class="close-btn"> Close Report</button>
+        <button class="close-btn">Close Report</button>
       </div>
     </div>
 
-    <!-- Basic information about the maintenance report -->
     <div class="grid">
-      <div><strong>Report ID</strong><br><span class="editable">MR-2024-001</span></div>
-      <div><strong>Priority</strong><br><span class="editable">High</span></div>
-      <div><strong>Device Type</strong><br><span class="editable">Laptop XPS 15</span></div>
-      <div><strong>Assigned To</strong><br><span class="editable">Technical Team A</span></div>
-      <div><strong>Department</strong><br><span class="editable">IT Support</span></div>
-      <div><strong>Category</strong><br><span class="editable">Hardware Issue</span></div>
+      <div><strong>Report ID</strong><br><span id="report-id" class="editable"></span></div>
+      <div><strong>Priority</strong><br><span id="priority" class="editable"></span></div>
+      <div><strong>Device Type</strong><br><span id="device-type" class="editable"></span></div>
+      <div><strong>Assigned To</strong><br><span id="assigned-to" class="editable"></span></div>
+      <div><strong>Department</strong><br><span id="department" class="editable"></span></div>
+      <div><strong>Category</strong><br><span id="category" class="editable"></span></div>
     </div>
-    
 
-    <!-- Description section detailing the issue -->
     <div class="section-title">Description</div>
-    <div class="description">
-      Device experiencing frequent overheating issues during normal operation. The laptop shuts down unexpectedly when running multiple applications. Cooling fans are making unusual noises. Required immediate inspection and maintenance to prevent potential hardware damage.
-    </div>
+    <div class="description" id="description"></div>
 
-    <!-- Specifications of the device being serviced -->
     <div class="section-title">Device Specifications</div>
-    <div class="grid">
-      <div class="spec-box">🧠 Intel Core i7-11800H</div>
-      <div class="spec-box">🔥 Overheating Issues</div>
-      <div class="spec-box">🔧 System Updates Required</div>
-      <div class="spec-box">💾 512GB SSD</div>
-      <div class="spec-box">📶 Wi-Fi 6 Compatible</div>
-      <div class="spec-box">🔋 Battery Health: 85%</div>
-      <div class="spec-box">🖥️ 15.6" 4K OLED Display</div>
-    </div>
+    <div class="grid" id="device-specs"></div>
 
-    <!-- Notes from the technical team -->
     <div class="section-title">Additional Notes</div>
-    <div class="note">
-      <strong>Technical Team Note:</strong><br>
-      Initial inspection suggests dust accumulation in cooling vents. Thermal paste might need replacement. Will conduct thorough cleaning and testing.
-    </div>
-    <div class="note">
-      <strong>Update (Jan 16, 2024):</strong><br>
-      Cleaning completed. Thermal paste replaced. Running temperature tests to ensure proper cooling function.
-    </div>
+    <div class="note" id="note"></div>
   </div>
-
   
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
