@@ -78,15 +78,31 @@
                 </select>
             </div>
 
-            <!-- Initial Diagnosis Dropdown -->
-            <div class="form-group">
-                <label>Initial Diagnosis</label>
-                <select id="initial-diagnosis">
-                    <option disabled selected>Select diagnosis</option>
-                </select>
-                  
-           
-            </div>
+          <!-- Initial Diagnosis Dropdown with Icons -->
+<label for="initial-diagnosis">Initial Diagnosis <span class="required">*</span></label>
+<div class="dropdown-container">
+  <div class="search-container" id="search-container-initial-diagnosis" style="display: none;">
+    <input
+      type="text"
+      class="search-input"
+      id="search-initial-diagnosis"
+      placeholder="Search..."
+      onkeyup="filterDropdown('initial-diagnosis')"
+    />
+  </div>
+  <div class="dropdown-wrapper">
+    <select id="initial-diagnosis" name="initial-diagnosis" required>
+      <option value="" disabled selected>Select diagnosis</option>
+      <option value="add-custom">+ Add New Diagnosis</option>
+    </select>
+    <div class="icons-container">
+      <img src="/icon/search.png" alt="search-icon" class="search-icon" onclick="toggleSearch('initial-diagnosis')" />
+      <img src="/icon/edit.png" alt="edit-icon" class="edit-icon" onclick="event.stopPropagation(); openPopup('initial-diagnosis', 'Initial Diagnosis')" />
+      <img src="/icon/trash.png" alt="trash-icon" class="trash-icon" onclick="event.stopPropagation(); deleteOption('initial-diagnosis')" />
+    </div>
+  </div>
+</div>
+
 
             <!-- Report Details (Issue Description) -->
             <div class="form-group">
@@ -112,6 +128,19 @@
     </div>
 </div>
 
+  <!-- Popup Modal -->
+  <div id="popup-modal" class="popup-modal">
+    <div class="popup-content">
+      <h2 id="popup-title">Enter Device Specifications</h2>
+      <div id="popup-fields">
+        <p>No fields available for this device type.</p>
+      </div>
+      <div class="popup-buttons">
+        <button id="popup-save-btn">Save</button>
+        <button onclick="closePopup()">Cancel</button>
+      </div>
+    </div>
+  </div>
 
 <!-- 📜 External JavaScript for drag & drop or form logic -->
 <script src="Internal Ticket.js"></script>

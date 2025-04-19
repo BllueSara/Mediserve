@@ -1344,7 +1344,220 @@ app.post("/add-department", (req, res) => {
 
 
 
+app.post("/delete-option-general", (req, res) => {
+  const { target, value, type } = req.body;
+
+  const tableMap = {
+    "problem-type": { table: "DeviceType", column: "DeviceType" },
+    "section": { table: "Departments", column: "name" },
+    "floor": { table: "Floors", column: "FloorNum" },
+    "technical": { table: "Engineers", column: "name" },
+    "problem-status": type === "pc"
+      ? { table: "ProblemStates_Pc", column: "problem_text" }
+      : type === "printer"
+        ? { table: "ProblemStates_Printer", column: "problem_text" }
+        : type === "scanner"
+          ? { table: "ProblemStates_Scanner", column: "problem_text" }
+          : { table: "problemStates_Maintance_device", column: "problemStates_Maintance_device_name", extra: "device_type_name" }
+  };
+
+  const mapping = tableMap[target];
+  if (!mapping) return res.status(400).json({ error: "❌ Invalid target field" });
+
+  let query = "";
+  let params = [];
+
+  if (mapping.extra) {
+    query = `DELETE FROM ${mapping.table} WHERE ${mapping.column} = ? AND ${mapping.extra} = ?`;
+    params = [value, type];
+  } else {
+    query = `DELETE FROM ${mapping.table} WHERE ${mapping.column} = ?`;
+    params = [value];
+  }
+
+  db.query(query, params, (err) => {
+    if (err) {
+      if (err.code === "ER_ROW_IS_REFERENCED_2") {
+        return res.status(400).json({
+          error: `❌ لا يمكن حذف "${value}" لأنه مرتبط بعناصر أخرى في النظام`
+        });
+      }
+
+      console.error("❌ Delete failed:", err);
+      return res.status(500).json({ error: "❌ Failed to delete option from database" });
+    }
+
+    res.json({ message: "✅ Option deleted successfully" });
+  });
+});
+
+app.post("/update-option-general", (req, res) => {
+  // 🟡 استقبل البيانات من الطلب
+  const { target, oldValue, newValue, type } = req.body;
+
+  // 🟡 خريطة الربط بين العناصر والجدوال والأعمدة
+  const tableMap = {
+    "problem-type": { table: "DeviceType", column: "DeviceType" },
+    "section": { table: "Departments", column: "name" },
+    "floor": { table: "Floors", column: "FloorNum" },
+    "technical": { table: "Engineers", column: "name" },
+    "problem-status": type === "pc"
+      ? { table: "ProblemStates_Pc", column: "problem_text" }
+      : type === "printer"
+        ? { table: "ProblemStates_Printer", column: "problem_text" }
+        : type === "scanner"
+          ? { table: "ProblemStates_Scanner", column: "problem_text" }
+          : { table: "problemStates_Maintance_device", column: "problemStates_Maintance_device_name", extra: "device_type_name" }
+  };
+
+  // 🔴 تحقق أن العنصر موجود في الخريطة
+  const mapping = tableMap[target];
+  if (!mapping) return res.status(400).json({ error: "Invalid target field" });
+
+  // 🟢 تحقق إذا كانت القيمة الجديدة موجودة مسبقًا
+  let checkQuery = `SELECT COUNT(*) AS count FROM ${mapping.table} WHERE ${mapping.column} = ?`;
+  let checkParams = [newValue];
+
+  // 🟢 إذا الجدول يحتوي على عمود إضافي (مثل نوع الجهاز في problem-status المخصصة)
+  if (mapping.extra) {
+    checkQuery += ` AND ${mapping.extra} = ?`;
+    checkParams.push(type);
+  }
+
+  db.query(checkQuery, checkParams, (checkErr, checkResult) => {
+    if (checkErr) {
+      console.error("❌ Database check failed:", checkErr);
+      return res.status(500).json({ error: "Database check failed" });
+    }
+
+    // 🛑 إذا القيمة الجديدة موجودة، نمنع التحديث
+    if (checkResult[0].count > 0) {
+      return res.status(400).json({ error: `❌ "${newValue}" already exists.` });
+    }
+
+    // ✅ إنشاء جملة التحديث الرئيسية
+    let updateQuery = "";
+    let updateParams = [];
+
+    if (mapping.extra) {
+      updateQuery = `UPDATE ${mapping.table} SET ${mapping.column} = ? WHERE ${mapping.column} = ? AND ${mapping.extra} = ?`;
+      updateParams = [newValue, oldValue, type];
+    } else {
+      updateQuery = `UPDATE ${mapping.table} SET ${mapping.column} = ? WHERE ${mapping.column} = ?`;
+      updateParams = [newValue, oldValue];
+    }
+
+    // 🟢 تنفيذ عملية التحديث
+    db.query(updateQuery, updateParams, (err, result) => {
+      if (err) {
+        console.error("❌ Update failed:", err);
+        return res.status(500).json({ error: "Failed to update option" });
+      }
+
+      // ✅ رد ناجح
+      res.json({ message: `✅ "${oldValue}" updated to "${newValue}" successfully.` });
+    });
+  });
+});
+
+
+// ✅ تعديل خيار عام + تحديث الجداول المرتبطة تلقائيًا
+app.post("/edit-option-general", (req, res) => {
+  const { target, oldValue, newValue, type } = req.body;
+
+  if (!target || !oldValue || !newValue) {
+    return res.status(400).json({ error: "Missing fields" });
+  }
+
+  if (oldValue.trim() === newValue.trim()) {
+    return res.status(400).json({ error: "Same value - no change needed" });
+  }
+
+  // 🧠 ماب الجداول والأعمدة حسب نوع السلكت
+  const updateMap = {
+    "problem-type": {
+      table: "DeviceType",
+      column: "DeviceType",
+      propagate: [
+        { table: "Maintenance_Devices", column: "device_type" },
+        { table: "General_Maintenance", column: "device_type" },
+        { table: "External_Maintenance", column: "device_type" },
+        { table: "Regular_Maintenance", column: "device_type" },
+        { table: "Maintance_Device_Model", column: "device_type_name" },
+        { table: "problemStates_Maintance_device", column: "device_type_name" },
+      ]
+    },
+    "section": {
+      table: "Departments",
+      column: "name",
+      propagate: [
+        { table: "Maintenance_Devices", column: "department_name" },
+        { table: "General_Maintenance", column: "department_name" },
+        { table: "External_Maintenance", column: "department_name" },
+        { table: "Regular_Maintenance", column: "department_name" },
+      ]
+    },
+    "floor": {
+      table: "Floors",
+      column: "FloorNum",
+      propagate: [
+        { table: "General_Maintenance", column: "floor" }
+      ]
+    },
+    "technical": {
+      table: "Engineers",
+      column: "name",
+      propagate: [
+        { table: "General_Maintenance", column: "technician_name" }
+      ]
+    },
+    "problem-status": {
+      table: type === "pc"
+        ? "ProblemStates_Pc"
+        : type === "printer"
+          ? "ProblemStates_Printer"
+          : type === "scanner"
+            ? "ProblemStates_Scanner"
+            : "problemStates_Maintance_device",
+      column: type === "pc" || type === "printer" || type === "scanner"
+        ? "problem_text"
+        : "problemStates_Maintance_device_name",
+      propagate: [
+        { table: "General_Maintenance", column: "problem_status" }
+      ]
+    }
+  };
+
+  const map = updateMap[target];
+  if (!map) return res.status(400).json({ error: "Invalid target" });
+
+  const checkDuplicateQuery = `SELECT * FROM ${map.table} WHERE ${map.column} = ?`;
+  db.query(checkDuplicateQuery, [newValue], (err, rows) => {
+    if (err) return res.status(500).json({ error: "DB error" });
+    if (rows.length > 0) {
+      return res.status(400).json({ error: "This value already exists" });
+    }
+
+    const updateQuery = `UPDATE ${map.table} SET ${map.column} = ? WHERE ${map.column} = ?`;
+    db.query(updateQuery, [newValue, oldValue], (err) => {
+      if (err) return res.status(500).json({ error: "Failed to update main value" });
+
+      // ✅ Update all related tables
+      let updateCount = 0;
+      map.propagate?.forEach(({ table, column }) => {
+        const q = `UPDATE ${table} SET ${column} = ? WHERE ${column} = ?`;
+        db.query(q, [newValue, oldValue], (err) => {
+          if (err) console.error(`❌ Failed to update ${table}.${column}`, err);
+          updateCount++;
+        });
+      });
+
+      res.json({ message: "✅ Option updated everywhere!" });
+    });
+  });
+});
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
+
