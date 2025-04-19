@@ -40,27 +40,31 @@
 
     <form action="#" method="POST">
       <div class="form-grid">
+        <!-- Customer Name -->
         <div>
           <label>Customer Name <span class="required">*</span></label>
           <input type="text" placeholder="Enter customer name" required>
         </div>
 
+        <!-- Initial Diagnosis -->
         <div>
           <label>Initial Diagnosis</label>
-          <input type="text" placeholder="Enter initial diagnosis" >
+          <input type="text" placeholder="Enter initial diagnosis">
         </div>
 
+        <!-- ID Number -->
         <div>
           <label>ID Number</label>
           <input type="text" placeholder="Enter ID number">
         </div>
 
+        <!-- Final Diagnosis -->
         <div>
           <label>Final Diagnosis</label>
           <input type="text" placeholder="Enter final diagnosis">
         </div>
 
-        <!-- Dropdown: Type of Problem -->
+        <!-- Type of Problem -->
         <div>
           <label>Type of Problem <span class="required">*</span></label>
           <div class="dropdown-container">
@@ -71,26 +75,23 @@
               <select id="problem-type">
                 <option value="" disabled selected>Select problem type</option>
                 <option value="add-custom">+ Add New Problem Type</option>
-                <!-- باقي الخيارات تُجلب من السيرفر -->
               </select>
               <div class="icons-container">
-                <!-- أيقونة البحث -->
-                <img src="/icon/search.png" alt="Search Icon" class="search-icon" onclick="toggleSearch('problem-type')">
-                <!-- أيقونة التحرير -->
-                <img src="/icon/edit.png" alt="Edit Icon" class="edit-icon" onclick="event.stopPropagation(); openPopup('problem-type', 'Type of Problem')">
-                <!-- أيقونة الحذف -->
-                <img src="/icon/trash.png" alt="Trash Icon" class="trash-icon" onclick="event.stopPropagation(); deleteOption('problem-type')">
+                <img src="/icon/search.png" class="search-icon" onclick="toggleSearch('problem-type')">
+                <img src="/icon/edit.png" class="edit-icon" onclick="openPopup('problem-type', 'Type of Problem')">
+                <img src="/icon/trash.png" class="trash-icon" onclick="deleteOption('problem-type')">
               </div>
             </div>
           </div>
         </div>
 
+        <!-- Ext Number -->
         <div>
           <label>Ext Number</label>
           <input type="text" placeholder="Enter extension number">
         </div>
 
-        <!-- Dropdown: Section -->
+        <!-- Section -->
         <div>
           <label>Section <span class="required">*</span></label>
           <div class="dropdown-container">
@@ -101,18 +102,17 @@
               <select id="section">
                 <option value="" disabled selected>Select section</option>
                 <option value="add-custom">+ Add New Section</option>
-                <!-- باقي البيانات تأتي من السيرفر -->
               </select>
               <div class="icons-container">
-                <img src="/icon/search.png" alt="Search Icon" class="search-icon" onclick="toggleSearch('section')">
-                <img src="/icon/edit.png" alt="Edit Icon" class="edit-icon" onclick="event.stopPropagation(); openPopup('section', 'Section')">
-                <img src="/icon/trash.png" alt="Trash Icon" class="trash-icon" onclick="event.stopPropagation(); deleteOption('section')">
+                <img src="/icon/search.png" class="search-icon" onclick="toggleSearch('section')">
+                <img src="/icon/edit.png" class="edit-icon" onclick="openPopup('section', 'Section')">
+                <img src="/icon/trash.png" class="trash-icon" onclick="deleteOption('section')">
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Dropdown: Device Specifications -->
+        <!-- Device Specifications -->
         <div>
           <label>Device Specifications <span class="required">*</span></label>
           <div class="dropdown-container">
@@ -123,18 +123,17 @@
               <select id="device-spec" required>
                 <option value="" disabled selected>Select Specifications</option>
                 <option value="add-custom">+ Add New Specification</option>
-                <!-- بيانات الجهاز تُجلب من السيرفر -->
               </select>
               <div class="icons-container">
-                <img src="/icon/search.png" alt="Search Icon" class="search-icon" onclick="toggleSearch('device-spec')">
-                <img src="/icon/edit.png" alt="Edit Icon" class="edit-icon" onclick="event.stopPropagation(); openPopup('device-spec', 'Device Specifications')">
-                <img src="/icon/trash.png" alt="Trash Icon" class="trash-icon" onclick="event.stopPropagation(); deleteOption('device-spec')">
+                <img src="/icon/search.png" class="search-icon" onclick="toggleSearch('device-spec')">
+                <img src="/icon/edit.png" class="edit-icon" onclick="openPopup('device-spec', 'Device Specifications')">
+                <img src="/icon/trash.png" class="trash-icon" onclick="deleteOption('device-spec')">
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Dropdown: Floor -->
+        <!-- Floor -->
         <div>
           <label>Floor</label>
           <div class="dropdown-container">
@@ -145,18 +144,17 @@
               <select id="floor">
                 <option value="" disabled selected>Select floor</option>
                 <option value="add-custom">+ Add New Floor</option>
-                <!-- بيانات الطوابق تُجلب من السيرفر -->
               </select>
               <div class="icons-container">
-                <img src="/icon/search.png" alt="Search Icon" class="search-icon" onclick="toggleSearch('floor')">
-                <img src="/icon/edit.png" alt="Edit Icon" class="edit-icon" onclick="event.stopPropagation(); openPopup('floor', 'Floor')">
-                <img src="/icon/trash.png" alt="Trash Icon" class="trash-icon" onclick="event.stopPropagation(); deleteOption('floor')">
+                <img src="/icon/search.png" class="search-icon" onclick="toggleSearch('floor')">
+                <img src="/icon/edit.png" class="edit-icon" onclick="openPopup('floor', 'Floor')">
+                <img src="/icon/trash.png" class="trash-icon" onclick="deleteOption('floor')">
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Dropdown: Technical -->
+        <!-- Technical -->
         <div>
           <label>Technical</label>
           <div class="dropdown-container">
@@ -167,18 +165,17 @@
               <select id="technical">
                 <option value="" disabled selected>Select technical</option>
                 <option value="add-custom">+ Add New Technical</option>
-                <!-- باقي البيانات تُجلب من السيرفر -->
               </select>
               <div class="icons-container">
-                <img src="/icon/search.png" alt="Search Icon" class="search-icon" onclick="toggleSearch('technical')">
-                <img src="/icon/edit.png" alt="Edit Icon" class="edit-icon" onclick="event.stopPropagation(); openPopup('technical', 'Technical')">
-                <img src="/icon/trash.png" alt="Trash Icon" class="trash-icon" onclick="event.stopPropagation(); deleteOption('technical')">
+                <img src="/icon/search.png" class="search-icon" onclick="toggleSearch('technical')">
+                <img src="/icon/edit.png" class="edit-icon" onclick="openPopup('technical', 'Technical')">
+                <img src="/icon/trash.png" class="trash-icon" onclick="deleteOption('technical')">
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Dropdown: Problem Status -->
+        <!-- Problem Status -->
         <div>
           <label>Problem Status <span class="required">*</span></label>
           <div class="dropdown-container">
@@ -189,12 +186,11 @@
               <select id="problem-status" required>
                 <option value="" disabled selected>Select status</option>
                 <option value="add-custom">+ Add New Status</option>
-                <!-- بيانات الحالة تُجلب من السيرفر -->
               </select>
               <div class="icons-container">
-                <img src="/icon/search.png" alt="Search Icon" class="search-icon" onclick="toggleSearch('problem-status')">
-                <img src="/icon/edit.png" alt="Edit Icon" class="edit-icon" onclick="event.stopPropagation(); openPopup('problem-status', 'Problem Status')">
-                <img src="/icon/trash.png" alt="Trash Icon" class="trash-icon" onclick="event.stopPropagation(); deleteOption('problem-status')">
+                <img src="/icon/search.png" class="search-icon" onclick="toggleSearch('problem-status')">
+                <img src="/icon/edit.png" class="edit-icon" onclick="openPopup('problem-status', 'Problem Status')">
+                <img src="/icon/trash.png" class="trash-icon" onclick="deleteOption('problem-status')">
               </div>
             </div>
           </div>
@@ -224,10 +220,9 @@
     </div>
   </div>
 
-  <!-- JavaScript functions -->
+  <!-- Scripts -->
   <script src="Maintenance.js"></script>
   <script src="general.js"></script>
 
-   </body>
-   </html>
-
+</body>
+</html>
