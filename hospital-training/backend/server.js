@@ -14,6 +14,34 @@ app.get("/", (req, res) => {
   res.send("🚀 Server is running!");
 });
 
+const multer = require("multer");
+
+// إعداد التخزين في مجلد uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "uploads/");
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + "-" + uniqueSuffix + ext);
+  },
+});
+
+// إعداد رفع ملف واحد فقط باسم `attachment`
+const upload = multer({
+  storage: storage,
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "message/rfc822"];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Invalid file type"));
+    }
+  },
+});
+
+
 
 app.get("/floors", (req, res) => {
   const query = "SELECT * FROM Floors";
@@ -707,6 +735,7 @@ app.get("/get-external-reports", (req, res) => {
       device_name,
       department_name,
       initial_diagnosis AS issue_summary, -- ✅ لتنسيق الكود الأمامي
+      final_diagnosis AS full_description,
       status,
       device_type
     FROM External_Maintenance
@@ -817,7 +846,7 @@ app.post("/submit-external-maintenance", async (req, res) => {
   const {
     ticket_number,
     device_type: rawDeviceType,
-    device_specifications, // ← ID من Maintenance_Devices
+    device_specifications,
     section,
     maintenance_manager,
     reporter_name,
@@ -826,7 +855,7 @@ app.post("/submit-external-maintenance", async (req, res) => {
   } = req.body;
 
   try {
-    // 🔍 Get device info (يدعم fallback للأجهزة الجديدة)
+    // 🔍 جلب بيانات الجهاز
     const getDeviceInfo = () =>
       new Promise((resolve, reject) => {
         const query = `
@@ -853,7 +882,6 @@ app.post("/submit-external-maintenance", async (req, res) => {
           LEFT JOIN Departments d ON md.department_id = d.id
           WHERE md.id = ?
         `;
-
         db.query(query, [device_specifications], (err, result) => {
           if (err) return reject(err);
           resolve(result[0]);
@@ -866,59 +894,101 @@ app.post("/submit-external-maintenance", async (req, res) => {
       return res.status(404).json({ error: "❌ لم يتم العثور على معلومات الجهاز" });
     }
 
-    // ✨ تأكد أن device_type مطابق للأنواع المسموح بها أو استخدم القيمة من الجدول مباشرة
+    // ✅ تجهيز نوع الجهاز
     let deviceType = rawDeviceType?.toLowerCase();
     const allowedTypes = ["pc", "printer", "scanner"];
     deviceType = allowedTypes.includes(deviceType)
       ? deviceType.charAt(0).toUpperCase() + deviceType.slice(1)
-      : deviceInfo.device_type; // fallback
+      : deviceInfo.device_type;
 
-    const insertQuery = `
-      INSERT INTO External_Maintenance (
-        ticket_number, device_type, device_specifications, section,
-        maintenance_manager, reporter_name,
-        initial_diagnosis, final_diagnosis,
-        serial_number, governmental_number, device_name,
-        department_name, cpu_name, ram_type, os_name,
-        generation_number, model_name
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+    // ✅ إنشاء التقرير الأساسي (التشخيص)
+    const insertMain = () =>
+      new Promise((resolve, reject) => {
+        const sql = `
+          INSERT INTO External_Maintenance (
+            ticket_number, device_type, device_specifications, section,
+            maintenance_manager, reporter_name,
+            initial_diagnosis, final_diagnosis,
+            serial_number, governmental_number, device_name,
+            department_name, cpu_name, ram_type, os_name,
+            generation_number, model_name
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        const values = [
+          ticket_number,
+          deviceType,
+          device_specifications,
+          section,
+          maintenance_manager,
+          reporter_name,
+          initial_diagnosis,
+          final_diagnosis,
+          deviceInfo.serial_number,
+          deviceInfo.governmental_number,
+          deviceInfo.device_name,
+          deviceInfo.department_name,
+          deviceInfo.cpu_name,
+          deviceInfo.ram_type,
+          deviceInfo.os_name,
+          deviceInfo.generation_number,
+          deviceInfo.model_name
+        ];
+        db.query(sql, values, (err, result) => {
+          if (err) return reject(err);
+          resolve();
+        });
+      });
 
-    db.query(
-      insertQuery,
-      [
-        ticket_number,
-        deviceType,
-        device_specifications,
-        section,
-        maintenance_manager,
-        reporter_name,
-        initial_diagnosis,
-        final_diagnosis,
-        deviceInfo.serial_number,
-        deviceInfo.governmental_number,
-        deviceInfo.device_name,
-        deviceInfo.department_name,
-        deviceInfo.cpu_name,
-        deviceInfo.ram_type,
-        deviceInfo.os_name,
-        deviceInfo.generation_number,
-        deviceInfo.model_name
-      ],
-      (err, result) => {
-        if (err) {
-          console.error("❌ Error inserting external maintenance:", err);
-          return res.status(500).json({ error: "❌ Database error while inserting external maintenance" });
-        }
-        res.json({ message: "✅ External Maintenance saved successfully" });
-      }
-    );
+    // ✅ إنشاء تقرير "Ticket Created"
+    const insertTicketSummary = () =>
+      new Promise((resolve, reject) => {
+        const sql = `
+          INSERT INTO External_Maintenance (
+            ticket_number, device_type, device_specifications, section,
+            maintenance_manager, reporter_name,
+            initial_diagnosis, final_diagnosis,
+            serial_number, governmental_number, device_name,
+            department_name, cpu_name, ram_type, os_name,
+            generation_number, model_name
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        const values = [
+          ticket_number,
+          deviceType,
+          device_specifications,
+          section,
+          maintenance_manager,
+          reporter_name,
+          "Ticket Created", // 🟦 initial_diagnosis
+          `Ticket (${ticket_number}) for device: ${deviceInfo.device_name} - Department: ${deviceInfo.department_name}`, // 🟦 final_diagnosis
+          deviceInfo.serial_number,
+          deviceInfo.governmental_number,
+          deviceInfo.device_name,
+          deviceInfo.department_name,
+          deviceInfo.cpu_name,
+          deviceInfo.ram_type,
+          deviceInfo.os_name,
+          deviceInfo.generation_number,
+          deviceInfo.model_name
+        ];
+        db.query(sql, values, (err, result) => {
+          if (err) return reject(err);
+          resolve();
+        });
+      });
+
+    // ✨ تنفيذ الاثنين معًا
+    await insertMain();
+    await insertTicketSummary();
+
+    res.json({ message: "✅ External maintenance and ticket summary saved successfully." });
+
   } catch (error) {
     console.error("❌ Error:", error);
     res.status(500).json({ error: "❌ Internal server error" });
   }
 });
+
 
 
 
@@ -1676,6 +1746,166 @@ app.post("/edit-option-general", (req, res) => {
     });
   });
 });
+
+async function generateTicketNumber(type) {
+  return new Promise((resolve, reject) => {
+    // نزيد الرقم بمقدار 1
+    db.query(
+      "UPDATE Ticket_Counters SET last_number = last_number + 1 WHERE type = ?",
+      [type],
+      (err) => {
+        if (err) return reject(err);
+
+        // نسترجع الرقم الجديد
+        db.query(
+          "SELECT last_number FROM Ticket_Counters WHERE type = ?",
+          [type],
+          (err, result) => {
+            if (err) return reject(err);
+            const number = String(result[0].last_number).padStart(6, "0");
+            const ticketNumber = `${type}-${number}`;
+            resolve(ticketNumber);
+          }
+        );
+      }
+    );
+  });
+}
+
+app.post("/internal-ticket-with-file", upload.single("attachment"), async (req, res) => {
+  try {
+    const {
+      report_number,
+      priority,
+      department_id,
+      issue_description,
+      initial_diagnosis,
+      final_diagnosis,
+      other_description,
+      assigned_to,
+      status = 'Open'
+    } = req.body;
+
+    const file = req.file;
+    const fileName = file ? file.filename : null;
+    const filePath = file ? file.path : null;
+
+    // ✅ 1. نجيب الرقم الأخير من جدول العدادات
+    const counterQuery = `SELECT last_number FROM Ticket_Counters WHERE type = 'INT'`;
+    db.query(counterQuery, (counterErr, counterResult) => {
+      if (counterErr) {
+        console.error("❌ Counter fetch error:", counterErr);
+        return res.status(500).json({ error: "Failed to generate ticket number" });
+      }
+
+      let newNumber = counterResult[0].last_number + 1;
+      let today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      let newTicketNumber = `INT-${today}-${String(newNumber).padStart(3, '0')}`;
+
+      // ✅ 2. نحدث جدول العدادات
+      const updateCounterQuery = `UPDATE Ticket_Counters SET last_number = ? WHERE type = 'INT'`;
+      db.query(updateCounterQuery, [newNumber], (updateErr) => {
+        if (updateErr) {
+          console.error("❌ Counter update error:", updateErr);
+          return res.status(500).json({ error: "Failed to update ticket counter" });
+        }
+
+        // ✅ 3. إدخال التذكرة في جدول Internal_Tickets
+        const insertTicketQuery = `
+          INSERT INTO Internal_Tickets (
+            ticket_number, priority, department_id, issue_description, 
+            assigned_to, status, attachment_name, attachment_path
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        const ticketValues = [
+          newTicketNumber,
+          priority || "Medium",
+          department_id || null,
+          issue_description || '',
+          assigned_to || '',
+          status,
+          fileName,
+          filePath
+        ];
+
+        db.query(insertTicketQuery, ticketValues, (ticketErr, ticketResult) => {
+          if (ticketErr) {
+            console.error("❌ Insert error (Internal_Tickets):", ticketErr);
+            return res.status(500).json({ error: "Failed to insert internal ticket" });
+          }
+
+          const ticketId = ticketResult.insertId;
+
+          // ✅ 4. ربط التقرير بالتذكرة
+          const insertReportQuery = `
+            INSERT INTO Maintenance_Reports (
+              report_number, ticket_id, issue_summary, full_description, 
+              status, maintenance_type, report_type
+            ) VALUES (?, ?, ?, ?, ?, 'Internal', 'Incident')
+          `;
+
+          const reportValues = [
+            report_number,
+            ticketId,
+            initial_diagnosis || '',
+            final_diagnosis || other_description || '',
+            status
+          ];
+
+          db.query(insertReportQuery, reportValues, (reportErr) => {
+            if (reportErr) {
+              console.error("❌ Insert error (Maintenance_Reports):", reportErr);
+              return res.status(500).json({ error: "Failed to insert maintenance report" });
+            }
+
+            res.status(201).json({
+              message: "✅ Internal ticket and report created",
+              ticket_number: newTicketNumber,
+              ticket_id: ticketId
+            });
+          });
+        });
+      });
+    });
+
+  } catch (err) {
+    console.error("❌ Server error:", err);
+    res.status(500).json({ error: "Unexpected server error" });
+  }
+});
+
+app.get("/generate-internal-ticket-number", async (req, res) => {
+  try {
+    const getCounter = `SELECT last_number FROM Ticket_Counters WHERE type = 'INT'`;
+    db.query(getCounter, (err, result) => {
+      if (err) return res.status(500).json({ error: "Failed to get counter" });
+
+      let newNumber = result[0].last_number + 1;
+      let today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      let ticketNumber = `INT-${today}-${String(newNumber).padStart(3, '0')}`;
+
+      return res.json({ ticket_number: ticketNumber });
+    });
+  } catch (err) {
+    console.error("❌ Ticket generation failed:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+
+app.get("/ticket-types", (req, res) => {
+  const sql = "SELECT * FROM Ticket_Types ORDER BY type_name ASC";
+  db.query(sql, (err, result) => {
+    if (err) {
+      console.error("❌ Failed to fetch ticket types:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(result);
+  });
+});
+
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
