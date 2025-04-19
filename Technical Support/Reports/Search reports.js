@@ -9,12 +9,46 @@ document.addEventListener("DOMContentLoaded", () => {
       if (page) loadReports(page);
     });
   });
+  // ✅ تحميل أنواع الأجهزة (بما فيها الأنواع الجديدة)
+
+    const select = document.getElementById("filter-device-type");
+    if (!select) {
+      console.warn("⚠️ filter-device-type not found in DOM!");
+      return;
+    }
+  
+    fetch("http://localhost:5050/device-types")
+      .then(res => res.json())
+      .then(deviceTypes => {
+        console.log("📦 Fetched device types:", deviceTypes);
+        const known = ["pc", "printer", "scanner"];
+        const existing = new Set(known.map(t => t.toLowerCase()));
+  
+        deviceTypes.forEach(type => {
+          type = type.trim();
+          if (!existing.has(type.toLowerCase())) {
+            const opt = document.createElement("option");
+            opt.value = type;
+            opt.textContent = type;
+            select.appendChild(opt);
+          }
+        });
+      })        
+      .catch(err => console.error("❌ Failed to load device types:", err));
+  
 
   document.getElementById("prev-btn")?.addEventListener("click", () => {
     const currentPage = parseInt(new URLSearchParams(window.location.search).get('page') || "1");
     if (currentPage > 1) loadReports(currentPage - 1);
   });
+  document.getElementById("filter-type").addEventListener("change", () => loadReports(1));
+  document.getElementById("filter-status").addEventListener("change", () => loadReports(1));
+  document.getElementById("search-input").addEventListener("input", () => loadReports(1));
+  document.getElementById("filter-date-from").addEventListener("change", () => loadReports(1));
+  document.getElementById("filter-date-to").addEventListener("change", () => loadReports(1));
+  document.getElementById("filter-device-type").addEventListener("change", () => loadReports(1));
 
+  
   document.getElementById("next-btn")?.addEventListener("click", () => {
     const currentPage = parseInt(new URLSearchParams(window.location.search).get('page') || "1");
     loadReports(currentPage + 1);
@@ -38,13 +72,59 @@ function loadReports(page = 1) {
     .then(data => {
       const container = document.getElementById("report-list");
       container.innerHTML = "";
+      
+      // قراءة الفلاتر
+      const type = document.getElementById("filter-type")?.value;
+      const status = document.getElementById("filter-status")?.value;
+      const search = document.getElementById("search-input")?.value.toLowerCase();
+      const dateFrom = document.getElementById("filter-date-from")?.value;
+      const dateTo = document.getElementById("filter-date-to")?.value;
+      const deviceType = document.getElementById("filter-device-type")?.value;
+
+      const filtered = data.filter(report => {
+        const createdAt = new Date(report.created_at);
+        const isTicket = report.issue_summary?.includes("Ticket Created");
+        const isNewReport = !report.ticket_id; // يعني report ما له تذكرة
+      
+        let typeMatch = true;
+      
+        // ✅ ضبط الأنواع حسب اللي طلبته
+        if (type === "Maintenance") {
+          typeMatch =  !isTicket;
+        } else if (type === "Ticket") {
+          typeMatch = isTicket;
+        } else if (type === "New") {
+          typeMatch = isNewReport;
+        }
+      
+        // باقي الفلاتر
+        let statusMatch = !status || report.status === status;
+      
+        let searchMatch =
+          !search ||
+          (report.device_name?.toLowerCase().includes(search)) ||
+          (report.department_name?.toLowerCase().includes(search)) ||
+          (report.ticket_number?.toLowerCase().includes(search));
+      
+        let dateMatch = true;
+        if (dateFrom) dateMatch = createdAt >= new Date(dateFrom);
+        if (dateTo) dateMatch = dateMatch && createdAt <= new Date(dateTo);
+        let deviceTypeMatch = !deviceType || (report.device_type?.toLowerCase() === deviceType.toLowerCase());
+
+        return typeMatch && statusMatch && searchMatch && dateMatch && deviceTypeMatch;      });
+      
+
+      if (!filtered.length) {
+        container.innerHTML = "<p>No matching reports found.</p>";
+        return;
+      }
 
       if (!data.length) {
         container.innerHTML = "<p>No reports found. Try refreshing or changing filters.</p>";
         return;
       }
 
-      data.forEach(report => {
+      filtered.forEach(report => {
         const card = document.createElement("div");
         card.className = "report-card";
 
@@ -127,7 +207,7 @@ function loadReports(page = 1) {
             ${diagnosis ? `<span><strong>Initial Diagnosis:</strong> ${diagnosis}</span>` : ""}
           </div>
         `;
-        
+
         }
 
         // Card Layout
@@ -135,7 +215,12 @@ function loadReports(page = 1) {
           <div class="report-card-header">
             <img src="${iconSrc}" alt="icon" />
             <span>${maintenanceLabel}</span>
-            <select onchange="updateReportStatus(${report.id}, this)" class="status-select ${getStatusClass(report.status)}">
+            <select 
+            data-report-id="${report.id}" 
+            data-ticket-id="${report.ticket_id || ''}" 
+           onchange="updateReportStatus(${report.id}, this)" 
+           class="status-select ${getStatusClass(report.status)}">
+
               <option value="Open" ${report.status === "Open" ? "selected" : ""}>Open</option>
               <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>In Progress</option>
               <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>Closed</option>
@@ -152,6 +237,12 @@ function loadReports(page = 1) {
         `;
 
         container.appendChild(card);
+
+        card.addEventListener("click", () => {
+          window.location.href = `report-details.html?id=${report.id}&type=internal`; // أو external
+        });
+        
+        
       });
 
       updatePagination(page);
@@ -191,11 +282,11 @@ function getStatusClass(status) {
   if (statusClean === "in progress") return "in-progress";
   return "pending";
 }
-
-function updateReportStatus(id, selectElement) {
+function updateReportStatus(reportId, selectElement) {
   const newStatus = selectElement.value;
+  const ticketId = selectElement.getAttribute("data-ticket-id");
 
-  fetch(`http://localhost:5050/update-report-status/${id}`, {
+  fetch(`http://localhost:5050/update-report-status/${reportId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status: newStatus })
@@ -203,7 +294,20 @@ function updateReportStatus(id, selectElement) {
     .then(res => res.json())
     .then(data => {
       alert(data.message || "✅ Status updated successfully");
-      selectElement.className = `status-select ${getStatusClass(newStatus)}`;
+
+      // ✅ حدّث كل القوائم المرتبطة بنفس التذكرة
+      if (ticketId) {
+        document.querySelectorAll(`select[data-ticket-id="${ticketId}"]`).forEach(dropdown => {
+          dropdown.value = newStatus;
+          dropdown.className = `status-select ${getStatusClass(newStatus)}`;
+        });
+      } else {
+        // إذا ما في تذكرة، حدّث حسب report فقط
+        document.querySelectorAll(`select[data-report-id="${reportId}"]`).forEach(dropdown => {
+          dropdown.value = newStatus;
+          dropdown.className = `status-select ${getStatusClass(newStatus)}`;
+        });
+      }
     })
     .catch(err => {
       console.error("❌ Failed to update report status:", err);

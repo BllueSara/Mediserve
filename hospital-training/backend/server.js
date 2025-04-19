@@ -408,23 +408,6 @@ app.post("/submit-regular-maintenance", async (req, res) => {
 
 
 
-app.put("/update-report-status/:id", (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
-
-  const sql = `UPDATE Maintenance_Reports SET status = ? WHERE id = ?`;
-
-  db.query(sql, [status, id], (err) => {
-    if (err) {
-      console.error("❌ Error updating report status:", err);
-      return res.status(500).json({ message: "Error updating report status" });
-    }
-    res.json({ message: "✅ Report status updated successfully" });
-  });
-});
-
-
-
 
 // ✅ Endpoint لإضافة الخيارات (Dropdown Options) - GENERAL
 app.post("/add-option-general", (req, res) => {
@@ -644,8 +627,9 @@ app.post("/submit-general-maintenance", async (req, res) => {
     const ticketNumber = `TIC-${Date.now()}`;
     const ticketId = await new Promise((resolve, reject) => {
       db.query(
-        "INSERT INTO Internal_Tickets (ticket_number, priority, department_id, issue_description) VALUES (?, ?, ?, ?)",
-        [ticketNumber, "Medium", departmentId, problemStatus],
+"INSERT INTO Internal_Tickets (ticket_number, priority, department_id, issue_description, assigned_to) VALUES (?, ?, ?, ?, ?)",
+[ticketNumber, "Medium", departmentId, problemStatus, technical],
+
         (err, result) => {
           if (err) return reject(err);
           resolve(result.insertId);
@@ -701,6 +685,129 @@ app.post("/submit-general-maintenance", async (req, res) => {
   } catch (error) {
     console.error("❌ Error in general maintenance:", error);
     res.status(500).json({ error: "❌ Internal server error" });
+  }
+});
+
+app.get("/device-types", (req, res) => {
+  db.query("SELECT DISTINCT device_type FROM Maintenance_Devices WHERE device_type IS NOT NULL ORDER BY device_type ASC", (err, result) => {
+    if (err) {
+      console.error("❌ Error fetching device types:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    // رجّع قائمة بسيطة بدل ما تكون كائنات
+    res.json(result.map(row => row.device_type));
+  });
+});
+app.get("/get-external-reports", (req, res) => {
+  const sql = `
+    SELECT 
+      id,
+      created_at,
+      ticket_number,
+      device_name,
+      department_name,
+      initial_diagnosis AS issue_summary, -- ✅ لتنسيق الكود الأمامي
+      status,
+      device_type
+    FROM External_Maintenance
+    ORDER BY created_at DESC
+  `;
+
+  db.query(sql, (err, result) => {
+    if (err) {
+      console.error("❌ Error fetching external reports:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(result);
+  });
+});
+app.get("/report/:id", (req, res) => {
+  const reportId = req.params.id;
+  const reportType = req.query.type; // 👈 نقرأ النوع من الرابط
+
+  if (reportType === "external") {
+    const sql = `SELECT * FROM External_Maintenance WHERE id = ? LIMIT 1`;
+
+    db.query(sql, [reportId], (err, result) => {
+      if (err) return res.status(500).json({ error: "Server error" });
+      if (!result.length) return res.status(404).json({ error: "External report not found" });
+
+      const r = result[0];
+      return res.json({
+        id: r.id,
+        request_number: r.ticket_number,
+        created_at: r.created_at,
+        reporter_name: r.reporter_name,
+        maintenance_manager: r.maintenance_manager,
+        device_name: r.device_name,
+        device_type: r.device_type,
+        serial_number: r.serial_number,
+        governmental_number: r.governmental_number,
+        department_name: r.department_name,
+        issue_summary: r.initial_diagnosis,
+        full_description: r.final_diagnosis,
+        cpu_name: r.cpu_name,
+        ram_type: r.ram_type,
+        os_name: r.os_name,
+        generation_number: r.generation_number,
+        model_name: r.model_name,
+        maintenance_type: "External",
+        status: r.status || "Open",
+        source: "external"
+      });
+    });
+  } else {
+    // داخلي
+    const sql = `
+      SELECT 
+        mr.id AS report_id,
+        mr.report_number,
+        mr.status,
+        mr.created_at,
+        mr.issue_summary,
+        mr.full_description,
+        mr.maintenance_type,
+
+        md.device_type,
+        md.serial_number,
+        md.governmental_number,
+        COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
+        d.name AS department_name,
+
+        it.priority,
+        it.assigned_to AS technical,
+
+        pc_os.os_name,
+        cpu.cpu_name,
+        gen.generation_number,
+        ram.ram_type,
+        model.model_name
+
+      FROM Maintenance_Reports mr
+      LEFT JOIN Maintenance_Devices md ON mr.device_id = md.id
+      LEFT JOIN Departments d ON md.department_id = d.id
+      LEFT JOIN Internal_Tickets it ON mr.ticket_id = it.id
+      LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number
+      LEFT JOIN CPU_Types cpu ON pc.Processor_id = cpu.id
+      LEFT JOIN RAM_Types ram ON pc.RAM_id = ram.id
+      LEFT JOIN OS_Types pc_os ON pc.OS_id = pc_os.id
+      LEFT JOIN Processor_Generations gen ON pc.Generation_id = gen.id
+      LEFT JOIN PC_Model model ON pc.Model_id = model.id
+      LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number
+      LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number
+      WHERE mr.id = ?
+    `;
+
+    db.query(sql, [reportId], (err2, result2) => {
+      if (err2) return res.status(500).json({ error: "Server error" });
+      if (!result2.length) return res.status(404).json({ error: "Internal report not found" });
+
+      return res.json({
+        ...result2[0],
+        id: result2[0].report_id,
+        source: "internal"
+      });
+    });
   }
 });
 
@@ -1112,6 +1219,9 @@ app.get('/regular-maintenance-summary', (req, res) => {
   });
 });
 
+
+
+
 app.put("/update-report-status/:id", async (req, res) => {
   const reportId = req.params.id;
   const { status } = req.body;
@@ -1127,7 +1237,7 @@ app.put("/update-report-status/:id", async (req, res) => {
 
     if (!report) return res.status(404).json({ error: "Report not found" });
 
-    // Update report status
+    // Update this specific report
     await new Promise((resolve, reject) => {
       db.query("UPDATE Maintenance_Reports SET status = ? WHERE id = ?", [status, reportId], (err) => {
         if (err) return reject(err);
@@ -1135,7 +1245,7 @@ app.put("/update-report-status/:id", async (req, res) => {
       });
     });
 
-    // Update ticket status for this report's ticket
+    // Update the linked ticket
     await new Promise((resolve, reject) => {
       db.query("UPDATE Internal_Tickets SET status = ? WHERE id = ?", [status, report.ticket_id], (err) => {
         if (err) return reject(err);
@@ -1143,7 +1253,15 @@ app.put("/update-report-status/:id", async (req, res) => {
       });
     });
 
-    // If report is Regular Maintenance, update Regular_Maintenance status as well
+    // ✅ NEW: Update all other reports under same ticket to match the status
+    await new Promise((resolve, reject) => {
+      db.query("UPDATE Maintenance_Reports SET status = ? WHERE ticket_id = ?", [status, report.ticket_id], (err) => {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
+
+    // If regular maintenance, update Regular_Maintenance table
     if (report.maintenance_type === "Regular") {
       await new Promise((resolve, reject) => {
         db.query("UPDATE Regular_Maintenance SET status = ? WHERE device_id = ? AND last_maintenance_date = ?", 
@@ -1154,12 +1272,14 @@ app.put("/update-report-status/:id", async (req, res) => {
       });
     }
 
-    res.json({ message: "✅ Status updated across report, ticket and maintenance (if any)" });
+    res.json({ message: "✅ Status updated across report, ticket, and all linked reports" });
+
   } catch (err) {
     console.error("❌ Failed to update status:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 
 
