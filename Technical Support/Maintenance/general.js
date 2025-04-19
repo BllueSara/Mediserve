@@ -299,21 +299,19 @@ if (deviceSpecDropdown) {
   });
 }
 function closePopup() {
-  popup.style.display = "none";
+  const popup = document.getElementById("popup-modal");
+  if (popup) popup.style.display = "none";
 
-  const targetElement = document.getElementById("popup-target-id"); // ✅ تحقق من وجود العنصر
+  const targetElement = document.getElementById("popup-target-id");
   const targetId = targetElement ? targetElement.value : null;
-
   const dropdown = targetId ? document.getElementById(targetId) : null;
   const deviceType = document.getElementById("problem-type")?.value?.toLowerCase();
 
   if (targetId === "device-spec" && dropdown) {
-    // إعادة تعيين القائمة حسب نوع الجهاز
     dropdown.innerHTML = '<option value="" disabled selected>Select Specification</option>';
     dropdown.value = "";
 
     if (["pc", "printer", "scanner"].includes(deviceType)) {
-      // إضافة خيار "Add New" فقط إذا كان الجهاز معروفًا
       const addNewOption = document.createElement("option");
       addNewOption.value = "add-custom";
       addNewOption.textContent = "+ Add New Specification";
@@ -321,18 +319,18 @@ function closePopup() {
     }
   }
 
-  // ✅ إعادة السلكت للوضع الطبيعي إذا كان على "add-custom" أو "add-new"
   if (dropdown && ["add-custom", "add-new", "add-new-department"].includes(dropdown.value)) {
     dropdown.selectedIndex = 0;
     dropdown.value = "";
     dropdown.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  // تنظيف الحقول المؤقتة
-  const input = document.getElementById("popup-input");
-  if (input) input.value = "";
+  if (document.getElementById("popup-input")) {
+    document.getElementById("popup-input").value = "";
+  }
   if (targetElement) targetElement.value = "";
 }
+
 
 
 function closeGenericPopup() {
@@ -343,27 +341,21 @@ function closeGenericPopup() {
   if (lastSelectId) {
     const dropdown = document.getElementById(lastSelectId);
     if (dropdown) {
-      // لو المستخدم كان على خيار إضافة (model او غيره)
-      const addValues = ["add-new-model", "add-new", "add-new-department", "add-custom"];
-      if (addValues.includes(dropdown.value)) {
-        // رجع للسطر الأول
+      const addNewValues = ["add-new", "add-new-model", "add-new-department", "add-custom"];
+      if (addNewValues.includes(dropdown.value)) {
         dropdown.selectedIndex = 0;
-        // تأكد إن القيمة فعلاً خالية
         dropdown.value = "";
-        // لو محتاج تشغل onchange
         dropdown.dispatchEvent(new Event("change", { bubbles: true }));
       }
     }
     sessionStorage.removeItem("lastDropdownOpened");
   }
 
-  // لو تبغى تحدث موديل الأجهزة المعروفة بعد الإلغاء
   const deviceType = document.getElementById("problem-type")?.value?.toLowerCase();
   if (["pc", "printer", "scanner"].includes(deviceType)) {
     fetchDeviceSpecsByTypeAndDepartment();
   }
 }
-
 
 
 
@@ -405,6 +397,8 @@ generalDropdowns.forEach(({ id, label }) => {
 
 
 function openGenericPopup(label, targetId) {
+  sessionStorage.setItem("lastDropdownOpened", targetId);
+
   const saveBtn = document.getElementById("popup-save-btn");
 
   if (label === "Device Specification") {
@@ -1320,9 +1314,9 @@ function openPopup(selectId, title) {
 }
 
 // إغلاق البوب أب
-function closePopup() {
-  document.getElementById("popup-modal").style.display = "none";
-}
+// function closePopup() {
+//   document.getElementById("popup-modal").style.display = "none";
+// }
 
 // فتح/إغلاق حقل البحث
 function toggleSearch(selectId) {
