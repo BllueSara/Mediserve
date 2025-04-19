@@ -1112,60 +1112,52 @@ app.get('/regular-maintenance-summary', (req, res) => {
   });
 });
 
-app.put('/update-maintenance-status/:id', async (req, res) => {
-  const { id } = req.params;
+app.put("/update-report-status/:id", async (req, res) => {
+  const reportId = req.params.id;
   const { status } = req.body;
 
-  // ⏩ حوّل Completed إلى Closed والعكس
-  const reportStatus =
-    status === "Completed" ? "Closed"
-    : status === "Pending" ? "Open"
-    : status === "Overdue" ? "Open"
-    : status;
-
   try {
-    // 1. تحديث Regular_Maintenance
-    await new Promise((resolve, reject) => {
-      db.query(
-        `UPDATE Regular_Maintenance SET status = ? WHERE id = ?`,
-        [status, id],
-        (err) => {
-          if (err) return reject(err);
-          resolve();
-        }
-      );
+    // Get report with linked ticket_id, device_id and type
+    const report = await new Promise((resolve, reject) => {
+      db.query("SELECT * FROM Maintenance_Reports WHERE id = ?", [reportId], (err, result) => {
+        if (err) return reject(err);
+        resolve(result[0]);
+      });
     });
 
-    // 2. تحديث Maintenance_Reports المرتبط بنفس الجهاز
+    if (!report) return res.status(404).json({ error: "Report not found" });
+
+    // Update report status
     await new Promise((resolve, reject) => {
-      db.query(
-        `
-        UPDATE Maintenance_Reports 
-        SET status = ?
-        WHERE id = (
-          SELECT id FROM (
-            SELECT R.id
-            FROM Maintenance_Reports R
-            WHERE maintenance_type = 'Regular'
-              AND device_id = (SELECT device_id FROM Regular_Maintenance WHERE id = ?)
-            ORDER BY created_at DESC
-            LIMIT 1
-          ) AS subquery
-        )
-        `,
-        [reportStatus, id],
-        (err) => {
-          if (err) return reject(err);
-          resolve();
-        }
-      );
+      db.query("UPDATE Maintenance_Reports SET status = ? WHERE id = ?", [status, reportId], (err) => {
+        if (err) return reject(err);
+        resolve();
+      });
     });
 
-    res.json({ message: "✅ Status updated in both maintenance and report" });
+    // Update ticket status for this report's ticket
+    await new Promise((resolve, reject) => {
+      db.query("UPDATE Internal_Tickets SET status = ? WHERE id = ?", [status, report.ticket_id], (err) => {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
 
+    // If report is Regular Maintenance, update Regular_Maintenance status as well
+    if (report.maintenance_type === "Regular") {
+      await new Promise((resolve, reject) => {
+        db.query("UPDATE Regular_Maintenance SET status = ? WHERE device_id = ? AND last_maintenance_date = ?", 
+          [status, report.device_id, report.created_at], (err) => {
+          if (err) return reject(err);
+          resolve();
+        });
+      });
+    }
+
+    res.json({ message: "✅ Status updated across report, ticket and maintenance (if any)" });
   } catch (err) {
-    console.error("❌ Error updating status:", err);
-    res.status(500).json({ message: "❌ Failed to update status in both tables" });
+    console.error("❌ Failed to update status:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
