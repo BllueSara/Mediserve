@@ -412,7 +412,22 @@ textarea {
 .popup-content input,
 .popup-content textarea {
   width: 400px; /* قم بتعديل القيمة حسب الحاجة */
-  hight:300px;
+  height:300px;
   padding: 8px;
   box-sizing: border-box; /* لضمان احتساب padding والحدود ضمن العرض المحدد */
+}
+
+.custom-dropdown-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.custom-dropdown-wrapper select,
+.custom-dropdown-wrapper input {
+  width: 100%;
+  padding: 10px;
+  font-size: 14px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
 }

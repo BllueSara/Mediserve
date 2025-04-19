@@ -330,6 +330,174 @@ function closePopup() {
   }
   if (targetElement) targetElement.value = "";
 }
+// 🔔 Show notification message below the dropdown
+function showNotification(message, selectId) {
+  const selectElement = document.getElementById(selectId);
+  let container = selectElement.closest('.dropdown-container') || selectElement.parentNode;
+
+  const notification = document.createElement('div');
+  notification.className = "notification";
+  notification.textContent = message;
+  notification.style.color = "#d9534f";
+  notification.style.fontSize = "14px";
+  notification.style.marginTop = "4px";
+
+  container.appendChild(notification);
+
+  // Remove after 3 seconds
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.parentNode.removeChild(notification);
+    }
+  }, 3000);
+}
+
+// ✏️ Open popup to edit dropdown value
+window.openPopup = function(selectId, title) {
+  const select = document.getElementById(selectId);
+  const selectedOption = select.options[select.selectedIndex];
+
+  // If invalid option selected
+  if (!selectedOption || selectedOption.disabled || selectedOption.value === "add-custom") {
+    showNotification("Please select a valid option to edit.", selectId);
+    return;
+  }
+
+  // Set popup title and input
+  document.getElementById("popup-title").textContent = `Edit ${title}`;
+  const popupFields = document.getElementById("popup-fields");
+  popupFields.innerHTML = `
+    <label>Update ${title}:</label>
+    <input type="text" id="popup-input" value="${selectedOption.text}">
+  `;
+
+  // Save new value
+  const saveBtn = document.getElementById("popup-save-btn");
+  saveBtn.onclick = () => {
+    const newValue = document.getElementById("popup-input").value.trim();
+    if (newValue) {
+      selectedOption.text = newValue;
+    }
+    window.closePopup(); // Close using global reference
+  };
+
+  // Show popup
+  document.getElementById("popup-modal").style.display = "flex";
+};
+
+// إغلاق البوب أب
+function closePopup() {
+  document.getElementById("popup-modal").style.display = "none";
+}
+
+// 🔎 Toggle search field in dropdown
+window.toggleSearch = function(selectId) {
+  const container = document.getElementById(`search-container-${selectId}`);
+  container.style.display = container.style.display === "none" ? "block" : "none";
+
+  const input = container.querySelector("input");
+  input.value = "";
+  input.focus();
+
+  // Filter dropdown options live
+  input.oninput = () => {
+    const filter = input.value.toLowerCase();
+    const select = document.getElementById(selectId);
+
+    for (let i = 0; i < select.options.length; i++) {
+      const option = select.options[i];
+      const shouldShow = option.text.toLowerCase().includes(filter) || option.value === "add-custom";
+      option.style.display = shouldShow ? "block" : "none";
+    }
+  };
+};
+
+// 🗑️ Delete selected option from dropdown and send DELETE to database
+// 🗑️ Delete selected option from dropdown and remember using localStorage + DB
+window.deleteOption = function(selectId) {
+  const select = document.getElementById(selectId);
+  const selectedIndex = select.selectedIndex;
+  const selectedOption = select.options[selectedIndex];
+
+  if (!selectedOption || selectedOption.disabled || selectedOption.value === "add-custom") {
+    showNotification("Please select a valid option to delete.", selectId);
+    return;
+  }
+
+  const deletedText = selectedOption.text;
+  const deviceType = document.getElementById("problem-type")?.value?.toLowerCase() || "";
+
+  select.removeChild(selectedOption);
+
+  // 🧠 حفظ الحذف محليًا (localStorage)
+  const persistentKey = `deletedOptions_${selectId}`;
+  let deletedOptions = JSON.parse(localStorage.getItem(persistentKey)) || [];
+
+  if (!deletedOptions.includes(deletedText)) {
+    deletedOptions.push(deletedText);
+    localStorage.setItem(persistentKey, JSON.stringify(deletedOptions));
+  }
+
+  // 🔄 أعد تعيين السلكت لأول خيار صالح
+  // 🔄 أعد تعيين السلكت لأول خيار "صالح" بعد الحذف
+for (let i = 0; i < select.options.length; i++) {
+  const opt = select.options[i];
+  if (!opt.disabled && !opt.value.includes("add-")) {
+    select.selectedIndex = i;
+    select.value = opt.value;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    break;
+  }
+}
+
+
+  // 🌐 حذف من الداتا بيس (API)
+  fetch("http://localhost:5050/delete-option-general", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      target: selectId,
+      value: deletedText,
+      type: deviceType // فقط لحالة problem-status
+    })
+  })
+    .then(res => res.json())
+    .then(result => {
+      if (result.error) {
+        console.error("❌ Error:", result.error);
+        showNotification("❌ Failed to delete from DB", selectId);
+        return;
+      }
+      showNotification("✅ Deleted: " + deletedText, selectId);
+    })
+    .catch(err => {
+      console.error("❌ Network error:", err);
+      showNotification("❌ Failed to connect", selectId);
+    });
+};
+
+// 🧽 Apply deletions from localStorage on load
+function applyDeletions(selectId) {
+  const persistentKey = `deletedOptions_${selectId}`;
+  const deletedOptions = JSON.parse(localStorage.getItem(persistentKey)) || [];
+  const select = document.getElementById(selectId);
+
+  for (let i = select.options.length - 1; i >= 0; i--) {
+    if (deletedOptions.includes(select.options[i].text)) {
+      select.remove(i);
+    }
+  }
+}
+
+// 🪄 On DOM ready, apply deletions to all relevant dropdowns
+document.addEventListener("DOMContentLoaded", function () {
+  const selectIds = ["problem-type", "section", "device-spec", "floor", "technical", "problem-status"];
+  selectIds.forEach(id => {
+    if (document.getElementById(id)) {
+      applyDeletions(id);
+    }
+  });
+});
 
 
 
@@ -1263,8 +1431,7 @@ function fetchDevicesBySection() {
 }
 
 
-
-// 🔔 Show notification message below the dropdown
+// إظهار إشعار أسفل الدروب ليست
 function showNotification(message, selectId) {
   const selectElement = document.getElementById(selectId);
   let container = selectElement.closest('.dropdown-container') || selectElement.parentNode;
@@ -1278,7 +1445,6 @@ function showNotification(message, selectId) {
 
   container.appendChild(notification);
 
-  // Remove after 3 seconds
   setTimeout(() => {
     if (notification.parentNode) {
       notification.parentNode.removeChild(notification);
@@ -1286,18 +1452,16 @@ function showNotification(message, selectId) {
   }, 3000);
 }
 
-// ✏️ Open popup to edit dropdown value
-window.openPopup = function(selectId, title) {
+// فتح البوب أب وتعبئة العنوان والنص الحالي
+function openPopup(selectId, title) {
   const select = document.getElementById(selectId);
   const selectedOption = select.options[select.selectedIndex];
 
-  // If invalid option selected
   if (!selectedOption || selectedOption.disabled || selectedOption.value === "add-custom") {
     showNotification("Please select a valid option to edit.", selectId);
     return;
   }
 
-  // Set popup title and input
   document.getElementById("popup-title").textContent = `Edit ${title}`;
   const popupFields = document.getElementById("popup-fields");
   popupFields.innerHTML = `
@@ -1305,27 +1469,25 @@ window.openPopup = function(selectId, title) {
     <input type="text" id="popup-input" value="${selectedOption.text}">
   `;
 
-  // Save new value
   const saveBtn = document.getElementById("popup-save-btn");
   saveBtn.onclick = () => {
     const newValue = document.getElementById("popup-input").value.trim();
     if (newValue) {
       selectedOption.text = newValue;
     }
-    window.closePopup(); // Close using global reference
+    closePopup();
   };
 
-  // Show popup
   document.getElementById("popup-modal").style.display = "flex";
-};
-
-// إغلاق البوب أب
-function closePopup() {
-  document.getElementById("popup-modal").style.display = "none";
 }
 
-// 🔎 Toggle search field in dropdown
-window.toggleSearch = function(selectId) {
+// إغلاق البوب أب
+// function closePopup() {
+//   document.getElementById("popup-modal").style.display = "none";
+// }
+
+// فتح/إغلاق حقل البحث
+function toggleSearch(selectId) {
   const container = document.getElementById(`search-container-${selectId}`);
   container.style.display = container.style.display === "none" ? "block" : "none";
 
@@ -1333,7 +1495,6 @@ window.toggleSearch = function(selectId) {
   input.value = "";
   input.focus();
 
-  // Filter dropdown options live
   input.oninput = () => {
     const filter = input.value.toLowerCase();
     const select = document.getElementById(selectId);
@@ -1344,11 +1505,8 @@ window.toggleSearch = function(selectId) {
       option.style.display = shouldShow ? "block" : "none";
     }
   };
-};
-
-// 🗑️ Delete selected option from dropdown and send DELETE to database
-// 🗑️ Delete selected option from dropdown and remember using localStorage + DB
-window.deleteOption = function(selectId) {
+}
+function deleteOption(selectId) {
   const select = document.getElementById(selectId);
   const selectedIndex = select.selectedIndex;
   const selectedOption = select.options[selectedIndex];
@@ -1361,56 +1519,60 @@ window.deleteOption = function(selectId) {
   const deletedText = selectedOption.text;
   const deviceType = document.getElementById("problem-type")?.value?.toLowerCase() || "";
 
-  select.removeChild(selectedOption);
-
-  // 🧠 حفظ الحذف محليًا (localStorage)
-  const persistentKey = `deletedOptions_${selectId}`;
-  let deletedOptions = JSON.parse(localStorage.getItem(persistentKey)) || [];
-
-  if (!deletedOptions.includes(deletedText)) {
-    deletedOptions.push(deletedText);
-    localStorage.setItem(persistentKey, JSON.stringify(deletedOptions));
-  }
-
-  // 🔄 أعد تعيين السلكت لأول خيار صالح
-  // 🔄 أعد تعيين السلكت لأول خيار "صالح" بعد الحذف
-for (let i = 0; i < select.options.length; i++) {
-  const opt = select.options[i];
-  if (!opt.disabled && !opt.value.includes("add-")) {
-    select.selectedIndex = i;
-    select.value = opt.value;
-    select.dispatchEvent(new Event("change", { bubbles: true }));
-    break;
-  }
-}
-
-
-  // 🌐 حذف من الداتا بيس (API)
   fetch("http://localhost:5050/delete-option-general", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       target: selectId,
       value: deletedText,
-      type: deviceType // فقط لحالة problem-status
+      type: deviceType
     })
   })
     .then(res => res.json())
     .then(result => {
       if (result.error) {
-        console.error("❌ Error:", result.error);
-        showNotification("❌ Failed to delete from DB", selectId);
+        // If the value is linked to other records, suggest editing
+        if (result.error.includes("linked")) {
+          if (confirm(`⚠️ ${result.error}\n\nWould you like to edit the value instead?`)) {
+            openPopup(selectId, "Value");
+          }
+        } else {
+          showNotification(result.error, selectId);
+        }
         return;
       }
+
+      // Remove from DOM
+      select.removeChild(selectedOption);
+
+      // Save deleted value to localStorage
+      const persistentKey = `deletedOptions_${selectId}`;
+      let deletedOptions = JSON.parse(localStorage.getItem(persistentKey)) || [];
+
+      if (!deletedOptions.includes(deletedText)) {
+        deletedOptions.push(deletedText);
+        localStorage.setItem(persistentKey, JSON.stringify(deletedOptions));
+      }
+
+      // Reset the select box to a valid option
+      for (let i = 0; i < select.options.length; i++) {
+        const opt = select.options[i];
+        if (!opt.disabled && !opt.value.includes("add-")) {
+          select.selectedIndex = i;
+          select.dispatchEvent(new Event("change", { bubbles: true }));
+          break;
+        }
+      }
+
       showNotification("✅ Deleted: " + deletedText, selectId);
     })
     .catch(err => {
       console.error("❌ Network error:", err);
-      showNotification("❌ Failed to connect", selectId);
+      showNotification("❌ Failed to connect to the server.", selectId);
     });
-};
+}
 
-// 🧽 Apply deletions from localStorage on load
+// دالة تطبق الحذف الدائم عند تحميل الصفحة
 function applyDeletions(selectId) {
   const persistentKey = `deletedOptions_${selectId}`;
   const deletedOptions = JSON.parse(localStorage.getItem(persistentKey)) || [];
@@ -1423,8 +1585,8 @@ function applyDeletions(selectId) {
   }
 }
 
-// 🪄 On DOM ready, apply deletions to all relevant dropdowns
-document.addEventListener("DOMContentLoaded", function () {
+// عند تحميل الصفحة، نطبق الحذف الدائم على القوائم المطلوبة
+document.addEventListener("DOMContentLoaded", function() {
   const selectIds = ["problem-type", "section", "device-spec", "floor", "technical", "problem-status"];
   selectIds.forEach(id => {
     if (document.getElementById(id)) {
@@ -1432,3 +1594,57 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 });
+
+
+function openPopup(selectId, title) {
+  const select = document.getElementById(selectId);
+  const selectedOption = select.options[select.selectedIndex];
+
+  if (!selectedOption || selectedOption.disabled || selectedOption.value === "add-custom") {
+    showNotification("Please select a valid option to edit.", selectId);
+    return;
+  }
+
+  document.getElementById("popup-title").textContent = `Edit ${title}`;
+  const popupFields = document.getElementById("popup-fields");
+  popupFields.innerHTML = `
+    <label>New ${title}:</label>
+    <input type="text" id="popup-input" value="${selectedOption.text}">
+  `;
+
+  const saveBtn = document.getElementById("popup-save-btn");
+  saveBtn.onclick = () => {
+    const newValue = document.getElementById("popup-input").value.trim();
+    if (!newValue) return;
+
+    const oldValue = selectedOption.text;
+
+    fetch("http://localhost:5050/update-option-general", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        target: selectId,
+        oldValue,
+        newValue,
+        type: document.getElementById("problem-type")?.value?.toLowerCase() || ""
+      })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.message) {
+          selectedOption.text = newValue;
+          showNotification("✅ Option updated successfully.", selectId);
+        } else {
+          showNotification(data.error || "❌ Update failed.", selectId);
+        }
+      })
+      .catch(err => {
+        console.error("❌ Update error:", err);
+        showNotification("❌ Failed to update option.", selectId);
+      });
+
+    closePopup();
+  };
+
+  document.getElementById("popup-modal").style.display = "flex";
+}

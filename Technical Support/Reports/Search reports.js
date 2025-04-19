@@ -72,8 +72,7 @@ function loadReports(page = 1) {
     .then(data => {
       const container = document.getElementById("report-list");
       container.innerHTML = "";
-      
-      // قراءة الفلاتر
+
       const type = document.getElementById("filter-type")?.value;
       const status = document.getElementById("filter-status")?.value;
       const search = document.getElementById("search-input")?.value.toLowerCase();
@@ -84,43 +83,31 @@ function loadReports(page = 1) {
       const filtered = data.filter(report => {
         const createdAt = new Date(report.created_at);
         const isTicket = report.issue_summary?.includes("Ticket Created");
-        const isNewReport = !report.ticket_id; // يعني report ما له تذكرة
-      
+        const isNewReport = !report.ticket_id;
+
         let typeMatch = true;
-      
-        // ✅ ضبط الأنواع حسب اللي طلبته
-        if (type === "Maintenance") {
-          typeMatch =  !isTicket;
-        } else if (type === "Ticket") {
-          typeMatch = isTicket;
-        } else if (type === "New") {
-          typeMatch = isNewReport;
-        }
-      
-        // باقي الفلاتر
-        let statusMatch = !status || report.status === status;
-      
-        let searchMatch =
+        if (type === "Maintenance") typeMatch = !isTicket;
+        else if (type === "Ticket") typeMatch = isTicket;
+        else if (type === "New") typeMatch = isNewReport;
+
+        const statusMatch = !status || report.status === status;
+        const searchMatch =
           !search ||
-          (report.device_name?.toLowerCase().includes(search)) ||
-          (report.department_name?.toLowerCase().includes(search)) ||
-          (report.ticket_number?.toLowerCase().includes(search));
-      
+          report.device_name?.toLowerCase().includes(search) ||
+          report.department_name?.toLowerCase().includes(search) ||
+          report.ticket_number?.toLowerCase().includes(search);
+
         let dateMatch = true;
         if (dateFrom) dateMatch = createdAt >= new Date(dateFrom);
         if (dateTo) dateMatch = dateMatch && createdAt <= new Date(dateTo);
-        let deviceTypeMatch = !deviceType || (report.device_type?.toLowerCase() === deviceType.toLowerCase());
 
-        return typeMatch && statusMatch && searchMatch && dateMatch && deviceTypeMatch;      });
-      
+        const deviceTypeMatch = !deviceType || (report.device_type?.toLowerCase() === deviceType.toLowerCase());
+
+        return typeMatch && statusMatch && searchMatch && dateMatch && deviceTypeMatch;
+      });
 
       if (!filtered.length) {
         container.innerHTML = "<p>No matching reports found.</p>";
-        return;
-      }
-
-      if (!data.length) {
-        container.innerHTML = "<p>No reports found. Try refreshing or changing filters.</p>";
         return;
       }
 
@@ -128,11 +115,9 @@ function loadReports(page = 1) {
         const card = document.createElement("div");
         card.className = "report-card";
 
-        // Maintenance Type Flags
         const isRegular = report.maintenance_type === "Regular";
         const isTicketOnly = report.issue_summary?.includes("Ticket Created");
 
-        // Icon & Label
         let maintenanceLabel = "";
         let iconSrc = "";
 
@@ -150,11 +135,8 @@ function loadReports(page = 1) {
           iconSrc = "/icon/maintenance.png";
         }
 
-        // Content Builder
         let issueHtml = "";
-
         if (isTicketOnly) {
-          // Show ONLY ticket, device, department
           issueHtml = `
             <div style="background:#e8f4ff;padding:10px;border-radius:6px">
               <strong>Ticket Number:</strong> ${report.ticket_number}<br>
@@ -163,7 +145,6 @@ function loadReports(page = 1) {
             </div>
           `;
         } else if (isRegular) {
-          // Checklist for Regular Maintenance
           let checklistItems = [];
           try {
             checklistItems = JSON.parse(report.issue_summary || "[]");
@@ -181,46 +162,28 @@ function loadReports(page = 1) {
                 </div>` : ""}
           `;
         } else {
-          // General Maintenance with issue & diagnosis on same line
-          let issue = "";
-          let diagnosis = "";
+          let issue = report.issue_summary || "";
+          let diagnosis = report.full_description || "";
 
-          if (report.issue_summary?.toLowerCase().startsWith("problem:")) {
-            issue = report.issue_summary.replace(/^problem:\s*/i, "");
-          } else if (report.issue_summary?.toLowerCase().startsWith("selected issue:")) {
-            issue = report.issue_summary.replace(/^selected issue:\s*/i, "");
-          } else {
-            issue = report.issue_summary || "";
-          }
-
-          if (report.full_description?.toLowerCase().startsWith("initialdiagnosis:")) {
-            diagnosis = report.full_description.replace(/^initialdiagnosis:\s*/i, "");
-          } else if (report.full_description?.toLowerCase().startsWith("initial diagnosis:")) {
-            diagnosis = report.full_description.replace(/^initial diagnosis:\s*/i, "");
-          } else {
-            diagnosis = report.full_description || "";
-          }
+          issue = issue.replace(/^selected issue:\s*/i, "");
+          diagnosis = diagnosis.replace(/^initial diagnosis:\s*/i, "");
 
           issueHtml = `
-          <div class="report-issue-line">
-            ${issue ? `<span><strong>Selected Issue:</strong> ${issue}</span>` : ""}
-            ${diagnosis ? `<span><strong>Initial Diagnosis:</strong> ${diagnosis}</span>` : ""}
-          </div>
-        `;
-
+            <div class="report-issue-line">
+              ${issue ? `<span><strong>Selected Issue:</strong> ${issue}</span>` : ""}
+              ${diagnosis ? `<span><strong>Initial Diagnosis:</strong> ${diagnosis}</span>` : ""}
+            </div>
+          `;
         }
 
-        // Card Layout
         card.innerHTML = `
           <div class="report-card-header">
             <img src="${iconSrc}" alt="icon" />
             <span>${maintenanceLabel}</span>
             <select 
-            data-report-id="${report.id}" 
-            data-ticket-id="${report.ticket_id || ''}" 
-           onchange="updateReportStatus(${report.id}, this)" 
-           class="status-select ${getStatusClass(report.status)}">
-
+              data-report-id="${report.id}" 
+              data-ticket-id="${report.ticket_id || ''}" 
+              class="status-select ${getStatusClass(report.status)}">
               <option value="Open" ${report.status === "Open" ? "selected" : ""}>Open</option>
               <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>In Progress</option>
               <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>Closed</option>
@@ -238,11 +201,19 @@ function loadReports(page = 1) {
 
         container.appendChild(card);
 
-        card.addEventListener("click", () => {
-          window.location.href = `report-details.html?id=${report.id}&type=internal`; // أو external
+        // ✅ منع التنقل إذا كان الضغط على select
+        card.addEventListener("click", (e) => {
+          if (e.target.closest("select")) return;
+          window.location.href = `report-details.html?id=${report.id}&type=internal`;
         });
-        
-        
+
+        // ✅ تحديث الحالة + منع انتشار الضغط
+        const selectElement = card.querySelector("select.status-select");
+        selectElement.addEventListener("click", e => e.stopPropagation());
+        selectElement.addEventListener("change", e => {
+          e.stopPropagation();
+          updateReportStatus(report.id, e.target);
+        });
       });
 
       updatePagination(page);
@@ -252,6 +223,7 @@ function loadReports(page = 1) {
       document.getElementById("report-list").innerHTML = "<p>Error loading reports</p>";
     });
 }
+
 
 
 function updatePagination(currentPage) {
