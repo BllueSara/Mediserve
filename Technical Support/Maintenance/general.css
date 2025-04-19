@@ -1,16 +1,56 @@
- /* Reset styles - Remove default margin, padding, and apply a common font */
- * {
+/* Reset styles - Remove default margin, padding, and apply a common font */
+* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
     font-family: Arial, sans-serif;
 }
 
-/* Page background - Set background color and center align text */
+/* Page background - Set background color, center align text and ensure enough height */
 body {
     background-color: #ffffff;
     text-align: center;
     padding: 20px;
+    min-height: 100vh; /* لضمان وجود مساحة كافية */
+}
+
+/* تعديل حجم الحاوية الرئيسية للنموذج لتكون أعرض */
+.form-container {
+    background-color: white;
+    max-width: 1000px;  /* تمت الزيادة من 700px إلى 900px */
+    margin: 70px auto;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+    text-align: left;
+}
+
+/* حاوية الدروب ليست */
+.dropdown-container {
+    position: relative;
+}
+
+/* توسيع حجم الدروب ليست مع ترك مساحة على اليسار للأيقونة */
+.dropdown-container select {
+    width: 100%;
+    padding: 10px;
+    padding-left: 40px; /* مساحة كافية للأيقونة من اليسار */
+    padding-right: 50px; /* مساحة إضافية من اليمين إن لزم الأمر */
+    margin-top: 5px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 16px;
+    height: 45px;
+}
+
+/* باقي تنسيقات الإدخال */
+input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
 }
 
 /* Back and Home buttons - Positioned at the top */
@@ -36,7 +76,7 @@ body {
     transform: translateX(-50%);
 }
 
-/* Button links - Styling for Back and Home buttons */
+/* Button links styling */
 .back-button a,
 .Home-button a {
     text-decoration: none;
@@ -62,7 +102,7 @@ body {
     height: 20px;
 }
 
-/* MS Logo - Positioned at the top left */
+/* MS Logo */
 .ms-logo {
     position: absolute;
     left: 5px;
@@ -73,7 +113,7 @@ body {
     width: 120px;
 }
 
-/* Hospital Logo - Positioned at the top right */
+/* Hospital Logo */
 .hospital-logo {
     position: absolute;
     right: 10px;
@@ -84,24 +124,13 @@ body {
     height: 50px;
 }
 
-/* Header - Contains MS and Hospital Logos */
+/* Header */
 header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 20px 50px;
     background-color: white;
-}
-
-/* Form container - Centralized form with shadow effect */
-.form-container {
-    background-color: white;
-    max-width: 700px;
-    margin: 70px auto;
-    padding: 25px;
-    border-radius: 10px;
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-    text-align: left;
 }
 
 /* Title Styling */
@@ -123,38 +152,22 @@ header {
     gap: 15px;
 }
 
-/* Labels - Input field labels */
+/* Labels */
 label {
     display: block;
     margin-top: 10px;
 }
 
-/* General Input and Select Styling */
-input, select {
-    width: 100%;
-    padding: 10px;
-    margin-top: 5px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    font-size: 14px;
-}
-
-/* Input focus effect - Highlight when active */
-input:focus, select:focus {
-    border-color: #3ba9e07c !important;
-    outline: none;
-}
-
-/* Styling for specific select fields */
+/* General styling for select fields (IDs موجودة حاليًا) */
 #technical, #floor, #section, #problem-status, #problem-type, #device-spec {
-    background-color: #EFEFEF; /* Gray background */
-    border: 1px solid #D1D5DB; /* Border same as background */
+    background-color: #EFEFEF; /* خلفية رمادية */
+    border: 1px solid #D1D5DB;
     border-radius: 8px;
     padding: 10px;
     font-size: 14px;
 }
 
-/* Focus effect when selecting inputs */
+/* Focus effect for select elements */
 #technical:focus, #floor:focus, #section:focus, #problem-type:focus {
     outline: none;
     border-color: #3ba9e07c;
@@ -168,13 +181,12 @@ input:focus, select:focus {
 /* Buttons container */
 .form-buttons {
     display: flex;
-    justify-content: flex-end; /* Align buttons to the right */
-    align-items: center; /* Align buttons properly */
-    gap: 10px; /* Space between buttons */
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
     margin-top: 20px;
-    width: 100%; /* Ensure full width */
+    width: 100%;
 }
-
 
 /* Cancel Button */
 .cancel-btn {
@@ -184,7 +196,7 @@ input:focus, select:focus {
     padding: 10px 20px;
     border-radius: 5px;
     cursor: pointer;
-    margin-left: 0; /* Reset margin */
+    margin-left: 0;
 }
 
 /* Submit Button */
@@ -197,105 +209,28 @@ input:focus, select:focus {
     cursor: pointer;
 }
 
-/* Popup */
-.popup-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-.popup-content {
-    background: white;
-    padding: 30px;
-    width: 600px;
-    max-height: 90vh;
-    overflow-y: auto;
-    border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-.popup-content label {
-    margin-top: 15px;
-    display: block;
-    font-size: 14px;
-}
-.popup-content input, .popup-content select {
-    width: 80%;
-    margin: 5px auto;
-    padding: 10px;
-    display: block;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-}
-.popup-buttons {
-    margin-top: 20px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 15px;
-}
-
-/* Responsive Design for Tablets */
-@media screen and (max-width: 768px) {
-    .back-button a,
-    .Home-button a {
-        font-size: 13px;
-    }
-
-    .form-container {
-        width: 90%;
-        margin: 120px auto 50px;
-    }
-
-    .form-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Responsive Design for Mobile */
-@media screen and (max-width: 480px) {
-    .back-button a,
-    .Home-button a {
-        font-size: 12px;
-    }
-
-    .form-container {
-        width: 95%;
-        margin: 100px auto 40px;
-    }
-
-    .form-grid {
-        grid-template-columns: 1fr;
-        gap: 10px;
-    }
-}
-
 /*pop up*/
 .popup-modal {
-    display: none;
+    display: none; /* نفعّله بـ JavaScript */
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.5);
-    justify-content: center;
-    align-items: center;
+    justify-content: center; /* يوسّط أفقي */
+    align-items: center;     /* يوسّط عمودي */
     z-index: 1000;
-}
+  }
+  
   .popup-content {
     background: white;
     padding: 30px;
-    width: 450px;
-    max-height: 90vh;
-    overflow-y: auto;
     border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    text-align: center;
   }
   
   .popup-content label {
@@ -339,3 +274,82 @@ input:focus, select:focus {
     justify-content: center; /* ✅ هذا يخلي الأزرار بالوسط */
     gap: 15px;                /* ✅ مسافة بين الزرين */
   }
+    /* جعل الأيقونات داخل القائمة المنسدلة */
+.dropdown-container {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.dropdown-wrapper {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.dropdown-container select {
+    width: 100%;
+    padding: 10px;
+    padding-right: 50px; /* مساحة للأيقونات */
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 16px;
+    height: 45px;
+    background-color: #EFEFEF;
+}
+
+/* تعديل وضع الأيقونات داخل القائمة */
+.icon-container {
+    position: absolute;
+    top: 0;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    height: 100%;
+    justify-content: center; /* لضبط وضع الأيقونات */
+}
+
+      select {
+        flex: 1;
+        padding: 4px;
+      }
+      
+/* الأيقونة الخاصة بالتعديل داخل الدروب ليست */
+.edit-icon {
+    width: 16px;
+    height: 16px;
+    position: absolute;
+    left:420px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    cursor: pointer;
+}
+.search-icon {
+    width: 16px;
+    height: 16px;
+    position: absolute;
+    left: 400px;
+    top: 50%;
+    transform: translateY(calc(-50% + 2px));
+    z-index: 2;
+    cursor: pointer;
+}
+.trash-icon {
+    width: 16px;
+    height: 16px;
+    position: absolute;
+    left: 380px;
+    top: 50%;
+    transform: translateY(calc(-50% + 2px));
+    z-index: 2;
+    cursor: pointer;
+}
+
+/* تنسيق الأيقونات داخل الحاوية */
+.icon-container img {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}

@@ -1046,16 +1046,16 @@ function saveDeviceSpecification() {
     return;
   }
 
+  // ✅ تعديل أسماء المفاتيح لتطابق متطلبات الباكند
   const specData = {
-    ministry,
-    name,
+    "ministry-id": ministry,
+    "device-name": name,
     model,
     serial,
-    department,
-    type: deviceType
+    department
   };
 
-  fetch("http://localhost:5050/add-device-specification", {
+  fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(specData)
@@ -1067,32 +1067,28 @@ function saveDeviceSpecification() {
     .then(result => {
       if (result.message) {
         alert(result.message);
-    
+
         if (!result.insertedId) {
           alert("❌ لم يتم استرجاع ID من السيرفر. لا يمكن ربط الجهاز بالصيانة.");
           return;
         }
-    
+
         console.log("✅ Inserted Device ID:", result.insertedId);
-    
-        // ✅ إنشاء الخيار الجديد مباشرة بدون إعادة تحميل القائمة
+
         const option = document.createElement("option");
         option.value = result.insertedId;
-        option.textContent = `${specData.name} | ${specData.serial} | ${specData.ministry}`;
+        option.textContent = `${name} | ${serial} | ${ministry}`;
         dropdown.appendChild(option);
         dropdown.value = result.insertedId;
-    
-        // ✅ إغلاق الـ popup بأمان
-        const popup = document.getElementById("generic-popup");
-        if (popup) popup.style.display = "none";
-    
-        // ✅ تنظيف الحقول
+
+        document.getElementById("generic-popup").style.display = "none";
+
+        // تنظيف الحقول
         document.getElementById("spec-ministry").value = "";
         document.getElementById("spec-name").value = "";
         document.getElementById("spec-model").value = "";
         document.getElementById("spec-serial").value = "";
         document.getElementById("spec-department").value = "";
-    
       } else {
         alert("❌ فشل في الحفظ: " + result.error);
       }
@@ -1102,6 +1098,7 @@ function saveDeviceSpecification() {
       alert("❌ Error saving device specification");
     });
 }
+
 function closeGenericPopup() {
   const popup = document.getElementById("generic-popup");
   popup.style.display = "none";
@@ -1261,3 +1258,128 @@ function saveGenericOption() {
       alert(err.message); // ✅ هنا سيتم عرض رسالة التكرار من السيرفر
     });
 }
+
+
+
+// إظهار إشعار أسفل الدروب ليست
+function showNotification(message, selectId) {
+  const selectElement = document.getElementById(selectId);
+  let container = selectElement.closest('.dropdown-container') || selectElement.parentNode;
+
+  const notification = document.createElement('div');
+  notification.className = "notification";
+  notification.textContent = message;
+  notification.style.color = "#d9534f";
+  notification.style.fontSize = "14px";
+  notification.style.marginTop = "4px";
+
+  container.appendChild(notification);
+
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.parentNode.removeChild(notification);
+    }
+  }, 3000);
+}
+
+// فتح البوب أب وتعبئة العنوان والنص الحالي
+function openPopup(selectId, title) {
+  const select = document.getElementById(selectId);
+  const selectedOption = select.options[select.selectedIndex];
+
+  if (!selectedOption || selectedOption.disabled || selectedOption.value === "add-custom") {
+    showNotification("Please select a valid option to edit.", selectId);
+    return;
+  }
+
+  document.getElementById("popup-title").textContent = `Edit ${title}`;
+  const popupFields = document.getElementById("popup-fields");
+  popupFields.innerHTML = `
+    <label>Update ${title}:</label>
+    <input type="text" id="popup-input" value="${selectedOption.text}">
+  `;
+
+  const saveBtn = document.getElementById("popup-save-btn");
+  saveBtn.onclick = () => {
+    const newValue = document.getElementById("popup-input").value.trim();
+    if (newValue) {
+      selectedOption.text = newValue;
+    }
+    closePopup();
+  };
+
+  document.getElementById("popup-modal").style.display = "flex";
+}
+
+// إغلاق البوب أب
+function closePopup() {
+  document.getElementById("popup-modal").style.display = "none";
+}
+
+// فتح/إغلاق حقل البحث
+function toggleSearch(selectId) {
+  const container = document.getElementById(`search-container-${selectId}`);
+  container.style.display = container.style.display === "none" ? "block" : "none";
+
+  const input = container.querySelector("input");
+  input.value = "";
+  input.focus();
+
+  input.oninput = () => {
+    const filter = input.value.toLowerCase();
+    const select = document.getElementById(selectId);
+
+    for (let i = 0; i < select.options.length; i++) {
+      const option = select.options[i];
+      const shouldShow = option.text.toLowerCase().includes(filter) || option.value === "add-custom";
+      option.style.display = shouldShow ? "block" : "none";
+    }
+  };
+}
+
+// حذف الخيار المحدد مع حفظ الحذف بشكل دائم باستخدام localStorage
+function deleteOption(selectId) {
+  const select = document.getElementById(selectId);
+  const selectedIndex = select.selectedIndex;
+  const selectedOption = select.options[selectedIndex];
+
+  if (!selectedOption || selectedOption.disabled || selectedOption.value === "add-custom") {
+    showNotification("Please select a valid option to delete.", selectId);
+    return;
+  }
+
+  const deletedOptionText = selectedOption.text;
+  select.removeChild(selectedOption);
+
+  const persistentKey = `deletedOptions_${selectId}`;
+  let deletedOptions = JSON.parse(localStorage.getItem(persistentKey)) || [];
+  if (!deletedOptions.includes(deletedOptionText)) {
+    deletedOptions.push(deletedOptionText);
+    localStorage.setItem(persistentKey, JSON.stringify(deletedOptions));
+  }
+
+  showNotification("Deleted option: " + deletedOptionText, selectId);
+}
+
+// دالة تطبق الحذف الدائم عند تحميل الصفحة
+function applyDeletions(selectId) {
+  const persistentKey = `deletedOptions_${selectId}`;
+  const deletedOptions = JSON.parse(localStorage.getItem(persistentKey)) || [];
+  const select = document.getElementById(selectId);
+
+  for (let i = select.options.length - 1; i >= 0; i--) {
+    if (deletedOptions.includes(select.options[i].text)) {
+      select.remove(i);
+    }
+  }
+}
+
+// عند تحميل الصفحة، نطبق الحذف الدائم على القوائم المطلوبة
+document.addEventListener("DOMContentLoaded", function() {
+  const selectIds = ["problem-type", "section", "device-spec", "floor", "technical", "problem-status"];
+  selectIds.forEach(id => {
+    if (document.getElementById(id)) {
+      applyDeletions(id);
+    }
+  });
+});

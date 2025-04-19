@@ -322,3 +322,31 @@ header {
   background-color: #4caf50;
   color: #fff;
 }
+
+.issue-flex-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.issue-block {
+  flex: 1 1 45%;
+  min-width: 200px;
+}
+.inline-issue-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px; /* تقدر تزودها لو تبغى أوسع */
+  align-items: baseline;
+  margin-bottom: 5px;
+}
+.inline-issue-line strong {
+  white-space: nowrap;
+}
+
+.report-issue-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 400px;
+  margin-bottom: 10px;
+}
