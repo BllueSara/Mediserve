@@ -322,3 +322,7 @@ header {
   background-color: #4caf50;
   color: #fff;
 }
+.report-diagnosis-card {
+  margin-top: 10px;
+  font-size: 14px;
+}

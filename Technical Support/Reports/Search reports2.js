@@ -3,7 +3,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const page = urlParams.get("page") || 1;
   loadExternalReports(page);
 
-  // Pagination
   document.querySelectorAll(".pagination .page-btn[data-page]").forEach(button => {
     button.addEventListener("click", () => {
       const page = button.dataset.page;
@@ -26,7 +25,6 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("search-input").addEventListener("input", () => loadExternalReports(1));
 });
 
-// Function to load external reports
 function loadExternalReports(page) {
   fetch(`http://localhost:5050/get-external-reports?page=${page}`)
     .then(res => res.json())
@@ -39,14 +37,20 @@ function loadExternalReports(page) {
       const searchTerm = document.getElementById("search-input").value.toLowerCase();
 
       const filtered = data.filter(report => {
+        const isTicket = report.issue_summary?.toLowerCase().includes("ticket created");
+
+        let typeMatch = true;
+        if (selectedType === "Ticket") typeMatch = isTicket;
+        else if (selectedType === "Maintenance") typeMatch = !isTicket;
+
         const statusMatch = !selectedStatus || report.status === selectedStatus;
-        const typeMatch = !selectedType || report.category === selectedType;
         const searchMatch =
           !searchTerm ||
-          (report.request_number && report.request_number.toLowerCase().includes(searchTerm)) ||
+          (report.ticket_number && report.ticket_number.toLowerCase().includes(searchTerm)) ||
           (report.device_name && report.device_name.toLowerCase().includes(searchTerm)) ||
           (report.department_name && report.department_name.toLowerCase().includes(searchTerm));
-        return statusMatch && typeMatch && searchMatch;
+
+        return typeMatch && statusMatch && searchMatch;
       });
 
       if (!filtered.length) {
@@ -59,12 +63,26 @@ function loadExternalReports(page) {
         card.className = "report-card";
 
         const statusClass = getStatusClass(report.status);
+        const isTicket = report.issue_summary?.toLowerCase().includes("ticket created");
+
+        let issueHtml = "";
+        if (!isTicket) {
+          let initial = report.issue_summary?.trim();
+          let final = report.full_description?.trim();
+
+          issueHtml = `
+            <div class="report-issue-line">
+              ${initial ? `<span><strong>Initial Diagnosis:</strong> ${initial}</span>` : ""}
+              ${final ? `<span><strong>Final Diagnosis:</strong> ${final}</span>` : ""}
+            </div>
+          `;
+        }
 
         card.innerHTML = `
           <div class="report-card-header">
-            <img src="/icon/Maintenance.png" alt="Maintenance Icon" />
-            External Maintenance
-            <select onchange="updateReportStatus(${report.id}, this)" class="status-select ${statusClass}">
+            <img src="/icon/${isTicket ? "ticket" : "Maintenance"}.png" alt="icon" />
+            ${isTicket ? "Ticket - External Maintenance" : "External Maintenance"}
+            <select class="status-select ${statusClass}">
               <option value="Open" ${report.status === "Open" ? "selected" : ""}>Open</option>
               <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>In Progress</option>
               <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>Closed</option>
@@ -76,19 +94,27 @@ function loadExternalReports(page) {
             <span>${formatDateTime(report.created_at)}</span>
           </div>
 
-          <p><strong>Request No:</strong> ${report.request_number || "N/A"}</p>
+          <p><strong>Ticket Number:</strong> ${report.ticket_number || "N/A"}</p>
           <p><strong>Device:</strong> ${report.device_name || "N/A"}</p>
           <p><strong>Department:</strong> ${report.department_name || "N/A"}</p>
-          <p><strong>Issue:</strong> ${report.issue_summary || "No issue summary"}</p>
+          ${issueHtml}
         `;
 
-        container.appendChild(card);
-          
-        card.addEventListener("click", () => {
-          window.location.href = `report-details.html?id=${report.id}&type=external`; // أو external
+        // ✅ منع التنقل للكرت إذا ضغطنا على select أو عناصر مشابهة
+        card.addEventListener("click", (e) => {
+          if (e.target.closest("select, option")) return;
+          window.location.href = `report-details.html?id=${report.id}&type=external`;
         });
-        
-   
+
+        // ✅ تحديث الحالة عند التغيير
+        const statusSelect = card.querySelector("select.status-select");
+        statusSelect.addEventListener("click", e => e.stopPropagation());
+        statusSelect.addEventListener("change", e => {
+          e.stopPropagation();
+          updateReportStatus(report.id, e.target);
+        });
+
+        container.appendChild(card);
       });
 
       updatePagination(page);
@@ -99,7 +125,6 @@ function loadExternalReports(page) {
     });
 }
 
-// Same utility functions
 function updatePagination(currentPage) {
   const paginationButtons = document.querySelectorAll(".pagination .page-btn");
   paginationButtons.forEach(button => {
