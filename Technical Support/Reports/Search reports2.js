@@ -1,7 +1,41 @@
 document.addEventListener("DOMContentLoaded", () => {
   const urlParams = new URLSearchParams(window.location.search);
   const page = urlParams.get("page") || 1;
+
+  // ✅ تحميل نوع الجهاز
+  const deviceTypeSelect = document.getElementById("filter-device-type");
+  if (deviceTypeSelect) {
+    fetch("http://localhost:5050/device-types")
+      .then(res => res.json())
+      .then(deviceTypes => {
+        const existing = new Set(["pc", "printer", "scanner"]);
+        deviceTypes.forEach(type => {
+          type = type.trim();
+          if (!existing.has(type.toLowerCase())) {
+            const opt = document.createElement("option");
+            opt.value = type;
+            opt.textContent = type;
+            deviceTypeSelect.appendChild(opt);
+          }
+        });
+      })
+      .catch(err => console.error("❌ Failed to load device types:", err));
+  }
+
+  // ✅ تحميل الفلتر من localStorage إذا موجود
+  const savedStatus = localStorage.getItem("reportStatusFilter");
+  if (savedStatus && document.getElementById("filter-status")) {
+    document.getElementById("filter-status").value = savedStatus;
+    localStorage.removeItem("reportStatusFilter");
+  }
+
+  // ✅ تحميل التقارير
   loadExternalReports(page);
+
+  // أزرار التنقل
+  document.querySelector(".new-report-btn")?.addEventListener("click", () => {
+    window.location.href = "Newreport.html";
+  });
 
   document.querySelectorAll(".pagination .page-btn[data-page]").forEach(button => {
     button.addEventListener("click", () => {
@@ -11,60 +45,104 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("prev-btn")?.addEventListener("click", () => {
-    const currentPage = parseInt(new URLSearchParams(window.location.search).get("page") || "1");
+    const currentPage = parseInt(urlParams.get("page") || "1");
     if (currentPage > 1) loadExternalReports(currentPage - 1);
   });
 
   document.getElementById("next-btn")?.addEventListener("click", () => {
-    const currentPage = parseInt(new URLSearchParams(window.location.search).get("page") || "1");
+    const currentPage = parseInt(urlParams.get("page") || "1");
     loadExternalReports(currentPage + 1);
   });
 
-  document.getElementById("filter-type").addEventListener("change", () => loadExternalReports(1));
-  document.getElementById("filter-status").addEventListener("change", () => loadExternalReports(1));
-  document.getElementById("search-input").addEventListener("input", () => loadExternalReports(1));
+  // ✅ فلترة
+  ["filter-type", "filter-status", "search-input", "filter-date-from", "filter-date-to", "filter-device-type"]
+    .forEach(id => {
+      document.getElementById(id)?.addEventListener("change", () => loadExternalReports(1));
+      document.getElementById(id)?.addEventListener("input", () => loadExternalReports(1));
+    });
 });
 
-function loadExternalReports(page) {
+
+function loadExternalReports(page) { 
+  const savedStatus = localStorage.getItem("reportStatusFilter");
+  const statusSelect = document.getElementById("filter-status");
+
+  if (savedStatus && statusSelect) {
+    statusSelect.value = savedStatus;
+    localStorage.removeItem("reportStatusFilter");
+  }
   fetch(`http://localhost:5050/get-external-reports?page=${page}`)
     .then(res => res.json())
     .then(data => {
       const container = document.getElementById("report-list");
       container.innerHTML = "";
-
-      const selectedType = document.getElementById("filter-type").value;
-      const selectedStatus = document.getElementById("filter-status").value;
-      const searchTerm = document.getElementById("search-input").value.toLowerCase();
+      const type = document.getElementById("filter-type")?.value;
+      const status = document.getElementById("filter-status")?.value;
+      const search = document.getElementById("search-input")?.value.toLowerCase();
+      const dateFrom = document.getElementById("filter-date-from")?.value;
+      const dateTo = document.getElementById("filter-date-to")?.value;
+      const deviceType = document.getElementById("filter-device-type")?.value;
 
       const filtered = data.filter(report => {
+        const createdAt = new Date(report.created_at);
         const isTicket = report.issue_summary?.toLowerCase().includes("ticket created");
 
         let typeMatch = true;
-        if (selectedType === "Ticket") typeMatch = isTicket;
-        else if (selectedType === "Maintenance") typeMatch = !isTicket;
+        if (type === "Ticket") typeMatch = isTicket;
+        if (type === "Maintenance") typeMatch = !isTicket && report.source !== "new";
+        else if (type === "New") typeMatch = report.source === "new";
 
-        const statusMatch = !selectedStatus || report.status === selectedStatus;
+        const statusMatch = !status || report.status === status;
         const searchMatch =
-          !searchTerm ||
-          (report.ticket_number && report.ticket_number.toLowerCase().includes(searchTerm)) ||
-          (report.device_name && report.device_name.toLowerCase().includes(searchTerm)) ||
-          (report.department_name && report.department_name.toLowerCase().includes(searchTerm));
+          !search ||
+          report.device_name?.toLowerCase().includes(search) ||
+          report.department_name?.toLowerCase().includes(search) ||
+          report.ticket_number?.toLowerCase().includes(search);
 
-        return typeMatch && statusMatch && searchMatch;
+        let dateMatch = true;
+        if (dateFrom) dateMatch = createdAt >= new Date(dateFrom);
+        if (dateTo) dateMatch = dateMatch && createdAt <= new Date(dateTo);
+
+        const deviceMatch = !deviceType || report.device_type?.toLowerCase() === deviceType.toLowerCase();
+
+        return typeMatch && statusMatch && searchMatch && dateMatch && deviceMatch;
       });
 
       if (!filtered.length) {
-        container.innerHTML = "<p>No reports match your filters.</p>";
+        container.innerHTML = "<p>No matching reports found.</p>";
         return;
       }
 
       filtered.forEach(report => {
+        const isNewSimple = report.source === "new"; // ✅ أفضل تحقق لأنه يجي من السيرفر
+
         const card = document.createElement("div");
         card.className = "report-card";
 
         const statusClass = getStatusClass(report.status);
         const isTicket = report.issue_summary?.toLowerCase().includes("ticket created");
-
+        if (isNewSimple) {
+          card.innerHTML = `
+            <div class="report-card-header">
+              <span>New Maintenance Report</span>
+              <span class="status-label ${getStatusClass(report.status)}">${report.status}</span>
+            </div>
+            <div class="report-details">
+              <span>${formatDateTime(report.created_at)}</span>
+            </div>
+            <p><strong>Device Type:</strong> ${report.device_type || "N/A"}</p>
+            <p><strong>Priority:</strong> ${report.priority || "N/A"}</p>
+            <p><strong>Status:</strong> ${report.status}</p>
+          `;
+      
+          container.appendChild(card);
+      
+          card.addEventListener("click", () => {
+            window.location.href = `report-details.html?id=${report.id}&type=new`;
+          });
+      
+          return; // ⛔ لا تكمل
+        }
         let issueHtml = "";
         if (!isTicket) {
           let initial = report.issue_summary?.trim();
