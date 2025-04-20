@@ -48,23 +48,31 @@
     <!-- Report options: Internal and External -->
     <div class="reports-options">
       <!-- Internal Report Option -->
-      <div class="option" data-href="Search reports.html">
-        <div class="icon-container">
-          <img src="/icon/GeneralReports.png" alt="Internal Report">
-        </div>
-        <h3>Internal Report</h3>
-        <p>For internal team members and employees</p>
-      </div>
+      <!-- Internal Report Option -->
+<div class="option" onclick="selectReportType('internal')">
+  <div class="icon-container">
+    <img src="/icon/GeneralReports.png" alt="Internal Report">
+  </div>
+  <h3>Internal Report</h3>
+  <p>For internal team members and employees</p>
+</div>
 
-      <!-- External Report Option -->
-      <div class="option" data-href="Search reports2.html">
-        <div class="icon-container">
-          <img src="/icon/GeneralReports.png" alt="External Report">
-        </div>
-        <h3>External Report</h3>
-        <p>For clients and external partners</p>
-      </div>
-    </div>
+<!-- External Report Option -->
+<div class="option" onclick="selectReportType('external')">
+  <div class="icon-container">
+    <img src="/icon/GeneralReports.png" alt="External Report">
+  </div>
+  <h3>External Report</h3>
+  <p>For clients and external partners</p>
+</div>
+
+<script>
+  function selectReportType(type) {
+    localStorage.setItem("reportType", type);
+    window.location.href = "Report Type3.html"; // صفحة الفلاتر
+  }
+</script>
+
   </div>
 
   <!-- External JavaScript file to handle interactions -->
