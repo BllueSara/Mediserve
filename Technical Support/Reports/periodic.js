@@ -31,12 +31,13 @@ function loadMaintenance(type) {
           <td>${formatDate(item.next_due_date)}</td>
           <td>
             <select onchange="updateStatus(${item.id}, this)" class="status-select ${getStatusClass(item.status)}">
-              <option value="Pending" ${item.status === 'Pending' ? 'selected' : ''}>Pending</option>
-              <option value="Completed" ${item.status === 'Completed' ? 'selected' : ''}>Completed</option>
-              <option value="Overdue" ${item.status === 'Overdue' ? 'selected' : ''}>Overdue</option>
+              <option value="Open" ${item.status === 'Open' ? 'selected' : ''}>Open</option>
+              <option value="In Progress" ${item.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+              <option value="Closed" ${item.status === 'Closed' ? 'selected' : ''}>Closed</option>
             </select>
           </td>
         `;
+        
         tableBody.appendChild(row);
       });
 
@@ -65,6 +66,7 @@ function updateHeaderCounts(completed, total, type = '3months') {
 function updateStatus(id, selectElement) {
   const newStatus = selectElement.value;
 
+  // ✅ أولاً: تحديث جدول Regular_Maintenance
   fetch(`http://localhost:5050/update-maintenance-status/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -73,14 +75,28 @@ function updateStatus(id, selectElement) {
     .then(res => res.json())
     .then(data => {
       alert(data.message || "✅ Status updated");
+
+      // ✅ تغيير شكل الـ select بعد التحديث
       selectElement.className = `status-select ${getStatusClass(newStatus)}`;
-      reloadTable(); // يعيد تحميل نفس الجدول
+
+      // ✅ ثانيًا: نرسل الطلب لتحديث تقارير الصيانة المرتبطة
+      return fetch(`http://localhost:5050/update-linked-reports`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ maintenance_id: id, status: newStatus })
+      });
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log("✅ Reports updated:", data.message);
+      reloadTable(); // إعادة تحميل الجدول بعد التحديث
     })
     .catch(err => {
-      console.error("❌ Failed to update status:", err);
-      alert("❌ Failed to update status");
+      console.error("❌ Error updating status or reports:", err);
+      alert("❌ Failed to update status or linked reports");
     });
 }
+
 
 // ✅ إعادة تحميل الجدول الحالي بعد التحديث
 function reloadTable() {

@@ -2,7 +2,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const urlParams = new URLSearchParams(window.location.search);
   const page = urlParams.get('page') || 1;
   loadReports(page);
-
+  document.querySelector(".new-report-btn")?.addEventListener("click", () => {
+    window.location.href = "Newreport.html";
+  });
+  
   document.querySelectorAll(".pagination .page-btn[data-page]").forEach(button => {
     button.addEventListener("click", () => {
       const page = button.dataset.page;
@@ -83,12 +86,12 @@ function loadReports(page = 1) {
       const filtered = data.filter(report => {
         const createdAt = new Date(report.created_at);
         const isTicket = report.issue_summary?.includes("Ticket Created");
-        const isNewReport = !report.ticket_id;
+        const isNewReport = report.source === "new"; // ✅ أدق وأفضل تحقق
 
         let typeMatch = true;
         if (type === "Maintenance") typeMatch = !isTicket;
         else if (type === "Ticket") typeMatch = isTicket;
-        else if (type === "New") typeMatch = isNewReport;
+        else if (type === "New") typeMatch = report.source === "new";
 
         const statusMatch = !status || report.status === status;
         const searchMatch =
@@ -112,9 +115,34 @@ function loadReports(page = 1) {
       }
 
       filtered.forEach(report => {
+       
+        const isNewSimple = report.source === "new"; // ✅ أفضل تحقق لأنه يجي من السيرفر
+
         const card = document.createElement("div");
         card.className = "report-card";
 
+        if (isNewSimple) {
+          card.innerHTML = `
+            <div class="report-card-header">
+              <span>New Maintenance Report</span>
+              <span class="status-label ${getStatusClass(report.status)}">${report.status}</span>
+            </div>
+            <div class="report-details">
+              <span>${formatDateTime(report.created_at)}</span>
+            </div>
+            <p><strong>Device Type:</strong> ${report.device_type || "N/A"}</p>
+            <p><strong>Priority:</strong> ${report.priority || "N/A"}</p>
+            <p><strong>Status:</strong> ${report.status}</p>
+          `;
+      
+          container.appendChild(card);
+      
+          card.addEventListener("click", () => {
+            window.location.href = `report-details.html?id=${report.id}&type=new`;
+          });
+      
+          return; // ⛔ لا تكمل
+        }
         const isRegular = report.maintenance_type === "Regular";
         const isTicketOnly = report.issue_summary?.includes("Ticket Created");
 
@@ -153,14 +181,22 @@ function loadReports(page = 1) {
           }
 
           issueHtml = `
-            <ul style="margin-left: 20px;">
-              ${checklistItems.map(i => `<li>${i}</li>`).join("") || "<li>No issues listed</li>"}
-            </ul>
-            ${report.full_description
+          <ul style="margin-left: 20px;">
+            ${
+              Array.isArray(checklistItems) && checklistItems.length
+                ? checklistItems.map(i => `<li>${i}</li>`).join("")
+                : "<li>No issues listed</li>"
+            }
+          </ul>
+          ${
+            report.full_description
               ? `<div style="margin-top:10px;background:#f2f2f2;padding:8px;border-radius:6px">
-                  <strong>Notes:</strong><br>${report.full_description}
-                </div>` : ""}
-          `;
+                   <strong>Notes:</strong><br>${report.full_description}
+                 </div>`
+              : ""
+          }
+        `;
+        
         } else {
           let issue = report.issue_summary || "";
           let diagnosis = report.full_description || "";
