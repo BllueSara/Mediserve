@@ -726,22 +726,50 @@ app.get("/device-types", (req, res) => {
   });
 });
 app.get("/get-external-reports", (req, res) => {
-  const sql = `
+  const externalSql = `
     SELECT 
       id,
       created_at,
       ticket_number,
       device_name,
       department_name,
-      initial_diagnosis AS issue_summary, -- ✅ لتنسيق الكود الأمامي
+      initial_diagnosis AS issue_summary,
       final_diagnosis AS full_description,
       status,
-      device_type
+      device_type,
+      NULL AS priority,
+      'external' AS source,
+      NULL AS attachment_name,
+      NULL AS attachment_path
     FROM External_Maintenance
+  `;
+
+  const newSql = `
+    SELECT 
+      id,
+      created_at,
+      NULL AS ticket_number,
+      NULL AS device_name,
+      NULL AS department_name,
+      NULL AS issue_summary,
+      NULL AS full_description,
+      status,
+      device_type,
+      priority,
+      'new' AS source,
+      attachment_name,
+      attachment_path
+    FROM New_Maintenance_Reports
+  `;
+
+  const combinedSql = `
+    (${externalSql})
+    UNION ALL
+    (${newSql})
     ORDER BY created_at DESC
   `;
 
-  db.query(sql, (err, result) => {
+  db.query(combinedSql, (err, result) => {
     if (err) {
       console.error("❌ Error fetching external reports:", err);
       return res.status(500).json({ error: "Database error" });
@@ -749,6 +777,7 @@ app.get("/get-external-reports", (req, res) => {
     res.json(result);
   });
 });
+
 
 app.get("/report/:id", (req, res) => {
   const reportId = req.params.id;

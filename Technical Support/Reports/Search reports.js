@@ -86,10 +86,9 @@ function loadReports(page = 1) {
       const filtered = data.filter(report => {
         const createdAt = new Date(report.created_at);
         const isTicket = report.issue_summary?.includes("Ticket Created");
-        const isNewReport = report.source === "new"; 
 
         let typeMatch = true;
-        if (type === "Maintenance") typeMatch = !isTicket;
+        if (type === "Maintenance") typeMatch = !isTicket && report.source !== "new";
         else if (type === "Ticket") typeMatch = isTicket;
         else if (type === "New") typeMatch = report.source === "new";
 
