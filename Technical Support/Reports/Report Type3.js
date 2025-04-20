@@ -1,16 +1,19 @@
-// Run this script when the DOM is fully loaded
 document.addEventListener("DOMContentLoaded", () => {
-  // Select all elements with the class "option"
+  const reportType = localStorage.getItem("reportType"); // internal / external
+
+  // احذر لو ما حُدد النوع
+  if (!reportType) {
+    alert("❗ Please select report type first");
+    window.location.href = "Report Type.html"; // رجع المستخدم لاختيار النوع
+    return;
+  }
+
   const options = document.querySelectorAll(".option");
 
-  // Loop through each option element
   options.forEach(option => {
-    // Add click event listener to each option
     option.addEventListener("click", () => {
-      // Get the text content inside the <p> tag, convert it to lowercase
       const label = option.querySelector("p")?.textContent?.toLowerCase();
 
-      // Determine which status to store in localStorage based on the label text
       if (label.includes("open")) {
         localStorage.setItem("reportStatusFilter", "Open");
       } else if (label.includes("in progress")) {
@@ -19,8 +22,15 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem("reportStatusFilter", "Closed");
       }
 
-      // Navigate to the reports search page
-      window.location.href = "/Technical Support/Reports/Search reports.html";
+      // ✅ التوجيه حسب نوع التقرير
+      if (reportType === "internal") {
+        window.location.href = "/Technical Support/Reports/Search reports.html";
+      } else if (reportType === "external") {
+        window.location.href = "/Technical Support/Reports/Search reports2.html";
+      }
     });
   });
 });
+function goBack() {
+  window.history.back();
+}
