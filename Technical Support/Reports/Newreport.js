@@ -1,4 +1,5 @@
-// 🟢 تعبئة القوائم من السيرفر
+
+  
 window.addEventListener("DOMContentLoaded", () => {
   fillSelect("reportType", ["Incident Report", "Maintenance", "Other"]);
 
@@ -120,7 +121,7 @@ document.getElementById("report-form").addEventListener("submit", async (e) => {
   formData.append("device_type", form.deviceType.value);
   formData.append("priority", form.priority?.value || "Medium");
   formData.append("status", form.status.value);
-  formData.append("description", form.description.value || "");
+  formData.append("details", form.description.value?.trim() || "");
 
   // المرفقات
   if (fileInput.files[0]) {
