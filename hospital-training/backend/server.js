@@ -809,7 +809,8 @@ app.get("/report/:id", (req, res) => {
         priority: r.priority,
         status: r.status,
         maintenance_type: "New",
-        details: parsedDetails,
+        details: r.details || "", // 👈 رجعها كـ string عادي
+        signature_path: r.signature_path || null,
         source: "new"
       });
     });
@@ -1998,19 +1999,16 @@ app.post("/submit-new-report", upload.fields([
   const {
     report_type,
     device_type,
-    priority
+    priority,
+    details // ✅ الآن نستقبل الوصف كـ details
   } = req.body;
 
   const attachment = req.files?.attachment?.[0] || null;
   const signature = req.files?.signature?.[0] || null;
 
-  // 🟢 خزن المسارات فقط في الأعمدة المنفصلة
   const attachmentName = attachment?.originalname || null;
   const attachmentPath = attachment?.path || null;
-  const signaturePath = signature?.path || null;
-
-  // 🟢 لو تبغى تخلي التفاصيل فاضية، عادي خليها NULL أو '{}'
-  const details = null; // أو "{}" لو حابب تبقي العمود موجود لكن فاضي
+  const signaturePath = signature ? `uploads/${signature.filename}` : null;
 
   const sql = `
     INSERT INTO New_Maintenance_Reports 
@@ -2025,7 +2023,7 @@ app.post("/submit-new-report", upload.fields([
     attachmentName,
     attachmentPath,
     signaturePath,
-    details
+    details?.trim() || null // ✅ تأكد إنها سترينق نظيف، أو null
   ], (err, result) => {
     if (err) {
       console.error("❌ Error inserting new report:", err);
