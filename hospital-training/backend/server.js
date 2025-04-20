@@ -9,6 +9,7 @@ const port = 5050;
 app.use(express.json());
 app.use(cors());
 app.use(express.static(path.join(__dirname, "public")));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.get("/", (req, res) => {
   res.send("🚀 Server is running!");
@@ -16,10 +17,9 @@ app.get("/", (req, res) => {
 
 const multer = require("multer");
 
-// إعداد التخزين في مجلد uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "uploads/");
+    cb(null, path.resolve(__dirname, "uploads")); // ← يضمن أنه يروح للمجلد الصح
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -27,6 +27,7 @@ const storage = multer.diskStorage({
     cb(null, file.fieldname + "-" + uniqueSuffix + ext);
   },
 });
+
 
 // إعداد رفع ملف واحد فقط باسم `attachment`
 const upload = multer({
@@ -784,14 +785,22 @@ app.get("/report/:id", (req, res) => {
         source: "external"
       });
     });
+
   } else if (reportType === "new") {
-    // 🔥 هذا الجديد
+    // ✅ جلب تقرير NEW وقراءة التفاصيل من JSON
     const sql = `SELECT * FROM New_Maintenance_Reports WHERE id = ? LIMIT 1`;
     db.query(sql, [reportId], (err, result) => {
       if (err) return res.status(500).json({ error: "Server error" });
       if (!result.length) return res.status(404).json({ error: "New maintenance report not found" });
 
       const r = result[0];
+      let parsedDetails = {};
+      try {
+        parsedDetails = JSON.parse(r.details || '{}');
+      } catch (e) {
+        console.warn("⚠️ Failed to parse JSON details");
+      }
+
       return res.json({
         id: r.id,
         created_at: r.created_at,
@@ -799,16 +808,14 @@ app.get("/report/:id", (req, res) => {
         device_type: r.device_type,
         priority: r.priority,
         status: r.status,
-        description: r.description,
-        signature_path: r.signature_path,
-        attachment_path: r.attachment_path,
-        attachment_name: r.attachment_name,
+        maintenance_type: "New",
+        details: parsedDetails,
         source: "new"
       });
     });
-  } 
-  else {
-    // داخلي
+
+  } else {
+    // ✅ داخلي (Internal)
     const sql = `
       SELECT 
         mr.id AS report_id,
@@ -860,8 +867,8 @@ app.get("/report/:id", (req, res) => {
       });
     });
   }
-  
 });
+
 
 
 
@@ -1997,19 +2004,28 @@ app.post("/submit-new-report", upload.fields([
   const attachment = req.files?.attachment?.[0] || null;
   const signature = req.files?.signature?.[0] || null;
 
+  // 🟢 خزن المسارات فقط في الأعمدة المنفصلة
+  const attachmentName = attachment?.originalname || null;
+  const attachmentPath = attachment?.path || null;
+  const signaturePath = signature?.path || null;
+
+  // 🟢 لو تبغى تخلي التفاصيل فاضية، عادي خليها NULL أو '{}'
+  const details = null; // أو "{}" لو حابب تبقي العمود موجود لكن فاضي
+
   const sql = `
     INSERT INTO New_Maintenance_Reports 
-    (report_type, device_type, priority, attachment_name, attachment_path, signature_path)
-    VALUES (?, ?, ?, ?, ?, ?)
+    (report_type, device_type, priority, attachment_name, attachment_path, signature_path, details)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `;
 
   db.query(sql, [
     report_type,
     device_type,
     priority || "Medium",
-    attachment?.originalname || null,
-    attachment?.path || null,
-    signature?.path || null
+    attachmentName,
+    attachmentPath,
+    signaturePath,
+    details
   ], (err, result) => {
     if (err) {
       console.error("❌ Error inserting new report:", err);
@@ -2019,6 +2035,10 @@ app.post("/submit-new-report", upload.fields([
     res.json({ message: "✅ New report saved successfully", id: result.insertId });
   });
 });
+
+
+
+
 app.get("/ticket-status", (req, res) => {
   db.query("SELECT DISTINCT status FROM Maintenance_Reports", (err, result) => {
     if (err) {
