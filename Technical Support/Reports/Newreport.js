@@ -1,18 +1,18 @@
 // 🟢 تعبئة القوائم من السيرفر
 window.addEventListener("DOMContentLoaded", () => {
-  fillSelect("reportType", ["Incident Report", "Maintenance", "Other"]),
+  fillSelect("reportType", ["Incident Report", "Maintenance", "Other"]);
+
   Promise.all([
     fetch("http://localhost:5050/TypeProplem").then(res => res.json()),
     fetch("http://localhost:5050/ticket-status").then(res => res.json())
   ])
-  .then(([ deviceTypes, statuses]) => {
+  .then(([deviceTypes, statuses]) => {
     fillSelect("deviceType", deviceTypes.map(t => t.DeviceType));
     fillSelect("status", statuses.map(s => s.status_name));
   })
   .catch(err => {
     console.error("❌ Failed to fetch select data:", err);
   });
-  
 
   function fillSelect(name, items) {
     const select = document.querySelector(`select[name='${name}']`);
@@ -26,7 +26,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// 🟢 Upload file logic
+// 🟢 رفع الملفات
 const fileLabel = document.querySelector("#drop-area");
 const fileInput = document.getElementById("upload-file");
 
@@ -47,7 +47,7 @@ fileInput.addEventListener("change", (event) => {
   }
 });
 
-["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+["dragenter", "dragover", "dragleave", "drop"].forEach(eventName => {
   fileLabel.addEventListener(eventName, (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -63,7 +63,7 @@ fileLabel.addEventListener("drop", (e) => {
   fileInput.dispatchEvent(new Event("change"));
 });
 
-// 🟢 Signature logic
+// 🟢 التوقيع
 const canvas = document.getElementById("signatureCanvas");
 const ctx = canvas.getContext("2d");
 let drawing = false;
@@ -115,48 +115,52 @@ document.getElementById("report-form").addEventListener("submit", async (e) => {
   const form = e.target;
   const formData = new FormData();
 
-  // 📥 البيانات النصية
+  // البيانات النصية
   formData.append("report_type", form.reportType.value);
   formData.append("device_type", form.deviceType.value);
-  formData.append("priority", "Medium"); // أو خلّيها من اختيار المستخدم
+  formData.append("priority", form.priority?.value || "Medium");
   formData.append("status", form.status.value);
   formData.append("description", form.description.value || "");
 
-  // 📎 المرفق
+  // المرفقات
   if (fileInput.files[0]) {
     formData.append("attachment", fileInput.files[0]);
   }
 
-  // ✍️ توقيع
+  // التوقيع: إما صورة مرفوعة أو canvas
   if (uploadInput.files.length > 0) {
     formData.append("signature", uploadInput.files[0]);
   } else {
     await new Promise((resolve) => {
       canvas.toBlob((blob) => {
-        formData.append("signature", blob, "signature.png");
+        if (blob.size > 100) { // توقيع فعلي وليس فارغ
+          formData.append("signature", blob, "signature.png");
+        }
         resolve();
       });
     });
   }
 
-  // 🚀 إرسال إلى السيرفر
+  // الإرسال للسيرفر
   fetch("http://localhost:5050/submit-new-report", {
     method: "POST",
     body: formData
   })
   .then(async res => {
-    const text = await res.text(); // 👈 نقرأ النص بدل JSON مباشرة
+    const text = await res.text();
     try {
-      const data = JSON.parse(text); // نحاول نحوله JSON
-      alert(data.message || "✅ تم الحفظ");
+      const data = JSON.parse(text);
+      alert(data.message || "✅ Report submitted successfully");
+      if (data.id) {
+        window.location.href = `ReportDetails.html?id=${data.id}`;
+      }
     } catch (err) {
       console.error("❌ Server returned non-JSON:", text);
-      alert("⚠️ السيرفر رجّع استجابة غير متوقعة");
+      alert("⚠️ Unexpected server response.");
     }
   })
   .catch(err => {
     console.error("❌ Submit failed:", err);
-    alert("❌ حدث خطأ أثناء الإرسال");
+    alert("❌ Error submitting the report.");
   });
-  
 });
