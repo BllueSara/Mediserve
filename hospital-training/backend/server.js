@@ -839,7 +839,10 @@ app.get("/report/:id", (req, res) => {
         status: r.status,
         maintenance_type: "New",
         details: r.details || "", // 👈 رجعها كـ string عادي
+        attachment_name: r.attachment_name,
+        attachment_path: r.attachment_path,
         signature_path: r.signature_path || null,
+
         source: "new"
       });
     });
@@ -850,6 +853,8 @@ app.get("/report/:id", (req, res) => {
       SELECT 
         mr.id AS report_id,
         mr.report_number,
+          mr.report_type,         -- ✅ هذا السطر مهم
+
         mr.status,
         mr.created_at,
         mr.issue_summary,
@@ -861,6 +866,7 @@ app.get("/report/:id", (req, res) => {
         md.governmental_number,
         COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
         d.name AS department_name,
+it.ticket_number,
 
         it.priority,
         it.assigned_to AS technical,
@@ -893,6 +899,8 @@ app.get("/report/:id", (req, res) => {
       return res.json({
         ...result2[0],
         id: result2[0].report_id,
+        ticket_number: result2[0].ticket_number, // ✅ أضف هذا
+
         source: "internal"
       });
     });
@@ -1460,33 +1468,40 @@ app.get('/regular-maintenance-summary-4months', (req, res) => {
 
 app.get('/get-internal-reports', (req, res) => {
   const internalSql = `
-    SELECT 
-      R.id,
-      R.created_at,
-      R.issue_summary,
-      R.full_description,
-      R.status,
-      R.device_id,
-      R.report_number,
-      R.ticket_id,
-      R.maintenance_type,
-      T.ticket_number,
-      T.issue_description,
-      T.priority,
-      COALESCE(RM.department_name, GM.department_name, D.name) AS department_name,
-      COALESCE(RM.device_name, GM.device_name, M.device_name) AS device_name,
-      RM.frequency,
-      M.device_type,
-      'internal' AS source,
-      NULL AS attachment_name,
-      NULL AS attachment_path
-    FROM Maintenance_Reports R
-    LEFT JOIN Internal_Tickets T ON R.ticket_id = T.id
-    LEFT JOIN Departments D ON T.department_id = D.id
-    LEFT JOIN Maintenance_Devices M ON R.device_id = M.id
-    LEFT JOIN Regular_Maintenance RM ON RM.device_id = R.device_id AND R.maintenance_type = 'Regular'
-    LEFT JOIN General_Maintenance GM ON GM.device_id = R.device_id AND R.maintenance_type = 'General'
-  `;
+  SELECT 
+    R.id,
+    R.created_at,
+    R.issue_summary,
+    R.full_description,
+    R.status,
+    R.device_id,
+    R.report_number,
+    R.ticket_id,
+    R.maintenance_type,
+    T.ticket_number,
+    T.issue_description,
+    T.priority,
+    COALESCE(RM.department_name, GM.department_name, D.name) AS department_name,
+    COALESCE(RM.device_name, GM.device_name, M.device_name) AS device_name,
+    RM.frequency,
+    M.device_type,
+    'internal' AS source,
+    T.attachment_name,
+    T.attachment_path
+  FROM Maintenance_Reports R
+  LEFT JOIN Internal_Tickets T 
+    ON R.ticket_id = T.id AND R.maintenance_type = 'Internal'
+  LEFT JOIN Departments D 
+    ON T.department_id = D.id
+  LEFT JOIN Maintenance_Devices M 
+    ON R.device_id = M.id
+  LEFT JOIN Regular_Maintenance RM 
+    ON RM.device_id = R.device_id AND R.maintenance_type = 'Regular'
+  LEFT JOIN General_Maintenance GM 
+    ON GM.device_id = R.device_id AND R.maintenance_type = 'General'
+  WHERE R.maintenance_type IN ('Regular', 'General', 'Internal')
+`;
+
 
   const newSql = `
     SELECT 
@@ -1523,6 +1538,65 @@ app.get('/get-internal-reports', (req, res) => {
   });
 });
 
+app.put("/update-report-full", (req, res) => {
+  const {
+    id, issue_summary, full_description, priority, status, device_type,
+    technical, department_name, category, source
+  } = req.body;
+
+  if (!source) {
+    return res.status(400).json({ error: "Missing source type" });
+  }
+
+  if (source === "new") {
+    const updateNewSql = `UPDATE New_Maintenance_Reports SET priority = ?, status = ?, device_type = ? WHERE id = ?`;
+    const values = [priority, status, device_type, id];
+
+    db.query(updateNewSql, values, (err) => {
+      if (err) {
+        console.error("❌ Failed to update new report:", err);
+        return res.status(500).json({ error: "Failed to update new report" });
+      }
+      return res.json({ message: "✅ New report updated successfully" });
+    });
+
+  } else if (source === "internal") {
+    // 1. تحديث تقرير الصيانة
+    const updateReportSql = `
+      UPDATE Maintenance_Reports 
+      SET issue_summary = ?, full_description = ?, status = ?, report_type = ? 
+      WHERE id = ?
+    `;
+    const reportValues = [issue_summary, full_description, status, category, id];
+
+    db.query(updateReportSql, reportValues, (err) => {
+      if (err) {
+        console.error("❌ Failed to update maintenance report:", err);
+        return res.status(500).json({ error: "Failed to update maintenance report" });
+      }
+
+      // 2. تحديث التذكرة الداخلية المرتبطة
+      const updateTicketSql = `
+        UPDATE Internal_Tickets 
+        SET priority = ?, assigned_to = ?, status = ? 
+        WHERE id = (SELECT ticket_id FROM Maintenance_Reports WHERE id = ?)
+      `;
+      const ticketValues = [priority, technical, status, id];
+
+      db.query(updateTicketSql, ticketValues, (err2) => {
+        if (err2) {
+          console.error("❌ Failed to update internal ticket:", err2);
+          return res.status(500).json({ error: "Failed to update internal ticket" });
+        }
+
+        return res.json({ message: "✅ Internal ticket and report updated successfully" });
+      });
+    });
+
+  } else {
+    return res.status(400).json({ error: "Unsupported report type" });
+  }
+});
 
 
 
@@ -2033,11 +2107,11 @@ app.post("/submit-new-report", upload.fields([
   } = req.body;
 
   const attachment = req.files?.attachment?.[0] || null;
-  const signature = req.files?.signature?.[0] || null;
+const signature = req.files?.signature?.[0] || null;
 
-  const attachmentName = attachment?.originalname || null;
-  const attachmentPath = attachment?.path || null;
-  const signaturePath = signature ? `uploads/${signature.filename}` : null;
+const attachmentName = attachment?.originalname || null;
+const attachmentPath = attachment ? `uploads/${attachment.filename}` : null;
+const signaturePath = signature ? `uploads/${signature.filename}` : null;
 
   const sql = `
     INSERT INTO New_Maintenance_Reports 

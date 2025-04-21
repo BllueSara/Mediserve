@@ -70,7 +70,8 @@
 
     <div class="section-title">Device Specifications</div>
     <div class="grid" id="device-specs"></div>
-
+    <div class="section-title">Attachment</div>
+    <div id="attachment-section" style="margin-bottom: 20px;"></div>
     <div class="section-title">Additional Notes</div>
     <div class="note" id="note"></div>
   </div>
@@ -78,6 +79,21 @@
  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="report-details.js"></script>
+  
+  <div id="pdf-options-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999;">
+    <div style="background:#fff; padding:20px; max-width:400px; margin:10% auto; border-radius:8px;">
+      <h3>Select Report Contents</h3>
+      <label><input type="checkbox" checked id="opt-priority"> Priority</label><br>
+      <label><input type="checkbox" checked id="opt-device-type"> Device Type</label><br>
+      <label><input type="checkbox" checked id="opt-description"> Description</label><br>
+      <label><input type="checkbox" checked id="opt-note"> Technical Notes</label><br>
+      <label><input type="checkbox" checked id="opt-signature"> Signature</label><br>
+      <label><input type="checkbox" checked id="opt-attachment"> Attachment</label><br>
+      <label><input type="checkbox" checked id="opt-specs"> Device Specs</label><br><br>
+      <button id="generate-pdf-btn">Generate PDF</button>
+      <button onclick="document.getElementById('pdf-options-modal').style.display='none'">Cancel</button>
+    </div>
+  </div>
   
 
 </body>

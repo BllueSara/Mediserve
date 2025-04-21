@@ -140,7 +140,8 @@ header {
 
 /* Edit button style */
 .edit-btn {
-  background: #3b82f6;
+  background:  #3BAAE0;
+  ;
   color: white;
 }
 
@@ -189,4 +190,71 @@ header {
 /* Margin between notes */
 .note {
   margin-top: 10px;
+}
+#pdf-options-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#pdf-options-modal .modal-content {
+  background: #ffffff;
+  padding: 30px 25px;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  text-align: left;
+  font-family: 'Inter', sans-serif;
+}
+
+#pdf-options-modal h3 {
+  margin-top: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 20px;
+}
+
+#pdf-options-modal label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #374151;
+}
+
+#pdf-options-modal input[type="checkbox"] {
+  transform: scale(1.2);
+  color: #3BAAE0;
+}
+
+#pdf-options-modal button {
+  margin-top: 20px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+#generate-pdf-btn {
+  background:  #3BAAE0;
+  color: white;
+}
+
+#pdf-options-modal button:last-child {
+  background-color: #e5e7eb;
+  color: #374151;
 }

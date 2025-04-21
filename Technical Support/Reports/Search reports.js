@@ -85,14 +85,21 @@ function loadReports(page = 1) {
 
       const filtered = data.filter(report => {
         const createdAt = new Date(report.created_at);
-        const isTicket = report.issue_summary?.includes("Ticket Created");
+        // const isTicket = report.issue_summary?.includes("Ticket Created");
 
+        const isInternalTicket = report.maintenance_type === "Internal";
+        const isTicketFromOtherType = report.issue_summary?.includes("Ticket Created"); // من Regular أو General
+        
         let typeMatch = true;
-        if (type === "Maintenance") typeMatch = !isTicket && report.source !== "new";
-        else if (type === "Ticket") typeMatch = isTicket;
-        else if (type === "New") typeMatch = report.source === "new";
-
-        const statusMatch = !status || report.status === status;
+        if (type === "Maintenance") {
+          typeMatch = !isInternalTicket && !isTicketFromOtherType && report.source !== "new";
+        } else if (type === "Ticket") {
+          typeMatch = isInternalTicket || isTicketFromOtherType;
+        } else if (type === "New") {
+          typeMatch = report.source === "new";
+        }
+        
+        const statusMatch = !status || report.status?.trim().toLowerCase() === status.trim().toLowerCase();
         const searchMatch =
           !search ||
           report.device_name?.toLowerCase().includes(search) ||
@@ -115,8 +122,15 @@ function loadReports(page = 1) {
 
       filtered.forEach(report => {
        
+        const isInternalTicket = report.maintenance_type === "Internal";
+        const isTicketFromOtherType = report.issue_summary?.includes("Ticket Created");
+        let ticketNumber = report.ticket_number;
+        if (!ticketNumber && report.full_description?.includes("Ticket (TIC-")) {
+          const match = report.full_description.match(/Ticket\s+\((TIC-[\d]+)\)/);
+          ticketNumber = match ? match[1] : null;
+        }
+      
         const isNewSimple = report.source === "new"; // ✅ أفضل تحقق لأنه يجي من السيرفر
-
         const card = document.createElement("div");
         card.className = "report-card";
 
@@ -147,11 +161,14 @@ function loadReports(page = 1) {
 
         let maintenanceLabel = "";
         let iconSrc = "";
-
-        if (isTicketOnly && isRegular) {
+        
+        if (isInternalTicket) {
+          maintenanceLabel = "Internal Ticket";
+          iconSrc = "/icon/ticket.png";
+        } else if (isTicketFromOtherType && isRegular) {
           maintenanceLabel = "Ticket - Regular Maintenance";
           iconSrc = "/icon/ticket.png";
-        } else if (isTicketOnly && !isRegular) {
+        } else if (isTicketFromOtherType && !isRegular) {
           maintenanceLabel = "Ticket - General Maintenance";
           iconSrc = "/icon/ticket.png";
         } else if (isRegular) {
@@ -161,7 +178,7 @@ function loadReports(page = 1) {
           maintenanceLabel = "General Maintenance";
           iconSrc = "/icon/maintenance.png";
         }
-
+        
         let issueHtml = "";
         if (isTicketOnly) {
           issueHtml = `
@@ -228,9 +245,10 @@ function loadReports(page = 1) {
             <img src="/icon/desktop.png" alt="device" />
             <span>${formatDateTime(report.created_at)}</span>
           </div>
-          <p><strong>Ticket Number:</strong> ${report.ticket_number || "N/A"}</p>
-          <p><strong>Device:</strong> ${report.device_name || "N/A"}</p>
-          <p><strong>Department:</strong> ${report.department_name || "N/A"}</p>
+${ticketNumber ? `<p><strong>Ticket Number:</strong> ${ticketNumber}</p>` : ""}
+          ${!isInternalTicket ? `<p><strong>Device:</strong> ${report.device_name || "N/A"}</p>` : ""}
+          ${!isInternalTicket ? `<p><strong>Department:</strong> ${report.department_name || "N/A"}</p>` : ""}
+          
           ${!isTicketOnly ? `<p><strong>Issue:</strong><br>${issueHtml}</p>` : ""}
         `;
 
