@@ -119,7 +119,10 @@ function fetchModelsByType(type, selectId) {
             openAddModelPopup(type, selectId);
           }
         });
-      })
+        requestAnimationFrame(() => {
+          activateGeneralDropdownTools(selectId, "Model");
+        });
+              })
       .catch(err => console.error("❌ Error fetching models:", err));
   } else {
     // أجهزة جديدة
@@ -161,6 +164,7 @@ function fetchModelsForNewDevices(type, selectId) {
           option.textContent = item.model_name;
           dropdown.appendChild(option);
         });
+
       }
 
       // 🧹 شيل أي مستمع قديم بإعادة إنشاء العنصر
@@ -179,6 +183,10 @@ function fetchModelsForNewDevices(type, selectId) {
           openAddModelPopup(type, selectId);
         }
       });
+      requestAnimationFrame(() => {
+        activateGeneralDropdownTools(selectId, "Model");
+      });
+      
     })
     .catch(err => {
       console.error("❌ Error fetching models:", err);
@@ -352,38 +360,6 @@ function showNotification(message, selectId) {
   }, 3000);
 }
 
-// ✏️ Open popup to edit dropdown value
-window.openPopup = function(selectId, title) {
-  const select = document.getElementById(selectId);
-  const selectedOption = select.options[select.selectedIndex];
-
-  // If invalid option selected
-  if (!selectedOption || selectedOption.disabled || selectedOption.value === "add-custom") {
-    showNotification("Please select a valid option to edit.", selectId);
-    return;
-  }
-
-  // Set popup title and input
-  document.getElementById("popup-title").textContent = `Edit ${title}`;
-  const popupFields = document.getElementById("popup-fields");
-  popupFields.innerHTML = `
-    <label>Update ${title}:</label>
-    <input type="text" id="popup-input" value="${selectedOption.text}">
-  `;
-
-  // Save new value
-  const saveBtn = document.getElementById("popup-save-btn");
-  saveBtn.onclick = () => {
-    const newValue = document.getElementById("popup-input").value.trim();
-    if (newValue) {
-      selectedOption.text = newValue;
-    }
-    window.closePopup(); // Close using global reference
-  };
-
-  // Show popup
-  document.getElementById("popup-modal").style.display = "flex";
-};
 
 // إغلاق البوب أب
 function closePopup() {
@@ -574,22 +550,34 @@ function openGenericPopup(label, targetId) {
 
     popupTitle.textContent = "Add Device Specification";
     popupFields.innerHTML = `
-      <label>Device Name:</label><input type="text" id="spec-name" />
-      <label>Serial Number:</label><input type="text" id="spec-serial" />
-      <label>Ministry Number:</label><input type="text" id="spec-ministry" />
+    <label>Device Name:</label><input type="text" id="spec-name" />
+    <label>Serial Number:</label><input type="text" id="spec-serial" />
+    <label>Ministry Number:</label><input type="text" id="spec-ministry" />
+  
+    <label>Model:</label>
+    <div class="dropdown-container">
+      <div class="dropdown-wrapper">
+        <select id="spec-model"></select>
+      </div>
+    </div>
+  
+    <label>Department:</label>
+    <div class="dropdown-container">
+      <div class="dropdown-wrapper">
+        <select id="spec-department">
+          <option value="" disabled selected>Loading departments...</option>
+        </select>
+      </div>
+    </div>
+  
+    <input type="hidden" id="popup-target-id" value="${targetId}" />
+  `;
+  setTimeout(() => {
+    activateGeneralDropdownTools("spec-model", "Model");
+    activateGeneralDropdownTools("spec-department", "Department");
+  }, 100);
+  
 
-      <label>Model:</label>
-      <label>Model:</label>
-<select id="spec-model"></select>
-
-
-      <label>Department:</label>
-      <select id="spec-department">
-        <option value="" disabled selected>Loading departments...</option>
-      </select>
-
-      <input type="hidden" id="popup-target-id" value="${targetId}" />
-    `;
 
     saveBtn.onclick = saveDeviceSpecification;
     popup.style.display = "flex";
@@ -888,27 +876,77 @@ function generateFieldsForDeviceType(type) {
 
   // Common fields for all device types
   const commonFields = `
-    <label>Device Name:</label><input type="text" name="device-name" required>
-    <label>Serial Number:</label><input type="text" name="serial" required>
-    <label>Ministry Number:</label><input type="text" name="ministry-id" required>
-    <label>Department:</label><select name="department" id="department-${type}"></select>
-    <label>Model:</label><select name="model" id="model-${type}"></select>
-  `;
+  <label>Device Name:</label><input type="text" name="device-name" required>
+  <label>Serial Number:</label><input type="text" name="serial" required>
+  <label>Ministry Number:</label><input type="text" name="ministry-id" required>
+
+  <label>Department:</label>
+  <div class="dropdown-container">
+    <div class="dropdown-wrapper">
+      <select name="department" id="department-${type}"></select>
+    </div>
+  </div>
+
+  <label>Model:</label>
+  <div class="dropdown-container">
+    <div class="dropdown-wrapper">
+      <select name="model" id="model-${type}"></select>
+    </div>
+  </div>
+`;
+
 
   // Device-specific fields
   let deviceSpecificFields = '';
   if (type === "pc") {
     deviceSpecificFields = `
-      <label>Processor Generation:</label><select name="generation" id="generation-select"></select>
-      <label>CPU:</label><select name="processor" id="cpu-select"></select>
-      <label>RAM:</label><select name="ram" id="ram-select"></select>
-      <label>OS:</label><select name="os" id="os-select"></select>
-    `;
+  <label>Processor Generation:</label>
+  <div class="dropdown-container">
+    <div class="dropdown-wrapper">
+      <select name="generation" id="generation-select"></select>
+    </div>
+  </div>
+
+  <label>CPU:</label>
+  <div class="dropdown-container">
+    <div class="dropdown-wrapper">
+      <select name="processor" id="cpu-select"></select>
+    </div>
+  </div>
+
+  <label>RAM:</label>
+  <div class="dropdown-container">
+    <div class="dropdown-wrapper">
+      <select name="ram" id="ram-select"></select>
+    </div>
+  </div>
+
+  <label>OS:</label>
+  <div class="dropdown-container">
+    <div class="dropdown-wrapper">
+      <select name="os" id="os-select"></select>
+    </div>
+  </div>
+`;
+
   }
 
   // Set the popup content
   popupTitle.textContent = `Enter ${type.charAt(0).toUpperCase() + type.slice(1)} Specifications`;
   popupFields.innerHTML = commonFields + deviceSpecificFields;
+  setTimeout(() => {
+    activateGeneralDropdownTools(`department-${type}`, "Department");
+    activateGeneralDropdownTools(`model-${type}`, "Model");
+  
+    if (type === "pc") {
+      activateGeneralDropdownTools("generation-select", "Processor Generation");
+      activateGeneralDropdownTools("cpu-select", "CPU");
+      activateGeneralDropdownTools("ram-select", "RAM");
+      activateGeneralDropdownTools("os-select", "OS");
+    }
+  }, 150);
+  
+
   saveBtn.onclick = savePCSpec;
 
   // Initialize common components
@@ -1155,6 +1193,10 @@ function fetchCPU() {
           openAddOptionPopup("cpu-select");
         }
       });
+      requestAnimationFrame(() => {
+        activateGeneralDropdownTools("cpu-select", "CPU");
+      });
+      
     });
 }
 
@@ -1186,6 +1228,10 @@ function fetchRAM() {
           openAddOptionPopup("ram-select");
         }
       });
+      requestAnimationFrame(() => {
+        activateGeneralDropdownTools("ram-select", "RAM");
+      });
+      
     });
 }
 
@@ -1217,6 +1263,10 @@ function fetchOS() {
           openAddOptionPopup("os-select");
         }
       });
+      requestAnimationFrame(() => {
+        activateGeneralDropdownTools("os-select", "Operating System");
+      });
+      
     });
 }
 
@@ -1324,6 +1374,10 @@ function fetchProcessorGen() {
           openAddOptionPopup("generation-select");
         }
       });
+      requestAnimationFrame(() => {
+        activateGeneralDropdownTools("generation-select", "Processor Generation");
+      });
+      
     });
 }
 
@@ -1365,6 +1419,10 @@ function fetchDepartments(selectId = "department") {
           }
         }
       });
+      requestAnimationFrame(() => {
+        activateGeneralDropdownTools(selectId, "Department");
+      });
+      
     });
 }
 
@@ -1453,7 +1511,7 @@ function showNotification(message, selectId) {
 }
 
 // فتح البوب أب وتعبئة العنوان والنص الحالي
-function openPopup(selectId, title) {
+function openPopup(selectId, label) {
   const select = document.getElementById(selectId);
   const selectedOption = select.options[select.selectedIndex];
 
@@ -1462,24 +1520,24 @@ function openPopup(selectId, title) {
     return;
   }
 
-  document.getElementById("popup-title").textContent = `Edit ${title}`;
-  const popupFields = document.getElementById("popup-fields");
-  popupFields.innerHTML = `
-    <label>Update ${title}:</label>
-    <input type="text" id="popup-input" value="${selectedOption.text}">
+  sessionStorage.setItem("lastDropdownOpened", selectId); // نستخدمه بعد الإغلاق
+
+  const genericPopup = document.getElementById("generic-popup");
+  genericPopup.innerHTML = `
+    <div class="popup-content">
+      <h3>Edit ${label}</h3>
+      <label for="edit-option-input">New ${label}:</label>
+      <input type="text" id="edit-option-input" value="${selectedOption.text}" />
+      <div class="popup-buttons">
+        <button onclick="saveEditedOption('${selectId}', '${selectedOption.text}', '${label}')">Save</button>
+        <button onclick="closeGenericPopup()">Cancel</button>
+      </div>
+    </div>
   `;
 
-  const saveBtn = document.getElementById("popup-save-btn");
-  saveBtn.onclick = () => {
-    const newValue = document.getElementById("popup-input").value.trim();
-    if (newValue) {
-      selectedOption.text = newValue;
-    }
-    closePopup();
-  };
-
-  document.getElementById("popup-modal").style.display = "flex";
+  genericPopup.style.display = "flex"; // ✅ تأكد انه العنصر الصحيح
 }
+
 
 // إغلاق البوب أب
 // function closePopup() {
@@ -1595,56 +1653,75 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 });
 
-
-function openPopup(selectId, title) {
-  const select = document.getElementById(selectId);
-  const selectedOption = select.options[select.selectedIndex];
-
-  if (!selectedOption || selectedOption.disabled || selectedOption.value === "add-custom") {
-    showNotification("Please select a valid option to edit.", selectId);
+function saveEditedOption(selectId, oldValue, label) {
+  const newValue = document.getElementById("edit-option-input").value.trim();
+  if (!newValue || newValue === oldValue) {
+    closeGenericPopup();
     return;
   }
 
-  document.getElementById("popup-title").textContent = `Edit ${title}`;
-  const popupFields = document.getElementById("popup-fields");
-  popupFields.innerHTML = `
-    <label>New ${title}:</label>
-    <input type="text" id="popup-input" value="${selectedOption.text}">
+  fetch("http://localhost:5050/update-option-general", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      target: selectId,
+      oldValue,
+      newValue,
+      type: document.getElementById("problem-type")?.value?.toLowerCase() || ""
+    })
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.message) {
+        const select = document.getElementById(selectId);
+        const selectedOption = select.options[select.selectedIndex];
+        if (selectedOption) {
+          selectedOption.text = newValue;
+          selectedOption.value = newValue;
+        }
+        showNotification("✅ Option updated successfully", selectId);
+        closeGenericPopup();
+      }
+       else {
+        showNotification(data.error || "❌ Update failed", selectId);
+      }
+    })
+    .catch(err => {
+      console.error("❌ Update error:", err);
+      showNotification("❌ Failed to update option", selectId);
+    });
+}
+
+
+
+function activateGeneralDropdownTools(selectId, label) {
+  console.log(`🔧 Trying to activate icons for: ${selectId}`); // ✅ للتأكد من التنفيذ
+
+  const container = document.getElementById(selectId)?.closest(".dropdown-container");
+  if (!container) {
+    console.warn(`❌ container not found for ${selectId}`);
+    return;
+  }
+
+  const wrapper = container.querySelector(".dropdown-wrapper");
+  if (!wrapper) {
+    console.warn(`❌ wrapper not found for ${selectId}`);
+    return;
+  }
+
+  if (wrapper.querySelector(".icon-container")) {
+    console.warn(`⚠️ Icons already exist for ${selectId}`);
+    return;
+  }
+
+  const iconBox = document.createElement("div");
+  iconBox.className = "icon-container";
+
+  iconBox.innerHTML = `
+    <img src="/icon/search.png" alt="Search" class="search-icon" onclick="toggleSearch('${selectId}')">
+    <img src="/icon/edit.png" alt="Edit" class="edit-icon" onclick="event.stopPropagation(); openPopup('${selectId}', '${label}')">
+    <img src="/icon/trash.png" alt="Delete" class="trash-icon" onclick="event.stopPropagation(); deleteOption('${selectId}')">
   `;
 
-  const saveBtn = document.getElementById("popup-save-btn");
-  saveBtn.onclick = () => {
-    const newValue = document.getElementById("popup-input").value.trim();
-    if (!newValue) return;
-
-    const oldValue = selectedOption.text;
-
-    fetch("http://localhost:5050/update-option-general", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        target: selectId,
-        oldValue,
-        newValue,
-        type: document.getElementById("problem-type")?.value?.toLowerCase() || ""
-      })
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.message) {
-          selectedOption.text = newValue;
-          showNotification("✅ Option updated successfully.", selectId);
-        } else {
-          showNotification(data.error || "❌ Update failed.", selectId);
-        }
-      })
-      .catch(err => {
-        console.error("❌ Update error:", err);
-        showNotification("❌ Failed to update option.", selectId);
-      });
-
-    closePopup();
-  };
-
-  document.getElementById("popup-modal").style.display = "flex";
+  wrapper.appendChild(iconBox);
 }
