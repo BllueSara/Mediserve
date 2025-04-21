@@ -37,10 +37,37 @@ document.addEventListener("DOMContentLoaded", () => {
         const specsContainer = document.getElementById("device-specs");
         specsContainer.innerHTML = "";
         if (report.device_type) {
-          const div = document.createElement("div");
-          div.className = "spec-box";
-          div.textContent = ` Device Type: ${report.device_type}`;
-          specsContainer.appendChild(div);
+          const specsContainer = document.getElementById("device-specs");
+          specsContainer.innerHTML = "";
+          
+          const deviceType = report.device_type?.trim()?.toLowerCase() || "";
+          
+          const fields = [
+            { label: "🔘 Device Name:", value: report.device_name, alwaysShow: true },
+            { label: "🔑 Serial Number:", value: report.serial_number, alwaysShow: true },
+            { label: "🏛️ Ministry Number:", value: report.governmental_number, alwaysShow: true },
+            { label: "🧠 CPU:", value: report.cpu_name, showForPC: true },
+            { label: "💾 RAM:", value: report.ram_type, showForPC: true },
+            { label: "🖥️ OS:", value: report.os_name, showForPC: true },
+            { label: "📶 Generation:", value: report.generation_number, showForPC: true },
+            { label: "🔧 Model:", value: report.model_name, alwaysShow: true },
+            { label: "📟 Device Type:", value: report.device_type }
+          ];
+          
+          fields.forEach(({ label, value, showForPC, alwaysShow }) => {
+            const shouldShow =
+              alwaysShow || (showForPC && deviceType === "pc") || !!value;
+          
+            if (shouldShow) {
+              const div = document.createElement("div");
+              div.className = "spec-box";
+              div.textContent = `${label} ${value || ""}`;
+              specsContainer.appendChild(div);
+            }
+          });
+          
+          
+          
         }
 
         if (report.signature_path) {
@@ -53,7 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (report.attachment_name && report.attachment_path) {
           const attachmentSection = document.getElementById("attachment-section");
           const attachmentLink = document.createElement("a");
-          attachmentLink.href = `http://localhost:5050/${report.attachment_path}`;
+          attachmentLink.href = `http://localhost:5050/uploads/${report.attachment_path}`; // ✅ التصحيح هنا
           attachmentLink.textContent = `📎 ${report.attachment_name}`;
           attachmentLink.download = report.attachment_name;
           attachmentLink.style = "display: inline-block; margin-top: 10px; color: #007bff; text-decoration: underline;";
@@ -128,12 +155,39 @@ if (!ticketNumber) {
 
       const specsContainer = document.getElementById("device-specs");
       specsContainer.innerHTML = "";
-      specs.forEach(spec => {
-        const div = document.createElement("div");
-        div.className = "spec-box";
-        div.textContent = spec;
-        specsContainer.appendChild(div);
-      });
+      if (report.device_type) {
+        const specsContainer = document.getElementById("device-specs");
+        specsContainer.innerHTML = "";
+        
+        const deviceType = report.device_type?.trim()?.toLowerCase() || "";
+        
+        const fields = [
+          { label: "🔘 Device Name:", value: report.device_name, alwaysShow: true },
+          { label: "🔑 Serial Number:", value: report.serial_number, alwaysShow: true },
+          { label: "🏛️ Ministry Number:", value: report.governmental_number, alwaysShow: true },
+          { label: "🧠 CPU:", value: report.cpu_name, showForPC: true },
+          { label: "💾 RAM:", value: report.ram_type, showForPC: true },
+          { label: "🖥️ OS:", value: report.os_name, showForPC: true },
+          { label: "📶 Generation:", value: report.generation_number, showForPC: true },
+          { label: "🔧 Model:", value: report.model_name, alwaysShow: true },
+          { label: "📟 Device Type:", value: report.device_type }
+        ];
+        
+        fields.forEach(({ label, value, showForPC, alwaysShow }) => {
+          const shouldShow =
+            alwaysShow || (showForPC && deviceType === "pc") || !!value;
+        
+          if (shouldShow) {
+            const div = document.createElement("div");
+            div.className = "spec-box";
+            div.textContent = `${label} ${value || ""}`;
+            specsContainer.appendChild(div);
+          }
+        });
+      }
+      
+
+ 
     })
     .catch(err => {
       console.error("❌ Error fetching report:", err);
@@ -176,7 +230,7 @@ if (!ticketNumber) {
   // محتوى التقرير
   doc.setTextColor(0, 0, 0).setFontSize(12);
   const attachmentName = reportData?.attachment_name || null;
-  const attachmentUrl = reportData?.attachment_path ? `http://localhost:5050/${reportData.attachment_path}` : null;
+  const attachmentUrl = reportData?.attachment_path ? `http://localhost:5050/uploads/${reportData.attachment_path}` : null;
 
   [
     ["Report ID", document.getElementById("report-id")?.textContent],
@@ -258,16 +312,27 @@ if (!ticketNumber) {
 
   // تفعيل التعديل
   document.querySelector(".edit-btn")?.addEventListener("click", () => {
-    document.querySelectorAll(".editable, .description, .note").forEach(el => {
+    const editableEls = document.querySelectorAll("#report-id, #priority, #device-type, #assigned-to, #department, #category, .description, .note, .spec-box");
+    
+    editableEls.forEach(el => {
       el.setAttribute("contenteditable", "true");
       el.style.border = "1px dashed #aaa";
       el.style.backgroundColor = "#fdfdfd";
       el.style.padding = "4px";
+      el.style.display = "inline-block";
+      el.style.minHeight = "20px";
     });
+  
+    // 👇 عرض مدخل رفع المرفق
+    document.getElementById("attachment-input").style.display = "block";
+  
     saveBtn.style.display = "inline-block";
     document.querySelector(".edit-btn").style.display = "none";
     alert("📝 Edit mode is ON");
   });
+  
+  
+  
 
   // حفظ التعديلات
   saveBtn?.addEventListener("click", async () => {
@@ -308,15 +373,22 @@ if (!ticketNumber) {
         case " Model": updatedData.model_name = value; break;
       }
     });
-  
+    const fileInput = document.getElementById("attachment-input");
+    const file = fileInput.files[0];
+    
+    const formData = new FormData();
+    formData.append("data", JSON.stringify(updatedData));
+    
+    if (file) {
+      formData.append("attachment", file);
+    }
+    
     try {
       const res = await fetch("http://localhost:5050/update-report-full", {
-
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedData)
+        method: "POST",
+        body: formData
       });
-  
+    
       const result = await res.json();
       if (result.message) {
         alert("✅ All changes saved successfully.");
@@ -327,7 +399,7 @@ if (!ticketNumber) {
       console.error("❌ Error during update:", err);
       alert("❌ Failed to save changes.");
     }
-  
+    
     // تعطيل التحرير
     const editableElements = document.querySelectorAll(".grid div, .description, .note, h2");
     editableElements.forEach(el => {

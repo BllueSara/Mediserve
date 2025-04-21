@@ -72,6 +72,8 @@
     <div class="grid" id="device-specs"></div>
     <div class="section-title">Attachment</div>
     <div id="attachment-section" style="margin-bottom: 20px;"></div>
+    <input type="file" id="attachment-input" style="display: none;" />
+
     <div class="section-title">Additional Notes</div>
     <div class="note" id="note"></div>
   </div>
@@ -79,7 +81,7 @@
  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="report-details.js"></script>
-  
+
   <div id="pdf-options-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999;">
     <div style="background:#fff; padding:20px; max-width:400px; margin:10% auto; border-radius:8px;">
       <h3>Select Report Contents</h3>
