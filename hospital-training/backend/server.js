@@ -1538,19 +1538,29 @@ app.get('/get-internal-reports', (req, res) => {
   });
 });
 
-app.put("/update-report-full", (req, res) => {
+
+app.post("/update-report-full", upload.single("attachment"), (req, res) => {
+  const updatedData = JSON.parse(req.body.data || "{}");
+
   const {
     id, issue_summary, full_description, priority, status, device_type,
     technical, department_name, category, source
-  } = req.body;
+  } = updatedData;
+
+  const attachmentFile = req.file;
 
   if (!source) {
     return res.status(400).json({ error: "Missing source type" });
   }
 
   if (source === "new") {
-    const updateNewSql = `UPDATE New_Maintenance_Reports SET priority = ?, status = ?, device_type = ? WHERE id = ?`;
-    const values = [priority, status, device_type, id];
+    const updateNewSql = `UPDATE New_Maintenance_Reports 
+      SET priority = ?, status = ?, device_type = ?${attachmentFile ? ", attachment_name = ?, attachment_path = ?" : ""}
+      WHERE id = ?`;
+
+    const values = attachmentFile
+      ? [priority, status, device_type, attachmentFile.originalname, attachmentFile.filename, id]
+      : [priority, status, device_type, id];
 
     db.query(updateNewSql, values, (err) => {
       if (err) {
@@ -1561,13 +1571,15 @@ app.put("/update-report-full", (req, res) => {
     });
 
   } else if (source === "internal") {
-    // 1. تحديث تقرير الصيانة
     const updateReportSql = `
       UPDATE Maintenance_Reports 
-      SET issue_summary = ?, full_description = ?, status = ?, report_type = ? 
-      WHERE id = ?
-    `;
-    const reportValues = [issue_summary, full_description, status, category, id];
+      SET issue_summary = ?, full_description = ?, status = ?, report_type = ?
+      ${attachmentFile ? ", attachment_name = ?, attachment_path = ?" : ""}
+      WHERE id = ?`;
+
+    const reportValues = attachmentFile
+      ? [issue_summary, full_description, status, category, attachmentFile.originalname, attachmentFile.filename, id]
+      : [issue_summary, full_description, status, category, id];
 
     db.query(updateReportSql, reportValues, (err) => {
       if (err) {
@@ -1575,12 +1587,11 @@ app.put("/update-report-full", (req, res) => {
         return res.status(500).json({ error: "Failed to update maintenance report" });
       }
 
-      // 2. تحديث التذكرة الداخلية المرتبطة
       const updateTicketSql = `
         UPDATE Internal_Tickets 
         SET priority = ?, assigned_to = ?, status = ? 
-        WHERE id = (SELECT ticket_id FROM Maintenance_Reports WHERE id = ?)
-      `;
+        WHERE id = (SELECT ticket_id FROM Maintenance_Reports WHERE id = ?)`;
+
       const ticketValues = [priority, technical, status, id];
 
       db.query(updateTicketSql, ticketValues, (err2) => {
