@@ -8,6 +8,8 @@ let reportData = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   const saveBtn = document.querySelector(".save-btn");
+  const editBtn = document.querySelector(".edit-btn"); // ✅ حل المشكلة
+
   const reportId = new URLSearchParams(window.location.search).get("id");
   const reportType = new URLSearchParams(window.location.search).get("type");
 
@@ -23,9 +25,9 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("report-title").textContent = `New Maintenance Report #${report.id}`;
         document.getElementById("report-id").textContent = `NMR-${report.id}`;
         document.getElementById("priority").textContent = report.priority || "Medium";
-        document.getElementById("device-type").textContent = report.device_type || "N/A";
-        document.getElementById("assigned-to").textContent = "N/A";
-        document.getElementById("department").textContent = "N/A";
+        document.getElementById("device-type").textContent = report.device_type || "";
+        document.getElementById("assigned-to").textContent = "";
+        document.getElementById("department").textContent = "";
         document.getElementById("category").textContent = "New";
         document.getElementById("report-status").textContent = report.status || "Open";
         document.getElementById("submitted-date").textContent = `Submitted on ${new Date(report.created_at).toLocaleString()}`;
@@ -48,31 +50,61 @@ document.addEventListener("DOMContentLoaded", () => {
           sigImg.style = "margin-top: 10px; max-width: 200px; border: 1px solid #ccc";
           specsContainer.appendChild(sigImg);
         }
+        if (report.attachment_name && report.attachment_path) {
+          const attachmentSection = document.getElementById("attachment-section");
+          const attachmentLink = document.createElement("a");
+          attachmentLink.href = `http://localhost:5050/${report.attachment_path}`;
+          attachmentLink.textContent = `📎 ${report.attachment_name}`;
+          attachmentLink.download = report.attachment_name;
+          attachmentLink.style = "display: inline-block; margin-top: 10px; color: #007bff; text-decoration: underline;";
+          attachmentSection.appendChild(attachmentLink); // ✅ يوديه لمكانه الصحيح
+        }
+        
+        
+        
         return;
       }
 
       // داخلية أو خارجية
-      const reportTitle =
-        report.maintenance_type === "Regular"
-          ? `Regular Maintenance #${report.report_number}`
-          : report.maintenance_type === "General"
-          ? `General Maintenance #${report.report_number}`
-          : report.ticket_number
-          ? `Ticket Report #${report.ticket_number}`
-          : `Maintenance Report #${report.report_number}`;
+      const isInternalTicket = report.maintenance_type === "Internal";
+      let ticketNumber = report.ticket_number?.trim();
 
-      document.getElementById("report-title").textContent =
-        isExternal ? `External Maintenance #${report.request_number || report.id}` : reportTitle;
+// محاولة استخراج رقم التذكرة من الوصف أو الملخص حتى لو بصيغة مختلفة
+if (!ticketNumber) {
+  const fullText = `${report.full_description || ""} ${report.issue_summary || ""}`;
+  const match = fullText.match(/(?:Ticket Number:|Ticket\s+\()? *(TIC-\d+|INT-\d{8}-\d{3})/i);
+  if (match) {
+    ticketNumber = match[1].trim();
+    console.log("📌 Extracted ticket number:", ticketNumber);
+  } else {
+    console.warn("⚠️ No ticket number found in report");
+  }
+}
 
+      
+      
+      let titlePrefix = "Maintenance";
+      if (report.maintenance_type === "Regular") titlePrefix = "Regular Maintenance";
+      else if (report.maintenance_type === "General") titlePrefix = "General Maintenance";
+      else if (report.maintenance_type === "Internal") titlePrefix = "Internal Ticket";
+      else if (report.maintenance_type === "External") titlePrefix = "External Maintenance";
+      
+      const reportTitle = ticketNumber
+        ? `${titlePrefix} #${ticketNumber}`
+        : `${titlePrefix} #${report.report_number || report.id}`;
+      
+      document.getElementById("report-title").textContent = reportTitle;
+      
+      
       document.getElementById("report-id").textContent =
         report.report_number || report.request_number || `MR-${report.id}`;
-      document.getElementById("priority").textContent = isExternal ? "N/A" : (report.priority || "N/A");
-      document.getElementById("device-type").textContent = report.device_type || "N/A";
+      document.getElementById("priority").textContent = isExternal ? "" : (report.priority || "");
+      document.getElementById("device-type").textContent = report.device_type || "";
       document.getElementById("assigned-to").textContent = isExternal
-        ? (report.reporter_name || "N/A")
-        : (report.technical || "N/A");
-      document.getElementById("department").textContent = report.department_name || "N/A";
-      document.getElementById("category").textContent = isExternal ? "External" : (report.category || "N/A");
+        ? (report.reporter_name || "")
+        : (report.technical || "");
+      document.getElementById("department").textContent = report.department_name || "";
+      document.getElementById("category").textContent = isExternal ? "External" : (report.report_type || "");
       document.getElementById("report-status").textContent = report.status || "Pending";
       document.getElementById("submitted-date").textContent = `Submitted on ${new Date(report.created_at).toLocaleString()}`;
       document.getElementById("description").textContent =
@@ -109,94 +141,120 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
   // ⬇️ تحميل PDF
-  document.querySelector(".download-btn")?.addEventListener("click", async () => {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF("p", "mm", "a4", true);
-    const pageWidth = doc.internal.pageSize.getWidth();
+  document.querySelector(".download-btn")?.addEventListener("click", () => {
+    document.getElementById("pdf-options-modal").style.display = "block";
+  });
 
-    // رأس
-    doc.setFillColor(0, 90, 156);
-    doc.rect(0, 0, pageWidth, 30, "F");
-    doc.addImage("/icon/MS Logo.png", "PNG", 3, 8, 25, 12);
-    doc.addImage("/icon/hospital-logo.png", "PNG", pageWidth - 35, 8, 25, 12);
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold").setFontSize(16);
-    doc.text("Maintenance Report", pageWidth / 2, 20, { align: "center" });
+  document.getElementById("generate-pdf-btn")?.addEventListener("click", async () => {
+  document.getElementById("pdf-options-modal").style.display = "none";
 
-    // التفاصيل
-    doc.setTextColor(0, 0, 0).setFontSize(12);
-    let y = 40;
-    [
-      ["Report ID", document.getElementById("report-id")?.textContent],
-      ["Priority", document.getElementById("priority")?.textContent],
-      ["Device Type", document.getElementById("device-type")?.textContent],
-      ["Assigned To", document.getElementById("assigned-to")?.textContent],
-      ["Department", document.getElementById("department")?.textContent],
-      ["Category", document.getElementById("category")?.textContent]
-    ].forEach(([label, value]) => {
-      doc.text(`${label}:`, 15, y);
-      doc.text(value || "N/A", 60, y);
-      y += 8;
-    });
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF("p", "mm", "a4", true);
+  const pageWidth = doc.internal.pageSize.getWidth();
+  let y = 40;
 
-    // الوصف والملاحظات
+  // التحقق من التحديد
+  const showPriority = document.getElementById("opt-priority").checked;
+  const showDeviceType = document.getElementById("opt-device-type").checked;
+  const showDescription = document.getElementById("opt-description").checked;
+  const showNote = document.getElementById("opt-note").checked;
+  const showSignature = document.getElementById("opt-signature").checked;
+  const showAttachment = document.getElementById("opt-attachment").checked;
+  const showSpecs = document.getElementById("opt-specs").checked;
+
+  // رأس التقرير
+  doc.setFillColor(0, 90, 156);
+  doc.rect(0, 0, pageWidth, 30, "F");
+  doc.addImage("/icon/MS Logo.png", "PNG", 3, 8, 25, 12);
+  doc.addImage("/icon/hospital-logo.png", "PNG", pageWidth - 35, 8, 25, 12);
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold").setFontSize(16);
+  let reportTitle = document.getElementById("report-title")?.textContent || "Maintenance Report";
+  reportTitle = reportTitle.split("#")[0].trim();
+  doc.text(`Report: ${reportTitle}`, pageWidth / 2, 20, { align: "center" });
+
+  // محتوى التقرير
+  doc.setTextColor(0, 0, 0).setFontSize(12);
+  const attachmentName = reportData?.attachment_name || null;
+  const attachmentUrl = reportData?.attachment_path ? `http://localhost:5050/${reportData.attachment_path}` : null;
+
+  [
+    ["Report ID", document.getElementById("report-id")?.textContent],
+    showPriority && ["Priority", document.getElementById("priority")?.textContent],
+    showDeviceType && ["Device Type", document.getElementById("device-type")?.textContent],
+    ["Assigned To", document.getElementById("assigned-to")?.textContent],
+    ["Department", document.getElementById("department")?.textContent],
+    ["Category", document.getElementById("category")?.textContent]
+  ].filter(Boolean).forEach(([label, value]) => {
+    doc.text(`${label}:`, 15, y);
+    doc.text(value || "", 60, y);
+    y += 8;
+  });
+
+  if (showAttachment && attachmentName && attachmentUrl) {
+    doc.text("Attachment:", 15, y);
+    doc.setTextColor(0, 0, 255);
+    doc.textWithLink(attachmentName, 60, y, { url: attachmentUrl });
+    doc.setTextColor(0, 0, 0);
+    y += 8;
+  }
+
+  if (showDescription) {
     y += 5;
     doc.setFont("helvetica", "bold").text("Description:", 15, y);
     y += 6;
     doc.setFont("helvetica", "normal");
-    const descLines = doc.splitTextToSize(document.getElementById("description")?.innerText || "N/A", pageWidth - 30);
-    doc.text(descLines, 15, y);
-    y += descLines.length * 6 + 5;
+    const lines = doc.splitTextToSize(document.getElementById("description")?.innerText || "", pageWidth - 30);
+    doc.text(lines, 15, y);
+    y += lines.length * 6 + 5;
+  }
 
+  if (showNote) {
     doc.setFont("helvetica", "bold").text("Technical Notes:", 15, y);
     y += 6;
-    const noteLines = doc.splitTextToSize(document.getElementById("note")?.textContent?.replace(/^.*?:\s*/, "") || "No notes.", pageWidth - 30);
-    doc.setFont("helvetica", "normal").text(noteLines, 15, y);
-    y += noteLines.length * 6 + 5;
+    const lines = doc.splitTextToSize(document.getElementById("note")?.textContent?.replace(/^.*?:\s*/, "") || "", pageWidth - 30);
+    doc.setFont("helvetica", "normal").text(lines, 15, y);
+    y += lines.length * 6 + 5;
+  }
 
+  if (showSpecs) {
     doc.setFont("helvetica", "bold").text("Device Specifications:", 15, y);
     y += 6;
     const specs = Array.from(document.querySelectorAll("#device-specs .spec-box"))
-    .map(el => el.innerText.replace(/[^\w\s:.-]/g, "").trim()); // يشيل الرموز والإيموجيات
-      specs.forEach(spec => {
+      .map(el => el.innerText.replace(/[^\w\s:.-]/g, "").trim());
+    specs.forEach(spec => {
       const lines = doc.splitTextToSize(spec, pageWidth - 30);
       doc.text(lines, 15, y);
       y += lines.length * 6 + 2;
     });
+  }
 
-    // التوقيع والختم
-    y = Math.max(y + 20, 240);
-    doc.setFont("helvetica", "bold").text("Signature:", 20, y);
-    doc.text("Stamp:", pageWidth - 50, y);
-
-    if (reportData?.signature_path) {
-      try {
-        const signatureImg = new Image();
-        signatureImg.crossOrigin = "anonymous";
-        signatureImg.src = `http://localhost:5050/${reportData.signature_path}`;
-
-        await new Promise((resolve, reject) => {
-          signatureImg.onload = () => resolve();
-          signatureImg.onerror = () => reject("Failed to load signature");
-        });
-
-        const canvas = document.createElement("canvas");
-        canvas.width = signatureImg.width;
-        canvas.height = signatureImg.height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(signatureImg, 0, 0);
-        const signatureDataURL = canvas.toDataURL("image/png");
-
-        doc.addImage(signatureDataURL, "PNG", 15, y + 5, 50, 25);
-        doc.addImage(signatureDataURL, "PNG", pageWidth - 65, y + 5, 50, 25);
-      } catch (e) {
-        console.warn("⚠️ Couldn't add signature image:", e);
-      }
+  y = Math.max(y + 20, 240);
+  doc.setFont("helvetica", "bold").text("Signature:", 20, y);
+  if (showSignature && reportData?.signature_path) {
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = `http://localhost:5050/${reportData.signature_path}`;
+      await new Promise((res, rej) => {
+        img.onload = res;
+        img.onerror = rej;
+      });
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      canvas.getContext("2d").drawImage(img, 0, 0);
+      const url = canvas.toDataURL("image/png");
+      doc.addImage(url, "PNG", 15, y + 5, 50, 25);
+    } catch (e) {
+      console.warn("⚠️ Signature not loaded", e);
     }
+  }
 
-    const fileName = document.getElementById("report-id")?.textContent || "Maintenance_Report";
-    doc.save(`${fileName}.pdf`);
-  });
+  const [typeOnly, ticketPart] = reportTitle.split("#").map(p => p.trim());
+  const fileName = ticketPart ? `${typeOnly} - ${ticketPart}` : typeOnly;
+  doc.save(`${fileName}.pdf`);
+});
 
   // تفعيل التعديل
   document.querySelector(".edit-btn")?.addEventListener("click", () => {
@@ -222,7 +280,9 @@ document.addEventListener("DOMContentLoaded", () => {
       device_type: document.getElementById("device-type")?.innerText.trim(),
       technical: document.getElementById("assigned-to")?.innerText.trim(),
       department_name: document.getElementById("department")?.innerText.trim(),
-      category: document.getElementById("category")?.innerText.trim(),
+      category: document.getElementById("category")?.innerText.trim() === "" ? null : document.getElementById("category")?.innerText.trim(),
+      source: reportData.source || reportType, // ✅ أضف هذا السطر
+
       device_name: null,
       serial_number: null,
       governmental_number: null,
