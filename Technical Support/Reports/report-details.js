@@ -26,8 +26,8 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("report-id").textContent = `NMR-${report.id}`;
         document.getElementById("priority").textContent = report.priority || "Medium";
         document.getElementById("device-type").textContent = report.device_type || "";
-        document.getElementById("assigned-to").textContent = "";
-        document.getElementById("department").textContent = "";
+        document.getElementById("assigned-to").textContent = report.assigned_to ||"";
+        document.getElementById("department").textContent = report.department_name || "";
         document.getElementById("category").textContent = "New";
         document.getElementById("report-status").textContent = report.status || "Open";
         document.getElementById("submitted-date").textContent = `Submitted on ${new Date(report.created_at).toLocaleString()}`;
@@ -347,6 +347,7 @@ if (!ticketNumber) {
       department_name: document.getElementById("department")?.innerText.trim(),
       category: document.getElementById("category")?.innerText.trim() === "" ? null : document.getElementById("category")?.innerText.trim(),
       source: reportData.source || reportType, // ✅ أضف هذا السطر
+      device_id: reportData.device_id || null, // ✅ هذا هو
 
       device_name: null,
       serial_number: null,
@@ -359,20 +360,23 @@ if (!ticketNumber) {
     };
   
     // مواصفات الجهاز
-    document.querySelectorAll("#device-specs .spec-box").forEach(box => {
-      const [rawLabel, value] = box.textContent.split(":").map(str => str.trim());
-      const label = rawLabel.replace(/[^\w\s]/gi, "").trim(); // 🔥 يشيل الإيموجي والرموز
-            switch (label) {
-        case " Device Name": updatedData.device_name = value; break;
-        case " Serial Number": updatedData.serial_number = value; break;
-        case " Ministry Number": updatedData.governmental_number = value; break;
-        case " CPU": updatedData.cpu_name = value; break;
-        case " RAM": updatedData.ram_type = value; break;
-        case " OS": updatedData.os_name = value; break;
-        case " Generation": updatedData.generation_number = value; break;
-        case " Model": updatedData.model_name = value; break;
-      }
-    });
+  // مواصفات الجهاز
+document.querySelectorAll("#device-specs .spec-box").forEach(box => {
+  const [rawLabel, value] = box.textContent.split(":").map(str => str.trim());
+  const label = rawLabel.toLowerCase().replace(/[^\w]/gi, "").trim(); // تنظيف الرموز والمسافات
+
+  switch (label) {
+    case "devicename": updatedData.device_name = value; break;
+    case "serialnumber": updatedData.serial_number = value; break;
+    case "ministrynumber": updatedData.governmental_number = value; break;
+    case "cpu": updatedData.cpu_name = value; break;
+    case "ram": updatedData.ram_type = value; break;
+    case "os": updatedData.os_name = value; break;
+    case "generation": updatedData.generation_number = value; break;
+    case "model": updatedData.model_name = value; break;
+  }
+});
+
     const fileInput = document.getElementById("attachment-input");
     const file = fileInput.files[0];
     
@@ -384,6 +388,8 @@ if (!ticketNumber) {
     }
     
     try {
+      console.log("🚀 Sending updated data:", updatedData);
+
       const res = await fetch("http://localhost:5050/update-report-full", {
         method: "POST",
         body: formData
