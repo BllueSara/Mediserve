@@ -60,13 +60,7 @@ html {
   height: 20px;
 }
 
-/* Priority icon (small colored icon next to priority label) */
-.priority-icon {
-    width: 16px;
-    height: 16px;
-    margin-right: 5px;
-    vertical-align: middle;
-}
+
 
 /* Logos section (header) */
 header {
@@ -96,7 +90,36 @@ header {
 .hospital-logo img {
     height: 50px;
 }
-
+/* Upload box styling */
+.upload-box {
+    border: 2px dashed #ccc;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.3s;
+    border-radius: 10px;
+  }
+  
+  /* Hover effect for upload box */
+  .upload-box:hover,
+  .drag-over {
+    background-color: #f9f9f9;
+    border-color: #333;
+  }
+  
+  /* Upload icon inside box */
+  .upload-icon {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 10px;
+  }
+  
+  /* File format info text */
+  .file-format-info {
+    font-size: 12px;
+    color: #999;
+  }
+  
 /* Main form container */
 .ticket-container {
     background-color: white;
@@ -138,7 +161,7 @@ label {
 input,
 select,
 textarea {
-    width: 100%;
+    width: 96%;
     padding: 14px;
     border: 1px solid #d1d5db;
     border-radius: 6px;
@@ -172,6 +195,13 @@ textarea {
     transform: scale(0.98);
 }
 
+/* Priority icon (small colored icon next to priority label) */
+.priority-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 5px;
+    vertical-align: middle;
+}
 /* Priority selection (radio buttons inside flex container) */
 .priority-options {
     display: flex;
@@ -198,6 +228,105 @@ textarea {
     border-color: #3BAAE0;
     font-weight: bold;
 }
+
+/* مربع البحث فوق الدروب داون */
+.search-input {
+    border: 1px solid black; /* ✅ بوردر أسود */
+    padding: 8px;
+    border-radius: 5px;
+    font-size: 14px;
+    width: 100%;
+  }
+  /* الأيقونة الخاصة بالتعديل داخل الدروب ليست */
+  .edit-icon {
+    width: 16px;
+    height: 16px;
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    cursor: pointer;
+  }
+  .search-icon {
+    width: 16px;
+    height: 16px;
+    position: absolute;
+    right: 40px;
+    top: 50%;
+    transform: translateY(calc(-50% + 2px));
+    z-index: 2;
+    cursor: pointer;
+  }
+  .trash-icon {
+    width: 16px;
+    height: 16px;
+    position: absolute;
+    right: 60px;
+    top: 50%;
+    transform: translateY(calc(-50% + 2px));
+    z-index: 2;
+    cursor: pointer;
+  }
+  /* جعل الـ search container يغطي العرض بالكامل */
+  .search-container {
+    width: 100%;
+    margin-bottom: 10px; /* مسافة عمودية بين مربع البحث وبقية المكونات */
+  }
+  
+  /* تنسيق مربع البحث بحيث يشبه قائمة الاختيارات */
+  .search-input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    box-sizing: border-box;
+  }
+   /* حاوية الدروب ليست */
+ .dropdown-container {
+    position: relative;
+    margin-bottom: 20px;
+  }
+  .dropdown-wrapper {
+    position: relative; /* 🔧 ضروري لربط الأيقونات بالمكان الصح */
+    display: flex;
+    align-items: center;
+  }
+  
+  /* الايقونات جنب الدروب داون */
+  .icons-container {
+    position: absolute;
+    top: 50%; /* توسيط عمودي */
+    right: 10px;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 6px;
+    z-index: 1;
+  }
+  
+  /* حتى ما يدخلوا فوق بعض */
+  .dropdown-wrapper select {
+    width: 100%;
+    padding-right: 80px; /* ⬅️ مساحة للأيقونات */
+    box-sizing: border-box;
+  }
+  
+  /* إظهار الـ select بشكل طبيعي */
+  .dropdown-container select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    font-size: 14px;
+    background-color: #EFEFEF;
+    box-sizing: border-box;
+  }
+.inline-error {
+    color: red;
+    font-size: 12px;
+    margin-top: 5px;  /* مسافة بسيطة بين الدروب داون والرسالة */
+    text-align: left;  /* محاذاة النص لليسار */
+  }
 
 /* Red color for required field indicator */
 .required {
