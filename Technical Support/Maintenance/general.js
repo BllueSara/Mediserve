@@ -77,58 +77,64 @@ function fetchModelsByType(type, selectId) {
   else if (cleanedType === "printer") endpoint = "/Printer_Model";
   else if (cleanedType === "scanner") endpoint = "/Scanner_Model";
 
-  if (endpoint) {
-    fetch(`http://localhost:5050${endpoint}`)
-      .then(res => res.json())
-      .then(data => {
-        const dropdown = document.getElementById(selectId);
-        if (!dropdown) return;
-
-        // تهيئة القائمة
-        dropdown.innerHTML = '<option value="" disabled>Select Model</option>';
-        dropdown.value = "";  
-        dropdown.selectedIndex = 0;
-
-        // + Add New Model
-        const addOption = document.createElement("option");
-        addOption.value = "add-new";
-        addOption.textContent = "+ Add New Model";
-        dropdown.appendChild(addOption);
-
-        // باقي الموديلات
-        data.forEach(item => {
-          const option = document.createElement("option");
-          option.value = item.model_name;
-          option.textContent = item.model_name;
-          dropdown.appendChild(option);
-        });
-
-        // شيل أي مستمع قديم
-        const newDropdown = dropdown.cloneNode(true);
-        dropdown.parentNode.replaceChild(newDropdown, dropdown);
-
-        // تأكد الخيار الأول محدد
-        newDropdown.value = "";
-        newDropdown.selectedIndex = 0;
-
-        // ربط الحدث
-        newDropdown.addEventListener("change", e => {
-          if (e.target.value === "add-new") {
-            sessionStorage.setItem("lastDropdownOpened", selectId);
-            saveTemporaryFields();
-            openAddModelPopup(type, selectId);
-          }
-        });
-        requestAnimationFrame(() => {
-          activateGeneralDropdownTools(selectId, "Model");
-        });
-              })
-      .catch(err => console.error("❌ Error fetching models:", err));
-  } else {
-    // أجهزة جديدة
+  if (!endpoint) {
     fetchModelsForNewDevices(type, selectId);
+    return;
   }
+
+  fetch(`http://localhost:5050${endpoint}`)
+    .then(res => res.json())
+    .then(data => {
+      const wrapper = document.getElementById(`model-wrapper-${type}`);
+      const list = document.getElementById(`custom-options-${type}`);
+      const display = wrapper.querySelector('.custom-select-display');
+      const dropdown = document.getElementById(`custom-select-dropdown-${type}`);
+
+      if (!wrapper || !list || !dropdown || !display) return;
+
+      list.innerHTML = ""; // Reset list
+
+      // + Add New Model option
+      const addOption = document.createElement("div");
+      addOption.className = "custom-select-option";
+      addOption.textContent = "+ Add New Model";
+      addOption.onclick = () => {
+        sessionStorage.setItem("lastDropdownOpened", selectId);
+        saveTemporaryFields();
+        openAddModelPopup(type, selectId);
+        dropdown.style.display = "none";
+      };
+      list.appendChild(addOption);
+
+      // باقي الخيارات
+      data.forEach(item => {
+        const opt = document.createElement("div");
+        opt.className = "custom-select-option";
+        opt.textContent = item.model_name;
+        opt.onclick = () => {
+          display.textContent = item.model_name;
+          dropdown.style.display = "none";
+        };
+        list.appendChild(opt);
+      });
+    })
+    .catch(err => {
+      console.error("❌ Error fetching models:", err);
+    });
 }
+
+function toggleCustomDropdown(type) {
+  const dropdown = document.getElementById(`custom-select-dropdown-${type}`);
+  dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+}
+
+function filterCustomDropdown(type, value) {
+  const all = document.querySelectorAll(`#custom-options-${type} .custom-select-option`);
+  all.forEach(opt => {
+    opt.style.display = opt.textContent.toLowerCase().includes(value.toLowerCase()) ? "block" : "none";
+  });
+}
+
 
 function fetchModelsForNewDevices(type, selectId) {
   console.log("🟡 Fetching models for custom device:", type, selectId);
@@ -898,15 +904,21 @@ function generateFieldsForDeviceType(type) {
     </div>
   </div>
 
-  <label>Model:</label>
-  <div class="dropdown-container">
-    <div class="search-container" id="search-container-model-${type}" style="display: none;">
-      <input type="text" class="search-input" placeholder="Search..." />
-    </div>
-    <div class="dropdown-wrapper">
-      <select name="model" id="model-${type}"></select>
+<label>Model:</label>
+<div class="dropdown-container">
+  <div class="dropdown-wrapper">
+    <div class="custom-select-wrapper" id="model-wrapper-${type}">
+      <div class="custom-select-display" onclick="toggleCustomDropdown('${type}')">Select Model</div>
+      <div class="custom-select-dropdown" id="custom-select-dropdown-${type}">
+        <input type="text" class="custom-select-search" placeholder="Search..." oninput="filterCustomDropdown('${type}', this.value)">
+        <div class="custom-select-options" id="custom-options-${type}">
+          <!-- Options will be populated here -->
+        </div>
+      </div>
     </div>
   </div>
+</div>
+
 `;
 
 
