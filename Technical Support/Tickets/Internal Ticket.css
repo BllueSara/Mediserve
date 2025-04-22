@@ -161,7 +161,7 @@ input:focus, select:focus, textarea:focus {
 input,
 select,
 textarea {
-  width: 100%;
+  width: 96%;
   padding: 12px;
   border: 1px solid #d1d5db;
   border-radius: 5px;
@@ -308,62 +308,6 @@ textarea {
   font-size: 14px;
   width: 100%;
 }
-
-/* تنسيق لـ Popup (نافذة منبثقة) */
-.popup-modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-.popup-content {
-  background: white;
-  padding: 30px;
-  width: 450px;
-  max-height: 90vh;
-  overflow-y: auto;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-.popup-content label {
-  margin-top: 15px;
-  display: block;
-  font-size: 14px;
-}
-.popup-content input, 
-.popup-content select {
-  width: 100%;
-  margin: 5px auto;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-}
-.popup-buttons {
-  margin-top: 20px;
-  display: flex;
-  justify-content: center;
-  gap: 15px;
-}
-.popup-buttons button {
-  padding: 5px 10px;
-  font-size: 14px;
-  min-width: 100px;
-  border: none;
-  border-radius: 5px;
-  background-color: #3BAAE0;
-  color: white;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-.popup-buttons button:hover {
-  background-color: #007bb8;
-}
 /* الأيقونة الخاصة بالتعديل داخل الدروب ليست */
 .edit-icon {
   width: 16px;
@@ -416,18 +360,110 @@ textarea {
   padding: 8px;
   box-sizing: border-box; /* لضمان احتساب padding والحدود ضمن العرض المحدد */
 }
-
-.custom-dropdown-wrapper {
-  position: relative;
-  width: 100%;
+/* Priority icon (small colored icon next to priority label) */
+.priority-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+/* Priority selection (radio buttons inside flex container) */
+.priority-options {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
 }
 
-.custom-dropdown-wrapper select,
-.custom-dropdown-wrapper input {
+/* Custom style for each priority option */
+.priority-options label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  padding: 12px 18px;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  background-color: #FFFFFF;
+  cursor: pointer;
+}
+
+/* Active state for selected priority */
+.priority-options input[type="radio"]:checked + label {
+  background-color: #DFF6FF;
+  border-color: #3BAAE0;
+  font-weight: bold;
+}
+
+/*pop up*/
+.popup-modal {
+  display: none; /* نفعّله بـ JavaScript */
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
-  padding: 10px;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  justify-content: center; /* يوسّط أفقي */
+  align-items: center;     /* يوسّط عمودي */
+  z-index: 1000;
+}
+
+.popup-content {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  text-align: center;
+}
+
+.popup-content label {
+  margin-top: 15px;
+  display: block;
   font-size: 14px;
-  border-radius: 5px;
+  
+}
+
+.popup-content input, .popup-content select {
+  width: 100%;
+  height: 50%;
+  margin: 5px auto;
+  padding: 10px;
+  display: block;
   border: 1px solid #ccc;
-  box-sizing: border-box;
+  border-radius: 5px;
+
+}
+
+.popup-buttons button {
+  padding: 5px 10px;
+  font-size: 14px;
+  width: auto;
+  min-width: 100px;
+  border: none;
+  border-radius: 5px;
+  background-color: #3BAAE0;
+  color: white; /* ✅ يخلي النص أبيض */
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+
+.popup-buttons button:hover {
+  background-color: #007bb8; /* لون عند التحويم */
+}
+
+.popup-buttons {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center; /* ✅ هذا يخلي الأزرار بالوسط */
+  gap: 15px;                /* ✅ مسافة بين الزرين */
+}
+
+.inline-error {
+  color: red;
+  font-size: 12px;
+  margin-top: 5px;  /* مسافة بسيطة بين الدروب داون والرسالة */
+  text-align: left;  /* محاذاة النص لليسار */
 }
