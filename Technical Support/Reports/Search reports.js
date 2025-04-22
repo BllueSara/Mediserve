@@ -85,11 +85,9 @@ function loadReports(page = 1) {
 
       const filtered = data.filter(report => {
         const createdAt = new Date(report.created_at);
-        // const isTicket = report.issue_summary?.includes("Ticket Created");
-
         const isInternalTicket = report.maintenance_type === "Internal";
-        const isTicketFromOtherType = report.issue_summary?.includes("Ticket Created"); // من Regular أو General
-        
+        const isTicketFromOtherType = report.issue_summary?.includes("Ticket Created");
+
         let typeMatch = true;
         if (type === "Maintenance") {
           typeMatch = !isInternalTicket && !isTicketFromOtherType && report.source !== "new";
@@ -98,7 +96,7 @@ function loadReports(page = 1) {
         } else if (type === "New") {
           typeMatch = report.source === "new";
         }
-        
+
         const statusMatch = !status || report.status?.trim().toLowerCase() === status.trim().toLowerCase();
         const searchMatch =
           !search ||
@@ -115,13 +113,19 @@ function loadReports(page = 1) {
         return typeMatch && statusMatch && searchMatch && dateMatch && deviceTypeMatch;
       });
 
-      if (!filtered.length) {
+      // ✅ Paginate the filtered results
+      const reportsPerPage = 4;
+      const totalReports = filtered.length;
+      const totalPages = Math.ceil(totalReports / reportsPerPage);
+      const startIndex = (page - 1) * reportsPerPage;
+      const paginatedReports = filtered.slice(startIndex, startIndex + reportsPerPage);
+
+      if (!paginatedReports.length) {
         container.innerHTML = "<p>No matching reports found.</p>";
         return;
       }
 
-      filtered.forEach(report => {
-       
+      paginatedReports.forEach(report => {
         const isInternalTicket = report.maintenance_type === "Internal";
         const isTicketFromOtherType = report.issue_summary?.includes("Ticket Created");
         let ticketNumber = report.ticket_number;
@@ -129,39 +133,57 @@ function loadReports(page = 1) {
           const match = report.full_description.match(/Ticket\s+\((TIC-[\d]+)\)/);
           ticketNumber = match ? match[1] : null;
         }
-      
-        const isNewSimple = report.source === "new"; // ✅ أفضل تحقق لأنه يجي من السيرفر
+
+        const isNewSimple = report.source === "new";
         const card = document.createElement("div");
         card.className = "report-card";
 
         if (isNewSimple) {
           card.innerHTML = `
             <div class="report-card-header">
-              <span>New Maintenance Report</span>
-              <span class="status-label ${getStatusClass(report.status)}">${report.status}</span>
+              <img src="/icon/Report.png" alt="icon" />
+             <span>${report.report_type || "Maintenance Report"}</span>
+
+              <select 
+                data-report-id="${report.id}" 
+                class="status-select ${getStatusClass(report.status)}">
+                <option value="Open" ${report.status === "Open" ? "selected" : ""}>Open</option>
+                <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>In Progress</option>
+                <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>Closed</option>
+              </select>
             </div>
             <div class="report-details">
+              <img src="/icon/desktop.png" alt="device" />
               <span>${formatDateTime(report.created_at)}</span>
             </div>
             <p><strong>Device Type:</strong> ${report.device_type || "N/A"}</p>
             <p><strong>Priority:</strong> ${report.priority || "N/A"}</p>
             <p><strong>Status:</strong> ${report.status}</p>
           `;
-      
+
           container.appendChild(card);
-      
-          card.addEventListener("click", () => {
+
+          card.addEventListener("click", (e) => {
+            if (e.target.closest("select")) return;
             window.location.href = `report-details.html?id=${report.id}&type=new`;
           });
-      
-          return; // ⛔ لا تكمل
+
+          const selectElement = card.querySelector("select.status-select");
+          selectElement.addEventListener("click", e => e.stopPropagation());
+          selectElement.addEventListener("change", e => {
+            e.stopPropagation();
+            updateReportStatus(report.id, e.target);
+          });
+
+          return;
         }
+
         const isRegular = report.maintenance_type === "Regular";
         const isTicketOnly = report.issue_summary?.includes("Ticket Created");
 
         let maintenanceLabel = "";
         let iconSrc = "";
-        
+
         if (isInternalTicket) {
           maintenanceLabel = "Internal Ticket";
           iconSrc = "/icon/ticket.png";
@@ -178,7 +200,7 @@ function loadReports(page = 1) {
           maintenanceLabel = "General Maintenance";
           iconSrc = "/icon/maintenance.png";
         }
-        
+
         let issueHtml = "";
         if (isTicketOnly) {
           issueHtml = `
@@ -197,22 +219,21 @@ function loadReports(page = 1) {
           }
 
           issueHtml = `
-          <ul style="margin-left: 20px;">
+            <ul style="margin-left: 20px;">
+              ${
+                Array.isArray(checklistItems) && checklistItems.length
+                  ? checklistItems.map(i => `<li>${i}</li>`).join("")
+                  : "<li>No issues listed</li>"
+              }
+            </ul>
             ${
-              Array.isArray(checklistItems) && checklistItems.length
-                ? checklistItems.map(i => `<li>${i}</li>`).join("")
-                : "<li>No issues listed</li>"
+              report.full_description
+                ? `<div style="margin-top:10px;background:#f2f2f2;padding:8px;border-radius:6px">
+                     <strong>Notes:</strong><br>${report.full_description}
+                   </div>`
+                : ""
             }
-          </ul>
-          ${
-            report.full_description
-              ? `<div style="margin-top:10px;background:#f2f2f2;padding:8px;border-radius:6px">
-                   <strong>Notes:</strong><br>${report.full_description}
-                 </div>`
-              : ""
-          }
-        `;
-        
+          `;
         } else {
           let issue = report.issue_summary || "";
           let diagnosis = report.full_description || "";
@@ -245,22 +266,19 @@ function loadReports(page = 1) {
             <img src="/icon/desktop.png" alt="device" />
             <span>${formatDateTime(report.created_at)}</span>
           </div>
-${ticketNumber ? `<p><strong>Ticket Number:</strong> ${ticketNumber}</p>` : ""}
+          ${ticketNumber ? `<p><strong>Ticket Number:</strong> ${ticketNumber}</p>` : ""}
           ${!isInternalTicket ? `<p><strong>Device:</strong> ${report.device_name || "N/A"}</p>` : ""}
           ${!isInternalTicket ? `<p><strong>Department:</strong> ${report.department_name || "N/A"}</p>` : ""}
-          
           ${!isTicketOnly ? `<p><strong>Issue:</strong><br>${issueHtml}</p>` : ""}
         `;
 
         container.appendChild(card);
 
-        // ✅ منع التنقل إذا كان الضغط على select
         card.addEventListener("click", (e) => {
           if (e.target.closest("select")) return;
           window.location.href = `report-details.html?id=${report.id}&type=internal`;
         });
 
-        // ✅ تحديث الحالة + منع انتشار الضغط
         const selectElement = card.querySelector("select.status-select");
         selectElement.addEventListener("click", e => e.stopPropagation());
         selectElement.addEventListener("change", e => {
@@ -269,7 +287,7 @@ ${ticketNumber ? `<p><strong>Ticket Number:</strong> ${ticketNumber}</p>` : ""}
         });
       });
 
-      updatePagination(page);
+      updatePagination(page, totalPages);
     })
     .catch(err => {
       console.error("❌ Error:", err);
@@ -279,15 +297,23 @@ ${ticketNumber ? `<p><strong>Ticket Number:</strong> ${ticketNumber}</p>` : ""}
 
 
 
-function updatePagination(currentPage) {
-  const paginationButtons = document.querySelectorAll(".pagination .page-btn");
-  paginationButtons.forEach(button => {
-    button.classList.remove("active");
-    if (button.dataset.page == currentPage) {
-      button.classList.add("active");
-    }
-  });
+
+function updatePagination(currentPage, totalPages) {
+  const paginationContainer = document.querySelector(".pagination");
+  if (!paginationContainer) return;
+
+  paginationContainer.innerHTML = "";
+
+  for (let i = 1; i <= totalPages; i++) {
+    const btn = document.createElement("button");
+    btn.textContent = i;
+    btn.className = `page-btn ${i == currentPage ? "active" : ""}`;
+    btn.dataset.page = i;
+    btn.addEventListener("click", () => loadReports(i));
+    paginationContainer.appendChild(btn);
+  }
 }
+
 
 function formatDateTime(dateStr) {
   const date = new Date(dateStr);
