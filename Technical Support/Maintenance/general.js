@@ -554,21 +554,29 @@ function openGenericPopup(label, targetId) {
     <label>Serial Number:</label><input type="text" id="spec-serial" />
     <label>Ministry Number:</label><input type="text" id="spec-ministry" />
   
-    <label>Model:</label>
-    <div class="dropdown-container">
-      <div class="dropdown-wrapper">
-        <select id="spec-model"></select>
-      </div>
-    </div>
+<label>Model:</label>
+<div class="dropdown-container">
+  <div class="search-container" id="search-container-spec-model" style="display: none;">
+    <input type="text" class="search-input" placeholder="Search..." />
+  </div>
+  <div class="dropdown-wrapper">
+    <select id="spec-model"></select>
+  </div>
+</div>
+
   
-    <label>Department:</label>
-    <div class="dropdown-container">
-      <div class="dropdown-wrapper">
-        <select id="spec-department">
-          <option value="" disabled selected>Loading departments...</option>
-        </select>
-      </div>
-    </div>
+<label>Department:</label>
+<div class="dropdown-container">
+  <div class="search-container" id="search-container-spec-department" style="display: none;">
+    <input type="text" class="search-input" placeholder="Search..." />
+  </div>
+  <div class="dropdown-wrapper">
+    <select id="spec-department">
+      <option value="" disabled selected>Loading departments...</option>
+    </select>
+  </div>
+</div>
+
   
     <input type="hidden" id="popup-target-id" value="${targetId}" />
   `;
@@ -882,6 +890,9 @@ function generateFieldsForDeviceType(type) {
 
   <label>Department:</label>
   <div class="dropdown-container">
+    <div class="search-container" id="search-container-department-${type}" style="display: none;">
+      <input type="text" class="search-input" placeholder="Search..." />
+    </div>
     <div class="dropdown-wrapper">
       <select name="department" id="department-${type}"></select>
     </div>
@@ -889,6 +900,9 @@ function generateFieldsForDeviceType(type) {
 
   <label>Model:</label>
   <div class="dropdown-container">
+    <div class="search-container" id="search-container-model-${type}" style="display: none;">
+      <input type="text" class="search-input" placeholder="Search..." />
+    </div>
     <div class="dropdown-wrapper">
       <select name="model" id="model-${type}"></select>
     </div>
@@ -900,34 +914,47 @@ function generateFieldsForDeviceType(type) {
   let deviceSpecificFields = '';
   if (type === "pc") {
     deviceSpecificFields = `
-  <label>Processor Generation:</label>
-  <div class="dropdown-container">
-    <div class="dropdown-wrapper">
-      <select name="generation" id="generation-select"></select>
+    <label>Processor Generation:</label>
+    <div class="dropdown-container">
+      <div class="search-container" id="search-container-generation-select" style="display: none;">
+        <input type="text" class="search-input" placeholder="Search..." />
+      </div>
+      <div class="dropdown-wrapper">
+        <select name="generation" id="generation-select"></select>
+      </div>
     </div>
-  </div>
-
-  <label>CPU:</label>
-  <div class="dropdown-container">
-    <div class="dropdown-wrapper">
-      <select name="processor" id="cpu-select"></select>
+  
+    <label>CPU:</label>
+    <div class="dropdown-container">
+      <div class="search-container" id="search-container-cpu-select" style="display: none;">
+        <input type="text" class="search-input" placeholder="Search..." />
+      </div>
+      <div class="dropdown-wrapper">
+        <select name="processor" id="cpu-select"></select>
+      </div>
     </div>
-  </div>
-
-  <label>RAM:</label>
-  <div class="dropdown-container">
-    <div class="dropdown-wrapper">
-      <select name="ram" id="ram-select"></select>
+  
+    <label>RAM:</label>
+    <div class="dropdown-container">
+      <div class="search-container" id="search-container-ram-select" style="display: none;">
+        <input type="text" class="search-input" placeholder="Search..." />
+      </div>
+      <div class="dropdown-wrapper">
+        <select name="ram" id="ram-select"></select>
+      </div>
     </div>
-  </div>
-
-  <label>OS:</label>
-  <div class="dropdown-container">
-    <div class="dropdown-wrapper">
-      <select name="os" id="os-select"></select>
+  
+    <label>OS:</label>
+    <div class="dropdown-container">
+      <div class="search-container" id="search-container-os-select" style="display: none;">
+        <input type="text" class="search-input" placeholder="Search..." />
+      </div>
+      <div class="dropdown-wrapper">
+        <select name="os" id="os-select"></select>
+      </div>
     </div>
-  </div>
-`;
+  `;
+  
 
   }
 
@@ -1545,17 +1572,28 @@ function openPopup(selectId, label) {
 // }
 
 // فتح/إغلاق حقل البحث
-function toggleSearch(selectId) {
+window.toggleSearch = function(selectId) {
   const container = document.getElementById(`search-container-${selectId}`);
+  if (!container) {
+    console.warn(`❌ search-container-${selectId} not found`);
+    return;
+  }
+
   container.style.display = container.style.display === "none" ? "block" : "none";
 
   const input = container.querySelector("input");
+  if (!input) {
+    console.warn(`❌ input not found inside search-container-${selectId}`);
+    return;
+  }
+
   input.value = "";
   input.focus();
 
   input.oninput = () => {
     const filter = input.value.toLowerCase();
     const select = document.getElementById(selectId);
+    if (!select) return;
 
     for (let i = 0; i < select.options.length; i++) {
       const option = select.options[i];
@@ -1563,7 +1601,9 @@ function toggleSearch(selectId) {
       option.style.display = shouldShow ? "block" : "none";
     }
   };
-}
+};
+
+
 function deleteOption(selectId) {
   const select = document.getElementById(selectId);
   const selectedIndex = select.selectedIndex;
@@ -1695,33 +1735,44 @@ function saveEditedOption(selectId, oldValue, label) {
 
 
 function activateGeneralDropdownTools(selectId, label) {
-  console.log(`🔧 Trying to activate icons for: ${selectId}`); // ✅ للتأكد من التنفيذ
-
   const container = document.getElementById(selectId)?.closest(".dropdown-container");
-  if (!container) {
-    console.warn(`❌ container not found for ${selectId}`);
-    return;
-  }
+  if (!container) return;
 
   const wrapper = container.querySelector(".dropdown-wrapper");
-  if (!wrapper) {
-    console.warn(`❌ wrapper not found for ${selectId}`);
-    return;
-  }
-
-  if (wrapper.querySelector(".icon-container")) {
-    console.warn(`⚠️ Icons already exist for ${selectId}`);
-    return;
-  }
+  if (!wrapper || wrapper.querySelector(".icon-container")) return;
 
   const iconBox = document.createElement("div");
   iconBox.className = "icon-container";
 
-  iconBox.innerHTML = `
-    <img src="/icon/search.png" alt="Search" class="search-icon" onclick="toggleSearch('${selectId}')">
-    <img src="/icon/edit.png" alt="Edit" class="edit-icon" onclick="event.stopPropagation(); openPopup('${selectId}', '${label}')">
-    <img src="/icon/trash.png" alt="Delete" class="trash-icon" onclick="event.stopPropagation(); deleteOption('${selectId}')">
-  `;
+  const searchIcon = document.createElement("img");
+  searchIcon.src = "/icon/search.png";
+  searchIcon.alt = "Search";
+  searchIcon.className = "search-icon";
+  searchIcon.style.cursor = "pointer";
+  searchIcon.addEventListener("click", () => toggleSearch(selectId));
+  iconBox.appendChild(searchIcon);
+
+  const editIcon = document.createElement("img");
+  editIcon.src = "/icon/edit.png";
+  editIcon.alt = "Edit";
+  editIcon.className = "edit-icon";
+  editIcon.style.cursor = "pointer";
+  editIcon.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openPopup(selectId, label);
+  });
+  iconBox.appendChild(editIcon);
+
+  const trashIcon = document.createElement("img");
+  trashIcon.src = "/icon/trash.png";
+  trashIcon.alt = "Delete";
+  trashIcon.className = "trash-icon";
+  trashIcon.style.cursor = "pointer";
+  trashIcon.addEventListener("click", (e) => {
+    e.stopPropagation();
+    deleteOption(selectId);
+  });
+  iconBox.appendChild(trashIcon);
 
   wrapper.appendChild(iconBox);
 }
