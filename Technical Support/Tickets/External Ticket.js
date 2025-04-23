@@ -101,66 +101,7 @@ fetch("http://localhost:5050/upload", {
 }
 
 // Function to open the popup modal with validation and prefill the data from the dropdown
-function openPopup(dropdownId, popupTitle) {
-// Get the dropdown (select element) using the provided id
-var selectElement = document.getElementById(dropdownId);
-if (!selectElement) {
-    console.error("Dropdown element not found: " + dropdownId);
-    return;
-}
 
-// Retrieve the selected value. If the user has not selected any option,
-// the value will be an empty string (because the first option is both disabled and has an empty value)
-var selectedValue = selectElement.value;
-
-// If no valid option is selected, display an inline error message below the dropdown
-if (!selectedValue) {
-    // Check if an error message is already displayed
-    var errorMsg = selectElement.parentElement.querySelector('.inline-error');
-    if (!errorMsg) {
-        errorMsg = document.createElement('span');
-        errorMsg.className = 'inline-error';
-        errorMsg.innerText = 'You must select from the dropdown.';
-        // Append the error message to the dropdown container
-        var container = selectElement.closest('.dropdown-container');
-        container.appendChild(errorMsg);
-        // Remove the error message after 1.5 seconds
-        setTimeout(function() {
-            errorMsg.remove();
-        }, 1500);
-    }
-    return;
-} else {
-    // Remove any inline error message if it exists
-    var existingError = selectElement.parentElement.querySelector('.inline-error');
-    if (existingError) {
-        existingError.remove();
-    }
-
-    // Prefill the popup modal with the selected information
-    document.getElementById('popup-title').innerText = 'Edit ' + popupTitle;
-    var popupFields = document.getElementById('popup-fields');
-    // Clear any previous content in the popup form fields section
-    popupFields.innerHTML = '';
-
-    // Create a label for the popup input field
-    var fieldLabel = document.createElement('label');
-    fieldLabel.innerText = popupTitle + ':';
-
-    // Create an input element and prefill it with the selected value
-    var fieldInput = document.createElement('input');
-    fieldInput.type = 'text';
-    fieldInput.value = selectedValue;
-    fieldInput.id = dropdownId + '-input';
-
-    // Append the label and input into the popup content area
-    popupFields.appendChild(fieldLabel);
-    popupFields.appendChild(fieldInput);
-
-    // Display the popup modal with Flex to correctly center the content
-    document.getElementById('popup-modal').style.display = 'flex';
-}
-}
 
 // Function to close the popup modal
 function closePopup() {
@@ -332,3 +273,61 @@ for (var i = 0; i < selectElement.options.length; i++) {
 selectElement.selectedIndex = 0;
 }
 
+
+// 📌 لما المستخدم يختار "+ Add New Section" من القائمة
+document.getElementById("section").addEventListener("change", function () {
+  if (this.value === "add-custom") {
+    this.selectedIndex = 0; // ترجع الاختيار
+    showSectionPopup();     // تفتح البوب أب
+  }
+});
+
+// 📌 دالة لعرض البوب أب وإعداده
+function showSectionPopup() {
+  document.getElementById("popup-title").textContent = "Add New Section";
+
+  const popupFields = document.getElementById("popup-fields");
+  popupFields.innerHTML = `
+    <label for="popup-input">Section:</label>
+    <input type="text" id="popup-input" placeholder="Enter new section name">
+  `;
+
+  document.getElementById("popup-modal").style.display = "flex";
+
+  setTimeout(() => document.getElementById("popup-input").focus(), 100);
+}
+
+// 📌 دالة لإغلاق البوب أب
+function closePopup() {
+  document.getElementById("popup-modal").style.display = "none";
+}
+
+// 📌 حفظ القسم الجديد داخل الـ dropdown
+document.getElementById("popup-save-btn").addEventListener("click", function () {
+  const input = document.getElementById("popup-input");
+  const newValue = input.value.trim();
+  const dropdown = document.getElementById("section");
+
+  if (newValue !== "") {
+    // تحقق إذا موجود مسبقًا
+    const exists = Array.from(dropdown.options).some(opt => opt.value === newValue);
+    if (!exists) {
+      const option = document.createElement("option");
+      option.value = newValue;
+      option.textContent = newValue;
+
+      const addOptionIndex = Array.from(dropdown.options).findIndex(opt => opt.value === "add-custom");
+      if (addOptionIndex !== -1) {
+        dropdown.insertBefore(option, dropdown.options[addOptionIndex]);
+      } else {
+        dropdown.appendChild(option);
+      }
+    }
+
+    dropdown.value = newValue;
+    dropdown.dispatchEvent(new Event("change", { bubbles: true }));
+    closePopup();
+  } else {
+    alert("❌ Please enter a valid section name");
+  }
+});

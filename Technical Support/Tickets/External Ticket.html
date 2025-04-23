@@ -62,7 +62,7 @@
             <select id="section">
               <option value="" disabled selected>Select section</option>
               <option value="add-custom">+ Add New Section</option>
-            </select>
+            </select>            
             <div class="icons-container">
               <img src="/icon/search.png" alt="Search Icon" onclick="toggleSearch('section')">
               <img src="/icon/edit.png" alt="Edit Icon" onclick="openPopup('section', 'Section')">
@@ -122,20 +122,21 @@
       <button type="submit" class="submit-btn">Save Ticket</button>
     </form>
   </div>
-
-  <!-- Popup -->
-  <div id="popup-modal" class="popup-modal" style="display:none;">
-    <div class="popup-content">
-      <h2 id="popup-title">Enter</h2>
-      <div id="popup-fields">
-        <p>No fields available for this device type.</p>
-      </div>
-      <div class="popup-buttons">
-        <button id="popup-save-btn">Save</button>
-        <button onclick="closePopup()">Cancel</button>
-      </div>
+<!-- Popup Modal for Adding New Section -->
+<div id="popup-modal" class="popup-modal">
+  <div class="popup-content">
+    <h2 id="popup-title">Add New Section</h2>
+    <div id="popup-fields">
+      <label for="popup-input">Section:</label>
+      <input type="text" id="popup-input" placeholder="Enter new section name">
+    </div>
+    <div class="popup-buttons">
+      <button id="popup-save-btn">Save</button>
+      <button onclick="closePopup()">Cancel</button>
     </div>
   </div>
+</div>
+
 
   <script src="External Ticket.js"></script>
 </body>
