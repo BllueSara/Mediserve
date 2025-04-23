@@ -20,7 +20,7 @@ document.querySelector(".back-button").addEventListener("click", () => window.hi
 
 
 
-fetch("http://10.99.28.16:5050/Departments")
+fetch("http://localhost:5050/Departments")
 .then(res => res.json())
 .then(data => {
 const dropdown = document.getElementById("section");
@@ -85,7 +85,7 @@ for (let i = 0; i < files.length; i++) {
 
 // إرسال الملفات للسيرفر عبر طلب POST باستخدام fetch
 // تأكد من تعديل الرابط التالي (URL) ليناسب إعدادات السيرفر لديك
-fetch("http://10.99.28.16:5050/upload", {
+fetch("http://localhost:5050/upload", {
   method: "POST",
   body: formData
 })
