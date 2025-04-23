@@ -816,19 +816,34 @@ app.get("/report/:id", (req, res) => {
     });
 
   } else if (reportType === "new") {
-    // ✅ جلب تقرير NEW وقراءة التفاصيل من JSON
-    const sql = `SELECT * FROM New_Maintenance_Reports WHERE id = ? LIMIT 1`;
+    const sql = `
+SELECT 
+  r.*, 
+  d.name AS department_name,
+  COALESCE(pc.model_name, pr.model_name, sc.model_name) AS model_name,
+  cpu.cpu_name,
+  ram.ram_type,
+  os.os_name,
+  gen.generation_number
+FROM New_Maintenance_Report r
+LEFT JOIN Departments d ON r.department_id = d.id
+LEFT JOIN PC_Model pc ON r.device_type = 'PC' AND r.model_id = pc.id
+LEFT JOIN Printer_Model pr ON r.device_type = 'Printer' AND r.model_id = pr.id
+LEFT JOIN Scanner_Model sc ON r.device_type = 'Scanner' AND r.model_id = sc.id
+LEFT JOIN CPU_Types cpu ON r.cpu_id = cpu.id
+LEFT JOIN RAM_Types ram ON r.ram_id = ram.id
+LEFT JOIN OS_Types os ON r.os_id = os.id
+LEFT JOIN Processor_Generations gen ON r.generation_id = gen.id
+WHERE r.id = ? LIMIT 1
+
+    `;
+  
     db.query(sql, [reportId], (err, result) => {
       if (err) return res.status(500).json({ error: "Server error" });
       if (!result.length) return res.status(404).json({ error: "New maintenance report not found" });
-
+  
       const r = result[0];
-      let parsedDetails = {};
-      try {
-        parsedDetails = JSON.parse(r.details || '{}');
-      } catch (e) {
-        console.warn("⚠️ Failed to parse JSON details");
-      }
+      console.log("📦 Loaded report row:", r);
 
       return res.json({
         id: r.id,
@@ -838,59 +853,90 @@ app.get("/report/:id", (req, res) => {
         priority: r.priority,
         status: r.status,
         maintenance_type: "New",
-        details: r.details || "", // 👈 رجعها كـ string عادي
+        issue_summary: r.issue_summary || "", //ssss
+        details: r.details || "",
+        assigned_to: r.assigned_to || "", //sss
         attachment_name: r.attachment_name,
         attachment_path: r.attachment_path,
         signature_path: r.signature_path || null,
-
+        department_name: r.department_name,
+        device_name: r.device_name,
+        serial_number: r.serial_number,
+        governmental_number: r.governmental_number,
+        model_name: r.model_name,
+        cpu_name: r.cpu_name,
+        ram_type: r.ram_type,
+        os_name: r.os_name,
+        generation_number: r.generation_number,
         source: "new"
       });
     });
-
-  } else {
+  }
+   else {
     // ✅ داخلي (Internal)
     const sql = `
-      SELECT 
-        mr.id AS report_id,
-        mr.report_number,
-          mr.report_type,         -- ✅ هذا السطر مهم
+SELECT 
+  mr.id AS report_id,
+  mr.report_number,
+  mr.report_type,
+  mr.status,
+  mr.created_at,
+  mr.issue_summary,
+  mr.full_description,
+  mr.maintenance_type,
 
-        mr.status,
-        mr.created_at,
-        mr.issue_summary,
-        mr.full_description,
-        mr.maintenance_type,
+  md.device_type,
+  md.serial_number,
+  md.governmental_number,
+  COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
+  d.name AS department_name,
+  it.ticket_number,
+  it.priority,
+  it.assigned_to AS technical,
 
-        md.device_type,
-        md.serial_number,
-        md.governmental_number,
-        COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
-        d.name AS department_name,
-it.ticket_number,
+  -- PC مواصفات
+  pc_os.os_name,
+  cpu.cpu_name,
+  gen.generation_number,
+  ram.ram_type,
 
-        it.priority,
-        it.assigned_to AS technical,
+  -- موديل مشترك
+  COALESCE(
+    pcm.model_name,
+    prm.model_name,
+    scm.model_name,
+    mdm_fixed.model_name
+  ) AS model_name
 
-        pc_os.os_name,
-        cpu.cpu_name,
-        gen.generation_number,
-        ram.ram_type,
-        model.model_name
+FROM Maintenance_Reports mr
+LEFT JOIN Maintenance_Devices md ON mr.device_id = md.id
+LEFT JOIN Departments d ON md.department_id = d.id
+LEFT JOIN Internal_Tickets it ON mr.ticket_id = it.id
 
-      FROM Maintenance_Reports mr
-      LEFT JOIN Maintenance_Devices md ON mr.device_id = md.id
-      LEFT JOIN Departments d ON md.department_id = d.id
-      LEFT JOIN Internal_Tickets it ON mr.ticket_id = it.id
-      LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number
-      LEFT JOIN CPU_Types cpu ON pc.Processor_id = cpu.id
-      LEFT JOIN RAM_Types ram ON pc.RAM_id = ram.id
-      LEFT JOIN OS_Types pc_os ON pc.OS_id = pc_os.id
-      LEFT JOIN Processor_Generations gen ON pc.Generation_id = gen.id
-      LEFT JOIN PC_Model model ON pc.Model_id = model.id
-      LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number
-      LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number
-      WHERE mr.id = ?
-    `;
+-- PC
+LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number
+LEFT JOIN CPU_Types cpu ON pc.Processor_id = cpu.id
+LEFT JOIN RAM_Types ram ON pc.RAM_id = ram.id
+LEFT JOIN OS_Types pc_os ON pc.OS_id = pc_os.id
+LEFT JOIN Processor_Generations gen ON pc.Generation_id = gen.id
+LEFT JOIN PC_Model pcm ON pc.Model_id = pcm.id
+
+-- Printer
+LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number
+LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
+
+-- Scanner
+LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number
+LEFT JOIN Scanner_Model scm ON sc.Model_id = scm.id
+
+-- 🆕 موديلات مخصصة لأي جهاز غير PC/Printer/Scanner (عن طريق الربط بـ model_id)
+LEFT JOIN Maintance_Device_Model mdm_fixed ON md.model_id = mdm_fixed.id
+
+WHERE mr.id = ?
+
+
+  `;
+  
 
     db.query(sql, [reportId], (err2, result2) => {
       if (err2) return res.status(500).json({ error: "Server error" });
@@ -1524,7 +1570,7 @@ app.get('/get-internal-reports', (req, res) => {
       'new' AS source,
       attachment_name,
       attachment_path
-    FROM New_Maintenance_Reports
+    FROM New_Maintenance_Report
   `;
 
   const combinedSql = `${internalSql} UNION ALL ${newSql} ORDER BY created_at DESC`;
@@ -1538,13 +1584,18 @@ app.get('/get-internal-reports', (req, res) => {
   });
 });
 
-
-app.post("/update-report-full", upload.single("attachment"), (req, res) => {
+app.post("/update-report-full", upload.single("attachment"), async (req, res) => {
   const updatedData = JSON.parse(req.body.data || "{}");
-
+  console.log("📩 Received update data:", updatedData);
+  if (req.file) {
+    console.log("📎 Received file:", req.file.originalname);
+  }
+  
   const {
     id, issue_summary, full_description, priority, status, device_type,
-    technical, department_name, category, source
+    technical, department_name, category, source,
+    device_id, device_name, serial_number, governmental_number,
+    cpu_name, ram_type, os_name, generation_number, model_name
   } = updatedData;
 
   const attachmentFile = req.file;
@@ -1553,61 +1604,266 @@ app.post("/update-report-full", upload.single("attachment"), (req, res) => {
     return res.status(400).json({ error: "Missing source type" });
   }
 
-  if (source === "new") {
-    const updateNewSql = `UPDATE New_Maintenance_Reports 
-      SET priority = ?, status = ?, device_type = ?${attachmentFile ? ", attachment_name = ?, attachment_path = ?" : ""}
+  try {
+    const departmentId = await getId("Departments", "name", department_name);
+    const modelId = await getModelId(device_type, model_name);
+
+    const isPC = device_type?.toLowerCase() === "pc";
+    let cpuId, ramId, osId, generationId;
+
+    if (isPC) {
+      cpuId = await getId("CPU_Types", "cpu_name", cpu_name);
+      ramId = await getId("RAM_Types", "ram_type", ram_type);
+      osId = await getId("OS_Types", "os_name", os_name);
+      generationId = await getId("Processor_Generations", "generation_number", generation_number);
+    }
+
+    // ✅ تحديث تقرير جديد
+    if (source === "new") {
+      const updateSql = `
+      UPDATE New_Maintenance_Report
+      SET
+      issue_summary = ?, details = ?, assigned_to = ?, 
+        priority = ?, status = ?, device_type = ?,
+        device_name = ?, serial_number = ?, governmental_number = ?,
+        department_id = ?, model_id = ?,
+        ${isPC ? "cpu_id = ?, ram_id = ?, os_id = ?, generation_id = ?," : ""}
+        ${attachmentFile ? "attachment_name = ?, attachment_path = ?," : ""}
+        details = ?
       WHERE id = ?`;
+    
+    
 
-    const values = attachmentFile
-      ? [priority, status, device_type, attachmentFile.originalname, attachmentFile.filename, id]
-      : [priority, status, device_type, id];
+      const values = [
+        issue_summary, full_description, technical,
+        priority, status, device_type,
+        device_name, serial_number, governmental_number,
+        departmentId, modelId
+      ];
 
-    db.query(updateNewSql, values, (err) => {
-      if (err) {
-        console.error("❌ Failed to update new report:", err);
-        return res.status(500).json({ error: "Failed to update new report" });
+      if (isPC) {
+        values.push(
+          cpuId || null,
+          ramId || null,
+          osId || null,
+          generationId || null
+        );
       }
-      return res.json({ message: "✅ New report updated successfully" });
-    });
+            if (attachmentFile) values.push(attachmentFile.originalname, `uploads/${attachmentFile.filename}`);
+      values.push(full_description?.trim() || null, id);
 
-  } else if (source === "internal") {
-    const updateReportSql = `
-      UPDATE Maintenance_Reports 
-      SET issue_summary = ?, full_description = ?, status = ?, report_type = ?
-      ${attachmentFile ? ", attachment_name = ?, attachment_path = ?" : ""}
-      WHERE id = ?`;
+      const [result] = await db.promise().query(updateSql, values);
+      console.log("✅ Updated rows:", result.affectedRows);
+          }
 
-    const reportValues = attachmentFile
-      ? [issue_summary, full_description, status, category, attachmentFile.originalname, attachmentFile.filename, id]
-      : [issue_summary, full_description, status, category, id];
+    // ✅ تحديث بلاغ داخلي
+    if (source === "internal") {
+      const updateReportSql = `
+        UPDATE Maintenance_Reports 
+        SET issue_summary = ?, full_description = ?, status = ?, report_type = ?
+        ${attachmentFile ? ", attachment_name = ?, attachment_path = ?" : ""}
+        WHERE id = ?`;
 
-    db.query(updateReportSql, reportValues, (err) => {
-      if (err) {
-        console.error("❌ Failed to update maintenance report:", err);
-        return res.status(500).json({ error: "Failed to update maintenance report" });
-      }
+      const reportValues = attachmentFile
+        ? [issue_summary, full_description, status, category, attachmentFile.originalname, attachmentFile.filename, id]
+        : [issue_summary, full_description, status, category, id];
+
+      await db.promise().query(updateReportSql, reportValues);
 
       const updateTicketSql = `
         UPDATE Internal_Tickets 
         SET priority = ?, assigned_to = ?, status = ? 
         WHERE id = (SELECT ticket_id FROM Maintenance_Reports WHERE id = ?)`;
 
-      const ticketValues = [priority, technical, status, id];
+      await db.promise().query(updateTicketSql, [priority, technical, status, id]);
+    }
 
-      db.query(updateTicketSql, ticketValues, (err2) => {
-        if (err2) {
-          console.error("❌ Failed to update internal ticket:", err2);
-          return res.status(500).json({ error: "Failed to update internal ticket" });
+    let actualDeviceId = device_id;
+
+    // لو ما فيه device_id، نبحث عنه يدويًا باستخدام السيريال
+    if (!actualDeviceId && serial_number) {
+      const [rows] = await db.promise().query(
+        `SELECT id FROM Maintenance_Devices WHERE serial_number = ? LIMIT 1`,
+        [serial_number]
+      );
+      if (rows.length > 0) {
+        actualDeviceId = rows[0].id;
+      }
+    }
+        if (actualDeviceId) {
+      const isOtherDevice = !["pc", "printer", "scanner"].includes(device_type?.toLowerCase());
+
+      if (isOtherDevice && actualDeviceId) {
+        const updateUnknownSql = `
+          UPDATE Maintenance_Devices 
+          SET device_type = ?, device_name = ?, serial_number = ?, 
+              governmental_number = ?, department_id = ?, model_id = ?
+          WHERE id = ?`;
+      
+        await db.promise().query(updateUnknownSql, [
+          device_type, device_name, serial_number,
+          governmental_number, departmentId, modelId,
+          actualDeviceId
+        ]);
+      
+        console.log("🔎 Final Device ID used for update:", actualDeviceId);
+      }
+      const updateSharedTables = async () => {
+        const updates = {
+          device_name,
+          serial_number,
+          governmental_number,
+          department_name: department_name,
+          model_name,
+          cpu_name,
+          ram_type,
+          os_name,
+          generation_number
+        };
+      
+        // General_Maintenance
+        await db.promise().query(`
+          UPDATE General_Maintenance 
+          SET 
+            device_name = ?, serial_number = ?, governmental_number = ?, department_name = ?,
+            model_name = ?, cpu_name = ?, ram_type = ?, os_name = ?, generation_number = ?
+          WHERE device_id = ?
+        `, [
+          updates.device_name, updates.serial_number, updates.governmental_number, updates.department_name,
+          updates.model_name, updates.cpu_name, updates.ram_type, updates.os_name, updates.generation_number,
+          actualDeviceId
+        ]);
+      
+        // Regular_Maintenance
+        await db.promise().query(`
+          UPDATE Regular_Maintenance 
+          SET 
+            device_name = ?, serial_number = ?, governmental_number = ?, department_name = ?,
+            model_name = ?, cpu_name = ?, ram_type = ?, os_name = ?, generation_number = ?
+          WHERE device_id = ?
+        `, [
+          updates.device_name, updates.serial_number, updates.governmental_number, updates.department_name,
+          updates.model_name, updates.cpu_name, updates.ram_type, updates.os_name, updates.generation_number,
+          actualDeviceId
+        ]);
+      
+        // External_Maintenance (based on serial_number)
+        await db.promise().query(`
+          UPDATE External_Maintenance 
+          SET 
+            device_name = ?, governmental_number = ?, department_name = ?,
+            model_name = ?, cpu_name = ?, ram_type = ?, os_name = ?, generation_number = ?
+          WHERE serial_number = ?
+        `, [
+          updates.device_name, updates.governmental_number, updates.department_name,
+          updates.model_name, updates.cpu_name, updates.ram_type, updates.os_name, updates.generation_number,
+          updates.serial_number
+        ]);
+      };
+      
+
+// نادِ الفنكشن
+await updateSharedTables();
+
+      const updates = [
+        "device_type = ?",
+        "device_name = ?",
+        "serial_number = ?",
+        "governmental_number = ?",
+        "department_id = ?",
+        "model_id = ?"
+      ];
+      const values = [
+        device_type, device_name, serial_number,
+        governmental_number, departmentId, modelId
+      ];
+
+      if (isPC) {
+        updates.push("cpu_id = ?", "ram_id = ?", "os_id = ?", "generation_id = ?");
+        values.push(cpuId, ramId, osId, generationId);
+      }
+
+      if (actualDeviceId) {
+        const sql = `UPDATE Maintenance_Devices SET ${updates.join(", ")} WHERE id = ?`;
+        values.push(actualDeviceId);
+        const [deviceResult] = await db.promise().query(sql, values);
+        console.log("🔧 Device updated rows:", deviceResult.affectedRows);
+      }
+
+          } else {
+      // ✅ تحديث جداول info حسب النوع والسيريال إذا الجهاز موجود فقط فيها
+      const tables = {
+        pc: "PC_info",
+        printer: "Printer_info",
+        scanner: "Scanner_info"
+      };
+      const table = tables[device_type?.toLowerCase()];
+
+      if (table) {
+        const [rows] = await db.promise().query(
+          `SELECT Serial_Number FROM ${table} WHERE Serial_Number = ?`,
+          [serial_number]
+        );
+
+        if (rows.length > 0) {
+          const updateFields = [
+            table === "PC_info" ? "Computer_Name = ?" : `${device_type}_Name = ?`,
+            "Governmental_Number = ?",
+            "Department = ?",
+            "Model_id = ?"
+          ];
+          const values = [
+            device_name, governmental_number, departmentId, modelId
+          ];
+
+          if (table === "PC_info") {
+            updateFields.push("Processor_id = ?", "RAM_id = ?", "OS_id = ?", "Generation_id = ?");
+            values.push(cpuId, ramId, osId, generationId);
+          }
+
+          const sql = `UPDATE ${table} SET ${updateFields.join(", ")} WHERE Serial_Number = ?`;
+          values.push(serial_number);
+          await db.promise().query(sql, values);
         }
+      }
+    }
 
-        return res.json({ message: "✅ Internal ticket and report updated successfully" });
-      });
-    });
-
-  } else {
-    return res.status(400).json({ error: "Unsupported report type" });
+    return res.json({ message: "✅ Report and related device updated successfully" });
+  } catch (err) {
+    console.error("❌ Error during update:", err);
+    return res.status(500).json({ error: "Server error during update" });
   }
 });
+
+
+// 🔁 دوال المساعدة
+const getModelId = async (type, modelName) => {
+  if (!modelName || !type) return null;
+
+  const lower = type.toLowerCase();
+
+  if (lower === "pc") return getId("PC_Model", "model_name", modelName);
+  if (lower === "printer") return getId("Printer_Model", "model_name", modelName);
+  if (lower === "scanner") return getId("Scanner_Model", "model_name", modelName);
+
+  // ✅ تحقق إذا الموديل موجود في Maintance_Device_Model
+  const [existing] = await db.promise().query(
+    `SELECT id FROM Maintance_Device_Model WHERE model_name = ? AND device_type_name = ? LIMIT 1`,
+    [modelName.trim(), type.trim()]
+  );
+
+  if (existing.length > 0) return existing[0].id;
+
+  // 🆕 إذا غير موجود نضيفه تلقائيًا
+  const [insert] = await db.promise().query(
+    `INSERT INTO Maintance_Device_Model (model_name, device_type_name) VALUES (?, ?)`,
+    [modelName.trim(), type.trim()]
+  );
+
+  console.log("🆕 Inserted new model:", modelName, "for", type);
+  return insert.insertId;
+};
+
 
 
 
@@ -2105,48 +2361,87 @@ app.get("/ticket-types", (req, res) => {
   });
 });
 
-
 app.post("/submit-new-report", upload.fields([
   { name: "attachment", maxCount: 1 },
   { name: "signature", maxCount: 1 }
-]), (req, res) => {
+]), async (req, res) => {
   const {
     report_type,
     device_type,
     priority,
-    details // ✅ الآن نستقبل الوصف كـ details
+    details,
+    device_name,
+    serial_number,
+    governmental_number,
+    department_name,
+    cpu_name,
+    ram_type,
+    os_name,
+    generation_number,
+    model_name
   } = req.body;
 
   const attachment = req.files?.attachment?.[0] || null;
-const signature = req.files?.signature?.[0] || null;
+  const signature = req.files?.signature?.[0] || null;
 
-const attachmentName = attachment?.originalname || null;
-const attachmentPath = attachment ? `uploads/${attachment.filename}` : null;
-const signaturePath = signature ? `uploads/${signature.filename}` : null;
+  const attachmentName = attachment?.originalname || null;
+  const attachmentPath = attachment ? `uploads/${attachment.filename}` : null;
+  const signaturePath = signature ? `uploads/${signature.filename}` : null;
 
-  const sql = `
-    INSERT INTO New_Maintenance_Reports 
-    (report_type, device_type, priority, attachment_name, attachment_path, signature_path, details)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `;
+  try {
+    const insertReportSql = `
+      INSERT INTO New_Maintenance_Report (
+        report_type, device_type, priority, status,
+        attachment_name, attachment_path, signature_path,
+        details, device_id, department_id, model_id,
+        ${device_type.toLowerCase() === "pc" ? "cpu_id, ram_id, os_id, generation_id," : ""}
+        device_name, serial_number, governmental_number
+      )
+      VALUES (?, ?, ?, 'Open', ?, ?, ?, ?, NULL, ?, ?, 
+        ${device_type.toLowerCase() === "pc" ? "?, ?, ?, ?," : ""}
+        ?, ?, ?
+      )
+    `;
 
-  db.query(sql, [
-    report_type,
-    device_type,
-    priority || "Medium",
-    attachmentName,
-    attachmentPath,
-    signaturePath,
-    details?.trim() || null // ✅ تأكد إنها سترينق نظيف، أو null
-  ], (err, result) => {
-    if (err) {
-      console.error("❌ Error inserting new report:", err);
-      return res.status(500).json({ error: "Database insert error" });
+    const insertParams = [
+      report_type,
+      device_type,
+      priority || "Medium",
+      attachmentName,
+      attachmentPath,
+      signaturePath,
+      details?.trim() || null,
+      await getId("Departments", "name", department_name),
+      await getId("PC_Model", "model_name", model_name)
+    ];
+
+    if (device_type.toLowerCase() === "pc") {
+      insertParams.push(
+        await getId("CPU_Types", "cpu_name", cpu_name),
+        await getId("RAM_Types", "ram_type", ram_type),
+        await getId("OS_Types", "os_name", os_name),
+        await getId("Processor_Generations", "generation_number", generation_number)
+      );
     }
 
-    res.json({ message: "✅ New report saved successfully", id: result.insertId });
-  });
+    insertParams.push(device_name || null, serial_number || null, governmental_number || null);
+
+    await db.promise().query(insertReportSql, insertParams);
+
+    res.json({ message: "✅ Report saved successfully" });
+
+  } catch (err) {
+    console.error("❌ Error saving report:", err);
+    res.status(500).json({ error: "Server error during insert" });
+  }
 });
+
+// دالة جلب ID من جدول معين
+const getId = async (table, column, value) => {
+  if (!value) return null;
+  const [rows] = await db.promise().query(`SELECT id FROM ${table} WHERE ${column} = ? LIMIT 1`, [value]);
+  return rows[0]?.id || null;
+};
 
 
 
