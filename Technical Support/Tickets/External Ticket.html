@@ -55,8 +55,8 @@
       <div class="form-group">
         <label>Section <span class="required">*</span></label>
         <div class="dropdown-container">
-          <div class="search-container" id="search-container-section" style="display: none;">
-            <input type="text" class="search-input" id="search-section" placeholder="Search...">
+          <div class="search-container" style="display: none;">
+            <input type="text" class="search-input" placeholder="Search...">
           </div>
           <div class="dropdown-wrapper">
             <select id="section">
@@ -64,15 +64,16 @@
               <option value="add-custom">+ Add New Section</option>
             </select>
             <div class="icons-container">
-              <img src="/icon/search.png" alt="Search Icon" class="search-icon" onclick="toggleSearch('section')">
-              <img src="/icon/edit.png" alt="Edit Icon" class="edit-icon" onclick="event.stopPropagation(); openPopup('section', 'Section')">
-              <img src="/icon/trash.png" alt="Trash Icon" class="trash-icon" onclick="event.stopPropagation(); deleteOption('section')">
+              <img src="/icon/search.png" alt="Search Icon" onclick="toggleSearch('section')">
+              <img src="/icon/edit.png" alt="Edit Icon" onclick="openPopup('section', 'Section')">
+              <img src="/icon/trash.png" alt="Trash Icon" onclick="deleteOption('section')">
             </div>
           </div>
         </div>
       </div>
+      
 
-      <!-- Email Upload -->
+      <!-- Upload Email -->
       <div class="form-group">
         <label>Upload a Copy of the Email</label>
         <div id="drop-area" class="upload-box">
@@ -122,7 +123,7 @@
     </form>
   </div>
 
-  <!-- Popup Modal -->
+  <!-- Popup -->
   <div id="popup-modal" class="popup-modal" style="display:none;">
     <div class="popup-content">
       <h2 id="popup-title">Enter</h2>
@@ -136,8 +137,6 @@
     </div>
   </div>
 
-  <!-- External JS -->
   <script src="External Ticket.js"></script>
-
 </body>
 </html>
