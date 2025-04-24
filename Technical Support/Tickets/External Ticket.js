@@ -273,7 +273,6 @@ for (var i = 0; i < selectElement.options.length; i++) {
 selectElement.selectedIndex = 0;
 }
 
-
 // 📌 لما المستخدم يختار "+ Add New Section" من القائمة
 document.getElementById("section").addEventListener("change", function () {
   if (this.value === "add-custom") {
@@ -302,32 +301,60 @@ function closePopup() {
   document.getElementById("popup-modal").style.display = "none";
 }
 
-// 📌 حفظ القسم الجديد داخل الـ dropdown
+// 📌 حفظ القسم الجديد داخل الـ dropdown + حفظه في السيرفر
 document.getElementById("popup-save-btn").addEventListener("click", function () {
   const input = document.getElementById("popup-input");
   const newValue = input.value.trim();
   const dropdown = document.getElementById("section");
 
-  if (newValue !== "") {
-    // تحقق إذا موجود مسبقًا
-    const exists = Array.from(dropdown.options).some(opt => opt.value === newValue);
-    if (!exists) {
-      const option = document.createElement("option");
-      option.value = newValue;
-      option.textContent = newValue;
+  if (newValue === "") {
+    alert("❌ Please enter a valid section name");
+    return;
+  }
 
-      const addOptionIndex = Array.from(dropdown.options).findIndex(opt => opt.value === "add-custom");
-      if (addOptionIndex !== -1) {
-        dropdown.insertBefore(option, dropdown.options[addOptionIndex]);
-      } else {
-        dropdown.appendChild(option);
-      }
+  // تحقق إذا القسم موجود مسبقًا في الواجهة
+  const exists = Array.from(dropdown.options).some(opt => opt.value === newValue);
+  if (exists) {
+    alert("⚠️ This section already exists");
+    return;
+  }
+
+  // ✅ أرسل الاسم للسيرفر لحفظه في قاعدة البيانات
+  fetch("http://localhost:5050/add-department", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ value: newValue })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.error) {
+      alert("❌ " + data.error);
+      return;
     }
 
+    // ✅ أضف القسم الجديد للقائمة في الواجهة
+    const option = document.createElement("option");
+    option.value = newValue;
+    option.textContent = newValue;
+
+    const addOptionIndex = Array.from(dropdown.options).findIndex(opt => opt.value === "add-custom");
+    if (addOptionIndex !== -1) {
+      dropdown.insertBefore(option, dropdown.options[addOptionIndex]);
+    } else {
+      dropdown.appendChild(option);
+    }
+
+    // حدده كقيمة مختارة
     dropdown.value = newValue;
     dropdown.dispatchEvent(new Event("change", { bubbles: true }));
+
+    // أغلق النافذة
     closePopup();
-  } else {
-    alert("❌ Please enter a valid section name");
-  }
+  })
+  .catch(err => {
+    console.error("❌ Error saving section:", err);
+    alert("❌ Failed to save to server");
+  });
 });
