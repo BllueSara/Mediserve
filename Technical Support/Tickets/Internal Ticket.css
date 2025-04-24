@@ -467,3 +467,55 @@ textarea {
   margin-top: 5px;  /* مسافة بسيطة بين الدروب داون والرسالة */
   text-align: left;  /* محاذاة النص لليسار */
 }
+
+
+.form-group {
+  margin-bottom: 1.2rem;
+}
+
+label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 0.4rem;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.required {
+  color: red;
+  font-weight: normal;
+}
+
+.dropdown-container {
+  position: relative;
+}
+
+select {
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 1rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  appearance: none; /* لإزالة السهم الافتراضي */
+  background-color: #fff;
+}
+
+.icon-container {
+  position: absolute;
+  top: 50%;
+  right: 0.5rem;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 0.3rem;
+}
+
+.icon-container img {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.icon-container img:hover {
+  opacity: 1;
+}
