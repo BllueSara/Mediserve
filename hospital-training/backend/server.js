@@ -200,6 +200,24 @@ app.get("/Printer_Model", (req, res) => {
   });
 });
 
+app.get("/device-specifications", (req, res) => {
+  const query = `
+    SELECT DISTINCT 
+      CONCAT(device_name, ' - ', serial_number, ' - ', governmental_number) AS name 
+    FROM Maintenance_Devices 
+    ORDER BY name ASC
+  `;
+
+  db.query(query, (err, result) => {
+    if (err) {
+      console.error("❌ Error fetching device specifications:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(result);
+  });
+});
+
+
 
 
 // ✅ GET Devices with ID from Maintenance_Devices
@@ -432,6 +450,45 @@ app.post("/submit-regular-maintenance", async (req, res) => {
 
 
 
+
+app.get("/report-statuses", (req, res) => {
+  db.query("SELECT * FROM Report_Statuses", (err, result) => {
+    if (err) {
+      console.error("❌ Failed to fetch report statuses:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(result);
+  });
+});
+
+app.post("/add-popup-option", (req, res) => {
+  const { target, value } = req.body;
+  if (!target || !value) return res.status(400).json({ message: "Missing target or value" });
+
+  const tableMap = {
+    "device-type": { table: "DeviceType", column: "DeviceType" },
+    "technical": { table: "Engineers", column: "name" },
+    "report-status": { table: "Report_Statuses", column: "status_name" },
+    // أضف كل dropdowns اللي عندك بنفس الطريقة
+  };
+
+  const mapping = tableMap[target];
+  if (!mapping) return res.status(400).json({ message: "Invalid target" });
+
+  const checkQuery = `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ?`;
+  db.query(checkQuery, [value], (checkErr, existing) => {
+    if (checkErr) return res.status(500).json({ message: "DB error" });
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: "⚠️ Already exists" });
+    }
+
+    const insertQuery = `INSERT INTO ${mapping.table} (${mapping.column}) VALUES (?)`;
+    db.query(insertQuery, [value], (err) => {
+      if (err) return res.status(500).json({ success: false, message: "❌ Insert error" });
+      res.json({ success: true });
+    });
+  });
+});
 
 
 
