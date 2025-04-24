@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", function () {
   loadDeviceTypes();
   loadDeviceSpecifications();
   loadTechnicals();
+  updateDiagnosisOptions();
 
   ticketTypeSelect.addEventListener("change", onTicketTypeChange);
   departmentSelect.addEventListener("change", updateDeviceSpecifications);
@@ -231,30 +232,49 @@ function updateDiagnosisOptions() {
   const deviceType = document.getElementById("device-type").value;
   const diagnosisSelect = document.getElementById("initial-diagnosis");
 
+  // 🧼 نظف القائمة أولاً
+  diagnosisSelect.innerHTML = "";
+
+  // ✅ دائما نعرض "Select diagnosis" حتى قبل ما يختار جهاز
+  diagnosisSelect.appendChild(createOption("", "Select diagnosis", false, true));
+  diagnosisSelect.appendChild(createOption("add-custom", "+ Add New"));
+
+  // ⛔ لو ما فيه نوع جهاز، ما نحمل شي جديد
   if (!deviceType || deviceType === "add-custom") return;
 
+  // 🔄 حدّد الـ API المناسب بناءً على نوع الجهاز
   let endpoint = "";
   switch (deviceType) {
-    case "PC": endpoint = "ProblemStates_Pc"; break;
-    case "Printer": endpoint = "ProblemStates_Printer"; break;
-    case "Scanner": endpoint = "ProblemStates_Scanner"; break;
+    case "PC":
+      endpoint = "problem-states/pc";
+      break;
+    case "Printer":
+      endpoint = "problem-states/printer";
+      break;
+    case "Scanner":
+      endpoint = "problem-states/scanner";
+      break;
     default:
-      endpoint = `problemStates_Maintance_device?type=${encodeURIComponent(deviceType)}`;
+      endpoint = `problem-states/maintenance/${encodeURIComponent(deviceType)}`;
       break;
   }
 
+  // 🔃 حمل المشاكل من السيرفر
   fetch(`http://localhost:5050/${endpoint}`)
     .then(res => res.json())
     .then(problems => {
-      diagnosisSelect.innerHTML = "";
-      diagnosisSelect.appendChild(createOption("", "Select diagnosis", true, true));
-      diagnosisSelect.appendChild(createOption("add-custom", "+ Add New"));
       problems.forEach(p => {
         const text = p.problem_text || p.problemStates_Maintance_device_name;
         diagnosisSelect.appendChild(createOption(text, text));
       });
+    })
+    .catch(err => {
+      console.error("❌ Failed to load diagnosis options:", err);
     });
 }
+
+
+
 
 function handleSubmit(event) {
   event.preventDefault();
@@ -281,7 +301,7 @@ function handleSubmit(event) {
   formData.append("report_number", reportNumber);
   formData.append("reporter_name", reporterName || "");
   formData.append("ticket_type", ticketType);
-  formData.append("initial_diagnosis", initialDiagnosis);
+  formData.append("initial-diagnosis", initialDiagnosis);
   formData.append("report_details", reportDetails);
   formData.append("final_diagnosis", finalDiagnosis);
   formData.append("other_description", otherDescription);
@@ -301,31 +321,48 @@ function handleSubmit(event) {
       alert("❌ Failed to submit ticket.");
     });
 }
-
-// Popup handling (Add New)
 document.getElementById("popup-save-btn").addEventListener("click", function () {
   const input = document.getElementById("popup-input");
   const value = input.value.trim();
   if (!value) return;
 
-  fetch("http://localhost:5050/add-popup-option", {
+  const deviceTypeValue = document.getElementById("device-type")?.value || "";
+
+  const targetMap = {
+    "technical": "technical",
+    "device-type": "device-type",
+    "department": "department",
+    "device-specification": "device-specification",
+    "initial-diagnosis": "problem-status",
+    "ticket-type": "ticket-type",
+    "report-status": "report-status"
+  };
+
+  const cleanTarget = targetMap[currentDropdownId];
+  if (!cleanTarget) {
+    alert("❌ Unknown dropdown ID: " + currentDropdownId);
+    return;
+  }
+
+  fetch("http://localhost:5050/add-option-general", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      target: currentDropdownId,
-      value: value
+      target: cleanTarget,
+      value: value,
+      type: currentDropdownId === "initial-diagnosis" ? deviceTypeValue : undefined
     })
   })
     .then(res => res.json())
     .then(data => {
       const select = document.getElementById(currentDropdownId);
-      if (data.success) {
+      if (data.message?.includes("✅")) {
         const newOption = createOption(value, value);
         select.appendChild(newOption);
         select.value = value;
         closePopup();
       } else {
-        alert(data.message || "❌ Failed to add option.");
+        alert(data.error || data.message || "❌ Failed to add option.");
       }
     })
     .catch(err => {
@@ -334,10 +371,18 @@ document.getElementById("popup-save-btn").addEventListener("click", function () 
     });
 });
 
+
 function closePopup() {
   document.getElementById("popup-modal").style.display = "none";
   document.getElementById("popup-fields").innerHTML = "";
-  currentDropdownId = "";
+  
+
+  const select = document.getElementById(currentDropdownId);
+  if (select){
+    select.selectedIndex = 0;
+  }
+  currentDropdownId ="";
+
 }
 
 function formatLabel(id) {
