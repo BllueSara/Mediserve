@@ -380,7 +380,7 @@ button:hover {
   }
   
 .popup-content input, .popup-content select {
-    width: 100%;
+    width: 90%;
     margin: 5px auto;
     padding: 10px;
     display: block;
@@ -413,3 +413,83 @@ button:hover {
     justify-content: center; /* ✅ هذا يخلي الأزرار بالوسط */
     gap: 15px;                /* ✅ مسافة بين الزرين */
   }
+
+  .custom-dropdown-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 20px auto;
+  }
+  
+  .dropdown-actions button {
+    padding: 8px 14px;
+    background-color: #3BAAE0;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .dropdown-actions button:hover {
+    background-color: #007bb8;
+  }
+  
+  .dropdown-search {
+    padding: 8px;
+    /* width: calc(100% - 20px); */
+    margin: 8px auto;
+    display: block;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+  
+  .dropdown-options .option {
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .dropdown-options .option:hover {
+    background-color: #f0f0f0;
+  }
+  .dropdown-option-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s;
+    cursor: pointer;
+  }
+  
+  .dropdown-option-row:hover {
+    background-color: #f9f9f9;
+  }
+  
+  .dropdown-option-text {
+    flex: 1;
+    font-size: 14px;
+  }
+  
+  .dropdown-actions-icons {
+    display: flex;
+    gap: 10px;
+  }
+  
+  .dropdown-actions-icons i {
+    font-size: 16px;
+    color: #888;
+    cursor: pointer;
+    transition: color 0.2s ease-in-out;
+  }
+  
+  .dropdown-actions-icons i:hover {
+    color: #007bb8;
+  }
+  /* Bold + Add New */
+.dropdown-option-row.add-new-option .dropdown-option-text {
+    font-weight: bold;
+    color: black; /* اختياري - يعطيها لون أزرق جميل */
+  }
+  

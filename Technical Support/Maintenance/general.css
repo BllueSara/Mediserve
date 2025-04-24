@@ -313,90 +313,131 @@ label {
         padding: 4px;
       }
       
-/* الأيقونة الخاصة بالتعديل داخل الدروب ليست */
-.edit-icon {
-    width: 16px;
-    height: 16px;
-    position: absolute;
-    left:420px;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 2;
-    cursor: pointer;
-}
-.search-icon {
-    width: 16px;
-    height: 16px;
-    position: absolute;
-    left: 400px;
-    top: 50%;
-    transform: translateY(calc(-50% + 2px));
-    z-index: 2;
-    cursor: pointer;
-}
-.trash-icon {
-    width: 16px;
-    height: 16px;
-    position: absolute;
-    left: 380px;
-    top: 50%;
-    transform: translateY(calc(-50% + 2px));
-    z-index: 2;
-    cursor: pointer;
-}
+      .custom-dropdown {
+        position: relative;
+        width: 100%;
+        margin-bottom: 20px;
+    }
+    .dropdown-toggle {
+        border: 1px solid #ccc;
+        padding: 10px;
+        background: #fff;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .dropdown-content {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        border: 1px solid #ccc;
+        background: #fff;
+        display: none;
+        z-index: 10;
+        border-top: none;
+        border-radius: 4px;
+    }
+    .dropdown-search {
+        width: calc(100% - 30px);
+        margin: 8px 15px;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .dropdown-options {
+        max-height: 300px;
+        overflow-y: auto;
+        padding: 5px 0;
+    }
+    .dropdown-options::-webkit-scrollbar {
+        width: 8px;
+    }
+    .dropdown-options::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+    .dropdown-options::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 4px;
+    }
+    .dropdown-options::-webkit-scrollbar-thumb:hover {
+        background: #aaa;
+    }
 
 /* تنسيق الأيقونات داخل الحاوية */
-.icon-container img {
-    width: 16px;
-    height: 16px;
+  .custom-dropdown-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 20px auto;
+  }
+  
+  .dropdown-actions button {
+    padding: 8px 14px;
+    background-color: #3BAAE0;
+    color: white;
+    border: none;
+    border-radius: 6px;
     cursor: pointer;
-}.custom-select-wrapper {
-    position: relative;
-    width: 100%;
-    background-color: #EFEFEF;
-    border: 1px solid #D1D5DB;
-    border-radius: 8px;
+    transition: background-color 0.3s ease;
+  }
+  
+  .dropdown-actions button:hover {
+    background-color: #007bb8;
+  }
+  
+  .dropdown-search {
+    padding: 8px;
+    /* width: calc(100% - 20px); */
+    margin: 8px auto;
+    display: block;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+  
+  .dropdown-options .option {
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .dropdown-options .option:hover {
+    background-color: #f0f0f0;
+  }
+  .dropdown-option-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s;
+    cursor: pointer;
+  }
+  
+  .dropdown-option-row:hover {
+    background-color: #f9f9f9;
+  }
+  
+  .dropdown-option-text {
+    flex: 1;
     font-size: 14px;
   }
   
-  .custom-select-display {
-    padding: 10px;
+  .dropdown-actions-icons {
+    display: flex;
+    gap: 10px;
+  }
+  
+  .dropdown-actions-icons i {
+    font-size: 16px;
+    color: #888;
     cursor: pointer;
+    transition: color 0.2s ease-in-out;
   }
   
-  .custom-select-dropdown {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid #ccc;
-    z-index: 1000;
-    border-radius: 0 0 8px 8px;
-    max-height: 200px;
-    overflow-y: auto;
+  .dropdown-actions-icons i:hover {
+    color: #007bb8;
   }
-  
-  .custom-select-search {
-    padding: 10px;
-    border: none;
-    border-bottom: 1px solid #ccc;
-    width: 100%;
-    box-sizing: border-box;
-  }
-  
-  .custom-select-options {
-    max-height: 160px;
-    overflow-y: auto;
-  }
-  
-  .custom-select-option {
-    padding: 10px;
-    cursor: pointer;
-  }
-  
-  .custom-select-option:hover {
-    background-color: #f0f0f0;
-  }
+   
   

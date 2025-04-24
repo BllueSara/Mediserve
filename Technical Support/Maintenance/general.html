@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Make the page responsive -->
   <title>General Maintenance</title> <!-- Page title -->
   <link rel="stylesheet" href="general.css"> <!-- Link external CSS file -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 </head>
 <body>
 
@@ -63,26 +65,19 @@
         <!-- Dropdown: Type of Problem -->
         <div>
           <label>Type of Problem <span class="required">*</span></label>
-          <div class="dropdown-container">
-            <div class="search-container" id="search-container-problem-type" style="display: none;">
-              <input type="text" class="search-input" id="search-problem-type" placeholder="Search...">
-            </div>
-            <div class="dropdown-wrapper">
-              <select id="problem-type">
-                <option value="" disabled selected>Select problem type</option>
-                <option value="add-custom">+ Add New Problem Type</option>
-                <!-- باقي الخيارات تُجلب من السيرفر -->
-              </select>
-              <div class="icons-container">
-                <!-- أيقونة البحث -->
-                <img src="/icon/search.png" alt="Search Icon" class="search-icon" onclick="toggleSearch('problem-type')">
-                <!-- أيقونة التحرير -->
-                <img src="/icon/edit.png" alt="Edit Icon" class="edit-icon" onclick="event.stopPropagation(); openPopup('problem-type', 'Type of Problem')">
-                <!-- أيقونة الحذف -->
-                <img src="/icon/trash.png" alt="Trash Icon" class="trash-icon" onclick="event.stopPropagation(); deleteOption('problem-type')">
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-problem-type">Select Problem Type</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search problem type..." oninput="filterDropdown(this, 'problem-type-options')">
+                <div class="dropdown-options" id="problem-type-options"></div>
               </div>
             </div>
           </div>
+          <input type="hidden" id="problem-type" name="problem-type" required>
         </div>
 
         <div>
@@ -93,114 +88,93 @@
         <!-- Dropdown: Section -->
         <div>
           <label>Section <span class="required">*</span></label>
-          <div class="dropdown-container">
-            <div class="search-container" id="search-container-section" style="display: none;">
-              <input type="text" class="search-input" id="search-section" placeholder="Search...">
-            </div>
-            <div class="dropdown-wrapper">
-              <select id="section">
-                <option value="" disabled selected>Select section</option>
-                <option value="add-custom">+ Add New Section</option>
-                <!-- باقي البيانات تأتي من السيرفر -->
-              </select>
-              <div class="icons-container">
-                <img src="/icon/search.png" alt="Search Icon" class="search-icon" onclick="toggleSearch('section')">
-                <img src="/icon/edit.png" alt="Edit Icon" class="edit-icon" onclick="event.stopPropagation(); openPopup('section', 'Section')">
-                <img src="/icon/trash.png" alt="Trash Icon" class="trash-icon" onclick="event.stopPropagation(); deleteOption('section')">
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-section">Select Section</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search section..." oninput="filterDropdown(this, 'section-options')">
+                <div class="dropdown-options" id="section-options"></div>
               </div>
             </div>
           </div>
+          <input type="hidden" id="section" name="section" required>
         </div>
 
         <!-- Dropdown: Device Specifications -->
         <div>
           <label>Device Specifications <span class="required">*</span></label>
-          <div class="dropdown-container">
-            <div class="search-container" id="search-container-device-spec" style="display: none;">
-              <input type="text" class="search-input" id="search-device-spec" placeholder="Search...">
-            </div>
-            <div class="dropdown-wrapper">
-              <select id="device-spec" required>
-                <option value="" disabled selected>Select Specifications</option>
-                <option value="add-custom">+ Add New Specification</option>
-                <!-- بيانات الجهاز تُجلب من السيرفر -->
-              </select>
-              <div class="icons-container">
-                <img src="/icon/search.png" alt="Search Icon" class="search-icon" onclick="toggleSearch('device-spec')">
-                <img src="/icon/edit.png" alt="Edit Icon" class="edit-icon" onclick="event.stopPropagation(); openPopup('device-spec', 'Device Specifications')">
-                <img src="/icon/trash.png" alt="Trash Icon" class="trash-icon" onclick="event.stopPropagation(); deleteOption('device-spec')">
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-device-spec">Select Specification</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search specification..." oninput="filterDropdown(this, 'device-spec-options')">
+                <div class="dropdown-options" id="device-spec-options"></div>
               </div>
             </div>
           </div>
+          <input type="hidden" id="device-spec" name="device-spec" required>
         </div>
+        
 
         <!-- Dropdown: Floor -->
         <div>
           <label>Floor</label>
-          <div class="dropdown-container">
-            <div class="search-container" id="search-container-floor" style="display: none;">
-              <input type="text" class="search-input" id="search-floor" placeholder="Search...">
-            </div>
-            <div class="dropdown-wrapper">
-              <select id="floor">
-                <option value="" disabled selected>Select floor</option>
-                <option value="add-custom">+ Add New Floor</option>
-                <!-- بيانات الطوابق تُجلب من السيرفر -->
-              </select>
-              <div class="icons-container">
-                <img src="/icon/search.png" alt="Search Icon" class="search-icon" onclick="toggleSearch('floor')">
-                <img src="/icon/edit.png" alt="Edit Icon" class="edit-icon" onclick="event.stopPropagation(); openPopup('floor', 'Floor')">
-                <img src="/icon/trash.png" alt="Trash Icon" class="trash-icon" onclick="event.stopPropagation(); deleteOption('floor')">
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-floor">Select Floor</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search floor..." oninput="filterDropdown(this, 'floor-options')">
+                <div class="dropdown-options" id="floor-options"></div>
               </div>
             </div>
           </div>
+          <input type="hidden" id="floor" name="floor">
         </div>
 
         <!-- Dropdown: Technical -->
         <div>
           <label>Technical</label>
-          <div class="dropdown-container">
-            <div class="search-container" id="search-container-technical" style="display: none;">
-              <input type="text" class="search-input" id="search-technical" placeholder="Search...">
-            </div>
-            <div class="dropdown-wrapper">
-              <select id="technical">
-                <option value="" disabled selected>Select technical</option>
-                <option value="add-custom">+ Add New Technical</option>
-                <!-- باقي البيانات تُجلب من السيرفر -->
-              </select>
-              <div class="icons-container">
-                <img src="/icon/search.png" alt="Search Icon" class="search-icon" onclick="toggleSearch('technical')">
-                <img src="/icon/edit.png" alt="Edit Icon" class="edit-icon" onclick="event.stopPropagation(); openPopup('technical', 'Technical')">
-                <img src="/icon/trash.png" alt="Trash Icon" class="trash-icon" onclick="event.stopPropagation(); deleteOption('technical')">
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-technical">Select Technical</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search technical..." oninput="filterDropdown(this, 'technical-options')">
+                <div class="dropdown-options" id="technical-options"></div>
               </div>
             </div>
           </div>
+          <input type="hidden" id="technical" name="technical">
         </div>
 
         <!-- Dropdown: Problem Status -->
         <div>
           <label>Problem Status <span class="required">*</span></label>
-          <div class="dropdown-container">
-            <div class="search-container" id="search-container-problem-status" style="display: none;">
-              <input type="text" class="search-input" id="search-problem-status" placeholder="Search...">
-            </div>
-            <div class="dropdown-wrapper">
-              <select id="problem-status" required>
-                <option value="" disabled selected>Select status</option>
-                <option value="add-custom">+ Add New Status</option>
-                <!-- بيانات الحالة تُجلب من السيرفر -->
-              </select>
-              <div class="icons-container">
-                <img src="/icon/search.png" alt="Search Icon" class="search-icon" onclick="toggleSearch('problem-status')">
-                <img src="/icon/edit.png" alt="Edit Icon" class="edit-icon" onclick="event.stopPropagation(); openPopup('problem-status', 'Problem Status')">
-                <img src="/icon/trash.png" alt="Trash Icon" class="trash-icon" onclick="event.stopPropagation(); deleteOption('problem-status')">
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-problem-status">Select Status</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search status..." oninput="filterDropdown(this, 'problem-status-options')">
+                <div class="dropdown-options" id="problem-status-options"></div>
               </div>
             </div>
           </div>
+          <input type="hidden" id="problem-status" name="problem-status" required>
         </div>
-
-      </div>
 
       <!-- Buttons -->
       <div class="form-buttons">
