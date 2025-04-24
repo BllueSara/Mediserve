@@ -469,8 +469,12 @@ app.post("/add-popup-option", (req, res) => {
     "device-type": { table: "DeviceType", column: "DeviceType" },
     "technical": { table: "Engineers", column: "name" },
     "report-status": { table: "Report_Statuses", column: "status_name" },
-    // أضف كل dropdowns اللي عندك بنفس الطريقة
+    "ticket-type": { table: "Ticket_Types", column: "type_name" },
+    "department": { table: "Departments", column: "name" },
+    "device-specification": { table: "Maintenance_Devices", column: "device_name" },
+    "initial-diagnosis": { table: "ProblemStates_Pc", column: "problem_text" } // تقدر توسعها حسب نوع الجهاز
   };
+  
 
   const mapping = tableMap[target];
   if (!mapping) return res.status(400).json({ message: "Invalid target" });
