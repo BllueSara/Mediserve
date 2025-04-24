@@ -915,10 +915,17 @@ function fetchDeviceSpecsByTypeAndDepartment() {
   addNewRow.innerHTML = `<div class="dropdown-option-text">+ Add New Specification</div>`;
   addNewRow.onclick = () => {
     sessionStorage.setItem("lastDropdownOpened", "device-spec");
-    updatePopupHeadingAndFields(type);
-    popup.style.display = "flex";
+  
+    if (["pc", "printer", "scanner"].includes(type)) {
+      updatePopupHeadingAndFields(type);
+      popup.style.display = "flex";
+    } else {
+      openGenericPopup("Device Specification", "device-spec");
+    }
+  
     closeAllDropdowns();
   };
+  
   optionsContainer.appendChild(addNewRow);
 
   fetch(`http://localhost:5050/devices/${type}/${encodeURIComponent(dept)}`)
@@ -996,17 +1003,25 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!row) return;
 
       const value = row.textContent.trim();
-
       if (value === "+ Add New Specification") {
         const type = typeDropdown?.value?.toLowerCase();
-        if (type && ["pc", "printer", "scanner"].includes(type)) {
+      
+        if (!type) {
+          console.log("❌ نوع الجهاز غير محدد");
+          alert("❌ اختر نوع الجهاز أولاً");
+          return;
+        }
+        
+        if (["pc", "printer", "scanner"].includes(type)) {
+          console.log("✅ فتح بوب أب المواصفات لنوع:", type);
           updatePopupHeadingAndFields(type);
           document.getElementById("popup-modal").style.display = "flex";
         } else {
+          console.log("🔁 فتح بوب أب generic للجهاز من نوع:", type);
           openGenericPopup("Device Specification", "device-spec");
-          
         }
-      }
+      }        
+      
     });
   }
 });
@@ -1146,8 +1161,7 @@ function openGenericPopup(label, targetId) {
           <input type="hidden" id="generic-popup-target-id" value="${targetId}" />
           <div class="popup-buttons">
             <button onclick="saveDeviceSpecification()">Save</button>
-            <button onclick="closeGenericPopup()">Cancel</button>
-          </div>
+<button onclick="closeGenericPopup(true); event.stopPropagation()">Cancel</button>          </div>
         </div>
       `;
       
@@ -1219,7 +1233,7 @@ function openGenericPopup(label, targetId) {
         <input type="hidden" id="generic-popup-target-id" value="${targetId}" />
         <div class="popup-buttons">
           <button type="button" class="save-btn" onclick="saveGenericOption()">Save</button>
-          <button type="button" class="cancel-btn" onclick="closeGenericPopup()">Cancel</button>
+<button onclick="closeGenericPopup(true); event.stopPropagation()">Cancel</button>
         </div>
       </div>
     `;
@@ -1247,16 +1261,23 @@ function openAddModelPopup() {
       <input type="hidden" id="generic-popup-target-id" value="model" />
       <div class="popup-buttons">
         <button onclick="saveNewModel()">Save</button>
-        <button onclick="closeGenericPopup()">Cancel</button>
++   <button onclick="closeGenericPopup(true); event.stopPropagation()">Cancel</button>
       </div>
     </div>
   `;
   popup.style.display = "flex";
 }
 
-
 function openAddSectionPopup(contextId = "section") {
   sessionStorage.setItem("addSectionContext", contextId);
+
+  // ✅ نضيف هذا الجزء لتحديد إذا جاي من بوب أب المواصفات
+  const origin = document.getElementById("generic-popup-target-id")?.value;
+  if (origin === "device-spec") {
+    sessionStorage.setItem("returnToPopup", "true");
+    sessionStorage.setItem("popupContext", "device-spec"); // سياق مواصفات
+  }
+
   const popup = document.getElementById("generic-popup");
 
   popup.innerHTML = `
@@ -1268,7 +1289,7 @@ function openAddSectionPopup(contextId = "section") {
 
       <div class="popup-buttons">
         <button onclick="saveNewSection()">Save</button>
-        <button onclick="closeGenericPopup()">Cancel</button>
+        <button onclick="closeGenericPopup(true); event.stopPropagation()">Cancel</button>
       </div>
     </div>
   `;
@@ -1431,10 +1452,22 @@ document.getElementById("spec-department").value = "";
 
 function closeGenericPopup(cancelled = false) {
   if (cancelled) {
-    sessionStorage.removeItem("returnToPopup"); // نلغي الفلاج اللي يفتح البوب أب من جديد
-    document.getElementById("generic-popup").style.display = "none";
+    const returnToSpec = sessionStorage.getItem("returnToPopup");
+    const deviceType = document.getElementById("device-type")?.value?.toLowerCase();
+  
+    // ✅ إذا كنا راجعين من بوب أب المواصفات لنوع جهاز غير معروف
+    if (returnToSpec === "true" && !["pc", "printer", "scanner"].includes(deviceType)) {
+      sessionStorage.removeItem("returnToPopup");
+      setTimeout(() => {
+        openGenericPopup("Device Specification", "device-spec");
+      }, 100);
+    } else {
+      sessionStorage.removeItem("returnToPopup");
+      document.getElementById("generic-popup").style.display = "none";
+    }
     return;
   }
+  
   const popup = document.getElementById("generic-popup");
   popup.style.display = "none";
 
