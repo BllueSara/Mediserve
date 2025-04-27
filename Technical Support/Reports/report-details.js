@@ -51,7 +51,11 @@ document.addEventListener("DOMContentLoaded", () => {
             { label: "🖥️ OS:", value: report.os_name, showForPC: true },
             { label: "📶 Generation:", value: report.generation_number, showForPC: true },
             { label: "🔧 Model:", value: report.model_name, alwaysShow: true },
-            { label: "📟 Device Type:", value: report.device_type }
+            { label: "📟 Device Type:", value: report.device_type,
+              
+             },
+             { label: "💽 Hard Drive:", value: report.drive_type, showForPC: true },
+
           ];
           
           fields.forEach(({ label, value, showForPC, alwaysShow }) => {
@@ -150,6 +154,7 @@ if (!ticketNumber) {
       if (report.os_name) specs.push(`🖥️ OS: ${report.os_name}`);
       if (report.generation_number) specs.push(`📶 Generation: ${report.generation_number}`);
       if (report.model_name) specs.push(`🔧 Model: ${report.model_name}`);
+      if (report.drive_type) specs.push(`💽 Hard Drive: ${report.drive_type}`);
 
       
 
@@ -170,7 +175,8 @@ if (!ticketNumber) {
           { label: "🖥️ OS:", value: report.os_name, showForPC: true },
           { label: "📶 Generation:", value: report.generation_number, showForPC: true },
           { label: "🔧 Model:", value: report.model_name, alwaysShow: true },
-          { label: "📟 Device Type:", value: report.device_type }
+          { label: "📟 Device Type:", value: report.device_type },
+          { label: "💽 Hard Drive:", value: report.drive_type, showForPC: true },
         ];
         
         fields.forEach(({ label, value, showForPC, alwaysShow }) => {
@@ -354,6 +360,7 @@ if (!ticketNumber) {
       governmental_number: null,
       cpu_name: null,
       ram_type: null,
+      drive_type: null,
       os_name: null,
       generation_number: null,
       model_name: null
@@ -374,6 +381,9 @@ document.querySelectorAll("#device-specs .spec-box").forEach(box => {
     case "os": updatedData.os_name = value; break;
     case "generation": updatedData.generation_number = value; break;
     case "model": updatedData.model_name = value; break;
+    case "harddrive": updatedData.drive_type = value; break; // ✅ الجديد
+
+
   }
 });
 
