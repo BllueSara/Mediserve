@@ -1,4 +1,4 @@
-// ✅ MAIN LOGIC - DOM READY
+
 
 let currentDropdownId = "";
 
@@ -23,6 +23,7 @@ document.addEventListener("DOMContentLoaded", function () {
   loadDepartments();
   loadDeviceTypes();
   loadDeviceSpecifications();
+
   loadTechnicals();
   updateDiagnosisOptions();
 
@@ -63,18 +64,33 @@ document.addEventListener("DOMContentLoaded", function () {
 
   saveButton.addEventListener("click", handleSubmit);
 
-  // + Add New option logic
-  document.querySelectorAll("select").forEach(select => {
-    select.addEventListener("change", function () {
-      if (this.value === "add-custom") {
-        currentDropdownId = this.id;
+ 
+// + Add New option logic (مع تمييز device-specification)
+document.querySelectorAll("select").forEach(select => {
+  select.addEventListener("change", function () {
+    if (this.value === "add-custom") {
+      currentDropdownId = this.id;
+      
+      if (currentDropdownId === "device-specification") {
+        const deviceType = document.getElementById("device-type").value.toLowerCase();
+        if (!deviceType) {
+          alert("❌ Please select device type first!");
+          return;
+        }
+        openAddNewSpecPopup(deviceType); // يفتح حقول خاصة بال PC أو Printer أو Scanner
+      } else {
         document.getElementById("popup-title").textContent = `Add New ${formatLabel(currentDropdownId)}`;
         document.getElementById("popup-fields").innerHTML = `<input type="text" id="popup-input" placeholder="Enter new ${formatLabel(currentDropdownId)}" />`;
         document.getElementById("popup-modal").style.display = "flex";
       }
-    });
+    }
   });
 });
+
+
+});
+
+
 
 function loadTicketTypes() {
   fetch("http://localhost:5050/ticket-types")
@@ -141,18 +157,16 @@ function loadDeviceTypes() {
 }
 
 function loadDeviceSpecifications() {
-  fetch("http://localhost:5050/device-specifications")
-    .then(res => res.json())
-    .then(specs => {
-      const select = document.getElementById("device-specification");
-      select.innerHTML = "";
-      select.appendChild(createOption("", "Select device specification", true, true));
-      select.appendChild(createOption("add-custom", "+ Add New"));
-      specs.forEach(spec => {
-        select.appendChild(createOption(spec.name, spec.name));
-      });
-    });
+  const select = document.getElementById("device-specification");
+  select.innerHTML = "";
+
+  // 🥇 أضف خيار "Select device specification" - دايم ثابت
+  select.appendChild(createOption("", "Select device specification", true, true));
+
+  // 🥈 أضف خيار "+ Add New" - دايم ثابت
+  select.appendChild(createOption("add-custom", "+ Add New"));
 }
+
 
 function loadTechnicals() {
   fetch("http://localhost:5050/Technical")
@@ -209,24 +223,52 @@ function handleFileChange(event) {
   }
 }
 
+
 function updateDeviceSpecifications() {
-  const department = document.getElementById("department").value;
-  const type = document.getElementById("device-type").value;
+  const department = document.getElementById("department").value.trim();
+  const deviceType = document.getElementById("device-type").value.trim();
   const specSelect = document.getElementById("device-specification");
 
-  if (!department || !type || type === "add-custom") return;
+  // 🧹 نظف كل الخيارات أول شي
+  specSelect.innerHTML = "";
 
-  fetch(`http://localhost:5050/device-specifications?department=${encodeURIComponent(department)}&type=${encodeURIComponent(type)}`)
+  // ✅ أضف خيار "Select" دايمًا كأول خيار
+  const selectOption = createOption("", "Select device specification", false, true);
+  specSelect.appendChild(selectOption);
+
+  // ✅ أضف خيار "+ Add New" بعدها
+  const addNewOption = createOption("add-custom", "+ Add New");
+  specSelect.appendChild(addNewOption);
+
+  // 🛑 لو مافيه قسم أو نوع جهاز، نوقف بدون نكمل تحميل الديفايسات
+  if (!department || !deviceType || deviceType === "add-custom") {
+    console.log("⛔ No department or device type selected. Showing only default options.");
+    return; // مافي تحميل ديفايسات
+  }
+
+  // ✅ في نوع وقسم: نجيب الديفايسات ونكمل
+  fetch(`http://localhost:5050/devices/${encodeURIComponent(deviceType)}/${encodeURIComponent(department)}`)
     .then(res => res.json())
-    .then(specs => {
-      specSelect.innerHTML = "";
-      specSelect.appendChild(createOption("", "Select device specification", true, true));
-      specSelect.appendChild(createOption("add-custom", "+ Add New"));
-      specs.forEach(spec => {
-        specSelect.appendChild(createOption(spec.name, spec.name));
+    .then(devices => {
+      if (!Array.isArray(devices) || devices.length === 0) {
+        console.log("ℹ️ No devices found for this combination.");
+        return;
+      }
+
+      devices.forEach(device => {
+        const option = document.createElement("option");
+        option.value = device.Serial_Number; // أو device.id لو تحب
+        option.textContent = `${device.Device_Name} | S/N: ${device.Serial_Number} | Gov#: ${device.Ministerial_Number || "-"}`;
+        specSelect.appendChild(option);
       });
+    })
+    .catch(error => {
+      console.error("❌ Error loading devices:", error);
     });
 }
+
+
+
 
 function updateDiagnosisOptions() {
   const deviceType = document.getElementById("device-type").value;
@@ -322,37 +364,71 @@ function handleSubmit(event) {
     });
 }
 document.getElementById("popup-save-btn").addEventListener("click", function () {
-  const input = document.getElementById("popup-input");
-  const value = input.value.trim();
-  if (!value) return;
+  const deviceType = document.getElementById("device-type").value.toLowerCase();
+  let payload = {};
 
-  const deviceTypeValue = document.getElementById("device-type")?.value || "";
-
-  const targetMap = {
-    "technical": "technical",
-    "device-type": "device-type",
-    "department": "department",
-    "device-specification": "device-specification",
-    "initial-diagnosis": "problem-status",
-    "ticket-type": "ticket-type",
-    "report-status": "report-status"
-  };
-
-  const cleanTarget = targetMap[currentDropdownId];
-  if (!cleanTarget) {
-    alert("❌ Unknown dropdown ID: " + currentDropdownId);
-    return;
-  }
-
-  fetch("http://localhost:5050/add-option-general", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      target: cleanTarget,
-      value: value,
-      type: currentDropdownId === "initial-diagnosis" ? deviceTypeValue : undefined
+  if (currentDropdownId === "device-specification" && (deviceType === "pc" || deviceType === "printer" || deviceType === "scanner")) {
+    // لو بيضيف جهاز كامل
+    payload = { 
+      // تعبئة الحقول الخاصة بالجهاز...
+    };
+    
+    // Check fields...
+    
+    fetch("http://localhost:5050/add-device-specification", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
     })
-  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.message?.includes("✅")) {
+        alert(data.message);
+        loadDeviceSpecifications();
+        closePopup();
+      } else {
+        alert(data.error || "❌ Failed to add specification.");
+      }
+    })
+    .catch(err => {
+      console.error("❌ Error:", err);
+      alert("❌ Server error while adding specification.");
+    });
+
+  } else {
+    // لما يضيف خيار بسيط (قسم - نوع جهاز - فني .. إلخ)
+    const input = document.getElementById("popup-input");
+    const value = input.value.trim();
+    if (!value) return;
+
+    // 🔥 هنا المهم: حدد التارغت بطريقة مرنة
+    const targetMap = {
+      "technical": "technical",
+      "device-type": "device-type",
+      "department": "department",
+      "device-specification": "device-specification",
+      "initial-diagnosis": "problem-status",
+      "ticket-type": "ticket-type",
+      "report-status": "report-status",
+      "department-name": "department",
+      "generation": "generation",
+      "processor": "processor",
+      "ram": "ram",
+      "model": "model",
+      "os": "os"
+    };
+
+    const cleanTarget = targetMap[currentDropdownId] || currentDropdownId; // خليه مرن: لو مافي بالخريطة، خذ الاسم نفسه
+
+    fetch("http://localhost:5050/add-option-general", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        target: cleanTarget,
+        value: value,
+        type: currentDropdownId === "initial-diagnosis" ? deviceType : undefined
+      })
+    })
     .then(res => res.json())
     .then(data => {
       const select = document.getElementById(currentDropdownId);
@@ -369,7 +445,205 @@ document.getElementById("popup-save-btn").addEventListener("click", function () 
       console.error("❌ Error:", err);
       alert("❌ Server error while adding option.");
     });
+  }
 });
+
+
+
+
+// لما يختار Add New في Device Specification
+document.getElementById("device-specification").addEventListener("change", function () {
+  if (this.value === "add-custom") {
+    const deviceType = document.getElementById("device-type").value.toLowerCase();
+    if (!deviceType) {
+      alert("❌ Please select device type first!");
+      return;
+    }
+    openAddNewSpecPopup(deviceType);
+  }
+});
+async function openAddNewSpecPopup(deviceType) {
+  const popupTitle = document.getElementById("popup-title");
+  const popupFields = document.getElementById("popup-fields");
+
+  popupTitle.textContent = "Enter Pc Specifications";
+
+  if (deviceType === "pc") {
+    popupFields.innerHTML = `
+      <label>Pc Name:</label>
+      <input type="text" id="computer-name" placeholder="Enter Pc Name" />
+
+      <label>Serial Number:</label>
+      <input type="text" id="serial" placeholder="Enter Serial Number" />
+
+      <label>Ministry Number:</label>
+      <input type="text" id="ministerial-number" placeholder="Enter Ministry Number" />
+
+      <label>Department:</label>
+      <select id="department-name"></select>
+
+      <label>Processor Generation:</label>
+      <select id="generation"></select>
+
+      <label>CPU:</label>
+      <select id="processor"></select>
+
+      <label>RAM:</label>
+      <select id="ram"></select>
+
+      <label>Model:</label>
+      <select id="model"></select>
+
+      <label>Operating System:</label>
+      <select id="os"></select>
+    `;
+
+    // ✨ هنا أربط الـ select بالـ API الصح
+    await loadPopupDropdown('department-name', 'Departments');
+    await loadPopupDropdown('generation', 'Processor_Generations');
+    await loadPopupDropdown('processor', 'CPU_Types');
+    await loadPopupDropdown('ram', 'RAM_Types');
+    await loadPopupDropdown('model', 'PC_Model');
+    await loadPopupDropdown('os', 'OS_Types');
+  } else {
+    popupFields.innerHTML = `
+      <label>Device Name:</label>
+      <input type="text" id="device-name" placeholder="Enter Device Name" />
+
+      <label>Serial Number:</label>
+      <input type="text" id="serial" placeholder="Enter Serial Number" />
+
+      <label>Ministry Number:</label>
+      <input type="text" id="ministerial-number" placeholder="Enter Ministry Number" />
+
+      <label>Model:</label>
+      <input type="text" id="model" placeholder="Enter Model" />
+    `;
+  }
+
+  document.getElementById("popup-modal").style.display = "flex";
+}
+
+
+
+
+
+
+
+async function loadPopupDropdown(selectId, apiEndpoint) {
+  const select = document.getElementById(selectId);
+
+  try {
+    const res = await fetch(`http://localhost:5050/${apiEndpoint}`);
+    const data = await res.json();
+
+    select.innerHTML = "";
+
+    // 🥇 أول خيار - "Select ..."
+    select.appendChild(createOption("", `Select ${formatLabel(selectId)}`, true, true));
+
+    // 🥈 ثاني خيار - "+ Add New"
+    const addNewOption = document.createElement("option");
+    addNewOption.value = "add-new";
+    addNewOption.textContent = "+ Add New";
+    select.appendChild(addNewOption);
+
+    // 🥉 بعدها نضيف باقي الخيارات اللي جت من السيرفر
+    data.forEach(item => {
+      const option = document.createElement("option");
+
+      if (selectId === "department-name") {
+        option.value = item.name;
+        option.textContent = item.name;
+      } else if (selectId === "generation") {
+        option.value = item.generation_number;
+        option.textContent = item.generation_number;
+      } else if (selectId === "processor") {
+        option.value = item.cpu_name;
+        option.textContent = item.cpu_name;
+      } else if (selectId === "ram") {
+        option.value = item.ram_type;
+        option.textContent = item.ram_type;
+      } else if (selectId === "model") {
+        option.value = item.model_name;
+        option.textContent = item.model_name;
+      } else if (selectId === "os") {
+        option.value = item.os_name;
+        option.textContent = item.os_name;
+      }
+
+      select.appendChild(option);
+    });
+
+    // 📥 لما يختار "+ Add New"
+    select.addEventListener("change", function () {
+      if (this.value === "add-new") {
+        const newValue = prompt(`Enter new ${formatLabel(selectId)}:`);
+        if (newValue) {
+          saveNewOption(apiEndpoint, newValue, select);
+        } else {
+          this.selectedIndex = 0;
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error(`❌ Failed loading ${apiEndpoint}`, error);
+  }
+}
+
+
+
+
+async function saveNewOption(apiEndpoint, newValue, selectElement) {
+  // 🛠️ هنا ضبطنا الماب حق كل الاحتمالات عشان السيرفر يفهم
+  const apiToTargetMap = {
+    "Departments": "department",
+    "Processor_Generations": "generation",
+    "CPU_Types": "processor",
+    "RAM_Types": "ram",
+    "PC_Model": "model",
+    "OS_Types": "os",
+    "Technical": "technical",
+    "TypeProplem": "device-type",
+    "device-specifications": "device-specification",
+    "problem-status": "problem-status",
+    "ticket-types": "ticket-type",
+    "report-statuses": "report-status"
+  };
+
+  const target = apiToTargetMap[apiEndpoint] || apiEndpoint; // fallback
+
+  try {
+    const res = await fetch("http://localhost:5050/add-option-general", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        target: target,
+        value: newValue
+      })
+    });
+
+    const data = await res.json();
+    if (data.message?.includes("✅")) {
+      const option = document.createElement("option");
+      option.value = newValue;
+      option.textContent = newValue;
+      selectElement.appendChild(option);
+      selectElement.value = newValue;
+    } else {
+      alert(data.error || "❌ Failed to save new option.");
+    }
+  } catch (error) {
+    console.error(`❌ Error saving new option:`, error);
+  }
+}
+
+
+
+
+
+
 
 
 function closePopup() {
