@@ -132,14 +132,16 @@ if (!ticketNumber) {
       document.getElementById("priority").textContent = isExternal ? "" : (report.priority || "");
       document.getElementById("device-type").textContent = report.device_type || "";
       document.getElementById("assigned-to").textContent = isExternal
-        ? (report.reporter_name || "")
-        : (report.technical || "");
+      ? (report.reporter_name || "")
+      : (report.technical_engineer || report.technical || ""); 
+    
       document.getElementById("department").textContent = report.department_name || "";
       document.getElementById("category").textContent = isExternal ? "External" : (report.report_type || "");
       document.getElementById("report-status").textContent = report.status || "Pending";
       document.getElementById("submitted-date").textContent = `Submitted on ${new Date(report.created_at).toLocaleString()}`;
       document.getElementById("description").textContent =
-        report.issue_summary || report.initial_diagnosis || "No description.";
+      report.problem_status || report.issue_summary || report.initial_diagnosis || "No description.";
+    
       document.getElementById("note").innerHTML = `
         <strong>${isExternal ? "Final Diagnosis" : "Technical Team Note"}:</strong><br>
         ${report.full_description || report.final_diagnosis || "No notes."}
