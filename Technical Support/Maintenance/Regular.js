@@ -165,6 +165,22 @@ function updatePopupHeadingAndFields(type) {
           </div>
         </div>
         <input type="hidden" id="ram-select" name="ram">
+
+        <label>Hard Drive Type:</label>
+<div class="custom-dropdown-wrapper">
+  <div class="custom-dropdown">
+    <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+      <span id="selected-drive-select">Select Hard Drive</span>
+      <span>▼</span>
+    </div>
+    <div class="dropdown-content">
+      <input type="text" class="dropdown-search" placeholder="Search Drive..." oninput="filterDropdown(this, 'drive-select-options')">
+      <div class="dropdown-options" id="drive-select-options"></div>
+    </div>
+  </div>
+</div>
+<input type="hidden" id="drive-select" name="drive">
+
       `;
     }
 
@@ -215,6 +231,8 @@ function updatePopupHeadingAndFields(type) {
       fetchRAM();
       fetchOS();
       fetchProcessorGen();
+      fetchDrives(); // ✅ أضفناها هنا
+
     }
   } else {
     popupHeading.textContent = "Enter Device Specifications";
@@ -504,6 +522,51 @@ function renderSelectOptionsWithAddFirst(selectElement, optionsArray, valueKey, 
     
   });
 }
+function fetchDrives() {
+  fetch("http://localhost:5050/Hard_Drive_Types")
+    .then(res => res.json())
+    .then(data => {
+      const optionsContainer = document.getElementById("drive-select-options");
+      const displaySpan = document.getElementById("selected-drive-select");
+      const hiddenInput = document.getElementById("drive-select");
+
+      if (!optionsContainer || !displaySpan || !hiddenInput) return;
+
+      optionsContainer.innerHTML = "";
+
+      const addNewRow = document.createElement("div");
+      addNewRow.className = "dropdown-option-row add-new-option";
+      addNewRow.innerHTML = `<div class="dropdown-option-text">+ Add New Drive Type</div>`;
+      addNewRow.onclick = () => {
+        sessionStorage.setItem("lastDropdownOpened", "drive-select");
+        openAddOptionPopup("drive-select");
+        closeAllDropdowns();
+      };
+      optionsContainer.appendChild(addNewRow);
+
+      data.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "dropdown-option-row";
+        const text = document.createElement("div");
+        text.className = "dropdown-option-text";
+        text.textContent = item.drive_type;
+        text.onclick = () => {
+          displaySpan.textContent = item.drive_type;
+          hiddenInput.value = item.drive_type;
+          closeAllDropdowns();
+        };
+        row.appendChild(text);
+        optionsContainer.appendChild(row);
+      });
+
+      const saved = sessionStorage.getItem("drive-select");
+      if (saved) {
+        displaySpan.textContent = saved;
+        hiddenInput.value = saved;
+        sessionStorage.removeItem("drive-select");
+      }
+    });
+}
 
 
 function fetchCPU() {
@@ -702,6 +765,8 @@ function openAddOptionPopup(targetId) {
   if (targetId === "ram-select") label = "RAM";
   else if (targetId === "cpu-select") label = "CPU";
   else if (targetId === "os-select") label = "Operating System";
+  else if (targetId === "drive-select") label = "Hard Drive Type";
+
   else if (targetId === "generation-select") label = "Processor Generation";
 
   const popup = document.getElementById("generic-popup");
@@ -743,8 +808,10 @@ function saveOptionForSelect() {
         // ✅ تحديث القائمة من السيرفر حسب الـ target
         if (targetId === "os-select") fetchOS();
         else if (targetId === "ram-select") fetchRAM();
+        else if (targetId === "drive-select") fetchDrives();
         else if (targetId === "cpu-select") fetchCPU();
         else if (targetId === "generation-select") fetchProcessorGen();
+        else if (targetId === "drive-select") fetchDrives();
 
         // ✅ نحفظ القيمة الجديدة عشان نرجع نحددها تلقائيًا
         sessionStorage.setItem(targetId, value);
