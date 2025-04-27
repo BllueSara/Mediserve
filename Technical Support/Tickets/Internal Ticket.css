@@ -519,3 +519,5 @@ select {
 .icon-container img:hover {
   opacity: 1;
 }
+
+.inline-error { color: red; font-size: 13px; margin-top: 5px; display: block; }
