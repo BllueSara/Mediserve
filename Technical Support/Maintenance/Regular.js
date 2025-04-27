@@ -7,9 +7,13 @@ const popupFieldsContainer = document.getElementById("popup-fields");
 
 if (deviceTypeSelect) {
   deviceTypeSelect.addEventListener("change", function () {
-    deviceSpecSelect.value = "";
-    fetchDeviceSpecsByTypeAndDepartment(); // ✅ ضروري عشان يعرض الأجهزة حسب النوع الجديد
+    const type = this.value.trim().toLowerCase();
+    const department = sectionDropdown?.value?.trim();
 
+    deviceSpecSelect.value = "";
+
+    fetchDeviceSpecsByTypeAndDepartment(); // ✅ تحديث الأجهزة
+    if (type) fetchProblemStatus(type);     // ✅ تحديث الأعطال
   });
 }
 
@@ -42,18 +46,17 @@ function fetchAndRenderModels(deviceType, dropdownId) {
       addNewRow.onclick = () => {
         sessionStorage.setItem("lastDropdownOpened", dropdownId);
 
-        // حفظ الحقول قبل الإضافة
         ["spec-ministry", "spec-name", "spec-serial", "spec-department"].forEach(id => {
           const el = document.getElementById(id);
           if (el) sessionStorage.setItem(id, el.value);
         });
 
-        openAddModelPopup(); // فتح بوب أب الإضافة
+        openAddModelPopup();
         closeAllDropdowns();
       };
       optionsContainer.appendChild(addNewRow);
 
-      // ✅ تعبئة النماذج من السيرفر
+      // ✅ تعبئة النماذج من السيرفر مع Edit/Delete
       data.forEach(item => {
         const row = document.createElement("div");
         row.className = "dropdown-option-row";
@@ -67,7 +70,35 @@ function fetchAndRenderModels(deviceType, dropdownId) {
           closeAllDropdowns();
         };
 
+        const icons = document.createElement("div");
+        icons.className = "dropdown-actions-icons";
+
+        const editIcon = document.createElement("i");
+        editIcon.className = "fas fa-edit";
+        editIcon.title = "Edit";
+        editIcon.onclick = (e) => {
+          e.stopPropagation();
+          const newValue = prompt("Edit Model:", item.model_name);
+          if (newValue) {
+            editOption(dropdownId, item.model_name, newValue, cleanedType); 
+          }
+        };
+
+        const deleteIcon = document.createElement("i");
+        deleteIcon.className = "fas fa-trash";
+        deleteIcon.title = "Delete";
+        deleteIcon.onclick = (e) => {
+          e.stopPropagation();
+          if (confirm(`Delete "${item.model_name}"?`)) {
+            deleteOption(dropdownId, item.model_name, cleanedType);
+          }
+        };
+
+        icons.appendChild(editIcon);
+        icons.appendChild(deleteIcon);
+
         row.appendChild(text);
+        row.appendChild(icons);
         optionsContainer.appendChild(row);
       });
 
@@ -79,6 +110,7 @@ function fetchAndRenderModels(deviceType, dropdownId) {
         sessionStorage.removeItem(dropdownId);
         sessionStorage.removeItem("lastAddedModel");
       }
+      attachEditDeleteHandlers(`${dropdownId}-options`, "Model");
     })
     .catch(err => {
       console.error("❌ Error fetching models:", err);
@@ -399,6 +431,8 @@ function savePCSpec() {
           hiddenInput.value = saved;
           sessionStorage.removeItem(selectId);
         }
+         attachEditDeleteHandlers(`${selectId}-options`, "Department");
+
       })
       .catch(err => {
         console.error(`❌ Failed to fetch departments for ${selectId}:`, err);
@@ -494,34 +528,7 @@ setTimeout(() => {
   }
   
 
-function renderSelectOptionsWithAddFirst(selectElement, optionsArray, valueKey, textKey, addNewValue, addNewLabel, placeholderText) {
-  if (!selectElement) return;
 
-  // تفريغ القائمة
-  selectElement.innerHTML = "";
-
-  // 1. placeholder
-  const placeholder = document.createElement("option");
-  placeholder.disabled = true;
-  placeholder.selected = true;
-  placeholder.textContent = placeholderText;
-  selectElement.appendChild(placeholder);
-
-  // 2. + Add New
-  const addNewOption = document.createElement("option");
-  addNewOption.value = addNewValue;
-  addNewOption.textContent = addNewLabel;
-  selectElement.appendChild(addNewOption);
-
-  // 3. باقي الخيارات
-  optionsArray.forEach(item => {
-    const option = document.createElement("option");
-    option.value = item[valueKey];
-    option.textContent = item[textKey];
-    selectElement.appendChild(option);
-    
-  });
-}
 function fetchDrives() {
   fetch("http://localhost:5050/Hard_Drive_Types")
     .then(res => res.json())
@@ -534,6 +541,7 @@ function fetchDrives() {
 
       optionsContainer.innerHTML = "";
 
+      // ✅ زر + Add New Drive Type
       const addNewRow = document.createElement("div");
       addNewRow.className = "dropdown-option-row add-new-option";
       addNewRow.innerHTML = `<div class="dropdown-option-text">+ Add New Drive Type</div>`;
@@ -544,9 +552,11 @@ function fetchDrives() {
       };
       optionsContainer.appendChild(addNewRow);
 
+      // ✅ الأنواع من السيرفر
       data.forEach(item => {
         const row = document.createElement("div");
         row.className = "dropdown-option-row";
+
         const text = document.createElement("div");
         text.className = "dropdown-option-text";
         text.textContent = item.drive_type;
@@ -555,18 +565,56 @@ function fetchDrives() {
           hiddenInput.value = item.drive_type;
           closeAllDropdowns();
         };
+
+        // ✅ أيقونات التعديل والحذف
+        const icons = document.createElement("div");
+        icons.className = "dropdown-actions-icons";
+
+        // ✏️ زر التعديل
+        const editIcon = document.createElement("i");
+        editIcon.className = "fas fa-edit";
+        editIcon.title = "Edit";
+        editIcon.onclick = (e) => {
+          e.stopPropagation();
+          const newValue = prompt("Edit Drive Type:", item.drive_type);
+          if (newValue) {
+            editOption("drive-select", item.drive_type, newValue);
+          }
+        };
+
+        // 🗑️ زر الحذف
+        const deleteIcon = document.createElement("i");
+        deleteIcon.className = "fas fa-trash";
+        deleteIcon.title = "Delete";
+        deleteIcon.onclick = (e) => {
+          e.stopPropagation();
+          if (confirm(`Delete "${item.drive_type}"?`)) {
+            deleteOption("drive-select", item.drive_type);
+          }
+        };
+
+        icons.appendChild(editIcon);
+        icons.appendChild(deleteIcon);
         row.appendChild(text);
+        row.appendChild(icons);
         optionsContainer.appendChild(row);
       });
 
+      // ✅ استعادة القيمة المحفوظة
       const saved = sessionStorage.getItem("drive-select");
       if (saved) {
         displaySpan.textContent = saved;
         hiddenInput.value = saved;
         sessionStorage.removeItem("drive-select");
       }
+      attachEditDeleteHandlers("drive-select-options", "Hard Drive Type");
+
+    })
+    .catch(err => {
+      console.error("❌ Error fetching drives:", err);
     });
 }
+
 
 
 function fetchCPU() {
@@ -594,6 +642,7 @@ function fetchCPU() {
       data.forEach(item => {
         const row = document.createElement("div");
         row.className = "dropdown-option-row";
+
         const text = document.createElement("div");
         text.className = "dropdown-option-text";
         text.textContent = item.cpu_name;
@@ -602,7 +651,35 @@ function fetchCPU() {
           hiddenInput.value = item.cpu_name;
           closeAllDropdowns();
         };
+
+        const icons = document.createElement("div");
+        icons.className = "dropdown-actions-icons";
+
+        const editIcon = document.createElement("i");
+        editIcon.className = "fas fa-edit";
+        editIcon.title = "Edit";
+        editIcon.onclick = (e) => {
+          e.stopPropagation();
+          const newValue = prompt("Edit CPU:", item.cpu_name);
+          if (newValue) {
+            editOption("cpu-select", item.cpu_name, newValue);
+          }
+        };
+
+        const deleteIcon = document.createElement("i");
+        deleteIcon.className = "fas fa-trash";
+        deleteIcon.title = "Delete";
+        deleteIcon.onclick = (e) => {
+          e.stopPropagation();
+          if (confirm(`Delete "${item.cpu_name}"?`)) {
+            deleteOption("cpu-select", item.cpu_name);
+          }
+        };
+
+        icons.appendChild(editIcon);
+        icons.appendChild(deleteIcon);
         row.appendChild(text);
+        row.appendChild(icons);
         optionsContainer.appendChild(row);
       });
 
@@ -612,8 +689,11 @@ function fetchCPU() {
         hiddenInput.value = saved;
         sessionStorage.removeItem("cpu-select");
       }
+      attachEditDeleteHandlers("cpu-select-options", "CPU");
+
     });
 }
+
 
 
 function fetchRAM() {
@@ -641,6 +721,7 @@ function fetchRAM() {
       data.forEach(item => {
         const row = document.createElement("div");
         row.className = "dropdown-option-row";
+
         const text = document.createElement("div");
         text.className = "dropdown-option-text";
         text.textContent = item.ram_type;
@@ -649,7 +730,35 @@ function fetchRAM() {
           hiddenInput.value = item.ram_type;
           closeAllDropdowns();
         };
+
+        const icons = document.createElement("div");
+        icons.className = "dropdown-actions-icons";
+
+        const editIcon = document.createElement("i");
+        editIcon.className = "fas fa-edit";
+        editIcon.title = "Edit";
+        editIcon.onclick = (e) => {
+          e.stopPropagation();
+          const newValue = prompt("Edit RAM:", item.ram_type);
+          if (newValue) {
+            editOption("ram-select", item.ram_type, newValue);
+          }
+        };
+
+        const deleteIcon = document.createElement("i");
+        deleteIcon.className = "fas fa-trash";
+        deleteIcon.title = "Delete";
+        deleteIcon.onclick = (e) => {
+          e.stopPropagation();
+          if (confirm(`Delete "${item.ram_type}"?`)) {
+            deleteOption("ram-select", item.ram_type);
+          }
+        };
+
+        icons.appendChild(editIcon);
+        icons.appendChild(deleteIcon);
         row.appendChild(text);
+        row.appendChild(icons);
         optionsContainer.appendChild(row);
       });
 
@@ -659,9 +768,10 @@ function fetchRAM() {
         hiddenInput.value = saved;
         sessionStorage.removeItem("ram-select");
       }
+      attachEditDeleteHandlers("ram-select-options", "RAM");
+
     });
 }
-
 
 
 function fetchOS() {
@@ -689,6 +799,7 @@ function fetchOS() {
       data.forEach(item => {
         const row = document.createElement("div");
         row.className = "dropdown-option-row";
+
         const text = document.createElement("div");
         text.className = "dropdown-option-text";
         text.textContent = item.os_name;
@@ -697,7 +808,35 @@ function fetchOS() {
           hiddenInput.value = item.os_name;
           closeAllDropdowns();
         };
+
+        const icons = document.createElement("div");
+        icons.className = "dropdown-actions-icons";
+
+        const editIcon = document.createElement("i");
+        editIcon.className = "fas fa-edit";
+        editIcon.title = "Edit";
+        editIcon.onclick = (e) => {
+          e.stopPropagation();
+          const newValue = prompt("Edit OS:", item.os_name);
+          if (newValue) {
+            editOption("os-select", item.os_name, newValue);
+          }
+        };
+
+        const deleteIcon = document.createElement("i");
+        deleteIcon.className = "fas fa-trash";
+        deleteIcon.title = "Delete";
+        deleteIcon.onclick = (e) => {
+          e.stopPropagation();
+          if (confirm(`Delete "${item.os_name}"?`)) {
+            deleteOption("os-select", item.os_name);
+          }
+        };
+
+        icons.appendChild(editIcon);
+        icons.appendChild(deleteIcon);
         row.appendChild(text);
+        row.appendChild(icons);
         optionsContainer.appendChild(row);
       });
 
@@ -707,8 +846,11 @@ function fetchOS() {
         hiddenInput.value = saved;
         sessionStorage.removeItem("os-select");
       }
+      attachEditDeleteHandlers("os-select-options", "Operating System");
+
     });
 }
+
 
 
 function fetchProcessorGen() {
@@ -736,6 +878,7 @@ function fetchProcessorGen() {
       data.forEach(item => {
         const row = document.createElement("div");
         row.className = "dropdown-option-row";
+
         const text = document.createElement("div");
         text.className = "dropdown-option-text";
         text.textContent = item.generation_number;
@@ -744,7 +887,35 @@ function fetchProcessorGen() {
           hiddenInput.value = item.generation_number;
           closeAllDropdowns();
         };
+
+        const icons = document.createElement("div");
+        icons.className = "dropdown-actions-icons";
+
+        const editIcon = document.createElement("i");
+        editIcon.className = "fas fa-edit";
+        editIcon.title = "Edit";
+        editIcon.onclick = (e) => {
+          e.stopPropagation();
+          const newValue = prompt("Edit Generation:", item.generation_number);
+          if (newValue) {
+            editOption("generation-select", item.generation_number, newValue);
+          }
+        };
+
+        const deleteIcon = document.createElement("i");
+        deleteIcon.className = "fas fa-trash";
+        deleteIcon.title = "Delete";
+        deleteIcon.onclick = (e) => {
+          e.stopPropagation();
+          if (confirm(`Delete "${item.generation_number}"?`)) {
+            deleteOption("generation-select", item.generation_number);
+          }
+        };
+
+        icons.appendChild(editIcon);
+        icons.appendChild(deleteIcon);
         row.appendChild(text);
+        row.appendChild(icons);
         optionsContainer.appendChild(row);
       });
 
@@ -754,6 +925,8 @@ function fetchProcessorGen() {
         hiddenInput.value = saved;
         sessionStorage.removeItem("generation-select");
       }
+      attachEditDeleteHandlers("generation-select-options", "Processor Generation");
+
     });
 }
 
@@ -848,7 +1021,7 @@ function fetchDeviceTypes() {
       container.appendChild(addNewRow);
 
       // ✅ Render other device types
-      data.forEach((item, index) => {
+      data.forEach((item) => {
         const row = document.createElement("div");
         row.className = "dropdown-option-row";
 
@@ -860,6 +1033,86 @@ function fetchDeviceTypes() {
           hiddenInput.value = item.DeviceType;
           closeAllDropdowns();
           fetchDeviceSpecsByTypeAndDepartment();
+        
+          const type = item.DeviceType.trim().toLowerCase();
+          if (type) fetchProblemStatus(type); // ✅ جلب حالات الأعطال بناءً على الجهاز
+        };
+        
+
+        const icons = document.createElement("div");
+        icons.className = "dropdown-actions-icons";
+
+        // ✏️ Edit icon
+        const editIcon = document.createElement("i");
+        editIcon.className = "fas fa-edit";
+        editIcon.title = "Edit";
+        editIcon.onclick = (e) => {
+          e.stopPropagation();
+          const newValue = prompt("Edit Device Type:", item.DeviceType);
+          if (newValue && newValue.trim() !== item.DeviceType) {
+            editOption("problem-type", item.DeviceType, newValue.trim()); // ✅ استخدم editOption مباشرة
+          }
+        };
+
+        // 🗑️ Delete icon
+        const deleteIcon = document.createElement("i");
+        deleteIcon.className = "fas fa-trash";
+        deleteIcon.title = "Delete";
+        deleteIcon.onclick = (e) => {
+          e.stopPropagation();
+          deleteOption("problem-type", item.DeviceType);
+        };
+        
+
+        icons.appendChild(editIcon);
+        icons.appendChild(deleteIcon);
+        row.appendChild(text);
+        row.appendChild(icons);
+        container.appendChild(row);
+      });
+      attachEditDeleteHandlers("device-type-options", "problem-type");
+
+    })
+    .catch(err => {
+      console.error("❌ Failed to fetch device types:", err);
+    });
+}
+
+function fetchTechnicalStatus() {
+  fetch("http://localhost:5050/Technical")
+    .then(res => res.json())
+    .then(data => {
+      const optionsContainer = document.getElementById("technical-status-options");
+      const displaySpan = document.getElementById("selected-technical-status");
+      const hiddenInput = document.getElementById("technical-status");
+
+      if (!optionsContainer || !displaySpan || !hiddenInput) return;
+
+      optionsContainer.innerHTML = "";
+
+      const addNewRow = document.createElement("div");
+      addNewRow.className = "dropdown-option-row add-new-option";
+      addNewRow.innerHTML = `<div class="dropdown-option-text">+ Add New Engineer</div>`;
+      addNewRow.onclick = () => {
+        sessionStorage.setItem("lastDropdownOpened", "technical-status");
+        openAddTechnicalPopup();
+        closeAllDropdowns();
+      };
+      optionsContainer.appendChild(addNewRow);
+
+      data.forEach(engineer => {
+        const row = document.createElement("div");
+        row.className = "dropdown-option-row";
+
+        const text = document.createElement("div");
+        text.className = "dropdown-option-text";
+        text.textContent = engineer.Engineer_Name || engineer.name || "No Name";
+        text.dataset.id = engineer.id; // ✨ حفظ رقم الـ ID هنا في الـ dataset
+
+        text.onclick = () => {
+          displaySpan.textContent = text.textContent;
+          hiddenInput.value = text.dataset.id; // ✨ خزِّن الـ ID مش الاسم
+          closeAllDropdowns();
         };
 
         const icons = document.createElement("div");
@@ -868,39 +1121,225 @@ function fetchDeviceTypes() {
         const editIcon = document.createElement("i");
         editIcon.className = "fas fa-edit";
         editIcon.title = "Edit";
+        // (كود التعديل لو تبغى)
+
+        const deleteIcon = document.createElement("i");
+        deleteIcon.className = "fas fa-trash";
+        deleteIcon.title = "Delete";
+        // (كود الحذف لو تبغى)
+
+        icons.appendChild(editIcon);
+        icons.appendChild(deleteIcon);
+
+        row.appendChild(text);
+        row.appendChild(icons);
+        optionsContainer.appendChild(row);
+      });
+    })
+    .catch(err => console.error("❌ Error fetching technical statuses:", err));
+}
+
+function openAddTechnicalPopup() {
+  const popup = document.getElementById("generic-popup");
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>Add New Technical Engineer</h3>
+      <label for="new-technical-name">Engineer Name:</label>
+      <input type="text" id="new-technical-name" placeholder="Enter engineer name..." />
+      <div class="popup-buttons">
+        <button type="button" onclick="saveNewTechnical()">Save</button>
+        <button type="button" onclick="closeGenericPopup()">Cancel</button>
+      </div>
+    </div>
+  `;
+  popup.style.display = "flex";
+}
+
+function saveNewTechnical() {
+  const name = document.getElementById("new-technical-name").value.trim();
+  if (!name) {
+    alert("❌ Please enter the engineer's name");
+    return;
+  }
+
+  fetch("http://localhost:5050/add-options-regular", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target: "technical-status", value: name })
+  })
+    .then(res => res.json())
+    .then(result => {
+      if (result.error) {
+        alert(result.error);
+      } else {
+        alert(result.message || "✅ Engineer added successfully");
+        fetchTechnicalStatus(); // 🔁 حدث القائمة
+        closeGenericPopup();
+      }
+    })
+    .catch(err => {
+      console.error("❌ Error saving engineer:", err);
+      alert("❌ Failed to save engineer");
+    });
+}
+
+function fetchProblemStatus(deviceType) {
+  const optionsContainer = document.getElementById("problem-status-options");
+  const displaySpan = document.getElementById("selected-problem-status");
+  const hiddenInput = document.getElementById("problem-status");
+
+  // ✅ تأكد أن كل العناصر موجودة
+  if (!optionsContainer || !displaySpan || !hiddenInput) {
+    console.error("❌ One of the problem status elements is missing!");
+    return;
+  }
+
+  optionsContainer.innerHTML = "";
+
+  // ✅ Add New Problem Status
+  const addNewRow = document.createElement("div");
+  addNewRow.className = "dropdown-option-row add-new-option";
+  addNewRow.innerHTML = `<div class="dropdown-option-text">+ Add New Problem Status</div>`;
+  addNewRow.onclick = () => {
+    sessionStorage.setItem("lastDropdownOpened", "problem-status");
+    openAddProblemStatusPopup(deviceType);
+    closeAllDropdowns();
+  };
+  optionsContainer.appendChild(addNewRow);
+
+  if (!deviceType || deviceType === "add-custom") {
+    const noDeviceRow = document.createElement("div");
+    noDeviceRow.className = "dropdown-option-row";
+    noDeviceRow.innerHTML = `<div class="dropdown-option-text">Select device type first</div>`;
+    optionsContainer.appendChild(noDeviceRow);
+    return;
+  }
+
+  let endpoint = "";
+  const cleanedType = deviceType.trim().toLowerCase();
+  if (cleanedType === "pc") endpoint = "problem-states/pc";
+  else if (cleanedType === "printer") endpoint = "problem-states/printer";
+  else if (cleanedType === "scanner") endpoint = "problem-states/scanner";
+  else endpoint = `problem-states/maintenance/${encodeURIComponent(deviceType)}`;
+
+  fetch(`http://localhost:5050/${endpoint}`)
+    .then(res => res.json())
+    .then(data => {
+      console.log("📦 Problem Status Data:", data);
+
+      if (!Array.isArray(data) || data.length === 0) {
+        const noDataRow = document.createElement("div");
+        noDataRow.className = "dropdown-option-row";
+        noDataRow.innerHTML = `<div class="dropdown-option-text">No Problem Status Found</div>`;
+        optionsContainer.appendChild(noDataRow);
+        return;
+      }
+
+      // ✅ عرض المشاكل مع التعديل والحذف
+      data.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "dropdown-option-row";
+
+        const text = document.createElement("div");
+        text.className = "dropdown-option-text";
+        const problemText = item.problem_text || item.problemStates_Maintance_device_name || "Unnamed Problem";
+        text.textContent = problemText;
+
+        text.onclick = () => {
+          displaySpan.textContent = problemText;
+          hiddenInput.value = problemText;
+          closeAllDropdowns();
+        };
+
+        const icons = document.createElement("div");
+        icons.className = "dropdown-actions-icons";
+
+        // ✏️ أيقونة التعديل
+        const editIcon = document.createElement("i");
+        editIcon.className = "fas fa-edit";
+        editIcon.title = "Edit";
         editIcon.onclick = (e) => {
           e.stopPropagation();
-          const newValue = prompt("Edit Device Type:", item.DeviceType);
-          if (newValue) {
-            item.DeviceType = newValue;
-            fetchDeviceTypes();
-            selectedDisplay.textContent = newValue;
-            hiddenInput.value = newValue;
+          const newValue = prompt("Edit Problem Status:", problemText);
+          if (newValue && newValue.trim() !== problemText) {
+            editOption("problem-status", problemText, newValue.trim(), cleanedType);
           }
         };
 
+        // 🗑️ أيقونة الحذف
         const deleteIcon = document.createElement("i");
         deleteIcon.className = "fas fa-trash";
         deleteIcon.title = "Delete";
         deleteIcon.onclick = (e) => {
           e.stopPropagation();
-          if (confirm(`Delete "${item.DeviceType}"?`)) {
-            data.splice(index, 1);
-            fetchDeviceTypes();
-            selectedDisplay.textContent = "Select device type";
-            hiddenInput.value = "";
+          if (confirm(`Delete "${problemText}"?`)) {
+            deleteOption("problem-status", problemText, cleanedType);
           }
         };
 
         icons.appendChild(editIcon);
         icons.appendChild(deleteIcon);
+
         row.appendChild(text);
         row.appendChild(icons);
-        container.appendChild(row);
+
+        optionsContainer.appendChild(row);
       });
+
     })
     .catch(err => {
-      console.error("❌ Failed to fetch device types:", err);
+      console.error("❌ Error fetching problem statuses:", err);
+      const errorRow = document.createElement("div");
+      errorRow.className = "dropdown-option-row";
+      errorRow.innerHTML = `<div class="dropdown-option-text">Failed to load problems</div>`;
+      optionsContainer.appendChild(errorRow);
+    });
+}
+
+
+
+function openAddProblemStatusPopup(deviceType) {
+  const popup = document.getElementById("generic-popup");
+
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>Add New Problem Status</h3>
+      <label for="new-problem-status-name">Problem Status Name:</label>
+      <input type="text" id="new-problem-status-name" placeholder="Enter problem status..." />
+      <div class="popup-buttons">
+        <button type="button" onclick="saveNewProblemStatus('${deviceType}')">Save</button>
+        <button type="button" onclick="closeGenericPopup()">Cancel</button>
+      </div>
+    </div>
+  `;
+  popup.style.display = "flex";
+}
+
+function saveNewProblemStatus(deviceType) {
+  const name = document.getElementById("new-problem-status-name").value.trim();
+  if (!name) {
+    alert("❌ Please enter a problem status name");
+    return;
+  }
+
+  fetch("http://localhost:5050/add-options-regular", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ problemStatus: name, deviceType })
+  })
+    .then(res => res.json())
+    .then(result => {
+      if (result.error) {
+        alert(result.error);
+      } else {
+        alert(result.message || "✅ Problem Status added successfully");
+        fetchProblemStatus(deviceType); // 🔁 رجع حدث القائمة
+        closeGenericPopup();
+      }
+    })
+    .catch(err => {
+      console.error("❌ Error saving problem status:", err);
+      alert("❌ Failed to save problem status");
     });
 }
 
@@ -1045,6 +1484,7 @@ function fetchDeviceSpecsByTypeAndDepartment() {
 document.addEventListener("DOMContentLoaded", () => {
   fetchDeviceTypes();
   fetchDepartments("section");
+  fetchTechnicalStatus(); // ✅ جلب أسماء المهندسين مع بداية الصفحة
 
   const typeDropdown = document.getElementById("device-type");
   const sectionDropdown = document.getElementById("section");
@@ -1052,6 +1492,9 @@ document.addEventListener("DOMContentLoaded", () => {
   if (typeDropdown && sectionDropdown) {
     typeDropdown.addEventListener("change", () => {
       fetchDeviceSpecsByTypeAndDepartment();
+      
+      const type = typeDropdown?.value?.toLowerCase();
+      if (type) fetchProblemStatus(type); // ✅ جلب حالة الأعطال حسب نوع الجهاز
     });
 
     sectionDropdown.addEventListener("change", () => {
@@ -1059,9 +1502,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ✅ لتفعيل اختيار "+ Add New Specification"
-  const displaySpan = document.getElementById("selected-device-spec");
-  const hiddenInput = document.getElementById("device-spec");
   const optionsContainer = document.getElementById("device-spec-options");
 
   if (optionsContainer) {
@@ -1088,10 +1528,10 @@ document.addEventListener("DOMContentLoaded", () => {
           openGenericPopup("Device Specification", "device-spec");
         }
       }        
-      
     });
   }
 });
+
 
 
 document.querySelector("form").addEventListener("submit", function (e) {
@@ -1145,8 +1585,143 @@ document.querySelector("form").addEventListener("submit", function (e) {
 });
 
 
+function deleteOption(selectId, value, type = null) {
+  if (!value) {
+    alert("❌ Please select a valid option to delete.");
+    return;
+  }
+
+  if (!confirm(`❗ Are you sure you want to delete "${value}"?`)) {
+    return;
+  }
+
+  fetch("http://localhost:5050/delete-option-complete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target: selectId, value, type })
+  })
+    .then(res => res.json())
+    .then(result => {
+      if (result.error) {
+        alert(result.error);
+      } else {
+        alert(result.message);
+
+        // ✅ بعد الحذف، نحدث القائمة بالكامل
+        refreshDropdown(selectId);
+      }
+    })
+    .catch(err => {
+      console.error("❌ Error deleting option:", err);
+      alert("❌ Failed to delete option");
+    });
+}
+function refreshDropdown(selectId) {
+  if (selectId === "problem-type") {
+    fetchDeviceTypes();
+  } else if (selectId === "section" || selectId.startsWith("department-")) {
+    fetchDepartments(selectId);
+  } else if (selectId === "ram-select") {
+    fetchRAM();
+  } else if (selectId === "cpu-select") {
+    fetchCPU();
+  } else if (selectId === "os-select") {
+    fetchOS();
+  } else if (selectId === "drive-select") {
+    fetchDrives();
+  } else if (selectId === "generation-select") {
+    fetchProcessorGen();
+  } else if (selectId.startsWith("model-")) {
+    const type = selectId.replace("model-", "");
+    fetchAndRenderModels(type, selectId);
+  } else if (selectId === "device-spec") {
+    fetchDeviceSpecsByTypeAndDepartment();
+  } else {
+    console.warn(`❓ Unknown selectId for refreshing: ${selectId}`);
+  }
+}
 
 
+function editOption(selectId, oldValue, newValue, type = null) {
+  if (!oldValue || !newValue) {
+    alert("❌ Please select and enter a valid value to edit.");
+    return;
+  }
+
+  fetch("http://localhost:5050/update-option-complete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target: selectId, oldValue, newValue, type })
+  })
+    .then(res => res.json())
+    .then(result => {
+      if (result.error) {
+        alert(result.error);
+      } else {
+        alert(result.message);
+
+        // ✅ بعد التعديل، نرجع نحمل البيانات من السيرفر من جديد
+        refreshDropdown(selectId);
+      }
+    })
+    .catch(err => {
+      console.error("❌ Error editing option:", err);
+      alert("❌ Failed to edit option");
+    });
+}
+
+
+
+
+function attachEditDeleteHandlers(optionsContainerId, type = null) {
+  const optionsContainer = document.getElementById(optionsContainerId);
+
+  if (!optionsContainer) {
+    console.error(`❌ Cannot find options container for: ${optionsContainerId}`);
+    return;
+  }
+
+  const rows = optionsContainer.querySelectorAll(".dropdown-option-row:not(.add-new-option)");
+
+  rows.forEach(row => {
+    const textEl = row.querySelector(".dropdown-option-text");
+    let iconsContainer = row.querySelector(".dropdown-actions-icons");
+
+    if (!iconsContainer) {
+      iconsContainer = document.createElement("div");
+      iconsContainer.className = "dropdown-actions-icons";
+
+      const editIcon = document.createElement("i");
+      editIcon.className = "fas fa-edit";
+      editIcon.title = "Edit";
+      editIcon.style.cursor = "pointer";
+      editIcon.onclick = (e) => {
+        e.stopPropagation();
+        const oldValue = textEl.textContent.trim();
+        const newValue = prompt(`Edit "${oldValue}"`, oldValue);
+        if (newValue && newValue.trim() !== oldValue) {
+          editOption(optionsContainerId.replace("-options", ""), oldValue, newValue.trim(), type);
+        }
+      };
+
+      const deleteIcon = document.createElement("i");
+      deleteIcon.className = "fas fa-trash";
+      deleteIcon.title = "Delete";
+      deleteIcon.style.cursor = "pointer";
+      deleteIcon.onclick = (e) => {
+        e.stopPropagation();
+        const valueToDelete = textEl.textContent.trim();
+        if (confirm(`❗ Are you sure you want to delete "${valueToDelete}"?`)) {
+          deleteOption(optionsContainerId.replace("-options", ""), valueToDelete, type);
+        }
+      };
+
+      iconsContainer.appendChild(editIcon);
+      iconsContainer.appendChild(deleteIcon);
+      row.appendChild(iconsContainer);
+    }
+  });
+}
 
 
 
@@ -1827,28 +2402,7 @@ function toggleSearch(selectId) {
 }
 
 // حذف الخيار المحدد مع حفظ الحذف بشكل دائم باستخدام localStorage
-function deleteOption(selectId) {
-  const select = document.getElementById(selectId);
-  const selectedIndex = select.selectedIndex;
-  const selectedOption = select.options[selectedIndex];
 
-  if (!selectedOption || selectedOption.disabled || selectedOption.value === "add-custom") {
-    showNotification("Please select a valid option to delete.", selectId);
-    return;
-  }
-
-  const deletedOptionText = selectedOption.text;
-  select.removeChild(selectedOption);
-
-  const persistentKey = `deletedOptions_${selectId}`;
-  let deletedOptions = JSON.parse(localStorage.getItem(persistentKey)) || [];
-  if (!deletedOptions.includes(deletedOptionText)) {
-    deletedOptions.push(deletedOptionText);
-    localStorage.setItem(persistentKey, JSON.stringify(deletedOptions));
-  }
-
-  showNotification("Deleted option: " + deletedOptionText, selectId);
-}
 
 // دالة تطبق الحذف الدائم عند تحميل الصفحة
 function applyDeletions(selectId) {

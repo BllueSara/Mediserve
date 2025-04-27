@@ -289,11 +289,14 @@ app.post("/submit-regular-maintenance", async (req, res) => {
     section,
     "device-spec": deviceSpec,
     details = [],
-    notes = ""
+    notes = "",
+  problem_status = "",
+   technical_engineer_id = null
   } = req.body;
+  
 
   try {
-    // 1. Get department ID
+    // 1️⃣ جلب رقم القسم
     const departmentId = await new Promise((resolve, reject) => {
       db.query("SELECT id FROM Departments WHERE name = ?", [section], (err, result) => {
         if (err) return reject(err);
@@ -301,7 +304,7 @@ app.post("/submit-regular-maintenance", async (req, res) => {
       });
     });
 
-    // 2. Get device info
+    // 2️⃣ جلب بيانات الجهاز
     const deviceInfo = await new Promise((resolve, reject) => {
       const query = `
         SELECT md.*, COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
@@ -310,13 +313,15 @@ app.post("/submit-regular-maintenance", async (req, res) => {
                COALESCE(o.os_name, '') AS os_name,
                COALESCE(g.generation_number, '') AS generation_number,
                COALESCE(pm.model_name, prm.model_name, scm.model_name, '') AS model_name,
-               COALESCE(hdt.drive_type, '') AS drive_type, 
-
+               COALESCE(hdt.drive_type, '') AS drive_type,
                d.name AS department_name
         FROM Maintenance_Devices md
-        LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
-        LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
-        LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
+        LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number
+          AND md.governmental_number = pc.Governmental_Number
+        LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number
+          AND md.governmental_number = pr.Governmental_Number
+        LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number
+          AND md.governmental_number = sc.Governmental_Number
         LEFT JOIN CPU_Types c ON pc.Processor_id = c.id
         LEFT JOIN RAM_Types r ON pc.RAM_id = r.id
         LEFT JOIN OS_Types o ON pc.OS_id = o.id
@@ -325,9 +330,9 @@ app.post("/submit-regular-maintenance", async (req, res) => {
         LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
         LEFT JOIN Scanner_Model scm ON sc.Model_id = scm.id
         LEFT JOIN Departments d ON md.department_id = d.id
-        LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id 
-
-        WHERE md.id = ?`;
+        LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id
+        WHERE md.id = ?
+      `;
       db.query(query, [deviceSpec], (err, result) => {
         if (err) return reject(err);
         resolve(result[0]);
@@ -336,127 +341,86 @@ app.post("/submit-regular-maintenance", async (req, res) => {
 
     if (!deviceInfo) return res.status(404).json({ error: "Device not found" });
 
-    // 3. Insert into Regular_Maintenance (no duplicates check here)
+    // 3️⃣ أدخل صيانة دورية Regular_Maintenance
     const checklist = JSON.stringify(details);
+
     await new Promise((resolve, reject) => {
-      db.query(
-        `INSERT INTO Regular_Maintenance (
-  device_id, device_type, last_maintenance_date, frequency, checklist, notes,
-  serial_number, governmental_number, device_name, department_name,
-  cpu_name, ram_type, os_name, generation_number, model_name, drive_type, status
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-
-        [
-          deviceSpec,
-          rawDeviceType || deviceInfo.device_type,
-          date,
-          frequency,
-          checklist,
-          notes,
-          deviceInfo.serial_number,
-          deviceInfo.governmental_number,
-          deviceInfo.device_name,
-          deviceInfo.department_name,
-          deviceInfo.cpu_name,
-          deviceInfo.ram_type,
-          deviceInfo.os_name,
-          deviceInfo.generation_number,
-          deviceInfo.model_name,
-          deviceInfo.drive_type,
-          "Open"
-        ],
-        (err) => {
-          if (err) return reject(err);
-          resolve();
-        }
-      );
+      db.query(`
+        INSERT INTO Regular_Maintenance (
+          device_id, device_type, last_maintenance_date, frequency, checklist, notes,
+          serial_number, governmental_number, device_name, department_name,
+          cpu_name, ram_type, os_name, generation_number, model_name, drive_type, status,
+          problem_status,  technical_engineer_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        deviceSpec,
+        rawDeviceType || deviceInfo.device_type,
+        date,
+        frequency,
+        checklist,
+        notes,
+        deviceInfo.serial_number,
+        deviceInfo.governmental_number,
+        deviceInfo.device_name,
+        deviceInfo.department_name,
+        deviceInfo.cpu_name,
+        deviceInfo.ram_type,
+        deviceInfo.os_name,
+        deviceInfo.generation_number,
+        deviceInfo.model_name,
+        deviceInfo.drive_type,
+        "Open",
+        problem_status || "",  
+        technical_engineer_id // 🆕 حالة المشكلة
+      ], (err) => {
+        if (err) return reject(err);
+        resolve();
+      });
     });
 
-    // 4. Create Ticket
+    // 4️⃣ إنشاء تذكرة داخلية Internal_Tickets
     const ticketNumber = `TIC-${Date.now()}`;
+
     const ticketId = await new Promise((resolve, reject) => {
-      db.query(
-        "INSERT INTO Internal_Tickets (ticket_number, priority, department_id, issue_description) VALUES (?, ?, ?, ?)",
-        [ticketNumber, "Medium", departmentId, `Regular Maintenance for device ${deviceInfo.device_name}`],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.insertId);
-        }
-      );
-    });
-
-    // 5. Check if maintenance report already exists for today
-    const alreadyReported = await new Promise((resolve, reject) => {
-      db.query(
-        `SELECT id FROM Maintenance_Reports 
-         WHERE device_id = ? AND maintenance_type = 'Regular' 
-         AND DATE(created_at) = CURDATE()`,
-        [deviceSpec],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.length > 0);
-        }
-      );
-    });
-
-    if (!alreadyReported) {
-      const reportNumberMain = `REP-${Date.now()}-MAIN`;
-      await new Promise((resolve, reject) => {
-        db.query(
-          "INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type) VALUES (?, ?, ?, ?, ?, ?, ?)",
-          [
-            reportNumberMain,
-            ticketId,
-            deviceSpec,
-            checklist,
-            notes || "Routine periodic maintenance performed.",
-            "Open",
-            "Regular"
-          ],
-          (err) => {
-            if (err) return reject(err);
-            resolve();
-          }
-        );
+      db.query(`
+        INSERT INTO Internal_Tickets (
+          ticket_number, priority, department_id, issue_description, assigned_to
+        ) VALUES (?, ?, ?, ?, ?)
+      `, [
+        ticketNumber,
+        "Medium",
+        departmentId,
+        problem_status || "Regular Maintenance", // 🆕 شرح التذكرة من حالة المشكلة
+        +   technical_engineer_id || null
+      ], (err, result) => {
+        if (err) return reject(err);
+        resolve(result.insertId);
       });
-    }
-
-    // 6. Prevent duplicate ticket summary
-    const ticketReportExists = await new Promise((resolve, reject) => {
-      db.query(
-        `SELECT id FROM Maintenance_Reports 
-         WHERE device_id = ? AND ticket_id = ? AND issue_summary = 'Ticket Created'`,
-        [deviceSpec, ticketId],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.length > 0);
-        }
-      );
     });
 
-    if (!ticketReportExists) {
-      const reportNumberTicket = `REP-${Date.now()}-TICKET`;
-      await new Promise((resolve, reject) => {
-        db.query(
-          "INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type) VALUES (?, ?, ?, ?, ?, ?, ?)",
-          [
-            reportNumberTicket,
-            ticketId,
-            deviceSpec,
-            "Ticket Created",
-            `Ticket (${ticketNumber}) for device: ${deviceInfo.device_name} - Department: ${deviceInfo.department_name}`,
-            "Open",
-            "Regular"
-          ],
-          (err) => {
-            if (err) return reject(err);
-            resolve();
-          }
-        );
+    // 5️⃣ إضافة تقرير الصيانة
+    const reportNumber = `REP-${Date.now()}`;
+    await new Promise((resolve, reject) => {
+      db.query(`
+        INSERT INTO Maintenance_Reports (
+          report_number, ticket_id, device_id,
+          issue_summary, full_description, status, maintenance_type
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [
+        reportNumber,
+        ticketId,
+        deviceSpec,
+        checklist,
+        notes || "Routine periodic maintenance performed.",
+        "Open",
+        "Regular"
+      ], (err) => {
+        if (err) return reject(err);
+        resolve();
       });
-    }
+    });
 
-    res.json({ message: "✅ Regular maintenance, ticket and reports created successfully" });
+    res.json({ message: "✅ Regular maintenance, ticket, and report created successfully" });
 
   } catch (error) {
     console.error("❌ Error in regular maintenance submission:", error);
@@ -626,21 +590,17 @@ app.post("/add-options-external", (req, res) => {
     });
   });
 });
-
-
 app.post("/add-options-regular", (req, res) => {
-  const { target, value, type } = req.body; // 🟢 استخراج القيم من الطلب
+  const { target, value, type } = req.body; // 🟢 استخراج البيانات من الجسم
 
-  // 🟢 تحديد الجدول والعمود لكل نوع خيار في القوائم المنسدلة
   const tableMap = {
     "device-type": { table: "DeviceType", column: "DeviceType" },
     "section": { table: "Departments", column: "name" },
     "os-select": { table: "OS_Types", column: "os_name" },
     "ram-select": { table: "RAM_Types", column: "ram_type" },
     "cpu-select": { table: "CPU_Types", column: "cpu_name" },
-    "generation-select": { table: "Processor_Generations", column: "generation_number",
-      "drive-select": { table: "Hard_Drive_Types", column: "drive_type" } // 🆕 أضفنا هذا
-     },
+    "generation-select": { table: "Processor_Generations", column: "generation_number" },
+    "drive-select": { table: "Hard_Drive_Types", column: "drive_type" },
     "problem-status": type === "pc"
       ? { table: "ProblemStates_Pc", column: "problem_text" }
       : type === "printer"
@@ -648,10 +608,11 @@ app.post("/add-options-regular", (req, res) => {
         : type === "scanner"
           ? { table: "ProblemStates_Scanner", column: "problem_text" }
           : { table: "problemStates_Maintance_device", column: "problemStates_Maintance_device_name", extra: "device_type_name" },
+    "technical": { table: "Engineers", column: "name" } // 🆕 دعم الفنيين هنا ✅
   };
 
   const mapping = tableMap[target];
-  if (!mapping) return res.status(400).json({ error: "Invalid target field" }); // 🔴 إذا النوع غير موجود نرجع خطأ
+  if (!mapping) return res.status(400).json({ error: "Invalid target field" });
 
   let query = "";
   let params = [];
@@ -664,7 +625,6 @@ app.post("/add-options-regular", (req, res) => {
     params = [value];
   }
 
-  // 🔍 تحقق من عدم وجود القيمة مسبقًا
   const checkQuery = mapping.extra
     ? `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ? AND ${mapping.extra} = ?`
     : `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ?`;
@@ -675,7 +635,6 @@ app.post("/add-options-regular", (req, res) => {
       return res.status(400).json({ error: `⚠️ \"${value}\" already exists in ${mapping.table}` });
     }
 
-    // ✅ إضافة إذا لم تكن موجودة مسبقًا
     db.query(query, params, (err2, result) => {
       if (err2) {
         console.error("❌ DB Insert Error:", err2);
@@ -685,6 +644,7 @@ app.post("/add-options-regular", (req, res) => {
     });
   });
 });
+
 
 
 app.post("/submit-general-maintenance", async (req, res) => {
@@ -956,7 +916,7 @@ WHERE r.id = ? LIMIT 1
 
   } else {
     const sql = `
-SELECT 
+    SELECT 
   mr.id AS report_id,
   mr.report_number,
   mr.report_type,
@@ -979,15 +939,17 @@ SELECT
   cpu.cpu_name,
   gen.generation_number,
   ram.ram_type,
-  hdt.drive_type, -- ✅ أضفنا الهارد درايف
+  hdt.drive_type,
 
   COALESCE(
     pcm.model_name,
     prm.model_name,
     scm.model_name,
     mdm_fixed.model_name
-  ) AS model_name
+  ) AS model_name,
 
+  rm.problem_status,
+  eng.name AS technical_engineer -- ✅ هنا جلبنا اسم الفني
 FROM Maintenance_Reports mr
 LEFT JOIN Maintenance_Devices md ON mr.device_id = md.id
 LEFT JOIN Departments d ON md.department_id = d.id
@@ -998,32 +960,64 @@ LEFT JOIN CPU_Types cpu ON pc.Processor_id = cpu.id
 LEFT JOIN RAM_Types ram ON pc.RAM_id = ram.id
 LEFT JOIN OS_Types pc_os ON pc.OS_id = pc_os.id
 LEFT JOIN Processor_Generations gen ON pc.Generation_id = gen.id
-LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id -- ✅
+LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id
 LEFT JOIN PC_Model pcm ON pc.Model_id = pcm.id
 
 LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number
 LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
 
 LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number
-LEFT JOIN Scanner_Model scm ON sc.Model_id = scm.id
+LEFT JOIN Scanner_Model scm ON sc.model_id = scm.id
 
 LEFT JOIN Maintance_Device_Model mdm_fixed ON md.model_id = mdm_fixed.id
 
-WHERE mr.id = ?
-    `;
+LEFT JOIN (
+  SELECT *
+  FROM Regular_Maintenance
+  ORDER BY last_maintenance_date DESC
+) AS rm ON rm.device_id = mr.device_id
 
+
+LEFT JOIN Engineers eng
+  ON rm.technical_engineer_id = eng.id -- ✅ الربط الصح للفني
+
+WHERE mr.id = ?
+
+    `;
+    
     db.query(sql, [reportId], (err2, result2) => {
       if (err2) return res.status(500).json({ error: "Server error" });
       if (!result2.length) return res.status(404).json({ error: "Internal report not found" });
-
+    
+      const report = result2[0];
+    
       return res.json({
-        ...result2[0],
-        id: result2[0].report_id,
-        ticket_number: result2[0].ticket_number,
-        drive_type: result2[0].drive_type || "", // ✅ أضفناها هنا
+        id: report.report_id,
+        ticket_number: report.ticket_number,
+        drive_type: report.drive_type || "",
+        device_type: report.device_type,
+        serial_number: report.serial_number,
+        governmental_number: report.governmental_number,
+        device_name: report.device_name,
+        department_name: report.department_name,
+        priority: report.priority,
+        technical: report.technical,
+        maintenance_type: report.maintenance_type,
+        issue_summary: report.issue_summary,
+        full_description: report.full_description,
+        created_at: report.created_at,
+        report_type: report.report_type,
+        model_name: report.model_name,
+        os_name: report.os_name,
+        cpu_name: report.cpu_name,
+        ram_type: report.ram_type,
+        generation_number: report.generation_number,
+        drive_type: report.drive_type,
+        problem_status: report.problem_status || "",        // 🆕 إرجاع حالة المشكلة
+        technical_engineer: report.technical_engineer || "",// 🆕 إرجاع اسم الفني
         source: "internal"
       });
-    });
+    });    
   }
 });
 
@@ -1608,50 +1602,57 @@ app.get('/get-internal-reports', (req, res) => {
     T.ticket_number,
     T.issue_description,
     T.priority,
-    COALESCE(RM.department_name, GM.department_name, D.name) AS department_name,
-    COALESCE(RM.device_name, GM.device_name, M.device_name) AS device_name,
+    COALESCE(GM.department_name, D.name) AS department_name,
+    COALESCE(GM.device_name, M.device_name) AS device_name,
     RM.frequency,
     M.device_type,
     'internal' AS source,
     T.attachment_name,
-    T.attachment_path
+    T.attachment_path,
+    RM.problem_status,
+    E.name AS technical_engineer
   FROM Maintenance_Reports R
   LEFT JOIN Internal_Tickets T 
     ON R.ticket_id = T.id AND R.maintenance_type = 'Internal'
-  LEFT JOIN Departments D 
-    ON T.department_id = D.id
   LEFT JOIN Maintenance_Devices M 
     ON R.device_id = M.id
-  LEFT JOIN Regular_Maintenance RM 
-    ON RM.device_id = R.device_id AND R.maintenance_type = 'Regular'
+  LEFT JOIN Departments D 
+    ON M.department_id = D.id
+  LEFT JOIN (
+    SELECT *
+    FROM Regular_Maintenance
+    ORDER BY last_maintenance_date DESC
+  ) AS RM ON RM.device_id = R.device_id
+  LEFT JOIN Engineers E ON RM.technical_engineer_id = E.id
   LEFT JOIN General_Maintenance GM 
     ON GM.device_id = R.device_id AND R.maintenance_type = 'General'
   WHERE R.maintenance_type IN ('Regular', 'General', 'Internal')
-`;
-
+  `;
 
   const newSql = `
-    SELECT 
-      id,
-      created_at,
-      NULL AS issue_summary,
-      NULL AS full_description,
-      status,
-      NULL AS device_id,
-      NULL AS report_number,
-      NULL AS ticket_id,
-      'New' AS maintenance_type,
-      NULL AS ticket_number,
-      NULL AS issue_description,
-      priority,
-      NULL AS department_name,
-      NULL AS device_name,
-      NULL AS frequency,
-      device_type,
-      'new' AS source,
-      attachment_name,
-      attachment_path
-    FROM New_Maintenance_Report
+  SELECT 
+    id,
+    created_at,
+    NULL AS issue_summary,
+    NULL AS full_description,
+    status,
+    NULL AS device_id,
+    NULL AS report_number,
+    NULL AS ticket_id,
+    'New' AS maintenance_type,
+    NULL AS ticket_number,
+    NULL AS issue_description,
+    priority,
+    NULL AS department_name,
+    NULL AS device_name,
+    NULL AS frequency,
+    device_type,
+    'new' AS source,
+    attachment_name,
+    attachment_path,
+    NULL AS problem_status,
+    NULL AS technical_engineer
+  FROM New_Maintenance_Report
   `;
 
   const combinedSql = `${internalSql} UNION ALL ${newSql} ORDER BY created_at DESC`;
@@ -1664,6 +1665,8 @@ app.get('/get-internal-reports', (req, res) => {
     res.json(results);
   });
 });
+
+
 
 app.post("/update-report-full", upload.single("attachment"), async (req, res) => {
   const updatedData = JSON.parse(req.body.data || "{}");
@@ -2516,3 +2519,236 @@ app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
 
+
+app.post("/delete-option-complete", async (req, res) => {
+  const { target, value, type } = req.body;
+
+  if (!target || !value) {
+    return res.status(400).json({ error: "❌ Missing fields" });
+  }
+
+  // 🧠 ماب الجداول والعواميد حسب نوع الحذف
+  const deleteMap = {
+    "section": {
+      table: "Departments",
+      column: "name",
+      referencedTables: [
+        { table: "Maintenance_Devices", column: "department_name" },
+        { table: "General_Maintenance", column: "department_name" },
+        { table: "Regular_Maintenance", column: "department_name" },
+        { table: "External_Maintenance", column: "department_name" }
+      ]
+    },
+    "problem-type": {
+      table: "DeviceType",
+      column: "DeviceType",
+      referencedTables: [
+        { table: "Maintenance_Devices", column: "device_type" },
+        // { table: "General_Maintenance", column: "device_type" },
+        { table: "Regular_Maintenance", column: "device_type" },
+        { table: "External_Maintenance", column: "device_type" },
+        { table: "Maintance_Device_Model", column: "device_type_name" },
+        { table: "problemStates_Maintance_device", column: "device_type_name" }
+      ]
+    },
+    "floor": {
+      table: "Floors",
+      column: "FloorNum",
+      referencedTables: [
+        { table: "General_Maintenance", column: "floor" }
+      ]
+    },
+    "technical": {
+      table: "Engineers",
+      column: "name",
+      referencedTables: [
+        { table: "General_Maintenance", column: "technician_name" }
+      ]
+    },
+    "problem-status": {
+      table: type === "pc"
+        ? "ProblemStates_Pc"
+        : type === "printer"
+          ? "ProblemStates_Printer"
+          : type === "scanner"
+            ? "ProblemStates_Scanner"
+            : "problemStates_Maintance_device",
+      column: type === "pc" || type === "printer" || type === "scanner"
+        ? "problem_text"
+        : "problemStates_Maintance_device_name",
+      referencedTables: []
+    }
+  };
+
+  const mapping = deleteMap[target];
+  if (!mapping) return res.status(400).json({ error: "❌ Invalid target field" });
+
+  try {
+    // ✅ تحقق هل الخيار مستخدم في جداول أخرى؟
+    for (const ref of mapping.referencedTables) {
+      const [rows] = await db.promise().query(
+        `SELECT COUNT(*) AS count FROM ${ref.table} WHERE ${ref.column} = ?`,
+        [value]
+      );
+      if (rows[0].count > 0) {
+        return res.status(400).json({
+          error: `❌ Can't delete "${value}" because it is referenced in table "${ref.table}"`
+        });
+      }
+    }
+
+    // ✅ الحذف من الجدول الرئيسي
+    let deleteQuery = "";
+    let params = [];
+
+    if (target === "problem-status" && type && !["pc", "printer", "scanner"].includes(type)) {
+      deleteQuery = `DELETE FROM ${mapping.table} WHERE ${mapping.column} = ? AND device_type_name = ?`;
+      params = [value, type];
+    } else {
+      deleteQuery = `DELETE FROM ${mapping.table} WHERE ${mapping.column} = ?`;
+      params = [value];
+    }
+
+    const [result] = await db.promise().query(deleteQuery, params);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "❌ Value not found or already deleted" });
+    }
+
+    res.json({ message: `✅ "${value}" deleted successfully.` });
+
+  } catch (err) {
+    console.error("❌ Error during delete-option-complete:", err);
+    res.status(500).json({ error: "Server error during deletion" });
+  }
+});
+
+app.post("/update-option-complete", async (req, res) => {
+  const { target, oldValue, newValue, type } = req.body;
+
+  if (!target || !oldValue || !newValue) {
+    return res.status(400).json({ error: "\u274c Missing fields" });
+  }
+
+  if (oldValue.trim() === newValue.trim()) {
+    return res.status(400).json({ error: "\u274c Same value - no update needed" });
+  }
+
+  const updateMap = {
+    "section": {
+      table: "Departments",
+      column: "name",
+      propagate: [
+        { table: "Maintenance_Devices", column: "department_name" },
+        { table: "General_Maintenance", column: "department_name" },
+        { table: "Regular_Maintenance", column: "department_name" },
+        { table: "External_Maintenance", column: "department_name" }
+      ]
+    },
+    "problem-type": {
+      table: "DeviceType",
+      column: "DeviceType",
+      propagate: [
+        { table: "Maintenance_Devices", column: "device_type" },
+        { table: "Regular_Maintenance", column: "device_type" },
+        { table: "External_Maintenance", column: "device_type" },
+        { table: "Maintance_Device_Model", column: "device_type_name" },
+        { table: "problemStates_Maintance_device", column: "device_type_name" }
+      ]
+    },
+    "os-select": { table: "OS_Types", column: "os_name", propagate: [] },
+    "ram-select": { table: "RAM_Types", column: "ram_type", propagate: [] },
+    "cpu-select": { table: "CPU_Types", column: "cpu_name", propagate: [] },
+    "generation-select": { table: "Processor_Generations", column: "generation_number", propagate: [] },
+    "drive-select": { table: "Hard_Drive_Types", column: "drive_type", propagate: [] },
+    "model": {
+      table: type === "pc" ? "PC_Model"
+           : type === "printer" ? "Printer_Model"
+           : type === "scanner" ? "Scanner_Model"
+           : "Maintance_Device_Model",
+      column: "model_name",
+      propagate: []
+    },
+    "floor": { 
+      table: "floors", 
+      column: "FloorNum",
+      propagate: [
+        { table: "General_Maintenance", column: "floor" },
+        // { table: "External_Maintenance", column: "floor" },
+        // { table: "Regular_Maintenance", column: "floor" }
+      ]
+    },
+    "problem-status": { 
+      table: "problem_status", 
+      column: "status_name",
+      propagate: [
+        { table: "General_Maintenance", column: "problem_status" },
+        // { table: "External_Maintenance", column: "problem_status" },
+        { table: "Regular_Maintenance", column: "problem_status" }
+      ]
+    },
+    "technical": { 
+      table: "Technical", 
+      column: "name",
+      propagate: [
+        { table: "General_Maintenance", column: "technical" },
+        // { table: "External_Maintenance", column: "technical" },
+        { table: "Regular_Maintenance", column: "technical" }
+      ]
+    }
+  };
+  
+
+  const mapping = updateMap[target];
+  if (!mapping) return res.status(400).json({ error: "\u274c Invalid target" });
+
+  const connection = db.promise();
+
+  try {
+    await connection.query('START TRANSACTION');
+
+    // 🔹 1 - اضف القيمة الجديدة أولاً إذا غير موجودة (لجدول DeviceType مثلا)
+    if (target === "problem-type") {
+      const [newExists] = await connection.query(
+        `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ?`,
+        [newValue]
+      );
+      if (newExists.length === 0) {
+        await connection.query(
+          `INSERT INTO ${mapping.table} (${mapping.column}) VALUES (?)`,
+          [newValue]
+        );
+      }
+    }
+
+    // 🔹 2 - بعدين حدث الجداول الفرعية كلها
+    for (const { table, column } of mapping.propagate) {
+      await connection.query(
+        `UPDATE ${table} SET ${column} = ? WHERE ${column} = ?`,
+        [newValue, oldValue]
+      );
+    }
+
+    // 🔹 3 - بعدين حدث الجدول الأساسي نفسه (بـ UPDATE أو DELETE حسب النوع)
+    if (target === "problem-type") {
+      await connection.query(
+        `DELETE FROM ${mapping.table} WHERE ${mapping.column} = ?`,
+        [oldValue]
+      );
+    } else {
+      await connection.query(
+        `UPDATE ${mapping.table} SET ${mapping.column} = ? WHERE ${mapping.column} = ?`,
+        [newValue, oldValue]
+      );
+    }
+
+    await connection.query('COMMIT');
+
+    res.json({ message: "\u2705 Option updated everywhere correctly!" });
+
+  } catch (err) {
+    await connection.query('ROLLBACK');
+    console.error("\u274c Error during update-option-complete:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
