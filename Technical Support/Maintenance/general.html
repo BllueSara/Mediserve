@@ -64,20 +64,26 @@
 
         <!-- Dropdown: Type of Problem -->
         <div>
-          <label>Type of Problem <span class="required">*</span></label>
-          <div class="custom-dropdown-wrapper">
+          <label for="device-type"> Type of Problem <span class="required">*</span></label>
+          <div class="custom-dropdown-wrapper" id="device-type-dropdown-wrapper">
             <div class="custom-dropdown">
               <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-                <span id="selected-problem-type">Select Problem Type</span>
+                <span id="selected-device-type">Select Problem type</span>
                 <span>▼</span>
               </div>
               <div class="dropdown-content">
-                <input type="text" class="dropdown-search" placeholder="Search problem type..." oninput="filterDropdown(this, 'problem-type-options')">
-                <div class="dropdown-options" id="problem-type-options"></div>
+                <input
+                  type="text"
+                  placeholder="Search device type..."
+                  class="dropdown-search"
+                  oninput="filterDropdown(this, 'device-type-options')"
+                />
+                <div class="dropdown-options" id="device-type-options">
+                  <!-- سيتم تعبئة الخيارات عبر JavaScript -->
+                </div>
               </div>
             </div>
-          </div>
-          <input type="hidden" id="problem-type" name="problem-type" required>
+          </div><input type="hidden" id="device-type" name="device-type" />
         </div>
 
         <div>
@@ -105,11 +111,12 @@
 
         <!-- Dropdown: Device Specifications -->
         <div>
+         
           <label>Device Specifications <span class="required">*</span></label>
           <div class="custom-dropdown-wrapper">
             <div class="custom-dropdown">
               <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-                <span id="selected-device-spec">Select Specification</span>
+                <span id="selected-device-spec">Select specification</span>
                 <span>▼</span>
               </div>
               <div class="dropdown-content">
@@ -118,7 +125,7 @@
               </div>
             </div>
           </div>
-          <input type="hidden" id="device-spec" name="device-spec" required>
+          <input type="hidden" id="device-spec" name="device-spec" required />
         </div>
         
 

@@ -483,7 +483,7 @@ app.post("/add-option-general", (req, res) => {
 
   // 🟢 تحديد الجدول والعمود لكل نوع خيار في القوائم المنسدلة
   const tableMap = {
-    "problem-type": { table: "DeviceType", column: "DeviceType" },
+    "device-type": { table: "DeviceType", column: "DeviceType" },
     "section": { table: "Departments", column: "name" },
     "floor": { table: "Floors", column: "FloorNum" },
     "technical": { table: "Engineers", column: "name" },
@@ -993,6 +993,8 @@ WHERE mr.id = ?
     
       return res.json({
         id: report.report_id,
+          report_number: report.report_number,   // 🛠️ أضف هذا السطر عشان ترجع رقم التقرير!
+
         ticket_number: report.ticket_number,
         drive_type: report.drive_type || "",
         device_type: report.device_type,
@@ -1609,23 +1611,19 @@ app.get('/get-internal-reports', (req, res) => {
     'internal' AS source,
     T.attachment_name,
     T.attachment_path,
-    RM.problem_status,
-    E.name AS technical_engineer
+    COALESCE(RM.problem_status, T.issue_description) AS problem_status,
+    COALESCE(E.name, T.assigned_to) AS technical_engineer
   FROM Maintenance_Reports R
-  LEFT JOIN Internal_Tickets T 
-    ON R.ticket_id = T.id AND R.maintenance_type = 'Internal'
-  LEFT JOIN Maintenance_Devices M 
-    ON R.device_id = M.id
-  LEFT JOIN Departments D 
-    ON M.department_id = D.id
+  LEFT JOIN Maintenance_Devices M ON R.device_id = M.id
+  LEFT JOIN Departments D ON M.department_id = D.id
   LEFT JOIN (
-    SELECT *
-    FROM Regular_Maintenance
-    ORDER BY last_maintenance_date DESC
+      SELECT *
+      FROM Regular_Maintenance
+      ORDER BY last_maintenance_date DESC
   ) AS RM ON RM.device_id = R.device_id
   LEFT JOIN Engineers E ON RM.technical_engineer_id = E.id
-  LEFT JOIN General_Maintenance GM 
-    ON GM.device_id = R.device_id AND R.maintenance_type = 'General'
+  LEFT JOIN General_Maintenance GM ON GM.device_id = R.device_id
+  LEFT JOIN Internal_Tickets T ON R.ticket_id = T.id
   WHERE R.maintenance_type IN ('Regular', 'General', 'Internal')
   `;
 
@@ -1633,10 +1631,10 @@ app.get('/get-internal-reports', (req, res) => {
   SELECT 
     id,
     created_at,
-    NULL AS issue_summary,
+    issue_summary,
     NULL AS full_description,
     status,
-    NULL AS device_id,
+    device_id,
     NULL AS report_number,
     NULL AS ticket_id,
     'New' AS maintenance_type,
@@ -1652,7 +1650,7 @@ app.get('/get-internal-reports', (req, res) => {
     attachment_path,
     NULL AS problem_status,
     NULL AS technical_engineer
-  FROM New_Maintenance_Report
+FROM New_Maintenance_Report
   `;
 
   const combinedSql = `${internalSql} UNION ALL ${newSql} ORDER BY created_at DESC`;
@@ -1665,6 +1663,7 @@ app.get('/get-internal-reports', (req, res) => {
     res.json(results);
   });
 });
+
 
 
 
