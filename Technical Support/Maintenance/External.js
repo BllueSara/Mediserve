@@ -335,108 +335,102 @@ function savePCSpec() {
 }
 
 
+function fetchDepartments(selectId = "department") {
+  fetch("http://localhost:5050/Departments")
+    .then(res => res.json())
+    .then(data => {
+      const optionsContainer = document.getElementById(`${selectId}-options`);
+      const displaySpan = document.getElementById(`selected-${selectId}`);
+      const hiddenInput = document.getElementById(selectId);
 
-  function fetchDepartments(selectId = "department") {
-    fetch("http://localhost:5050/Departments")
-      .then(res => res.json())
-      .then(data => {
-        const optionsContainer = document.getElementById(`${selectId}-options`);
-        const displaySpan = document.getElementById(`selected-${selectId}`);
-        const hiddenInput = document.getElementById(selectId);
-  
-        if (!optionsContainer || !displaySpan || !hiddenInput) {
-          console.error(`❌ عناصر الدروب داون غير موجودة لـ: ${selectId}`);
-          return;
-        }
-  
-        optionsContainer.innerHTML = "";
-  
-        // ✅ زر "إضافة جديد"
-        const addNewRow = document.createElement("div");
-        addNewRow.className = "dropdown-option-row add-new-option";
-        addNewRow.innerHTML = `<div class="dropdown-option-text">+ Add New Section</div>`;
+      if (!optionsContainer || !displaySpan || !hiddenInput) {
+        console.error(`❌ عناصر الدروب داون غير موجودة لـ: ${selectId}`);
+        return;
+      }
 
-  addNewRow.onclick = () => {
-  sessionStorage.setItem("lastDepartmentSelectId", selectId); // ✅ تحديد السياق الصح
+      optionsContainer.innerHTML = "";
 
-  ["spec-name", "spec-serial", "spec-ministry", "spec-model", selectId].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) sessionStorage.setItem(id, el.value);
-  });
+      // ✅ زر إضافة جديد
+      const addNewRow = document.createElement("div");
+      addNewRow.className = "dropdown-option-row add-new-option";
+      addNewRow.innerHTML = `<div class="dropdown-option-text">+ Add New Section</div>`;
+      addNewRow.onclick = () => {
+        sessionStorage.setItem("lastDepartmentSelectId", selectId);
 
-  sessionStorage.setItem("lastDropdownOpened", selectId);
-  openAddSectionPopup();
-  closeAllDropdowns();
-};
-
-        optionsContainer.appendChild(addNewRow);
-  
-        // ✅ الأقسام من السيرفر
-        data.forEach((item, index) => {
-          const row = document.createElement("div");
-          row.className = "dropdown-option-row";
-  
-          const text = document.createElement("div");
-          text.className = "dropdown-option-text";
-          text.textContent = item.name;
-          text.onclick = () => {
-            displaySpan.textContent = item.name;
-            hiddenInput.value = item.name;
-            closeAllDropdowns();
-            fetchDeviceSpecsByTypeAndDepartment(); // 🔁 للتحديث حسب القسم
-          };
-  
-          const icons = document.createElement("div");
-          icons.className = "dropdown-actions-icons";
-  
-          const editIcon = document.createElement("i");
-          editIcon.className = "fas fa-edit";
-          editIcon.title = "Edit";
-          editIcon.onclick = (e) => {
-            e.stopPropagation();
-            const newValue = prompt("Edit Section:", item.name);
-            if (newValue) {
-              item.name = newValue;
-              displaySpan.textContent = newValue;
-              hiddenInput.value = newValue;
-              fetchCustomStyledDepartments(selectId);
-            }
-          };
-  
-          const deleteIcon = document.createElement("i");
-          deleteIcon.className = "fas fa-trash";
-          deleteIcon.title = "Delete";
-          deleteIcon.onclick = (e) => {
-            e.stopPropagation();
-            if (confirm(`Delete "${item.name}"?`)) {
-              data.splice(index, 1);
-              displaySpan.textContent = "Select section";
-              hiddenInput.value = "";
-              fetchCustomStyledDepartments(selectId);
-            }
-          };
-  
-          icons.appendChild(editIcon);
-          icons.appendChild(deleteIcon);
-          row.appendChild(text);
-          row.appendChild(icons);
-          optionsContainer.appendChild(row);
+        ["spec-name", "spec-serial", "spec-ministry", "spec-model", selectId].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) sessionStorage.setItem(id, el.value);
         });
-  
-        // ✅ استعادة القيمة المخزنة مؤقتًا
-        const saved = sessionStorage.getItem(selectId);
-        if (saved) {
-          displaySpan.textContent = saved;
-          hiddenInput.value = saved;
-          sessionStorage.removeItem(selectId);
-        }
-         attachEditDeleteHandlers(`${selectId}-options`, "Department");
 
-      })
-      .catch(err => {
-        console.error(`❌ Failed to fetch departments for ${selectId}:`, err);
+        sessionStorage.setItem("lastDropdownOpened", selectId);
+        openAddSectionPopup();
+        closeAllDropdowns();
+      };
+      optionsContainer.appendChild(addNewRow);
+
+      // ✅ الأقسام من السيرفر
+      data.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = "dropdown-option-row";
+
+        const text = document.createElement("div");
+        text.className = "dropdown-option-text";
+        text.textContent = item.name;
+        text.onclick = () => {
+          displaySpan.textContent = item.name;
+          hiddenInput.value = item.name;
+          closeAllDropdowns();
+          fetchDeviceSpecsByTypeAndDepartment(); // 🔁 لتحديث الأجهزة حسب القسم
+        };
+
+        const icons = document.createElement("div");
+        icons.className = "dropdown-actions-icons";
+
+        // ✏️ أيقونة التعديل (Edit)
+        const editIcon = document.createElement("i");
+        editIcon.className = "fas fa-edit";
+        editIcon.title = "Edit";
+        editIcon.onclick = (e) => {
+          e.stopPropagation();
+          const oldValue = item.name;
+          const newValue = prompt("Edit Section:", oldValue);
+          if (newValue && newValue.trim() !== oldValue) {
+            editOption("section", oldValue, newValue.trim(), "Department");
+          }
+        };
+
+        // 🗑️ أيقونة الحذف (Delete)
+        const deleteIcon = document.createElement("i");
+        deleteIcon.className = "fas fa-trash";
+        deleteIcon.title = "Delete";
+        deleteIcon.onclick = (e) => {
+          e.stopPropagation();
+          if (confirm(`Delete "${item.name}"?`)) {
+            deleteOption("section", item.name, "Department");
+          }
+        };
+
+        icons.appendChild(editIcon);
+        icons.appendChild(deleteIcon);
+        row.appendChild(text);
+        row.appendChild(icons);
+        optionsContainer.appendChild(row);
       });
-  }
+
+      // ✅ استعادة القيمة المخزنة مؤقتًا
+      const saved = sessionStorage.getItem(selectId);
+      if (saved) {
+        displaySpan.textContent = saved;
+        hiddenInput.value = saved;
+        sessionStorage.removeItem(selectId);
+      }
+
+      attachEditDeleteHandlers(`${selectId}-options`, "Department");
+    })
+    .catch(err => {
+      console.error(`❌ Failed to fetch departments for ${selectId}:`, err);
+    });
+}
   
   function saveNewSection() {
     const sectionName = document.getElementById("new-section-name").value.trim();
@@ -1034,6 +1028,7 @@ function fetchDeviceTypes() {
           fetchDeviceSpecsByTypeAndDepartment();
         
           const type = item.DeviceType.trim().toLowerCase();
+          if (type) fetchProblemStatus(type); // ✅ جلب حالات الأعطال بناءً على الجهاز
         };
         
 
@@ -1075,8 +1070,7 @@ function fetchDeviceTypes() {
       console.error("❌ Failed to fetch device types:", err);
     });
 }
-
-function fetchTechnicalStatus() {
+function fetchTechnicalStatus(callback) {
   fetch("http://localhost:5050/Technical")
     .then(res => res.json())
     .then(data => {
@@ -1104,38 +1098,28 @@ function fetchTechnicalStatus() {
 
         const text = document.createElement("div");
         text.className = "dropdown-option-text";
-        text.textContent = engineer.Engineer_Name || engineer.name || "No Name";
-        text.dataset.id = engineer.id; // ✨ حفظ رقم الـ ID هنا في الـ dataset
+        const engineerName = engineer.Engineer_Name || engineer.name || "No Name";
+        text.textContent = engineerName;
+        text.dataset.id = engineer.id;
 
         text.onclick = () => {
-          displaySpan.textContent = text.textContent;
-          hiddenInput.value = text.dataset.id; // ✨ خزِّن الـ ID مش الاسم
+          displaySpan.textContent = engineerName;
+          hiddenInput.value = engineer.id;
           closeAllDropdowns();
         };
 
-        const icons = document.createElement("div");
-        icons.className = "dropdown-actions-icons";
-
-        const editIcon = document.createElement("i");
-        editIcon.className = "fas fa-edit";
-        editIcon.title = "Edit";
-        // (كود التعديل لو تبغى)
-
-        const deleteIcon = document.createElement("i");
-        deleteIcon.className = "fas fa-trash";
-        deleteIcon.title = "Delete";
-        // (كود الحذف لو تبغى)
-
-        icons.appendChild(editIcon);
-        icons.appendChild(deleteIcon);
-
         row.appendChild(text);
-        row.appendChild(icons);
         optionsContainer.appendChild(row);
       });
+
+      // ✅ بعد ما تخلص بناء العناصر, اربط الازرار
+      attachEditDeleteHandlers("technical-status-options", "technical");
+
+      if (typeof callback === "function") callback();
     })
     .catch(err => console.error("❌ Error fetching technical statuses:", err));
 }
+
 
 function openAddTechnicalPopup() {
   const popup = document.getElementById("generic-popup");
@@ -1389,6 +1373,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
+function mapSelectIdToServerTarget(selectId) {
+  const map = {
+    "device-type": "problem-type",
+    "technical-status": "technical",
+    "problem-status": "problem-status",
+    "section": "section",
+    "spec-department": "section",
+    "spec-model": "model",
+    "model-pc": "model",
+    "model-printer": "model",
+    "model-scanner": "model",
+    "drive-select": "drive-select",
+    "cpu-select": "cpu-select",
+    "ram-select": "ram-select",
+    "os-select": "os-select",
+    "generation-select": "generation-select",
+    "device-spec": "device-spec"
+  };
+
+  return map[selectId] || selectId;
+}
+
 
 function deleteOption(selectId, value, type = null) {
   if (!value) {
@@ -1400,10 +1406,21 @@ function deleteOption(selectId, value, type = null) {
     return;
   }
 
+  const target = mapSelectIdToServerTarget(selectId);
+
+  let requestBody = { target, value };
+  
+  // ✨ إضافي: بعض الأنواع تحتاج تحديد "type"
+  if (target === "section" || target === "model") {
+    requestBody.type = "Department"; // أو "Model" حسب الحاجة
+  } else if (type) {
+    requestBody.type = type;
+  }
+
   fetch("http://localhost:5050/delete-option-complete", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ target: selectId, value, type })
+    body: JSON.stringify(requestBody)
   })
     .then(res => res.json())
     .then(result => {
@@ -1411,8 +1428,6 @@ function deleteOption(selectId, value, type = null) {
         alert(result.error);
       } else {
         alert(result.message);
-
-        // ✅ بعد الحذف، نحدث القائمة بالكامل
         refreshDropdown(selectId);
       }
     })
@@ -1421,6 +1436,7 @@ function deleteOption(selectId, value, type = null) {
       alert("❌ Failed to delete option");
     });
 }
+
 function refreshDropdown(selectId) {
   if (selectId === "problem-type") {
     fetchDeviceTypes();
@@ -1441,7 +1457,12 @@ function refreshDropdown(selectId) {
     fetchAndRenderModels(type, selectId);
   } else if (selectId === "device-spec") {
     fetchDeviceSpecsByTypeAndDepartment();
-  } else {
+  } 
+  // ✅✅ الإضافات الجديدة:
+ else if (selectId === "technical" || selectId === "technical-status") {
+     fetchReporterNames(); // ✅ هنا الحل لتحديث الريبورترز بعد الحذف
+  // -------------------
+ } else {
     console.warn(`❓ Unknown selectId for refreshing: ${selectId}`);
   }
 }
@@ -1456,7 +1477,7 @@ function editOption(selectId, oldValue, newValue, type = null) {
   fetch("http://localhost:5050/update-option-complete", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ target: selectId, oldValue, newValue, type })
+    body: JSON.stringify({ target: mapSelectIdToServerTarget(selectId), oldValue, newValue, type })
   })
     .then(res => res.json())
     .then(result => {
@@ -1474,7 +1495,6 @@ function editOption(selectId, oldValue, newValue, type = null) {
       alert("❌ Failed to edit option");
     });
 }
-
 
 
 
@@ -2270,9 +2290,8 @@ function fetchReporterNames() {
         deleteIcon.onclick = (e) => {
           e.stopPropagation();
           const valueToDelete = reporter.Engineer_Name || reporter.name;
-          if (confirm(`❗ Are you sure you want to delete "${valueToDelete}"?`)) {
             deleteOption("technical-status", valueToDelete);
-          }
+          
         };
 
         icons.appendChild(editIcon);
