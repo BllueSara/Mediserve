@@ -131,16 +131,25 @@ if (!ticketNumber) {
         report.report_number || report.request_number || `MR-${report.id}`;
       document.getElementById("priority").textContent = isExternal ? "" : (report.priority || "");
       document.getElementById("device-type").textContent = report.device_type || "";
-      document.getElementById("assigned-to").textContent = isExternal
-      ? (report.reporter_name || "")
-      : (report.technical_engineer || report.technical || ""); 
-    
+      if (report.maintenance_type === "Regular") {
+        document.getElementById("assigned-to").textContent = report.technical_engineer;
+      } else {
+        document.getElementById("assigned-to").textContent = isExternal
+          ? (report.reporter_name || "")
+          : (report.assigned_to || report.technical || "");
+      }
       document.getElementById("department").textContent = report.department_name || "";
       document.getElementById("category").textContent = isExternal ? "External" : (report.report_type || "");
       document.getElementById("report-status").textContent = report.status || "Pending";
       document.getElementById("submitted-date").textContent = `Submitted on ${new Date(report.created_at).toLocaleString()}`;
-      document.getElementById("description").textContent =
-      report.problem_status || report.issue_summary || report.initial_diagnosis || "No description.";
+      
+      if (report.maintenance_type === "Regular") {
+        document.getElementById("description").textContent =
+          report.problem_status || report.issue_summary || report.initial_diagnosis || "No description.";
+      }else{
+        document.getElementById("description").textContent =
+          report.issue_summary || report.initial_diagnosis || "No description.";
+      }
     
       document.getElementById("note").innerHTML = `
         <strong>${isExternal ? "Final Diagnosis" : "Technical Team Note"}:</strong><br>

@@ -1,4 +1,4 @@
-const deviceTypeSelect = document.getElementById("problem-type");
+const deviceTypeSelect = document.getElementById("device-type");
 const deviceSpecSelect = document.getElementById("device-spec");
 const popup = document.getElementById("popup-modal");
 const popupHeading = popup.querySelector("#popup-title");
@@ -7,11 +7,16 @@ const popupFieldsContainer = document.getElementById("popup-fields");
 
 if (deviceTypeSelect) {
   deviceTypeSelect.addEventListener("change", function () {
-    deviceSpecSelect.value = "";
-    fetchDeviceSpecsByTypeAndDepartment(); // ✅ ضروري عشان يعرض الأجهزة حسب النوع الجديد
+    const type = this.value.trim().toLowerCase();
+    const department = sectionDropdown?.value?.trim();
 
+    deviceSpecSelect.value = "";
+
+    fetchDeviceSpecsByTypeAndDepartment(); // ✅ تحديث الأجهزة
+    if (type) fetchProblemStatus(type);     // ✅ تحديث الأعطال
   });
 }
+
 function fetchAndRenderModels(deviceType, dropdownId) {
   const cleanedType = deviceType.trim().toLowerCase();
   const optionsContainer = document.getElementById(`${dropdownId}-options`);
@@ -109,77 +114,6 @@ function fetchAndRenderModels(deviceType, dropdownId) {
     })
     .catch(err => {
       console.error("❌ Error fetching models:", err);
-    });
-}
-
-function fetchProblemStatuses() {
-  const deviceTypeInput = document.getElementById("problem-type");
-  if (!deviceTypeInput) {
-    console.error("❌ problem-type input not found.");
-    return;
-  }
-
-  const deviceType = deviceTypeInput.value.trim().toLowerCase();
-  if (!deviceType) {
-    console.log("❌ No device type selected yet, skipping problem statuses fetch.");
-    return;
-  }
-
-  const optionsContainer = document.getElementById("problem-status-options");
-  const displaySpan = document.getElementById("selected-problem-status");
-  const hiddenInput = document.getElementById("problem-status");
-
-  if (!optionsContainer || !displaySpan || !hiddenInput) {
-    console.error("❌ DOM elements missing for problem statuses");
-    return;
-  }
-
-  optionsContainer.innerHTML = "";
-
-  let endpoint = "";
-  if (deviceType === "pc") endpoint = "/problem-states/pc";
-  else if (deviceType === "printer") endpoint = "/problem-states/printer";
-  else if (deviceType === "scanner") endpoint = "/problem-states/scanner";
-  else endpoint = `/problem-states/maintenance/${encodeURIComponent(deviceType)}`;
-
-  fetch(`http://localhost:5050${endpoint}`)
-    .then(res => res.json())
-    .then(data => {
-      optionsContainer.innerHTML = "";
-
-      // Add + Add New option
-      const addNewRow = document.createElement("div");
-      addNewRow.className = "dropdown-option-row add-new-option";
-      addNewRow.innerHTML = `<div class="dropdown-option-text">+ Add New Problem Status</div>`;
-      addNewRow.onclick = () => {
-        sessionStorage.setItem("lastDropdownOpened", "problem-status");
-        openAddOptionPopup("problem-status");
-        closeAllDropdowns();
-      };
-      optionsContainer.appendChild(addNewRow);
-
-      data.forEach(item => {
-        const statusName = item.problem_text || item.problemStates_Maintance_device_name;
-
-        const row = document.createElement("div");
-        row.className = "dropdown-option-row";
-
-        const text = document.createElement("div");
-        text.className = "dropdown-option-text";
-        text.textContent = statusName;
-        text.onclick = () => {
-          displaySpan.textContent = statusName;
-          hiddenInput.value = statusName;
-          closeAllDropdowns();
-        };
-
-        row.appendChild(text);
-        optionsContainer.appendChild(row);
-      });
-
-    })
-    .catch(err => {
-      console.error("❌ Failed to fetch problem statuses:", err);
     });
 }
 
@@ -358,7 +292,7 @@ function savePCSpec() {
     deviceData[key] = value;
   });
 
-  const deviceType = document.getElementById("problem-type").value.toLowerCase();
+  const deviceType = document.getElementById("device-type").value.toLowerCase();
 
   fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
     method: "POST",
@@ -512,7 +446,7 @@ function savePCSpec() {
       return;
     }
   
-    fetch("http://localhost:5050/add-options-regular", {
+    fetch("http://localhost:5050/add-option-general", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ target: "section", value: sectionName })
@@ -553,7 +487,7 @@ setTimeout(() => {
         document.getElementById("generic-popup").style.display = "none";
   
         // ✅ فقط إذا كانت الإضافة داخل popup المواصفات + نوع الجهاز غير معروف
-        const deviceType = document.getElementById("problem-type")?.value?.toLowerCase();
+        const deviceType = document.getElementById("device-type")?.value?.toLowerCase();
         const isSpecContext = ["spec-department", "department-pc", "department-printer", "department-scanner"].includes(selectId);
   
         if (isSpecContext && !["pc", "printer", "scanner"].includes(deviceType)) {
@@ -1068,9 +1002,9 @@ function fetchDeviceTypes() {
   fetch("http://localhost:5050/TypeProplem")
     .then(res => res.json())
     .then(data => {
-      const container = document.getElementById("problem-type-options");
-      const selectedDisplay = document.getElementById("selected-problem-type");
-      const hiddenInput = document.getElementById("problem-type");
+      const container = document.getElementById("device-type-options");
+      const selectedDisplay = document.getElementById("selected-device-type");
+      const hiddenInput = document.getElementById("device-type");
 
       container.innerHTML = "";
 
@@ -1081,7 +1015,7 @@ function fetchDeviceTypes() {
         <div class="dropdown-option-text">+ Add New Device Type</div>
       `;
       addNewRow.onclick = () => {
-        openGenericPopup("Device Type", "problem-type");
+        openGenericPopup("Device Type", "device-type");
         closeAllDropdowns();
       };
       container.appendChild(addNewRow);
@@ -1099,7 +1033,11 @@ function fetchDeviceTypes() {
           hiddenInput.value = item.DeviceType;
           closeAllDropdowns();
           fetchDeviceSpecsByTypeAndDepartment();
+        
+          const type = item.DeviceType.trim().toLowerCase();
+          if (type) fetchProblemStatus(type); // ✅ جلب حالات الأعطال بناءً على الجهاز
         };
+        
 
         const icons = document.createElement("div");
         icons.className = "dropdown-actions-icons";
@@ -1132,11 +1070,276 @@ function fetchDeviceTypes() {
         row.appendChild(icons);
         container.appendChild(row);
       });
-      attachEditDeleteHandlers("problem-type-options", "problem-type");
+      attachEditDeleteHandlers("device-type-options", "problem-type");
 
     })
     .catch(err => {
       console.error("❌ Failed to fetch device types:", err);
+    });
+}
+
+function fetchTechnicalStatus() {
+  fetch("http://localhost:5050/Technical")
+    .then(res => res.json())
+    .then(data => {
+      const optionsContainer = document.getElementById("technical-status-options");
+      const displaySpan = document.getElementById("selected-technical-status");
+      const hiddenInput = document.getElementById("technical-status");
+
+      if (!optionsContainer || !displaySpan || !hiddenInput) return;
+
+      optionsContainer.innerHTML = "";
+
+      const addNewRow = document.createElement("div");
+      addNewRow.className = "dropdown-option-row add-new-option";
+      addNewRow.innerHTML = `<div class="dropdown-option-text">+ Add New Engineer</div>`;
+      addNewRow.onclick = () => {
+        sessionStorage.setItem("lastDropdownOpened", "technical-status");
+        openAddTechnicalPopup();
+        closeAllDropdowns();
+      };
+      optionsContainer.appendChild(addNewRow);
+
+      data.forEach(engineer => {
+        const row = document.createElement("div");
+        row.className = "dropdown-option-row";
+
+        const text = document.createElement("div");
+        text.className = "dropdown-option-text";
+        text.textContent = engineer.Engineer_Name || engineer.name || "No Name";
+        text.dataset.id = engineer.id; // ✨ حفظ رقم الـ ID هنا في الـ dataset
+
+        text.onclick = () => {
+          displaySpan.textContent = text.textContent;
+          hiddenInput.value = text.dataset.id; // ✨ خزِّن الـ ID مش الاسم
+          closeAllDropdowns();
+        };
+
+        const icons = document.createElement("div");
+        icons.className = "dropdown-actions-icons";
+
+        const editIcon = document.createElement("i");
+        editIcon.className = "fas fa-edit";
+        editIcon.title = "Edit";
+        // (كود التعديل لو تبغى)
+
+        const deleteIcon = document.createElement("i");
+        deleteIcon.className = "fas fa-trash";
+        deleteIcon.title = "Delete";
+        // (كود الحذف لو تبغى)
+
+        icons.appendChild(editIcon);
+        icons.appendChild(deleteIcon);
+
+        row.appendChild(text);
+        row.appendChild(icons);
+        optionsContainer.appendChild(row);
+      });
+    })
+    .catch(err => console.error("❌ Error fetching technical statuses:", err));
+}
+
+function openAddTechnicalPopup() {
+  const popup = document.getElementById("generic-popup");
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>Add New Technical Engineer</h3>
+      <label for="new-technical-name">Engineer Name:</label>
+      <input type="text" id="new-technical-name" placeholder="Enter engineer name..." />
+      <div class="popup-buttons">
+        <button type="button" onclick="saveNewTechnical()">Save</button>
+        <button type="button" onclick="closeGenericPopup()">Cancel</button>
+      </div>
+    </div>
+  `;
+  popup.style.display = "flex";
+}
+
+function saveNewTechnical() {
+  const name = document.getElementById("new-technical-name").value.trim();
+  if (!name) {
+    alert("❌ Please enter the engineer's name");
+    return;
+  }
+
+  fetch("http://localhost:5050/add-option-general", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target: "technical-status", value: name })
+  })
+    .then(res => res.json())
+    .then(result => {
+      if (result.error) {
+        alert(result.error);
+      } else {
+        alert(result.message || "✅ Engineer added successfully");
+        fetchTechnicalStatus(); // 🔁 حدث القائمة
+        closeGenericPopup();
+      }
+    })
+    .catch(err => {
+      console.error("❌ Error saving engineer:", err);
+      alert("❌ Failed to save engineer");
+    });
+}
+
+function fetchProblemStatus(deviceType) {
+  const optionsContainer = document.getElementById("problem-status-options");
+  const displaySpan = document.getElementById("selected-problem-status");
+  const hiddenInput = document.getElementById("problem-status");
+
+  // ✅ تأكد أن كل العناصر موجودة
+  if (!optionsContainer || !displaySpan || !hiddenInput) {
+    console.error("❌ One of the problem status elements is missing!");
+    return;
+  }
+
+  optionsContainer.innerHTML = "";
+
+  // ✅ Add New Problem Status
+  const addNewRow = document.createElement("div");
+  addNewRow.className = "dropdown-option-row add-new-option";
+  addNewRow.innerHTML = `<div class="dropdown-option-text">+ Add New Problem Status</div>`;
+  addNewRow.onclick = () => {
+    sessionStorage.setItem("lastDropdownOpened", "problem-status");
+    openAddProblemStatusPopup(deviceType);
+    closeAllDropdowns();
+  };
+  optionsContainer.appendChild(addNewRow);
+
+  if (!deviceType || deviceType === "add-custom") {
+    const noDeviceRow = document.createElement("div");
+    noDeviceRow.className = "dropdown-option-row";
+    noDeviceRow.innerHTML = `<div class="dropdown-option-text">Select device type first</div>`;
+    optionsContainer.appendChild(noDeviceRow);
+    return;
+  }
+
+  let endpoint = "";
+  const cleanedType = deviceType.trim().toLowerCase();
+  if (cleanedType === "pc") endpoint = "problem-states/pc";
+  else if (cleanedType === "printer") endpoint = "problem-states/printer";
+  else if (cleanedType === "scanner") endpoint = "problem-states/scanner";
+  else endpoint = `problem-states/maintenance/${encodeURIComponent(deviceType)}`;
+
+  fetch(`http://localhost:5050/${endpoint}`)
+    .then(res => res.json())
+    .then(data => {
+      console.log("📦 Problem Status Data:", data);
+
+      if (!Array.isArray(data) || data.length === 0) {
+        const noDataRow = document.createElement("div");
+        noDataRow.className = "dropdown-option-row";
+        noDataRow.innerHTML = `<div class="dropdown-option-text">No Problem Status Found</div>`;
+        optionsContainer.appendChild(noDataRow);
+        return;
+      }
+
+      // ✅ عرض المشاكل مع التعديل والحذف
+      data.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "dropdown-option-row";
+
+        const text = document.createElement("div");
+        text.className = "dropdown-option-text";
+        const problemText = item.problem_text || item.problemStates_Maintance_device_name || "Unnamed Problem";
+        text.textContent = problemText;
+
+        text.onclick = () => {
+          displaySpan.textContent = problemText;
+          hiddenInput.value = problemText;
+          closeAllDropdowns();
+        };
+
+        const icons = document.createElement("div");
+        icons.className = "dropdown-actions-icons";
+
+        // ✏️ أيقونة التعديل
+        const editIcon = document.createElement("i");
+        editIcon.className = "fas fa-edit";
+        editIcon.title = "Edit";
+        editIcon.onclick = (e) => {
+          e.stopPropagation();
+          const newValue = prompt("Edit Problem Status:", problemText);
+          if (newValue && newValue.trim() !== problemText) {
+            editOption("problem-status", problemText, newValue.trim(), cleanedType);
+          }
+        };
+
+        // 🗑️ أيقونة الحذف
+        const deleteIcon = document.createElement("i");
+        deleteIcon.className = "fas fa-trash";
+        deleteIcon.title = "Delete";
+        deleteIcon.onclick = (e) => {
+          e.stopPropagation();
+          if (confirm(`Delete "${problemText}"?`)) {
+            deleteOption("problem-status", problemText, cleanedType);
+          }
+        };
+
+        icons.appendChild(editIcon);
+        icons.appendChild(deleteIcon);
+
+        row.appendChild(text);
+        row.appendChild(icons);
+
+        optionsContainer.appendChild(row);
+      });
+
+    })
+    .catch(err => {
+      console.error("❌ Error fetching problem statuses:", err);
+      const errorRow = document.createElement("div");
+      errorRow.className = "dropdown-option-row";
+      errorRow.innerHTML = `<div class="dropdown-option-text">Failed to load problems</div>`;
+      optionsContainer.appendChild(errorRow);
+    });
+}
+
+
+
+function openAddProblemStatusPopup(deviceType) {
+  const popup = document.getElementById("generic-popup");
+
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>Add New Problem Status</h3>
+      <label for="new-problem-status-name">Problem Status Name:</label>
+      <input type="text" id="new-problem-status-name" placeholder="Enter problem status..." />
+      <div class="popup-buttons">
+        <button type="button" onclick="saveNewProblemStatus('${deviceType}')">Save</button>
+        <button type="button" onclick="closeGenericPopup()">Cancel</button>
+      </div>
+    </div>
+  `;
+  popup.style.display = "flex";
+}
+
+function saveNewProblemStatus(deviceType) {
+  const name = document.getElementById("new-problem-status-name").value.trim();
+  if (!name) {
+    alert("❌ Please enter a problem status name");
+    return;
+  }
+
+  fetch("http://localhost:5050/add-option-general", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ problemStatus: name, deviceType })
+  })
+    .then(res => res.json())
+    .then(result => {
+      if (result.error) {
+        alert(result.error);
+      } else {
+        alert(result.message || "✅ Problem Status added successfully");
+        fetchProblemStatus(deviceType); // 🔁 رجع حدث القائمة
+        closeGenericPopup();
+      }
+    })
+    .catch(err => {
+      console.error("❌ Error saving problem status:", err);
+      alert("❌ Failed to save problem status");
     });
 }
 
@@ -1157,10 +1360,14 @@ function toggleDropdown(toggleEl) {
 function filterDropdown(input, optionsContainerId) {
   const filter = input.value.toLowerCase();
   const rows = document.getElementById(optionsContainerId).querySelectorAll(".dropdown-option-row");
+  
   rows.forEach(row => {
     const textEl = row.querySelector(".dropdown-option-text");
-    if (!textEl) return; // ✅ لو مافي text skip
-
+    if (!textEl) {
+      row.style.display = "none"; // 🔥 إذا مافي نص، أخفِ العنصر
+      return;
+    }
+    
     const text = textEl.textContent.toLowerCase();
     row.style.display = text.includes(filter) ? "flex" : "none";
   });
@@ -1179,7 +1386,7 @@ document.addEventListener(" ", () => {
 });
 
 function fetchDevicesBySection() {
-  const type = document.getElementById("problem-type").value.toLowerCase();
+  const type = document.getElementById("device-type").value.toLowerCase();
   const department = document.getElementById("section").value;
 
   if (!type || !department) {
@@ -1205,68 +1412,82 @@ function fetchDevicesBySection() {
 }
 
 function fetchDeviceSpecsByTypeAndDepartment() {
-  const typeInput = document.getElementById("problem-type");
-  const deptInput = document.getElementById("section");
+  const type = document.getElementById("device-type").value?.toLowerCase();
+  const dept = document.getElementById("section").value;
+  
+  console.log("👉 النوع المختار (device-type):", type);
+  console.log("👉 القسم المختار (section):", dept);
+
   const optionsContainer = document.getElementById("device-spec-options");
   const displaySpan = document.getElementById("selected-device-spec");
   const hiddenInput = document.getElementById("device-spec");
 
-  if (!typeInput || !deptInput || !optionsContainer || !displaySpan || !hiddenInput) {
-    console.error("❌ Missing required elements for device specs.");
-    return;
-  }
-
-  const type = typeInput.value.trim().toLowerCase();
-  const dept = deptInput.value.trim();
-
-  if (!type || !dept) {
-    console.log("❌ Must select both type and department before fetching device specs.");
-    return;
-  }
+  if (!type || !dept || !optionsContainer || !displaySpan || !hiddenInput) return;
 
   optionsContainer.innerHTML = "";
 
+  // + Add New Specification
   const addNewRow = document.createElement("div");
   addNewRow.className = "dropdown-option-row add-new-option";
   addNewRow.innerHTML = `<div class="dropdown-option-text">+ Add New Specification</div>`;
   addNewRow.onclick = () => {
     sessionStorage.setItem("lastDropdownOpened", "device-spec");
-    openAddModelPopup(); // ✅ أو فتح البوب أب لإضافة مواصفات
+  
+    if (["pc", "printer", "scanner"].includes(type)) {
+      updatePopupHeadingAndFields(type);
+      popup.style.display = "flex";
+    } else {
+      openGenericPopup("Device Specification", "device-spec");
+    }
+  
     closeAllDropdowns();
   };
+  
   optionsContainer.appendChild(addNewRow);
 
   fetch(`http://localhost:5050/devices/${type}/${encodeURIComponent(dept)}`)
     .then(res => res.json())
     .then(data => {
-      if (!data.length) {
-        const noDevices = document.createElement("div");
-        noDevices.className = "dropdown-option-row";
-        noDevices.innerHTML = `<div class="dropdown-option-text">No devices found.</div>`;
-        optionsContainer.appendChild(noDevices);
+      if (!Array.isArray(data) || data.length === 0) {
+        const noData = document.createElement("div");
+        noData.className = "dropdown-option-row";
+        noData.innerHTML = `<div class="dropdown-option-text">No specifications found</div>`;
+        optionsContainer.appendChild(noData);
         return;
       }
 
       data.forEach(device => {
+        const text = `${device.name || "Unnamed"} | ${device.Serial_Number} | ${device.Governmental_Number}`;
         const row = document.createElement("div");
         row.className = "dropdown-option-row";
-        const text = `${device.name || "Unnamed"} | ${device.Serial_Number} | ${device.Governmental_Number}`;
 
-        const textDiv = document.createElement("div");
-        textDiv.className = "dropdown-option-text";
-        textDiv.textContent = text;
-        textDiv.onclick = () => {
+        const optionText = document.createElement("div");
+        optionText.className = "dropdown-option-text";
+        optionText.textContent = text;
+        optionText.onclick = () => {
           displaySpan.textContent = text;
-          hiddenInput.value = device.id || device.Serial_Number;
+          hiddenInput.value = device.id;
           closeAllDropdowns();
         };
 
-        row.appendChild(textDiv);
+        row.appendChild(optionText);
         optionsContainer.appendChild(row);
       });
+
+      // ✅ Restore from sessionStorage
+      const saved = sessionStorage.getItem("device-spec");
+      if (saved) {
+        const match = data.find(d => d.id === saved);
+        if (match) {
+          const label = `${match.name} | ${match.Serial_Number} | ${match.Governmental_Number}`;
+          displaySpan.textContent = label;
+          hiddenInput.value = saved;
+          sessionStorage.removeItem("device-spec");
+        }
+      }
     })
     .catch(err => {
-      console.error("❌ Failed to fetch device specs:", err);
+      console.error("❌ Error fetching specs:", err);
     });
 }
 
@@ -1274,31 +1495,24 @@ function fetchDeviceSpecsByTypeAndDepartment() {
 document.addEventListener("DOMContentLoaded", () => {
   fetchDeviceTypes();
   fetchDepartments("section");
+  fetchTechnicalStatus(); // ✅ جلب أسماء المهندسين مع بداية الصفحة
 
-  const typeDropdown = document.getElementById("problem-type");
+  const typeDropdown = document.getElementById("device-type");
   const sectionDropdown = document.getElementById("section");
-
-  if (typeDropdown && typeDropdown.value) {
-    fetchProblemStatuses(); // ✅ عشان أول ما يفتح إذا فيه نوع جهاز جاهز
-  }
-
-  if (typeDropdown && sectionDropdown && typeDropdown.value && sectionDropdown.value) {
-    fetchDeviceSpecsByTypeAndDepartment(); // ✅ عشان أول ما يفتح إذا موجود نوع وقسم
-  }
 
   if (typeDropdown && sectionDropdown) {
     typeDropdown.addEventListener("change", () => {
-      fetchProblemStatuses(); // لما المستخدم يغير النوع
-      fetchDeviceSpecsByTypeAndDepartment(); // وجيب الأجهزة
+      fetchDeviceSpecsByTypeAndDepartment();
+      
+      const type = typeDropdown?.value?.toLowerCase();
+      if (type) fetchProblemStatus(type); // ✅ جلب حالة الأعطال حسب نوع الجهاز
     });
 
     sectionDropdown.addEventListener("change", () => {
-      fetchDeviceSpecsByTypeAndDepartment(); // لما المستخدم يغير القسم
+      fetchDeviceSpecsByTypeAndDepartment();
     });
   }
 
-  const displaySpan = document.getElementById("selected-device-spec");
-  const hiddenInput = document.getElementById("device-spec");
   const optionsContainer = document.getElementById("device-spec-options");
 
   if (optionsContainer) {
@@ -1309,13 +1523,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const value = row.textContent.trim();
       if (value === "+ Add New Specification") {
         const type = typeDropdown?.value?.toLowerCase();
-
+      
         if (!type) {
           console.log("❌ نوع الجهاز غير محدد");
           alert("❌ اختر نوع الجهاز أولاً");
           return;
         }
-
+        
         if (["pc", "printer", "scanner"].includes(type)) {
           console.log("✅ فتح بوب أب المواصفات لنوع:", type);
           updatePopupHeadingAndFields(type);
@@ -1324,10 +1538,13 @@ document.addEventListener("DOMContentLoaded", () => {
           console.log("🔁 فتح بوب أب generic للجهاز من نوع:", type);
           openGenericPopup("Device Specification", "device-spec");
         }
-      }
+      }        
     });
   }
 });
+
+
+
 
 
 
@@ -1475,7 +1692,7 @@ function openGenericPopup(label, targetId) {
   const popup = document.getElementById("generic-popup");
 
   if (label === "Device Specification") {
-    const deviceType = document.getElementById("problem-type")?.value;
+    const deviceType = document.getElementById("device-type")?.value;
     const cleanedType = deviceType.trim().toLowerCase();
 
     // ✅ Fetch departments from the server
@@ -1634,7 +1851,7 @@ function openGenericPopup(label, targetId) {
 
 
 function openAddModelPopup() {
-  const deviceType = document.getElementById("problem-type").value.trim();
+  const deviceType = document.getElementById("device-type").value.trim();
   const origin = document.getElementById("generic-popup-target-id")?.value;
   if (origin === "device-spec") {
     sessionStorage.setItem("returnToPopup", "true");
@@ -1688,7 +1905,7 @@ function openAddSectionPopup(contextId = "section") {
 
 
 function saveNewModel() {
-  const deviceType = document.getElementById("problem-type").value.trim().toLowerCase();
+  const deviceType = document.getElementById("device-type").value.trim().toLowerCase();
   const modelName = document.getElementById("new-model-name").value.trim();
 
   if (!modelName) {
@@ -1759,7 +1976,7 @@ function saveDeviceSpecification() {
   const model = document.getElementById("spec-model").value.trim();
   const serial = document.getElementById("spec-serial").value.trim();
   const department = document.getElementById("spec-department").value.trim();
-  const deviceType = document.getElementById("problem-type").value.toLowerCase();
+  const deviceType = document.getElementById("device-type").value.toLowerCase();
   const dropdown = document.getElementById("device-spec");
 
   if (!ministry || !name || !model || !serial || !department || !deviceType) {
@@ -1841,7 +2058,7 @@ document.getElementById("spec-department").value = "";
 function closeGenericPopup(cancelled = false) {
   if (cancelled) {
     const returnToSpec = sessionStorage.getItem("returnToPopup");
-    const deviceType = document.getElementById("problem-type")?.value?.toLowerCase();
+    const deviceType = document.getElementById("device-type")?.value?.toLowerCase();
   
     // ✅ إذا كنا راجعين من بوب أب المواصفات لنوع جهاز غير معروف
     if (returnToSpec === "true" && !["pc", "printer", "scanner"].includes(deviceType)) {
@@ -1861,7 +2078,7 @@ function closeGenericPopup(cancelled = false) {
 
   const returnToSpec = sessionStorage.getItem("returnToPopup");
   const popupContext = sessionStorage.getItem("popupContext");
-  const deviceType = document.getElementById("problem-type")?.value?.toLowerCase();
+  const deviceType = document.getElementById("device-type")?.value?.toLowerCase();
   const lastDropdownId = sessionStorage.getItem("lastDropdownOpened");
   const deviceSpecValue = document.getElementById("device-spec")?.value;
 
@@ -1980,14 +2197,14 @@ function saveGenericOption() {
     .then(result => {
       alert(result.message || "✅ Added successfully");
 
-      if (targetId === "problem-type") {
+      if (targetId === "device-type") {
         // ✅ أعد تحميل القائمة ثم اختر القيمة المضافة
         fetch("http://localhost:5050/TypeProplem")
           .then(res => res.json())
           .then(data => {
-            const container = document.getElementById("problem-type-options");
-            const selectedDisplay = document.getElementById("selected-problem-type");
-            const hiddenInput = document.getElementById("problem-type");
+            const container = document.getElementById("device-type-options");
+            const selectedDisplay = document.getElementById("selected-device-type");
+            const hiddenInput = document.getElementById("device-type");
 
             container.innerHTML = "";
 
@@ -1996,7 +2213,7 @@ function saveGenericOption() {
             addNewRow.className = "dropdown-option-row add-new-option";
             addNewRow.innerHTML = `<div class="dropdown-option-text">+ Add New Device Type</div>`;
             addNewRow.onclick = () => {
-              openGenericPopup("Device Type", "problem-type");
+              openGenericPopup("Device Type", "device-type");
               closeAllDropdowns();
             };
             container.appendChild(addNewRow);
@@ -2156,17 +2373,6 @@ function applyDeletions(selectId) {
   const deletedOptions = JSON.parse(localStorage.getItem(persistentKey)) || [];
   const select = document.getElementById(selectId);
 
-  if (!select) {
-    console.warn(`⚠️ Element with id "${selectId}" not found in applyDeletions.`);
-    return;
-  }
-
-  // ✅ نتأكد أن العنصر فعلاً <select> وإلا نتجاهل
-  if (select.tagName !== "SELECT") {
-    console.warn(`⚠️ Element with id "${selectId}" is not a <select>. Skipping applyDeletions.`);
-    return;
-  }
-
   for (let i = select.options.length - 1; i >= 0; i--) {
     if (deletedOptions.includes(select.options[i].text)) {
       select.remove(i);
@@ -2176,16 +2382,17 @@ function applyDeletions(selectId) {
 
 
 
+
 // ================== إرسال النموذج =====================
 document.querySelector("form").addEventListener("submit", function (e) {
   e.preventDefault();
 
   const data = {
-    DeviceType: document.getElementById("problem-type").value,
+    DeviceType: document.getElementById("device-type").value,
     DeviceID: document.getElementById("device-spec").value,
     Section: document.getElementById("section").value,
     Floor: document.getElementById("floor").value,
-    ProblemType: document.getElementById("problem-type").value,
+    ProblemType: document.getElementById("device-type").value,
     ProblemStatus: document.getElementById("problem-status").value,
     InitialDiagnosis: document.querySelector('input[placeholder="Enter initial diagnosis"]').value,
     FinalDiagnosis: document.querySelector('input[placeholder="Enter final diagnosis"]').value,
@@ -2214,12 +2421,8 @@ document.querySelector("form").addEventListener("submit", function (e) {
 
 document.addEventListener("DOMContentLoaded", () => {
   const dropdownConfigs = [
-    { id: "problem-type", endpoint: "/TypeProplem", key: "DeviceType", label: "Problem Type" },
     { id: "floor", endpoint: "/floors", key: "FloorNum", label: "Floor" },
     { id: "technical", endpoint: "/Technical", key: "name", label: "Technical" },
-    { id: "section", endpoint: "/Departments", key: "name", label: "Section" },
-
-    
   ];
 
   dropdownConfigs.forEach(config => {
@@ -2227,86 +2430,126 @@ document.addEventListener("DOMContentLoaded", () => {
     const hiddenInput = document.getElementById(config.id);
     const displaySpan = document.getElementById(`selected-${config.id}`);
 
-    fetch(`http://localhost:5050${config.endpoint}`)
-      .then(res => res.json())
-      .then(data => {
-        optionsContainer.innerHTML = "";
+    function loadOptions() {
+      fetch(`http://localhost:5050${config.endpoint}`)
+        .then(res => res.json())
+        .then(data => {
+          optionsContainer.innerHTML = "";
 
-        // ✅ Add New with custom label
-        const addNew = document.createElement("div");
-        addNew.className = "dropdown-option-row";
-        addNew.textContent = `+ Add New ${config.label}`;
-        addNew.style.fontWeight = "bold";
-        addNew.onclick = () => {
-          sessionStorage.setItem("lastDropdownOpened", config.id);
-          openGenericPopup(config.label, config.id);
-          optionsContainer.parentElement.style.display = "none";
-        };
-        optionsContainer.appendChild(addNew);
+          // ✅ زر "Add New"
+          const addNew = document.createElement("div");
+          addNew.className = "dropdown-option-row add-new-option";
+          addNew.innerHTML = `<div class="dropdown-option-text">+ Add New ${config.label}</div>`;
+          addNew.onclick = () => {
+            openAddNewOptionPopup(config);
+            closeAllDropdowns();
+          };
+          optionsContainer.appendChild(addNew);
 
-        // ✅ باقي العناصر
-        data.forEach(item => {
-          const value = item[config.key];
-        
-          const row = document.createElement("div");
-          row.className = "dropdown-option-row";
-          row.style.display = "flex";
-          row.style.justifyContent = "space-between";
-          row.style.alignItems = "center";
-        
-          // النص الأساسي
-          const valueSpan = document.createElement("span");
-          valueSpan.textContent = value;
-          valueSpan.style.flex = "1";
-          valueSpan.style.cursor = "pointer";
-          valueSpan.onclick = () => {
-            hiddenInput.value = value;
-            displaySpan.textContent = value;
-            optionsContainer.parentElement.style.display = "none";
-          };
-        
-          // أيقونات
-          const iconGroup = document.createElement("div");
-          iconGroup.innerHTML = `
-            <i class="fa-solid fa-edit" style="color:#6c757d; margin-left: 8px; cursor:pointer;" title="Edit"></i>
-            <i class="fa-solid fa-trash" style="color:#6c757d; margin-left: 8px; cursor:pointer;" title="Delete"></i>
-          `;
-        
-          // حدث التعديل
-          iconGroup.querySelector(".fa-edit").onclick = (e) => {
-            e.stopPropagation(); // ما يختار العنصر
-            sessionStorage.setItem("lastDropdownOpened", config.id);
-            openPopup(config.id, config.label); // يفتح popup التعديل
-          };
-        
-          // حدث الحذف
-          iconGroup.querySelector(".fa-trash").onclick = (e) => {
-            e.stopPropagation(); // ما يختار العنصر
-            deleteOption(config.id); // ينفذ الحذف
-          };
-        
-          // التجميع النهائي
-          row.appendChild(valueSpan);
-          row.appendChild(iconGroup);
-          optionsContainer.appendChild(row);
-        });
-        
-      })        
-      .catch(err => console.error(`❌ Error loading ${config.id}:`, err));
+          // ✅ البيانات الحالية
+          data.forEach(item => {
+            const value = item[config.key];
+
+            const row = document.createElement("div");
+            row.className = "dropdown-option-row";
+            row.style.display = "flex";
+            row.style.justifyContent = "space-between";
+            row.style.alignItems = "center";
+
+            const valueSpan = document.createElement("div");
+            valueSpan.className = "dropdown-option-text";
+            valueSpan.textContent = value;
+            valueSpan.style.flex = "1";
+            valueSpan.style.cursor = "pointer";
+            valueSpan.onclick = () => {
+              hiddenInput.value = value;
+              displaySpan.textContent = value;
+              closeAllDropdowns();
+            };
+
+            const iconGroup = document.createElement("div");
+            iconGroup.innerHTML = `
+              <i class="fa-solid fa-edit" style="color:#6c757d; margin-left: 8px; cursor:pointer;" title="Edit"></i>
+              <i class="fa-solid fa-trash" style="color:#6c757d; margin-left: 8px; cursor:pointer;" title="Delete"></i>
+            `;
+
+            iconGroup.querySelector(".fa-edit").onclick = (e) => {
+              e.stopPropagation();
+              openPopup(config.id, config.label);
+            };
+
+            iconGroup.querySelector(".fa-trash").onclick = (e) => {
+              e.stopPropagation();
+              deleteOption(config.id);
+            };
+
+            row.appendChild(valueSpan);
+            row.appendChild(iconGroup);
+            optionsContainer.appendChild(row);
+          });
+
+        })
+        .catch(err => console.error(`❌ Error loading ${config.id}:`, err));
+    }
+
+    loadOptions(); // ✅ أول تحميل
   });
-  const problemTypeInput = document.getElementById("problem-type");
-if (problemTypeInput) {
-  problemTypeInput.addEventListener("change", () => {
-    fetchProblemStatuses(); // ✅
-  });
+
+});
+
+// ✅ دالة فتح بوب أب إضافة عنصر جديد
+function openAddNewOptionPopup(config) {
+  const popup = document.getElementById("generic-popup");
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>Add New ${config.label}</h3>
+      <label>${config.label} Name:</label>
+      <input type="text" id="new-option-input" placeholder="Enter ${config.label}..." />
+      <div class="popup-buttons">
+        <button onclick="saveNewOption('${config.id}', '${config.label}')">Save</button>
+        <button onclick="closeGenericPopup()">Cancel</button>
+      </div>
+    </div>
+  `;
+  popup.style.display = "flex";
 }
 
-});
-document.addEventListener("DOMContentLoaded", function() {
-  const selectIds = ["problem-type", "section", "device-spec", "floor", "technical", "problem-status"];
-  selectIds.forEach(id => {
-    if (document.getElementById(id)) {
-      applyDeletions(id);
-    }
-  });
-});
+// ✅ دالة حفظ العنصر الجديد
+function saveNewOption(selectId, label) {
+  const input = document.getElementById("new-option-input");
+  const value = input.value.trim();
+  if (!value) {
+    alert(`❌ Please enter ${label} name.`);
+    return;
+  }
+
+  fetch("http://localhost:5050/add-option-general", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target: selectId, value })
+  })
+    .then(res => res.json())
+    .then(result => {
+      if (result.error) {
+        alert(result.error);
+      } else {
+        alert(result.message || `✅ ${label} added successfully.`);
+        closeGenericPopup();
+        location.reload(); // ✅ أو تعيد تحميل الدروب داون فقط بدون ريفريش كامل (أذكى)
+      }
+    })
+    .catch(err => {
+      console.error(`❌ Error adding new ${label}:`, err);
+      alert(`❌ Failed to add new ${label}.`);
+    });
+}
+
+// ✅ دالة إغلاق البوب أب
+function closeGenericPopup() {
+  document.getElementById("generic-popup").style.display = "none";
+}
+
+// ✅ دالة إغلاق كل الدروب داون
+function closeAllDropdowns() {
+  document.querySelectorAll(".dropdown-content").forEach(drop => drop.style.display = "none");
+}
