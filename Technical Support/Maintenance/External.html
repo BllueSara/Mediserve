@@ -8,6 +8,8 @@
 
   <!-- External CSS file for styling -->
   <link rel="stylesheet" href="external.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 </head>
 <body>
   <!-- Navigation buttons section (Back & Home) -->
@@ -49,29 +51,62 @@
       <div class="device-container">
         <!-- Device Type dropdown -->
         <div class="device-box">
-          <label>Device Type <span class="required">*</span></label>
-          <select id="device-type" required>
-            <option value="" disabled selected>Select device type</option>
-            <option value="add-custom">+ Add New Device Type</option>
-          </select>
+          <label for="device-type"> Type of Problem <span class="required">*</span></label>
+          <div class="custom-dropdown-wrapper" id="device-type-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-device-type">Select Problem type</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input
+                  type="text"
+                  placeholder="Search device type..."
+                  class="dropdown-search"
+                  oninput="filterDropdown(this, 'device-type-options')"
+                />
+                <div class="dropdown-options" id="device-type-options">
+                  <!-- سيتم تعبئة الخيارات عبر JavaScript -->
+                </div>
+              </div>
+            </div>
+          </div><input type="hidden" id="device-type" name="device-type" />
         </div>
 
         <!-- Section dropdown -->
         <div class="device-box">
           <label>Section <span class="required">*</span></label>
-          <select id="section" required>
-            <option value="" disabled selected>Select section</option>
-            <option value="add-custom">+ Add New Section</option>
-          </select>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-section">Select Section</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search section..." oninput="filterDropdown(this, 'section-options')">
+                <div class="dropdown-options" id="section-options"></div>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="section" name="section" required>
         </div>
 
         <!-- Device specification dropdown -->
         <div class="device-box">
           <label>Device Specifications <span class="required">*</span></label>
-          <select id="device-spec" required>
-            <option value="" disabled selected>Select specification</option>
-            <option value="add-custom">+ Add New Specification</option>
-          </select>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-device-spec">Select specification</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search specification..." oninput="filterDropdown(this, 'device-spec-options')">
+                <div class="dropdown-options" id="device-spec-options"></div>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="device-spec" name="device-spec" required />
         </div>
       </div>
 
@@ -92,10 +127,20 @@
 
       <!-- Reporter dropdown -->
       <div>
-        <label>Reporter Name <span class="required">*</span></label>
-        <select id="reporter-name" required>
-          <option value="" disabled selected>Select reporter</option>
-        </select>
+        <label>Reporter Name</label>
+        <div class="custom-dropdown-wrapper">
+          <div class="custom-dropdown">
+            <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+              <span id="selected-technical">Select Reporter </span>
+              <span>▼</span>
+            </div>
+            <div class="dropdown-content">
+              <input type="text" class="dropdown-search" placeholder="Search technical..." oninput="filterDropdown(this, 'technical-options')">
+              <div class="dropdown-options" id="technical-options"></div>
+            </div>
+          </div>
+        </div>
+        <input type="hidden" id="technical" name="technical">
       </div>
 
       <!-- Section title for diagnosis -->
