@@ -153,16 +153,17 @@
           <div class="custom-dropdown-wrapper">
             <div class="custom-dropdown">
               <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-                <span id="selected-technical">Select Technical</span>
+                <span id="selected-technical-status">Select Technical</span> <!-- ✅ تصحيح -->
                 <span>▼</span>
               </div>
               <div class="dropdown-content">
-                <input type="text" class="dropdown-search" placeholder="Search technical..." oninput="filterDropdown(this, 'technical-options')">
-                <div class="dropdown-options" id="technical-options"></div>
+                <input type="text" class="dropdown-search" placeholder="Search technical..." oninput="filterDropdown(this, 'technical-status-options')"> <!-- ✅ تصحيح -->
+                <div class="dropdown-options" id="technical-status-options"></div> <!-- ✅ تصحيح -->
               </div>
             </div>
           </div>
-          <input type="hidden" id="technical" name="technical">
+          <input type="hidden" id="technical-status" name="technical"> <!-- ✅ تصحيح -->
+          
         </div>
 
         <!-- Dropdown: Problem Status -->
