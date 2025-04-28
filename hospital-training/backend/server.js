@@ -479,13 +479,13 @@ app.post("/add-popup-option", (req, res) => {
 
 // ✅ Endpoint لإضافة الخيارات (Dropdown Options) - GENERAL
 app.post("/add-option-general", (req, res) => {
-  const { target, value, type } = req.body; // 🟢 Extract values from request
+  const { target, value, type } = req.body;
 
-  // 🟢 تحديد الجدول والعمود لكل نوع خيار في القوائم المنسدلة
   const tableMap = {
     "device-type": { table: "DeviceType", column: "DeviceType" },
     "section": { table: "Departments", column: "name" },
     "floor": { table: "Floors", column: "FloorNum" },
+    "technical-status": { table: "Engineers", column: "name" }, // ✅ هنا الصحيح
     "technical": { table: "Engineers", column: "name" },
     "problem-status": type === "pc"
       ? { table: "ProblemStates_Pc", column: "problem_text" }
@@ -497,14 +497,12 @@ app.post("/add-option-general", (req, res) => {
     "os-select": { table: "OS_Types", column: "os_name" },
     "ram-select": { table: "RAM_Types", column: "ram_type" },
     "cpu-select": { table: "CPU_Types", column: "cpu_name" },
-    "generation-select": { table: "Processor_Generations", column: "generation_number",
-      "drive-select": { table: "Hard_Drive_Types", column: "drive_type" } // 🆕 أضفنا هذا
-
-    }
+    "generation-select": { table: "Processor_Generations", column: "generation_number" },
+    "drive-select": { table: "Hard_Drive_Types", column: "drive_type" }
   };
 
   const mapping = tableMap[target];
-  if (!mapping) return res.status(400).json({ error: "Invalid target field" }); // 🔴 إذا النوع غير موجود نرجع خطأ
+  if (!mapping) return res.status(400).json({ error: "Invalid target field" });
 
   let query = "";
   let params = [];
@@ -517,7 +515,6 @@ app.post("/add-option-general", (req, res) => {
     params = [value];
   }
 
-  // 🔍 تحقق من عدم وجود القيمة مسبقًا
   const checkQuery = mapping.extra
     ? `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ? AND ${mapping.extra} = ?`
     : `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ?`;
@@ -528,16 +525,17 @@ app.post("/add-option-general", (req, res) => {
       return res.status(400).json({ error: `⚠️ \"${value}\" already exists in ${mapping.table}` });
     }
 
-    // ✅ إضافة إذا لم تكن موجودة مسبقًا
     db.query(query, params, (err2, result) => {
       if (err2) {
         console.error("❌ DB Insert Error:", err2);
         return res.status(500).json({ error: "Database error while inserting option" });
       }
-      res.json({ message: `✅ ${value} added to ${mapping.table}` });
+      // ✨ رجعنا ID الجديد
+      res.json({ message: `✅ ${value} added to ${mapping.table}`, insertedId: result.insertId });
     });
   });
 });
+
 
 
 
@@ -559,7 +557,7 @@ app.post("/add-options-external", (req, res) => {
       table = "Departments";
       column = "name";
       break;
-    case "reporter-name":
+    case "technical-status":
       table = "Engineers";
       column = "name";
       break;
@@ -1591,66 +1589,89 @@ app.get('/regular-maintenance-summary-4months', (req, res) => {
 
 app.get('/get-internal-reports', (req, res) => {
   const internalSql = `
-  SELECT 
-    R.id,
-    R.created_at,
-    R.issue_summary,
-    R.full_description,
-    R.status,
-    R.device_id,
-    R.report_number,
-    R.ticket_id,
-    R.maintenance_type,
-    T.ticket_number,
-    T.issue_description,
-    T.priority,
-    COALESCE(GM.department_name, D.name) AS department_name,
-    COALESCE(GM.device_name, M.device_name) AS device_name,
-    RM.frequency,
-    M.device_type,
-    'internal' AS source,
-    T.attachment_name,
-    T.attachment_path,
-    COALESCE(RM.problem_status, T.issue_description) AS problem_status,
-    COALESCE(E.name, T.assigned_to) AS technical_engineer
-  FROM Maintenance_Reports R
-  LEFT JOIN Maintenance_Devices M ON R.device_id = M.id
-  LEFT JOIN Departments D ON M.department_id = D.id
-  LEFT JOIN (
-      SELECT *
-      FROM Regular_Maintenance
-      ORDER BY last_maintenance_date DESC
-  ) AS RM ON RM.device_id = R.device_id
-  LEFT JOIN Engineers E ON RM.technical_engineer_id = E.id
-  LEFT JOIN General_Maintenance GM ON GM.device_id = R.device_id
-  LEFT JOIN Internal_Tickets T ON R.ticket_id = T.id
-  WHERE R.maintenance_type IN ('Regular', 'General', 'Internal')
+    SELECT 
+      R.id,
+      R.created_at,
+      R.issue_summary,
+      R.full_description,
+      R.status,
+      R.device_id,
+      R.report_number,
+      R.ticket_id,
+      R.maintenance_type,
+
+      CASE 
+        WHEN R.maintenance_type = 'Regular' THEN NULL 
+        ELSE T.ticket_number
+      END AS ticket_number,
+
+      CASE 
+        WHEN R.maintenance_type = 'Regular' THEN NULL 
+        ELSE T.issue_description
+      END AS issue_description,
+
+      CASE 
+        WHEN R.maintenance_type = 'Regular' THEN RM.problem_status
+        ELSE T.priority
+      END AS priority,
+
+      COALESCE(GM.department_name, D.name) AS department_name,
+      COALESCE(GM.device_name, M.device_name) AS device_name,
+      RM.frequency,
+      M.device_type,
+      'internal' AS source,
+
+      CASE 
+        WHEN R.maintenance_type = 'Regular' THEN NULL 
+        ELSE T.attachment_name
+      END AS attachment_name,
+
+      CASE 
+        WHEN R.maintenance_type = 'Regular' THEN NULL 
+        ELSE T.attachment_path
+      END AS attachment_path,
+
+      COALESCE(RM.problem_status, T.issue_description) AS problem_status,
+      COALESCE(E.name, T.assigned_to) AS technical_engineer
+
+    FROM Maintenance_Reports R
+    LEFT JOIN Maintenance_Devices M ON R.device_id = M.id
+    LEFT JOIN Departments D ON M.department_id = D.id
+    LEFT JOIN (
+        SELECT *
+        FROM Regular_Maintenance
+        ORDER BY last_maintenance_date DESC
+    ) AS RM ON RM.device_id = R.device_id
+    LEFT JOIN Engineers E ON RM.technical_engineer_id = E.id
+    LEFT JOIN General_Maintenance GM ON GM.device_id = R.device_id
+    LEFT JOIN Internal_Tickets T ON R.ticket_id = T.id
+    WHERE R.maintenance_type IN ('Regular', 'General', 'Internal')
   `;
 
   const newSql = `
-  SELECT 
-    id,
-    created_at,
-    issue_summary,
-    NULL AS full_description,
-    status,
-    device_id,
-    NULL AS report_number,
-    NULL AS ticket_id,
-    'New' AS maintenance_type,
-    NULL AS ticket_number,
-    NULL AS issue_description,
-    priority,
-    NULL AS department_name,
-    NULL AS device_name,
-    NULL AS frequency,
-    device_type,
-    'new' AS source,
-    attachment_name,
-    attachment_path,
-    NULL AS problem_status,
-    NULL AS technical_engineer
-FROM New_Maintenance_Report
+    SELECT 
+      id,
+      created_at,
+      issue_summary,
+      NULL AS full_description,
+      status,
+      device_id,
+      NULL AS report_number,
+      NULL AS ticket_id,
+      'New' AS maintenance_type,
+      NULL AS ticket_number,
+      NULL AS issue_description,
+      priority,
+      NULL AS department_name,
+      NULL AS device_name,
+      NULL AS frequency,
+      device_type,
+      'new' AS source,
+      attachment_name,
+      attachment_path,
+      NULL AS problem_status,
+      NULL AS technical_engineer
+    FROM New_Maintenance_Report
   `;
 
   const combinedSql = `${internalSql} UNION ALL ${newSql} ORDER BY created_at DESC`;
@@ -2615,22 +2636,22 @@ app.post("/delete-option-complete", async (req, res) => {
     }
 
     res.json({ message: `✅ "${value}" deleted successfully.` });
-
   } catch (err) {
-    console.error("❌ Error during delete-option-complete:", err);
-    res.status(500).json({ error: "Server error during deletion" });
+    console.error("❌ Error during delete-option-complete:", err.sqlMessage || err.message || err);
+    res.status(500).json({ error: err.sqlMessage || "Server error during deletion" });
   }
+  
 });
 
 app.post("/update-option-complete", async (req, res) => {
   const { target, oldValue, newValue, type } = req.body;
 
   if (!target || !oldValue || !newValue) {
-    return res.status(400).json({ error: "\u274c Missing fields" });
+    return res.status(400).json({ error: "❌ Missing fields" });
   }
 
   if (oldValue.trim() === newValue.trim()) {
-    return res.status(400).json({ error: "\u274c Same value - no update needed" });
+    return res.status(400).json({ error: "❌ Same value - no update needed" });
   }
 
   const updateMap = {
@@ -2638,7 +2659,7 @@ app.post("/update-option-complete", async (req, res) => {
       table: "Departments",
       column: "name",
       propagate: [
-        { table: "Maintenance_Devices", column: "department_name" },
+        { table: "Maintenance_Devices", column: "department_id" }, // يحتاج تعديل بالأرقام
         { table: "General_Maintenance", column: "department_name" },
         { table: "Regular_Maintenance", column: "department_name" },
         { table: "External_Maintenance", column: "department_name" }
@@ -2672,9 +2693,7 @@ app.post("/update-option-complete", async (req, res) => {
       table: "floors", 
       column: "FloorNum",
       propagate: [
-        { table: "General_Maintenance", column: "floor" },
-        // { table: "External_Maintenance", column: "floor" },
-        // { table: "Regular_Maintenance", column: "floor" }
+        { table: "General_Maintenance", column: "floor" }
       ]
     },
     "problem-status": { 
@@ -2682,32 +2701,55 @@ app.post("/update-option-complete", async (req, res) => {
       column: "status_name",
       propagate: [
         { table: "General_Maintenance", column: "problem_status" },
-        // { table: "External_Maintenance", column: "problem_status" },
         { table: "Regular_Maintenance", column: "problem_status" }
       ]
     },
     "technical": { 
-      table: "Technical", 
+      table: "Engineers", 
       column: "name",
-      propagate: [
-        { table: "General_Maintenance", column: "technical" },
-        // { table: "External_Maintenance", column: "technical" },
-        { table: "Regular_Maintenance", column: "technical" }
-      ]
+      propagate: []
     }
   };
-  
 
   const mapping = updateMap[target];
-  if (!mapping) return res.status(400).json({ error: "\u274c Invalid target" });
+  if (!mapping) return res.status(400).json({ error: "❌ Invalid target" });
 
   const connection = db.promise();
 
   try {
     await connection.query('START TRANSACTION');
-
-    // 🔹 1 - اضف القيمة الجديدة أولاً إذا غير موجودة (لجدول DeviceType مثلا)
-    if (target === "problem-type") {
+    if (target === "section") {
+      // ✅ نجيب ID القديم
+      const [oldDept] = await connection.query(`SELECT id FROM Departments WHERE TRIM(name) = ?`, [oldValue.trim()]);
+    
+      if (!oldDept.length) {
+        throw new Error("Old Department not found");
+      }
+    
+      const oldDeptId = oldDept[0].id;
+    
+      // ✅ نحدث الجداول المرتبطة
+      for (const { table, column } of mapping.propagate) {
+        if (column === "department_id") {
+          // department_id هو رقم، ما يتغير، فلا تحديث هنا فعلياً على الرقم
+          continue; 
+        } else {
+          // تحديث أسماء الأقسام في الجداول الثانية
+          await connection.query(
+            `UPDATE ${table} SET ${column} = ? WHERE ${column} = ?`,
+            [newValue.trim(), oldValue.trim()]
+          );
+        }
+      }
+    
+      // ✅ نحدث اسم القسم نفسه
+      await connection.query(
+        `UPDATE ${mapping.table} SET ${mapping.column} = ? WHERE id = ?`,
+        [newValue.trim(), oldDeptId]
+      );
+    }
+     else if (target === "problem-type") {
+      // ✅ إضافة جديدة لو كانت مشكلة جهاز
       const [newExists] = await connection.query(
         `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ?`,
         [newValue]
@@ -2718,23 +2760,29 @@ app.post("/update-option-complete", async (req, res) => {
           [newValue]
         );
       }
-    }
 
-    // 🔹 2 - بعدين حدث الجداول الفرعية كلها
-    for (const { table, column } of mapping.propagate) {
-      await connection.query(
-        `UPDATE ${table} SET ${column} = ? WHERE ${column} = ?`,
-        [newValue, oldValue]
-      );
-    }
+      for (const { table, column } of mapping.propagate) {
+        await connection.query(
+          `UPDATE ${table} SET ${column} = ? WHERE ${column} = ?`,
+          [newValue, oldValue]
+        );
+      }
 
-    // 🔹 3 - بعدين حدث الجدول الأساسي نفسه (بـ UPDATE أو DELETE حسب النوع)
-    if (target === "problem-type") {
+      // بعدين نحذف القديم
       await connection.query(
         `DELETE FROM ${mapping.table} WHERE ${mapping.column} = ?`,
         [oldValue]
       );
+
     } else {
+      // باقي الكيسات العادية
+      for (const { table, column } of mapping.propagate) {
+        await connection.query(
+          `UPDATE ${table} SET ${column} = ? WHERE ${column} = ?`,
+          [newValue, oldValue]
+        );
+      }
+
       await connection.query(
         `UPDATE ${mapping.table} SET ${mapping.column} = ? WHERE ${mapping.column} = ?`,
         [newValue, oldValue]
@@ -2743,11 +2791,11 @@ app.post("/update-option-complete", async (req, res) => {
 
     await connection.query('COMMIT');
 
-    res.json({ message: "\u2705 Option updated everywhere correctly!" });
+    res.json({ message: "✅ Option updated everywhere correctly!" });
 
   } catch (err) {
     await connection.query('ROLLBACK');
-    console.error("\u274c Error during update-option-complete:", err);
+    console.error("❌ Error during update-option-complete:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
