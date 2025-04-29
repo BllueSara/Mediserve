@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Internal Ticket</title>
   <link rel="stylesheet" href="Internal Ticket.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 </head>
 <body>
   <div class="container" id="container">
@@ -38,7 +40,19 @@
         <!-- النوع -->
         <div class="form-group">
           <label for="ticket-type">Ticket Type <span class="required">*</span></label>
-          <select id="ticket-type" name="ticket-type" required></select>
+          <div class="custom-dropdown-wrapper" id="ticket-type-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-ticket-type">Select Ticket Type</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search ticket types..." oninput="filterDropdown(this, 'ticket-type-options')">
+                <div class="dropdown-options" id="ticket-type-options"></div>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="ticket-type" name="ticket_type" required />
         </div>
 
         <!-- Custom نوع -->
@@ -55,83 +69,121 @@
 
         <!-- الفني -->
         <div class="form-group">
-          <label for="technical">Technical Name <span class="required">*</span></label>
-          <div class="dropdown-container">
-            <select id="technical" name="technical" required>
-              <option value="" disabled selected>Select technical name</option>
-              <option value="add-custom">+ Add New Technical</option>
-            </select>
-            <div class="icon-container">
-              <img src="/icon/search.png" class="search-icon" onclick="toggleSearch('technical')" />
-              <img src="/icon/edit.png" class="edit-icon" onclick="event.stopPropagation(); openPopup('technical', 'Technical Name')" />
-              <img src="/icon/trash.png" class="trash-icon" onclick="event.stopPropagation(); deleteOption('technical')" />
+          <label for="technical-status">Technical Name <span class="required">*</span></label>
+          <div class="custom-dropdown-wrapper" id="technical-status-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-technical-status">Select Technical Engineer</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search technical..." oninput="filterDropdown(this, 'technical-status-options')">
+                <div class="dropdown-options" id="technical-status-options"></div>
+              </div>
             </div>
           </div>
+          <input type="hidden" id="technical-status" name="technical_engineer_id" required />
         </div>
 
         <!-- الحالة -->
         <div class="form-group">
           <label for="report-status">Report Status <span class="required">*</span></label>
-          <div class="dropdown-container">
-            <select id="report-status" name="report-status" required></select>
-            <div class="icon-container">
-              <img src="/icon/search.png" class="search-icon" onclick="toggleSearch('report-status')" />
-              <img src="/icon/edit.png" class="edit-icon" onclick="event.stopPropagation(); openPopup('report-status', 'Report Status')" />
-              <img src="/icon/trash.png" class="trash-icon" onclick="event.stopPropagation(); deleteOption('report-status')" />
+          <div class="custom-dropdown-wrapper" id="report-status-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-report-status">Select Report Status</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search report statuses..." oninput="filterDropdown(this, 'report-status-options')">
+                <div class="dropdown-options" id="report-status-options"></div>
+              </div>
             </div>
           </div>
+          <input type="hidden" id="report-status" name="report_status" required />
         </div>
 
-        <!-- نوع الجهاز -->
-        <div class="form-group">
-          <label for="device-type">Device Type <span class="required">*</span></label>
-          <div class="dropdown-container">
-            <select id="device-type" name="device-type" required></select>
-            <div class="icon-container">
-              <img src="/icon/search.png" class="search-icon" onclick="toggleSearch('device-type')" />
-              <img src="/icon/edit.png" class="edit-icon" onclick="event.stopPropagation(); openPopup('device-type', 'Device Type')" />
-              <img src="/icon/trash.png" class="trash-icon" onclick="event.stopPropagation(); deleteOption('device-type')" />
+        <label for="device-type">Device Type <span class="required">*</span></label>
+        <div class="custom-dropdown-wrapper" id="device-type-dropdown-wrapper">
+          <div class="custom-dropdown">
+            <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+              <span id="selected-device-type">Select device type</span>
+              <span>▼</span>
+            </div>
+            <div class="dropdown-content">
+              <input
+                type="text"
+                placeholder="Search device type..."
+                class="dropdown-search"
+                oninput="filterDropdown(this, 'device-type-options')"
+              />
+              <div class="dropdown-options" id="device-type-options">
+                <!-- سيتم تعبئة الخيارات عبر JavaScript -->
+              </div>
             </div>
           </div>
-        </div>
+        </div><input type="hidden" id="device-type" name="device-type" />
+
 
         <!-- القسم -->
         <div class="form-group">
-          <label for="department">Department <span class="required">*</span></label>
-          <div class="dropdown-container">
-            <select id="department" name="device-department" required></select>
-            <div class="icon-container">
-              <img src="/icon/search.png" class="search-icon" onclick="toggleSearch('department')" />
-              <img src="/icon/edit.png" class="edit-icon" onclick="event.stopPropagation(); openPopup('department', 'Department')" />
-              <img src="/icon/trash.png" class="trash-icon" onclick="event.stopPropagation(); deleteOption('department')" />
+          <label for="section">Section <span class="required">*</span></label>
+          <div class="custom-dropdown-wrapper" id="section-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-section">Select section</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input
+                  type="text"
+                  placeholder="Search section..."
+                  class="dropdown-search"
+                  oninput="filterDropdown(this, 'section-options')"
+                />
+                <div class="dropdown-options" id="section-options">
+                  <!-- يتم تعبئتها عبر JavaScript -->
+                </div>
+              </div>
             </div>
           </div>
+          <input type="hidden" id="section" name="section" />
         </div>
 
         <!-- المواصفات -->
-        <div class="form-group">
-          <label for="device-specification">Device Specification <span class="required">*</span></label>
-          <div class="dropdown-container">
-            <select id="device-specification" name="device-specification" required></select>
-            <div class="icon-container">
-              <img src="/icon/search.png" class="search-icon" onclick="toggleSearch('device-specification')" />
-              <img src="/icon/edit.png" class="edit-icon" onclick="event.stopPropagation(); openPopup('device-specification', 'Device Specification')" />
-              <img src="/icon/trash.png" class="trash-icon" onclick="event.stopPropagation(); deleteOption('device-specification')" />
+        <label>Device Specifications <span class="required">*</span></label>
+        <div class="custom-dropdown-wrapper">
+          <div class="custom-dropdown">
+            <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+              <span id="selected-device-spec">Select specification</span>
+              <span>▼</span>
+            </div>
+            <div class="dropdown-content">
+              <input type="text" class="dropdown-search" placeholder="Search specification..." oninput="filterDropdown(this, 'device-spec-options')">
+              <div class="dropdown-options" id="device-spec-options"></div>
             </div>
           </div>
         </div>
+        <input type="hidden" id="device-spec" name="device-spec" required />
 
         <!-- باقي الحقول -->
         <div class="form-group">
-          <label for="initial-diagnosis">Initial Diagnosis <span class="required">*</span></label>
-          <div class="dropdown-container">
-            <select id="initial-diagnosis" name="initial-diagnosis" required></select>
-            <div class="icon-container">
-              <img src="/icon/search.png" class="search-icon" onclick="toggleSearch('initial-diagnosis')" />
-              <img src="/icon/edit.png" class="edit-icon" onclick="event.stopPropagation(); openPopup('initial-diagnosis', 'Initial Diagnosis')" />
-              <img src="/icon/trash.png" class="trash-icon" onclick="event.stopPropagation(); deleteOption('initial-diagnosis')" />
-            </div>
-          </div>
+      <!-- Problem Status -->
+<label for="problem-status">Initial Diagnosis <span class="required">*</span></label>
+<div class="custom-dropdown-wrapper" id="problem-status-wrapper">
+  <div class="custom-dropdown">
+    <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+      <span id="selected-problem-status">Select Initial Diagnosis</span>
+      <span>▼</span>
+    </div>
+    <div class="dropdown-content">
+      <input type="text" class="dropdown-search" placeholder="Search problem status..." oninput="filterDropdown(this, 'problem-status-options')">
+      <div class="dropdown-options" id="problem-status-options"></div>
+    </div>
+  </div>
+</div>
+<input type="hidden" id="problem-status" name="problem_status" required />
+
         </div>
 
         <!-- رفع ملف -->
@@ -166,19 +218,33 @@
     </div>
   </div>
 
-  <!-- البوب أب -->
-  <div id="popup-modal" class="popup-modal">
-    <div class="popup-content">
-      <h2 id="popup-title">Enter </h2>
-      <div id="popup-fields">
-        <p>No fields available for this device type.</p>
-      </div>
+<!-- ✅ Popup for Custom Device Specification -->
+<div id="popup-modal" class="popup-overlay" style="display: none;">
+  <div class="popup-content wide-popup">
+    <h3 id="popup-title">Enter Device Specifications</h3>
+    <form id="pc-spec-form">
+      <div id="popup-fields"></div> 
       <div class="popup-buttons">
-        <button id="popup-save-btn">Save</button>
-        <button onclick="closePopup()">Cancel</button>
+        <button type="button" class="save-btn" onclick="savePCSpec()">Save</button>
+        <button type="button" class="cancel-btn" onclick="closePopup()">Cancel</button>
       </div>
+    </form>
+  </div>
+</div>
+<!-- ✅ Popup for Adding Generic Options -->
+<div id="generic-popup" class="popup-overlay" style="display: none;">
+  <div class="popup-content">
+    <h3 id="generic-popup-title">Add New</h3>
+    <label for="generic-popup-input" id="generic-label">New Value</label>
+    <input type="text" id="generic-popup-input" placeholder="Enter new value..." required />
+    <input type="hidden" id="generic-popup-target-id" />
+    <div class="popup-buttons">
+      <button type="button" class="save-btn" onclick="saveGenericOption()">Save</button>
+      <button type="button" class="cancel-btn" onclick="closeGenericPopup()">Cancel</button>
     </div>
   </div>
+</div>
+
   <!-- JavaScript -->
   <script src="Internal Ticket.js"></script>
 </body>
