@@ -62,20 +62,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-
-function loadExternalReports(page) { 
-  const savedStatus = localStorage.getItem("reportStatusFilter");
-  const statusSelect = document.getElementById("filter-status");
-
-  if (savedStatus && statusSelect) {
-    statusSelect.value = savedStatus;
-    localStorage.removeItem("reportStatusFilter");
-  }
+function loadExternalReports(page = 1) {
   fetch(`http://localhost:5050/get-external-reports?page=${page}`)
     .then(res => res.json())
     .then(data => {
       const container = document.getElementById("report-list");
       container.innerHTML = "";
+
       const type = document.getElementById("filter-type")?.value;
       const status = document.getElementById("filter-status")?.value;
       const search = document.getElementById("search-input")?.value.toLowerCase();
@@ -85,14 +78,21 @@ function loadExternalReports(page) {
 
       const filtered = data.filter(report => {
         const createdAt = new Date(report.created_at);
-        const isTicket = report.issue_summary?.toLowerCase().includes("ticket created");
+        const isTicket =
+        report.source === "external-new" ||
+        (report.source === "external-legacy" &&
+         report.issue_summary?.toLowerCase().includes("ticket") || 
+         report.full_description?.toLowerCase().includes("ticket"));
+              const isNew = report.source === "new";
+        const isExternalNew = report.source === "external-new";
+        const isExternalLegacy = report.source === "external-legacy";
 
         let typeMatch = true;
         if (type === "Ticket") typeMatch = isTicket;
-        if (type === "Maintenance") typeMatch = !isTicket && report.source !== "new";
-        else if (type === "New") typeMatch = report.source === "new";
+        else if (type === "Maintenance") typeMatch = !isTicket && (isExternalLegacy || isExternalNew);
+        else if (type === "New") typeMatch = isNew;
 
-        const statusMatch = !status || report.status === status;
+        const statusMatch = !status || report.status?.trim().toLowerCase() === status.trim().toLowerCase();
         const searchMatch =
           !search ||
           report.device_name?.toLowerCase().includes(search) ||
@@ -108,58 +108,88 @@ function loadExternalReports(page) {
         return typeMatch && statusMatch && searchMatch && dateMatch && deviceMatch;
       });
 
-      if (!filtered.length) {
+      // ✅ Pagination setup
+      const reportsPerPage = 4;
+      const totalReports = filtered.length;
+      const totalPages = Math.ceil(totalReports / reportsPerPage);
+      const startIndex = (page - 1) * reportsPerPage;
+      const paginatedReports = filtered.slice(startIndex, startIndex + reportsPerPage);
+
+      if (!paginatedReports.length) {
         container.innerHTML = "<p>No matching reports found.</p>";
         return;
       }
 
-      filtered.forEach(report => {
-        const isNewSimple = report.source === "new"; // ✅ أفضل تحقق لأنه يجي من السيرفر
-
+      paginatedReports.forEach(report => {
         const card = document.createElement("div");
         card.className = "report-card";
 
-        const statusClass = getStatusClass(report.status);
+        const isNew = report.source === "new";
+        const isExternalNew = report.source === "external-new";
+        const isExternalLegacy = report.source === "external-legacy";
         const isTicket = report.issue_summary?.toLowerCase().includes("ticket created");
-        if (isNewSimple) {
+
+        const statusClass = getStatusClass(report.status);
+
+        if (isNew) {
           card.innerHTML = `
             <div class="report-card-header">
               <span>New Maintenance Report</span>
-              <span class="status-label ${getStatusClass(report.status)}">${report.status}</span>
+              <select class="status-select ${statusClass}">
+                <option value="Open" ${report.status === "Open" ? "selected" : ""}>Open</option>
+                <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>In Progress</option>
+                <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>Closed</option>
+              </select>
             </div>
             <div class="report-details">
+              <img src="/icon/desktop.png" alt="Device Icon" />
               <span>${formatDateTime(report.created_at)}</span>
             </div>
             <p><strong>Device Type:</strong> ${report.device_type || "N/A"}</p>
             <p><strong>Priority:</strong> ${report.priority || "N/A"}</p>
             <p><strong>Status:</strong> ${report.status}</p>
           `;
-      
-          container.appendChild(card);
-      
-          card.addEventListener("click", () => {
+
+          card.addEventListener("click", e => {
+            if (e.target.closest("select")) return;
             window.location.href = `report-details.html?id=${report.id}&type=new`;
           });
-      
-          return; // ⛔ لا تكمل
-        }
-        let issueHtml = "";
-        if (!isTicket) {
-          let initial = report.issue_summary?.trim();
-          let final = report.full_description?.trim();
 
-          issueHtml = `
-            <div class="report-issue-line">
-              ${initial ? `<span><strong>Initial Diagnosis:</strong> ${initial}</span>` : ""}
-              ${final ? `<span><strong>Final Diagnosis:</strong> ${final}</span>` : ""}
-            </div>
-          `;
+          const selectElement = card.querySelector("select.status-select");
+          selectElement.addEventListener("click", e => e.stopPropagation());
+          selectElement.addEventListener("change", e => {
+            e.stopPropagation();
+            updateReportStatus(report.id, e.target);
+          });
+
+          container.appendChild(card);
+          return;
         }
+
+        let issueHtml = "";
+        let initial = report.issue_summary?.trim();
+        let final = report.full_description?.trim();
+
+        issueHtml = `
+          <div class="report-issue-line">
+            ${initial ? `<span><strong>Initial Diagnosis:</strong> ${initial}</span>` : ""}
+            ${final ? `<span><strong>Final Diagnosis:</strong> ${final}</span>` : ""}
+          </div>
+        `;
+
+        const sourceLabel = isTicket
+        ? "External Maintenance Ticket"
+        : isExternalNew
+          ? "External Ticket"
+          : isExternalLegacy
+            ? "External Maintenance"
+            : "External Maintenance";
+      
 
         card.innerHTML = `
           <div class="report-card-header">
             <img src="/icon/${isTicket ? "ticket" : "Maintenance"}.png" alt="icon" />
-            ${isTicket ? "Ticket - External Maintenance" : "External Maintenance"}
+            ${sourceLabel}
             <select class="status-select ${statusClass}">
               <option value="Open" ${report.status === "Open" ? "selected" : ""}>Open</option>
               <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>In Progress</option>
@@ -178,16 +208,14 @@ function loadExternalReports(page) {
           ${issueHtml}
         `;
 
-        // ✅ منع التنقل للكرت إذا ضغطنا على select أو عناصر مشابهة
         card.addEventListener("click", (e) => {
-          if (e.target.closest("select, option")) return;
+          if (e.target.closest("select")) return;
           window.location.href = `report-details.html?id=${report.id}&type=external`;
         });
 
-        // ✅ تحديث الحالة عند التغيير
-        const statusSelect = card.querySelector("select.status-select");
-        statusSelect.addEventListener("click", e => e.stopPropagation());
-        statusSelect.addEventListener("change", e => {
+        const selectElement = card.querySelector("select.status-select");
+        selectElement.addEventListener("click", e => e.stopPropagation());
+        selectElement.addEventListener("change", e => {
           e.stopPropagation();
           updateReportStatus(report.id, e.target);
         });
@@ -195,13 +223,14 @@ function loadExternalReports(page) {
         container.appendChild(card);
       });
 
-      updatePagination(page);
+      updatePagination(page, totalPages);
     })
     .catch(err => {
       console.error("❌ Error loading external reports:", err);
       document.getElementById("report-list").innerHTML = "<p>Error loading reports.</p>";
     });
 }
+
 
 function updatePagination(currentPage) {
   const paginationButtons = document.querySelectorAll(".pagination .page-btn");

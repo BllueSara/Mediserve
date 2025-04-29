@@ -120,7 +120,7 @@ if (!ticketNumber) {
       if (report.maintenance_type === "Regular") titlePrefix = "Regular Maintenance";
       else if (report.maintenance_type === "General") titlePrefix = "General Maintenance";
       else if (report.maintenance_type === "Internal") titlePrefix = "Internal Ticket";
-      else if (report.maintenance_type === "External") titlePrefix = "External Maintenance";
+      else if (report.maintenance_type === "External") titlePrefix = "External Maintenance"|| "External Ticket";
       
       const reportTitle = ticketNumber
         ? `${titlePrefix} #${ticketNumber}`

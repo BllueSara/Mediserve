@@ -800,7 +800,7 @@ app.get("/get-external-reports", (req, res) => {
       status,
       device_type,
       NULL AS priority,
-      'external' AS source,
+      'external-legacy' AS source,
       NULL AS attachment_name,
       NULL AS attachment_path
     FROM External_Maintenance
@@ -824,8 +824,37 @@ app.get("/get-external-reports", (req, res) => {
     FROM New_Maintenance_Reports
   `;
 
+  const externalReportsSQL = `
+    SELECT 
+      mr.id,
+      mr.created_at,
+      et.ticket_number,
+      COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
+      d.name AS department_name,
+      mr.issue_summary,
+      mr.full_description,
+      mr.status,
+      md.device_type,
+      mr.priority,
+      'external-new' AS source,
+      et.attachment_name,
+      et.attachment_path
+    FROM Maintenance_Reports mr
+    LEFT JOIN External_Tickets et ON mr.ticket_id = et.id
+    LEFT JOIN Maintenance_Devices md ON mr.device_id = md.id
+    LEFT JOIN Departments d ON md.department_id = d.id
+
+    LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number
+    LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number
+    LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number
+
+    WHERE mr.maintenance_type = 'External'
+  `;
+
   const combinedSql = `
     (${externalSql})
+    UNION ALL
+    (${externalReportsSQL})
     UNION ALL
     (${newSql})
     ORDER BY created_at DESC
@@ -840,44 +869,145 @@ app.get("/get-external-reports", (req, res) => {
   });
 });
 
+
 app.get("/report/:id", (req, res) => {
   const reportId = req.params.id;
   const reportType = req.query.type;
-
   if (reportType === "external") {
-    const sql = `SELECT * FROM External_Maintenance WHERE id = ? LIMIT 1`;
-
-    db.query(sql, [reportId], (err, result) => {
+    // أولاً: نحاول نجيب من التقارير الجديدة (External_Tickets + Maintenance_Reports)
+    const newExternalSQL = `
+      SELECT 
+        mr.id AS report_id,
+        mr.report_number,
+        mr.status,
+        mr.created_at,
+        mr.issue_summary,
+        mr.full_description,
+        mr.maintenance_type,
+        mr.priority,
+  
+        et.ticket_number,
+        et.attachment_name,
+        et.attachment_path,
+        et.report_datetime,
+        et.issue_description,
+        et.assigned_to AS reporter_name,
+  
+        d.name AS department_name,
+        md.device_type,
+        md.serial_number,
+        md.governmental_number,
+        COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
+  
+        cpu.cpu_name,
+        ram.ram_type,
+        os.os_name,
+        gen.generation_number,
+        hdt.drive_type,
+        COALESCE(pcm.model_name, prm.model_name, scm.model_name, mdm_fixed.model_name) AS model_name
+  
+      FROM Maintenance_Reports mr
+      LEFT JOIN External_Tickets et ON mr.ticket_id = et.id
+      LEFT JOIN Maintenance_Devices md ON mr.device_id = md.id
+      LEFT JOIN Departments d ON md.department_id = d.id
+  
+      LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number
+      LEFT JOIN CPU_Types cpu ON pc.Processor_id = cpu.id
+      LEFT JOIN RAM_Types ram ON pc.RAM_id = ram.id
+      LEFT JOIN OS_Types os ON pc.OS_id = os.id
+      LEFT JOIN Processor_Generations gen ON pc.Generation_id = gen.id
+      LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id
+      LEFT JOIN PC_Model pcm ON pc.Model_id = pcm.id
+  
+      LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number
+      LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
+  
+      LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number
+      LEFT JOIN Scanner_Model scm ON sc.model_id = scm.id
+  
+      LEFT JOIN Maintance_Device_Model mdm_fixed ON md.model_id = mdm_fixed.id
+  
+      WHERE mr.id = ? AND mr.maintenance_type = 'External'
+      LIMIT 1
+    `;
+  
+    db.query(newExternalSQL, [reportId], (err, result) => {
       if (err) return res.status(500).json({ error: "Server error" });
-      if (!result.length) return res.status(404).json({ error: "External report not found" });
-
-      const r = result[0];
-      return res.json({
-        id: r.id,
-        request_number: r.ticket_number,
-        created_at: r.created_at,
-        reporter_name: r.reporter_name,
-        maintenance_manager: r.maintenance_manager,
-        device_name: r.device_name,
-        device_type: r.device_type,
-        serial_number: r.serial_number,
-        governmental_number: r.governmental_number,
-        department_name: r.department_name,
-        issue_summary: r.initial_diagnosis,
-        full_description: r.final_diagnosis,
-        cpu_name: r.cpu_name,
-        ram_type: r.ram_type,
-        os_name: r.os_name,
-        generation_number: r.generation_number,
-        model_name: r.model_name,
-        drive_type: r.drive_type || "", // ✅ أضفناها هنا
-        maintenance_type: "External",
-        status: r.status || "Open",
-        source: "external"
-      });
+      if (result.length) {
+        const r = result[0];
+        return res.json({
+          id: r.report_id,
+          report_number: r.report_number,
+          ticket_number: r.ticket_number,
+          created_at: r.created_at,
+          reporter_name: r.reporter_name || "",
+          assigned_to: r.reporter_name || "", // ✅ جديد
+          report_type: "Incident",            // ✅ أو "External" أو حسب نظامك
+          priority: r.priority || "Medium",   // ✅ مهم للعرض والتعديل
+      
+          maintenance_manager: "",
+          device_name: r.device_name || "",
+          device_type: r.device_type || "",
+          serial_number: r.serial_number || "",
+          governmental_number: r.governmental_number || "",
+          department_name: r.department_name || "",
+          issue_summary: r.issue_summary || "",
+          full_description: r.full_description || "",
+          cpu_name: r.cpu_name || "",
+          ram_type: r.ram_type || "",
+          os_name: r.os_name || "",
+          generation_number: r.generation_number || "",
+          model_name: r.model_name || "",
+          drive_type: r.drive_type || "",
+          attachment_name: r.attachment_name || "",
+          attachment_path: r.attachment_path || "",
+          maintenance_type: r.maintenance_type,
+          status: r.status || "Open",
+          source: "external-new"
+        });
+      }
+       else {
+        // إذا ما لقى في external الجديدة، يبحث في External_Maintenance
+        const oldExternalSQL = `SELECT * FROM External_Maintenance WHERE id = ? LIMIT 1`;
+        db.query(oldExternalSQL, [reportId], (err2, result2) => {
+          if (err2) return res.status(500).json({ error: "Server error" });
+          if (!result2.length) return res.status(404).json({ error: "External report not found" });
+  
+          const r = result2[0];
+          return res.json({
+            id: r.id,
+            report_number: r.ticket_number,         // ✅ توحيد التسمية
+            ticket_number: r.ticket_number,
+            created_at: r.created_at,
+            reporter_name: r.reporter_name,
+            assigned_to: r.reporter_name || "",     // ✅ مهم للعرض
+            report_type: "External",                // ✅ لتعرض في category
+            priority: r.priority || "Medium",       // ✅ إذا موجودة أو نعطي قيمة افتراضية
+          
+            maintenance_manager: r.maintenance_manager,
+            device_name: r.device_name,
+            device_type: r.device_type,
+            serial_number: r.serial_number,
+            governmental_number: r.governmental_number,
+            department_name: r.department_name,
+            issue_summary: r.initial_diagnosis,
+            full_description: r.final_diagnosis,
+            cpu_name: r.cpu_name,
+            ram_type: r.ram_type,
+            os_name: r.os_name,
+            generation_number: r.generation_number,
+            model_name: r.model_name,
+            drive_type: r.drive_type || "",
+            maintenance_type: "External",
+            status: r.status || "Open",
+            source: "external-legacy"
+          });
+          
+        });
+      }
     });
-
-  } else if (reportType === "new") {
+  }
+   else if (reportType === "new") {
     const sql = `
 SELECT 
   r.*, 
