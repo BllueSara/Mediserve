@@ -358,3 +358,178 @@ document.getElementById("popup-save-btn").addEventListener("click", function () 
     alert("❌ Failed to save to server");
   });
 });
+
+
+// 🟰 تحميل قائمة الأقسام من السيرفر عند بداية الصفحة
+fetch("http://localhost:5050/Departments")
+    .then(res => res.json()) // 🟰 تحويل الرد إلى JSON
+    .then(data => {
+      const sectionDropdown = document.getElementById("section");
+
+// 🟰 إضافة كل قسم للقائمة
+      data.forEach(item => {
+        const option = document.createElement("option"); // 🟰 إنشاء خيار (Option)
+        option.value = item.name; // 🟰 قيمة الخيار هي اسم القسم
+        option.textContent = item.name; // 🟰 قيمة الخيار هي اسم القسم
+        sectionDropdown.appendChild(option);  // 🟰 إضافة الخيار للقائمة
+      
+      });
+    })
+    .catch(err => console.error("Error loading sections:" , err)); // 🟰 طباعة أي خطأ إذا فشل الجلب
+
+
+
+
+// 🟰 تحميل قائمة الأقسام من السيرفر عند بداية الصفحة
+fetch("http://localhost:5050/TypeProplem")
+.then(res => res.json()) // 🟰 تحويل الرد إلى JSON
+.then(data => {
+  const deviceType = document.getElementById("device-type");
+
+// 🟰 إضافة كل قسم للقائمة
+  data.forEach(item => {
+    const option = document.createElement("option"); // 🟰 إنشاء خيار (Option)
+    option.value = item.DeviceType; // 🟰 قيمة الخيار هي اسم القسم
+    option.textContent = item.DeviceType; // 🟰 قيمة الخيار هي اسم القسم
+    deviceType.appendChild(option);  // 🟰 إضافة الخيار للقائمة
+  
+  });
+})
+.catch(err => console.error("Error loading sections:" , err)); // 🟰 طباعة أي خطأ إذا فشل الجلب
+
+
+
+  // ✅ تحميل السبسفيكيشن حسب القسم والجهاز
+function loadSpecifications() {
+  const section = document.getElementById("section")?.value;
+  const type = document.getElementById("device-type")?.value;
+  const specDropdown = document.getElementById("specification");
+
+  if (!section || !type || section === "add-custom" || type === "add-custom") return;
+
+  fetch(`http://localhost:5050/devices/${type}/${section}`)
+    .then(res => res.json())
+    .then(data => {
+      specDropdown.innerHTML = `<option disabled selected value="">Select Specification</option>`;
+      
+      data.forEach(item => {
+        const option = document.createElement("option");
+        option.value = item.id;
+        option.textContent = item.name;
+        specDropdown.appendChild(option);
+      });
+
+      // Add the "+ Add New" option
+      const addNewOption = document.createElement("option");
+      addNewOption.value = "add-custom";
+      addNewOption.textContent = "+ Add New Specification";
+      specDropdown.appendChild(addNewOption);
+    })
+    .catch(err => console.error("❌ Error loading specifications:", err));
+}
+
+
+
+
+document.getElementById("section").addEventListener("change", loadSpecifications);
+document.getElementById("device-type").addEventListener("change", loadSpecifications);
+
+
+
+document.getElementById("specification").addEventListener("change", function () {
+  if (this.value === "add-custom") {
+    this.selectedIndex = 0;
+    showPopup("Add New Specification", "specification");
+  }
+});
+
+
+function showPopup(title, targetDropdownId) {
+  document.getElementById("popup-title").textContent = title;
+  document.getElementById("popup-fields").innerHTML = `
+    <label for="popup-input">${title}:</label>
+    <input type="text" id="popup-input" placeholder="Enter ${title.toLowerCase()}">
+    <input type="hidden" id="popup-target" value="${targetDropdownId}">
+  `;
+  document.getElementById("popup-modal").style.display = "flex";
+  setTimeout(() => document.getElementById("popup-input").focus(), 100);
+}
+
+
+
+document.getElementById("popup-save-btn").addEventListener("click", function () {
+  const input = document.getElementById("popup-input").value.trim();
+  const target = document.getElementById("popup-target").value;
+  const dropdown = document.getElementById(target);
+
+  if (!input) {
+    alert("❌ Please enter a valid value");
+    return;
+  }
+
+  const exists = Array.from(dropdown.options).some(opt => opt.value === input);
+  if (exists) {
+    alert("⚠️ This value already exists");
+    return;
+  }
+
+  let endpoint = "";
+  if (target === "section") endpoint = "add-department";
+  else if (target === "device-type") endpoint = "add-device-type";
+  else if (target === "specification") endpoint = "add-specification";
+
+  // NOTE: تأكد أن لديك هذه الـ endpoints في الـ backend
+  fetch(`http://localhost:5050/${endpoint}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ value: input })
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.error) {
+        alert("❌ " + data.error);
+        return;
+      }
+
+      const option = document.createElement("option");
+      option.value = input;
+      option.textContent = input;
+
+      const addIndex = Array.from(dropdown.options).findIndex(opt => opt.value === "add-custom");
+      if (addIndex !== -1) dropdown.insertBefore(option, dropdown.options[addIndex]);
+      else dropdown.appendChild(option);
+
+      dropdown.value = input;
+      dropdown.dispatchEvent(new Event("change", { bubbles: true }));
+
+      closePopup();
+    })
+    .catch(err => {
+      console.error("❌ Save failed:", err);
+      alert("❌ Failed to save to server");
+    });
+});
+
+
+// ✅ تحديث عرض الحقول حسب نوع الجهاز المختار
+document.getElementById("device-type").addEventListener("change", function () {
+  const type = this.value.toLowerCase();
+
+  const specFields = [
+    "processor-generation-row",
+    "cpu-row",
+    "ram-row",
+    "hdd-row",
+    "os-row"
+  ];
+
+  // إظهار الكل فقط للـ PC
+  if (type === "pc") {
+    specFields.forEach(id => document.getElementById(id).style.display = "block");
+  } else {
+    specFields.forEach(id => document.getElementById(id).style.display = "none");
+  }
+
+  // تحميل المواصفات حسب النوع والقسم
+  loadSpecifications();
+});
