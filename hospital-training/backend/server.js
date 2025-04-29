@@ -2799,3 +2799,98 @@ app.post("/update-option-complete", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+
+
+// ضروري تتأكد إن عندك body-parser أو express.json() مفعّل
+
+
+app.post('/add-option-internal-ticket', async (req, res) => {
+  try {
+    const { target, value, type } = req.body;
+
+    if (!target || !value) {
+      return res.status(400).json({ error: "❌ Missing target or value." });
+    }
+
+    let query = "";
+    let values = [];
+
+    switch (target) {
+      case "department":
+        query = "INSERT INTO Departments (name) VALUES (?)";
+        values = [value];
+        break;
+      case "technical":
+        query = "INSERT INTO Engineers (name) VALUES (?)";
+        values = [value];
+        break;
+      case "device-type":
+        query = "INSERT INTO DeviceType (DeviceType) VALUES (?)";
+        values = [value];
+        break;
+      case "problem-status":
+        if (!type) {
+          return res.status(400).json({ error: "❌ Missing device type for problem status." });
+        }
+        if (type === "pc") {
+          query = "INSERT INTO problemstates_pc (problem_text) VALUES (?)";
+          values = [value];
+        } else if (type === "printer") {
+          query = "INSERT INTO problemstates_printer (problem_text) VALUES (?)";
+          values = [value];
+        } else if (type === "scanner") {
+          query = "INSERT INTO problemstates_scanner (problem_text) VALUES (?)";
+          values = [value];
+        } else {
+          query = "INSERT INTO problemstates_maintance_device (problemStates_Maintance_device_name, device_type) VALUES (?, ?)";
+          values = [value, type];
+        }
+        break;
+      case "ticket-type":
+        query = "INSERT INTO ticket_types (type_name) VALUES (?)";
+        values = [value];
+        break;
+      case "report-status":
+        query = "INSERT INTO report_statuses (status_name) VALUES (?)";
+        values = [value];
+        break;
+      case "generation":
+        query = "INSERT INTO processor_generations (generation_number) VALUES (?)";
+        values = [value];
+        break;
+      case "processor":
+        query = "INSERT INTO cpu_types (cpu_name) VALUES (?)";
+        values = [value];
+        break;
+      case "ram":
+        query = "INSERT INTO ram_types (ram_type) VALUES (?)";
+        values = [value];
+        break;
+      case "model":
+        query = "INSERT INTO pc_model (model_name) VALUES (?)";
+        values = [value];
+        break;
+      case "os":
+        query = "INSERT INTO os_types (os_name) VALUES (?)";
+        values = [value];
+        break;
+      default:
+        return res.status(400).json({ error: "❌ Invalid target." });
+    }
+
+    if (!query) {
+      return res.status(400).json({ error: "❌ No query found for the target." });
+    }
+
+    // ⚡ التنفيذ بطريقة صحيحة
+    await db.promise().query(query, values);
+
+
+    return res.json({ message: `✅ Successfully added ${value} to ${target}` });
+
+  } catch (err) {
+    console.error("❌ Error in add-option-internal-ticket:", err);
+    return res.status(500).json({ error: "❌ Server error while adding option." });
+  }
+});
