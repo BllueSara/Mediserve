@@ -353,6 +353,7 @@ function closePopup() {
 }
 
 
+
 function savePCSpec() {
   const data = new FormData(popupForm);
   const deviceData = {};
@@ -361,6 +362,15 @@ function savePCSpec() {
   });
 
   const deviceType = document.getElementById("device-type").value.toLowerCase();
+
+  // 🔥 هنا التعديل المهم 🔥
+  const departmentInput = document.getElementById("department-" + deviceType);
+  if (departmentInput) {
+    const departmentName = departmentInput.dataset.name || departmentInput.value.trim();
+    deviceData["department"] = departmentName;
+  }
+
+  console.log("🔍 Sending data:", deviceData);
 
   fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
     method: "POST",
@@ -384,7 +394,6 @@ function savePCSpec() {
         dropdown.appendChild(option);
         dropdown.value = option.value;
 
-        // ✅ 👇 هذه الإضافة ضرورية لعرض الاسم بدل "Select"
         const displaySpan = document.getElementById("selected-device-spec");
         if (displaySpan) {
           displaySpan.textContent = option.textContent;
@@ -392,7 +401,6 @@ function savePCSpec() {
 
         popup.style.display = "none";
         fetchDeviceSpecsByTypeAndDepartment();
-
       } else {
         alert("❌ فشل في الحفظ: " + result.error);
       }
@@ -402,7 +410,6 @@ function savePCSpec() {
       alert("❌ حدث خطأ في الاتصال بالسيرفر. تأكد أن السيرفر يعمل");
     });
 }
-
 
 function fetchDepartments(selectId = "department") {
   fetch("http://localhost:5050/Departments")
@@ -1837,8 +1844,9 @@ function saveDeviceSpecification() {
   const name = document.getElementById("spec-name").value.trim();
   const model = document.getElementById("spec-model").value.trim();
   const serial = document.getElementById("spec-serial").value.trim();
-  const department = document.getElementById("spec-department").value.trim();
-  const deviceType = document.getElementById("device-type").value.toLowerCase();
+  const departmentInput = document.getElementById("spec-department");
+  const department = departmentInput.dataset.name || departmentInput.value.trim();
+    const deviceType = document.getElementById("device-type").value.toLowerCase();
   const dropdown = document.getElementById("device-spec");
 
   if (!ministry || !name || !model || !serial || !department || !deviceType) {
