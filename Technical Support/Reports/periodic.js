@@ -8,7 +8,7 @@ function loadMaintenance(type) {
     ? 'http://localhost:5050/regular-maintenance-summary' 
     : 'http://localhost:5050/regular-maintenance-summary-4months';
 
-  fetch(url)
+    fetch(url, { cache: "no-store" }) // ✅ منع الكاش
     .then(res => res.json())
     .then(data => {
       const tableBody = document.getElementById("maintenance-table-body");
@@ -66,8 +66,7 @@ function updateHeaderCounts(completed, total, type = '3months') {
 function updateStatus(id, selectElement) {
   const newStatus = selectElement.value;
 
-  // ✅ أولاً: تحديث جدول Regular_Maintenance
-  fetch(`http://localhost:5050/update-maintenance-status/${id}`, {
+  fetch(`http://localhost:5050/update-report-status/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status: newStatus })
@@ -76,27 +75,38 @@ function updateStatus(id, selectElement) {
     .then(data => {
       alert(data.message || "✅ Status updated");
 
-      // ✅ تغيير شكل الـ select بعد التحديث
+      // ✅ غير كلاس السلكت فقط (بدون reload)
       selectElement.className = `status-select ${getStatusClass(newStatus)}`;
 
-      // ✅ ثانيًا: نرسل الطلب لتحديث تقارير الصيانة المرتبطة
-      return fetch(`http://localhost:5050/update-linked-reports`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ maintenance_id: id, status: newStatus })
-      });
-    })
-    .then(res => res.json())
-    .then(data => {
-      console.log("✅ Reports updated:", data.message);
-      reloadTable(); // إعادة تحميل الجدول بعد التحديث
+      // ✅ حدّث فقط العداد والشريط
+      updateSummaryCountsOnly();
     })
     .catch(err => {
-      console.error("❌ Error updating status or reports:", err);
-      alert("❌ Failed to update status or linked reports");
+      console.error("❌ Error updating status:", err);
+      alert("❌ Failed to update status");
     });
 }
 
+function updateSummaryCountsOnly() {
+  const url = currentType === '3months'
+    ? 'http://localhost:5050/regular-maintenance-summary'
+    : 'http://localhost:5050/regular-maintenance-summary-4months';
+
+  fetch(url)
+    .then(res => res.json())
+    .then(data => {
+      let total = 0;
+      let completed = 0;
+      data.forEach(item => {
+        if (!item.device_name) return;
+        total++;
+        if (item.status === 'Completed') completed++;
+      });
+
+      updateHeaderCounts(completed, total, currentType);
+    })
+    .catch(err => console.error("❌ Error loading updated counts:", err));
+}
 
 // ✅ إعادة تحميل الجدول الحالي بعد التحديث
 function reloadTable() {
@@ -105,9 +115,11 @@ function reloadTable() {
 
 // ✅ تحديد ألوان الحالة
 function getStatusClass(status) {
-  if (status === 'Completed') return 'completed';
-  if (status === 'Pending') return 'pending';
-  return 'overdue';
+  if (!status) return "pending";
+  const statusClean = status.toLowerCase();
+  if (statusClean === "completed" || statusClean === "closed") return "completed";
+  if (statusClean === "in progress") return "in-progress";
+  return "pending";
 }
 
 // ✅ تنسيق التاريخ

@@ -966,6 +966,7 @@ WHERE r.id = ? LIMIT 1
     prm.model_name,
     scm.model_name,
     mdm_fixed.model_name
+    
   ) AS model_name,
 
   rm.problem_status,
@@ -1029,12 +1030,12 @@ WHERE mr.id = ?
         full_description: report.full_description,
         created_at: report.created_at,
         report_type: report.report_type,
-        model_name: report.model_name,
-        os_name: report.os_name,
-        cpu_name: report.cpu_name,
-        ram_type: report.ram_type,
-        generation_number: report.generation_number,
-        drive_type: report.drive_type,
+        cpu_name: report.cpu_name || "",
+        ram_type: report.ram_type || "",
+        os_name: report.os_name || "",
+        generation_number: report.generation_number || "",
+        drive_type: report.drive_type || "",
+        model_name: report.model_name || "",        
         problem_status: report.problem_status || "",        // 🆕 إرجاع حالة المشكلة
         technical_engineer: report.technical_engineer || "",// 🆕 إرجاع اسم الفني
         source: "internal"
@@ -2327,6 +2328,8 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), async (req, 
       report_number,
       priority,
       department_id,
+      device_id, // 👈 أضفناها هنا ✅
+
       issue_description,
       initial_diagnosis,
       final_diagnosis,
@@ -2388,19 +2391,21 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), async (req, 
 
           // ✅ 4. ربط التقرير بالتذكرة
           const insertReportQuery = `
-            INSERT INTO Maintenance_Reports (
-              report_number, ticket_id, issue_summary, full_description, 
-              status, maintenance_type, report_type
-            ) VALUES (?, ?, ?, ?, ?, 'Internal', 'Incident')
-          `;
-
-          const reportValues = [
-            report_number,
-            ticketId,
-            initial_diagnosis || '',
-            final_diagnosis || other_description || '',
-            status
-          ];
+          INSERT INTO Maintenance_Reports (
+            report_number, ticket_id, device_id, issue_summary, full_description, 
+            status, maintenance_type, report_type
+          ) VALUES (?, ?, ?, ?, ?, ?, 'Internal', 'Incident')
+        `;
+        
+        const reportValues = [
+          report_number,
+          ticketId,
+          device_id || null, // 👈 أضفنا الـ device_id مع القيم
+          initial_diagnosis || '',
+          final_diagnosis || other_description || '',
+          status
+        ];
+        
 
           db.query(insertReportQuery, reportValues, (reportErr) => {
             if (reportErr) {
@@ -2916,6 +2921,10 @@ app.post('/add-option-internal-ticket', async (req, res) => {
         break;
       case "os":
         query = "INSERT INTO os_types (os_name) VALUES (?)";
+        values = [value];
+        break;
+      case "drive":
+        query = "INSERT INTO Hard_Drive_Types (drive_type) VALUES (?)";
         values = [value];
         break;
       default:

@@ -189,24 +189,22 @@ th {
     color: #3498db;
     text-decoration: none;
 }
-.status {
-    display: inline-block;
-    padding: 5px 10px;
-    border-radius: 5px;
-    font-size: 14px;
-}
-.status.completed {
-    background: #4caf50;
-    color: white;
-}
-.status.pending {
-    background: #f39c12;
-    color: white;
-}
-.status.overdue {
-    background: #e74c3c;
-    color: white;
-}
+.status-select.pending {
+    background-color: #ffd84d;
+    color: #000;
+  }
+  
+  .status-select.in-progress {
+    background-color: #00bfff;
+    color: #fff;
+  }
+  
+  .status-select.completed,
+  .status-select.closed {
+    background-color: #4caf50;
+    color: #fff;
+  }
+  
 .schedule-tabs {
     display: flex;
     justify-content: flex-start; /* أو center لو تبغاهم في النص */

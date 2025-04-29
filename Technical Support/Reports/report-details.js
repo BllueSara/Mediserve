@@ -18,6 +18,8 @@ document.addEventListener("DOMContentLoaded", () => {
   fetch(`http://localhost:5050/report/${reportId}?type=${reportType}`)
     .then(res => res.json())
     .then(report => {
+      console.log("📦 التقرير:", report);
+
       reportData = report;
       const isExternal = report.source === "external";
 
@@ -131,7 +133,7 @@ if (!ticketNumber) {
         report.report_number || report.request_number || `MR-${report.id}`;
       document.getElementById("priority").textContent = isExternal ? "" : (report.priority || "");
       document.getElementById("device-type").textContent = report.device_type || "";
-      if (report.maintenance_type === "Regular") {
+      if (report.maintenance_type === "Regular"|| report.maintenance_type === "Internal") {
         document.getElementById("assigned-to").textContent = report.technical_engineer;
       } else {
         document.getElementById("assigned-to").textContent = isExternal
@@ -178,7 +180,8 @@ if (!ticketNumber) {
         const specsContainer = document.getElementById("device-specs");
         specsContainer.innerHTML = "";
         
-        const deviceType = report.device_type?.trim()?.toLowerCase() || "";
+        const deviceType = (report.device_type || "").trim().toLowerCase();
+        const isInternal = report.maintenance_type === "Internal";
         
         const fields = [
           { label: "🔘 Device Name:", value: report.device_name, alwaysShow: true },
@@ -195,7 +198,7 @@ if (!ticketNumber) {
         
         fields.forEach(({ label, value, showForPC, alwaysShow }) => {
           const shouldShow =
-            alwaysShow || (showForPC && deviceType === "pc") || !!value;
+            alwaysShow || isInternal || (showForPC && deviceType === "pc") || !!value;
         
           if (shouldShow) {
             const div = document.createElement("div");
@@ -204,6 +207,7 @@ if (!ticketNumber) {
             specsContainer.appendChild(div);
           }
         });
+        
       }
       
 
