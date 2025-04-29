@@ -123,23 +123,40 @@
         alert("Sign-up successful!");
       }
     });
+    document.getElementById("loginForm").addEventListener("submit", async function(event) {
+  event.preventDefault();
 
-    // Validate inputs when submitting the login form
-    document.getElementById("loginForm").addEventListener("submit", function(event) {
-      event.preventDefault();
-      // Retrieve values from login fields
-      let email = document.getElementById("loginEmail").value.trim();
-      let password = document.getElementById("loginPassword").value.trim();
-      let errorMessage = document.getElementById("loginError");
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value.trim();
+  const errorMessage = document.getElementById("loginError");
 
-      // Ensure all fields are not empty
-      if (email === "" || password === "") {
-        errorMessage.textContent = "All fields are required!";
-      } else {
-        errorMessage.textContent = "";
-        alert("Login successful!");
-      }
+  if (email === "" || password === "") {
+    errorMessage.textContent = "All fields are required!";
+    return;
+  }
+
+  try {
+    const response = await fetch("http://localhost:5050/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password })
     });
+
+    const result = await response.json();
+
+    if (result.success) {
+      // ✅ دخول بدون رسالة
+      window.location.href = "/Home/Home.html";      // أو صفحة الأدمن
+    } else {
+      // ❌ طباعة الخطأ
+      errorMessage.textContent = result.message;
+    }
+  } catch (err) {
+    errorMessage.textContent = "Server error. Please try again later.";
+  }
+});
+
+
   </script>
 </body>
 </html>
