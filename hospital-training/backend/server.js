@@ -2609,6 +2609,13 @@ app.post("/delete-option-complete", async (req, res) => {
         { table: "General_Maintenance", column: "technician_name" }
       ]
     },
+    "ticket-type": {
+      table: "ticket_types",
+      column: "type_name",
+      referencedTables: [
+        { table: "ticket_types", column: "type_name" }
+      ]
+    },
     "problem-status": {
       table: type === "pc"
         ? "ProblemStates_Pc"
