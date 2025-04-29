@@ -2539,7 +2539,6 @@ app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
 
-
 app.post("/delete-option-complete", async (req, res) => {
   const { target, value, type } = req.body;
 
@@ -2547,13 +2546,12 @@ app.post("/delete-option-complete", async (req, res) => {
     return res.status(400).json({ error: "❌ Missing fields" });
   }
 
-  // 🧠 ماب الجداول والعواميد حسب نوع الحذف
   const deleteMap = {
     "section": {
       table: "Departments",
       column: "name",
       referencedTables: [
-        { table: "Maintenance_Devices", column: "department_name" },
+        { table: "Maintenance_Devices", column: "department_id" }, // يحتاج التعامل بالأرقام
         { table: "General_Maintenance", column: "department_name" },
         { table: "Regular_Maintenance", column: "department_name" },
         { table: "External_Maintenance", column: "department_name" }
@@ -2564,7 +2562,6 @@ app.post("/delete-option-complete", async (req, res) => {
       column: "DeviceType",
       referencedTables: [
         { table: "Maintenance_Devices", column: "device_type" },
-        // { table: "General_Maintenance", column: "device_type" },
         { table: "Regular_Maintenance", column: "device_type" },
         { table: "External_Maintenance", column: "device_type" },
         { table: "Maintance_Device_Model", column: "device_type_name" },
@@ -2604,12 +2601,35 @@ app.post("/delete-option-complete", async (req, res) => {
   if (!mapping) return res.status(400).json({ error: "❌ Invalid target field" });
 
   try {
+    let departmentId = null;
+
+    if (target === "section") {
+      // ✅ إذا كان الهدف "section"، نجيب الـ ID الخاص بالاسم
+      const [deptRows] = await db.promise().query(
+        `SELECT id FROM Departments WHERE TRIM(name) = ?`,
+        [value.trim()]
+      );
+      if (!deptRows.length) {
+        return res.status(400).json({ error: `❌ Department "${value}" not found.` });
+      }
+      departmentId = deptRows[0].id;
+    }
+
     // ✅ تحقق هل الخيار مستخدم في جداول أخرى؟
     for (const ref of mapping.referencedTables) {
-      const [rows] = await db.promise().query(
-        `SELECT COUNT(*) AS count FROM ${ref.table} WHERE ${ref.column} = ?`,
-        [value]
-      );
+      let query = "";
+      let param = null;
+
+      if (target === "section" && ref.column === "department_id") {
+        // نستخدم ID بدلاً من الاسم
+        query = `SELECT COUNT(*) AS count FROM ${ref.table} WHERE ${ref.column} = ?`;
+        param = departmentId;
+      } else {
+        query = `SELECT COUNT(*) AS count FROM ${ref.table} WHERE ${ref.column} = ?`;
+        param = value.trim();
+      }
+
+      const [rows] = await db.promise().query(query, [param]);
       if (rows[0].count > 0) {
         return res.status(400).json({
           error: `❌ Can't delete "${value}" because it is referenced in table "${ref.table}"`
@@ -2617,31 +2637,32 @@ app.post("/delete-option-complete", async (req, res) => {
       }
     }
 
-    // ✅ الحذف من الجدول الرئيسي
+    // ✅ حذف من الجدول الرئيسي
     let deleteQuery = "";
     let params = [];
 
     if (target === "problem-status" && type && !["pc", "printer", "scanner"].includes(type)) {
       deleteQuery = `DELETE FROM ${mapping.table} WHERE ${mapping.column} = ? AND device_type_name = ?`;
-      params = [value, type];
+      params = [value.trim(), type];
     } else {
       deleteQuery = `DELETE FROM ${mapping.table} WHERE ${mapping.column} = ?`;
-      params = [value];
+      params = [value.trim()];
     }
 
     const [result] = await db.promise().query(deleteQuery, params);
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({ error: "❌ Value not found or already deleted" });
+      return res.status(404).json({ error: "❌ Value not found or already deleted." });
     }
 
     res.json({ message: `✅ "${value}" deleted successfully.` });
+
   } catch (err) {
     console.error("❌ Error during delete-option-complete:", err.sqlMessage || err.message || err);
-    res.status(500).json({ error: err.sqlMessage || "Server error during deletion" });
+    res.status(500).json({ error: err.sqlMessage || "Server error during deletion." });
   }
-  
 });
+
 
 app.post("/update-option-complete", async (req, res) => {
   const { target, oldValue, newValue, type } = req.body;
