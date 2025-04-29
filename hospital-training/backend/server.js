@@ -2946,3 +2946,174 @@ app.post('/add-option-internal-ticket', async (req, res) => {
     return res.status(500).json({ error: "❌ Server error while adding option." });
   }
 });
+
+
+app.post('/add-option-external-ticket', async (req, res) => {
+  try {
+    const { target, value, type } = req.body;
+
+    if (!target || !value) {
+      return res.status(400).json({ error: "❌ Missing target or value." });
+    }
+
+    let query = "";
+    let values = [];
+
+    switch (target) {
+      case "department":
+        query = "INSERT INTO Departments (name) VALUES (?)";
+        values = [value];
+        break;
+     
+      case "device-type":
+        query = "INSERT INTO DeviceType (DeviceType) VALUES (?)";
+        values = [value];
+        break;
+      
+      
+      case "generation":
+        query = "INSERT INTO processor_generations (generation_number) VALUES (?)";
+        values = [value];
+        break;
+      case "processor":
+        query = "INSERT INTO cpu_types (cpu_name) VALUES (?)";
+        values = [value];
+        break;
+      case "ram":
+        query = "INSERT INTO ram_types (ram_type) VALUES (?)";
+        values = [value];
+        break;
+      case "model":
+        query = "INSERT INTO pc_model (model_name) VALUES (?)";
+        values = [value];
+        break;
+      case "os":
+        query = "INSERT INTO os_types (os_name) VALUES (?)";
+        values = [value];
+        break;
+      case "drive":
+        query = "INSERT INTO Hard_Drive_Types (drive_type) VALUES (?)";
+        values = [value];
+        break;
+      default:
+        return res.status(400).json({ error: "❌ Invalid target." });
+    }
+
+    if (!query) {
+      return res.status(400).json({ error: "❌ No query found for the target." });
+    }
+
+    // ⚡ التنفيذ بطريقة صحيحة
+    await db.promise().query(query, values);
+
+
+    return res.json({ message: `✅ Successfully added ${value} to ${target}` });
+
+  } catch (err) {
+    console.error("❌ Error in add-option external-ticket:", err);
+    return res.status(500).json({ error: "❌ Server error while adding option." });
+  }
+});
+
+
+app.post("/external-ticket-with-file", upload.single("attachment"), (req, res) => {
+  try {
+    const {
+      ticket_number,      // ✅ المستخدم يدخله
+      reporter_name,      // ✅ المستخدم يدخله
+      device_type,
+      section,
+      device_spec,
+      priority,
+      issue_description,
+      report_datetime
+    } = req.body;
+
+    const file = req.file;
+    const fileName = file ? file.filename : null;
+    const filePath = file ? file.path : null;
+
+    // ✅ إدخال التذكرة في External_Tickets
+    const insertTicketQuery = `
+    INSERT INTO External_Tickets (
+      ticket_number,
+      department_id,
+      priority,
+      issue_description,
+      assigned_to,
+      status,
+      attachment_name,
+      attachment_path,
+      report_datetime
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+  
+
+  const ticketValues = [
+    ticket_number,                      // ticket_number
+    section || null,                    // department_id
+    priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase(), // priority (High/Medium/Low)
+    issue_description || '',            // issue_description
+    reporter_name || '',                // assigned_to
+    'Open',                             // status
+    fileName || '',                     // attachment_name
+    filePath || '',                     // attachment_path
+    report_datetime || new Date()       // report_datetime
+  ];
+  
+
+    db.query(insertTicketQuery, ticketValues, (ticketErr, ticketResult) => {
+      if (ticketErr) {
+        console.error("❌ Insert external ticket error:", ticketErr);
+        return res.status(500).json({ error: "Failed to create external ticket" });
+      }
+
+      const ticketId = ticketResult.insertId;
+
+      // ✅ بعد إنشاء التذكرة نضيف تقرير صيانة
+      const insertReportQuery = `
+      INSERT INTO Maintenance_Reports (
+        report_number,
+        ticket_id,
+        device_id,
+        issue_summary,
+        full_description,
+        status,
+        maintenance_type,
+        report_type,
+        priority
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    
+    const reportValues = [
+      ticket_number,                  // report_number
+      ticketId,                        // ticket_id
+      device_spec || null,             // device_id
+      issue_description || '',         // issue_summary
+      '',                              // full_description (فارغ مؤقتاً)
+      'Open',                          // status
+      'External',                      // maintenance_type
+      'Incident',                      // report_type
+      priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase() || 'Medium' // priority (High/Medium/Low)
+    ];
+    
+
+      db.query(insertReportQuery, reportValues, (reportErr) => {
+        if (reportErr) {
+          console.error("❌ Insert report error:", reportErr);
+          return res.status(500).json({ error: "Failed to create maintenance report" });
+        }
+
+        res.status(201).json({
+          message: "✅ External ticket and report created successfully",
+          ticket_number: ticket_number,
+          ticket_id: ticketId
+        });
+      });
+    });
+
+  } catch (err) {
+    console.error("❌ Server error:", err);
+    res.status(500).json({ error: "Unexpected server error" });
+  }
+});
