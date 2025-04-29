@@ -284,7 +284,6 @@ textarea {
   }
 }
 
-/* Pop-up Modal Styles */
 .popup-modal {
   display: none;
   position: fixed;
@@ -297,7 +296,6 @@ textarea {
   align-items: center;
   z-index: 1000;
 }
-
 .popup-content {
   background: white;
   padding: 30px;
@@ -306,29 +304,24 @@ textarea {
   overflow-y: auto;
   border-radius: 10px;
   box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  
 }
 
 .popup-content label {
   margin-top: 15px;
   display: block;
   font-size: 14px;
+  
 }
 
-.popup-content input, 
-.popup-content select {
-  width: 100%;
+.popup-content input, .popup-content select {
+  width: 90%;
   margin: 5px auto;
   padding: 10px;
   display: block;
   border: 1px solid #ccc;
   border-radius: 5px;
-}
 
-.popup-buttons {
-  margin-top: 20px;
-  display: flex;
-  justify-content: center;
-  gap: 15px;
 }
 
 .popup-buttons button {
@@ -339,11 +332,213 @@ textarea {
   border: none;
   border-radius: 5px;
   background-color: #3BAAE0;
-  color: white;
+  color: white; /* ✅ يخلي النص أبيض */
   cursor: pointer;
   transition: background-color 0.3s ease;
 }
 
+
 .popup-buttons button:hover {
+  background-color: #007bb8; /* لون عند التحويم */
+}
+
+.popup-buttons {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center; /* ✅ هذا يخلي الأزرار بالوسط */
+  gap: 15px;                /* ✅ مسافة بين الزرين */
+}
+
+.custom-dropdown-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px auto;
+}
+
+.dropdown-actions button {
+  padding: 8px 14px;
+  background-color: #3BAAE0;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.dropdown-actions button:hover {
   background-color: #007bb8;
+}
+
+.dropdown-search {
+  padding: 8px;
+  /* width: calc(100% - 20px); */
+  margin: 8px auto;
+  display: block;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.dropdown-options .option {
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.dropdown-options .option:hover {
+  background-color: #f0f0f0;
+}
+.dropdown-option-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+
+.dropdown-option-row:hover {
+  background-color: #f9f9f9;
+}
+
+.dropdown-option-text {
+  flex: 1;
+  font-size: 14px;
+}
+
+.dropdown-actions-icons {
+  display: flex;
+  gap: 10px;
+}
+
+.dropdown-actions-icons i {
+  font-size: 16px;
+  color: #888;
+  cursor: pointer;
+  transition: color 0.2s ease-in-out;
+}
+
+.dropdown-actions-icons i:hover {
+  color: #007bb8;
+}
+/* Bold + Add New */
+.dropdown-option-row.add-new-option .dropdown-option-text {
+  font-weight: bold;
+  color: black; /* اختياري - يعطيها لون أزرق جميل */
+}
+/* Custom dropdown full */
+.custom-dropdown {
+  position: relative;
+  width: 100%;
+  margin-bottom: 20px;
+}
+.dropdown-toggle {
+  border: 1px solid #ccc;
+  padding: 10px;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.dropdown-content {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  border: 1px solid #ccc;
+  background: #fff;
+  display: none;
+  z-index: 10;
+  border-top: none;
+  border-radius: 4px;
+}
+.dropdown-search {
+  width: calc(100% - 30px);
+  margin: 8px 15px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+.dropdown-options {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 5px 0;
+}
+.dropdown-options::-webkit-scrollbar {
+  width: 8px;
+}
+.dropdown-options::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+.dropdown-options::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+.dropdown-options::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
+}
+.option {
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.option:hover {
+  background-color: #f0f0f0;
+}
+.add-option-under-search {
+  padding: 8px 15px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #ddd;
+  cursor: pointer;
+  color: #3498db;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+}
+.add-option-under-search:hover {
+  background-color: #e9ecef;
+}
+
+/* Popup */
+.popup-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+.popup-content {
+  background: white;
+  padding: 30px;
+  width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+.popup-content label {
+  margin-top: 15px;
+  display: block;
+  font-size: 14px;
+}
+.popup-content input, .popup-content select {
+  width: 80%;
+  margin: 5px auto;
+  padding: 10px;
+  display: block;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+.popup-buttons {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
 }
