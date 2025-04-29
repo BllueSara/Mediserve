@@ -139,8 +139,11 @@ if (!ticketNumber) {
           : (report.assigned_to || report.technical || "");
       }
       document.getElementById("department").textContent = report.department_name || "";
-      document.getElementById("category").textContent = isExternal ? "External" : (report.report_type || "");
-      document.getElementById("report-status").textContent = report.status || "Pending";
+      document.getElementById("category").textContent =
+      isExternal ? "External" :
+      report.maintenance_type === "Regular" ? "Regular" :
+      (report.report_type || "");
+          document.getElementById("report-status").textContent = report.status || "Pending";
       document.getElementById("submitted-date").textContent = `Submitted on ${new Date(report.created_at).toLocaleString()}`;
       
       if (report.maintenance_type === "Regular") {

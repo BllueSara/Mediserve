@@ -211,30 +211,44 @@ function loadReports(page = 1) {
             </div>
           `;
         } else if (isRegular) {
+          let problemContent = report.problem_status || "";
+        
+          let isArray = false;
           let checklistItems = [];
+        
           try {
-            checklistItems = JSON.parse(report.issue_summary || "[]");
-          } catch (e) {
-            console.warn("⚠️ Failed to parse checklist:", e);
-          }
-
-          issueHtml = `
-            <ul style="margin-left: 20px;">
-              ${
-                Array.isArray(checklistItems) && checklistItems.length
-                  ? checklistItems.map(i => `<li>${i}</li>`).join("")
-                  : "<li>No issues listed</li>"
-              }
-            </ul>
-            ${
-              report.full_description
-                ? `<div style="margin-top:10px;background:#f2f2f2;padding:8px;border-radius:6px">
-                     <strong>Notes:</strong><br>${report.full_description}
-                   </div>`
-                : ""
+            const parsed = JSON.parse(problemContent);
+            if (Array.isArray(parsed)) {
+              isArray = true;
+              checklistItems = parsed;
             }
-          `;
-        } else {
+          } catch (e) {
+            // 🔕 not an array, it's just a text
+          }
+        
+          if (isArray && checklistItems.length) {
+            issueHtml = `
+              <ul style="margin-left: 20px;">
+                ${checklistItems.map(i => `<li>${i}</li>`).join("")}
+              </ul>
+            `;
+          } else {
+            issueHtml = `
+              <div style="margin-left: 10px;">
+                ${problemContent || "No issue specified."}
+              </div>
+            `;
+          }
+        
+          if (report.full_description) {
+            issueHtml += `
+              <div style="margin-top:10px;background:#f2f2f2;padding:8px;border-radius:6px">
+                <strong>Notes:</strong><br>${report.full_description}
+              </div>
+            `;
+          }
+        }
+        else {
           let issue = report.issue_summary || "";
           let diagnosis = report.full_description || "";
 
