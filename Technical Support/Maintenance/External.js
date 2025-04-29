@@ -1027,8 +1027,7 @@ function fetchDeviceTypes() {
           closeAllDropdowns();
           fetchDeviceSpecsByTypeAndDepartment();
         
-          const type = item.DeviceType.trim().toLowerCase();
-          if (type) fetchProblemStatus(type); // ✅ جلب حالات الأعطال بناءً على الجهاز
+
         };
         
 
@@ -1330,8 +1329,7 @@ document.addEventListener("DOMContentLoaded", () => {
     typeDropdown.addEventListener("change", () => {
       fetchDeviceSpecsByTypeAndDepartment();
       
-      const type = typeDropdown?.value?.toLowerCase();
-      if (type) fetchProblemStatus(type); // ✅ جلب حالة الأعطال حسب نوع الجهاز
+
     });
 
     sectionDropdown.addEventListener("change", () => {
