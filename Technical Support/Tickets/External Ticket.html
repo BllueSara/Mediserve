@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>External Ticket</title>
   <link rel="stylesheet" href="External Ticket.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 </head>
 
 <body>
@@ -43,57 +45,64 @@
 
       <!-- Ticket Number -->
       <div class="form-group">
-        <label>Ticket Number</label>
-        <input type="text" placeholder="Enter Ticket Number">
+        <label for="ticket-number">Ticket Number <span class="required">*</span></label>
+        <input type="text" id="ticket-number" name="ticket_number" placeholder="Enter Ticket Number" required>
       </div>
-
-      <!-- Reporter Name -->
+      
       <div class="form-group">
         <label for="reporter-name">Reporter Name <span class="required">*</span></label>
-        <input type="text" id="reporter-name" placeholder="Enter reporter name" required>
+        <input type="text" id="reporter-name" name="reporter_name" placeholder="Enter reporter name" required>
       </div>
+      
 
 
       <!-- Device Type -->
       <div class="form-group">
         <label for="device-type">Device Type <span class="required">*</span></label>
-        <div class="dropdown-container">
-          <div class="search-container" id="device-type-search" style="display: none;">
-            <input type="text" class="search-input" placeholder="Search Device Type...">
-          </div>
-          <div class="dropdown-wrapper">
-            <select id="device-type" name="device-type" required>
-              <option value="" disabled selected>Select device type</option>
-              <option value="add-custom">+ Add New Device Type</option>
-            </select>
-            <div class="icons-container">
-              <img src="/icon/search.png" alt="Search Icon" onclick="toggleSearch('device-type')">
-              <img src="/icon/edit.png" alt="Edit Icon" onclick="openPopup('device-type', 'Device Type')">
-              <img src="/icon/trash.png" alt="Trash Icon" onclick="deleteOption('device-type')">
+        <div class="custom-dropdown-wrapper" id="device-type-dropdown-wrapper">
+          <div class="custom-dropdown">
+            <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+              <span id="selected-device-type">Select device type</span>
+              <span>▼</span>
+            </div>
+            <div class="dropdown-content">
+              <input
+                type="text"
+                placeholder="Search device type..."
+                class="dropdown-search"
+                oninput="filterDropdown(this, 'device-type-options')"
+              />
+              <div class="dropdown-options" id="device-type-options">
+                <!-- سيتم تعبئة الخيارات عبر JavaScript -->
+              </div>
             </div>
           </div>
-        </div>
+        </div><input type="hidden" id="device-type" name="device-type" />
       </div>
 
       <!-- Section Dropdown -->
       <div class="form-group">
-        <label>Section <span class="required">*</span></label>
-        <div class="dropdown-container">
-          <div class="search-container" style="display: none;">
-            <input type="text" class="search-input" placeholder="Search...">
-          </div>
-          <div class="dropdown-wrapper">
-            <select id="section">
-              <option value="" disabled selected>Select section</option>
-              <option value="add-custom">+ Add New Section</option>
-            </select>
-            <div class="icons-container">
-              <img src="/icon/search.png" alt="Search Icon" onclick="toggleSearch('section')">
-              <img src="/icon/edit.png" alt="Edit Icon" onclick="openPopup('section', 'Section')">
-              <img src="/icon/trash.png" alt="Trash Icon" onclick="deleteOption('section')">
+        <label for="section">Section <span class="required">*</span></label>
+        <div class="custom-dropdown-wrapper" id="section-dropdown-wrapper">
+          <div class="custom-dropdown">
+            <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+              <span id="selected-section">Select section</span>
+              <span>▼</span>
+            </div>
+            <div class="dropdown-content">
+              <input
+                type="text"
+                placeholder="Search section..."
+                class="dropdown-search"
+                oninput="filterDropdown(this, 'section-options')"
+              />
+              <div class="dropdown-options" id="section-options">
+                <!-- يتم تعبئتها عبر JavaScript -->
+              </div>
             </div>
           </div>
         </div>
+        <input type="hidden" id="section" name="section" />
       </div>
 
 
@@ -101,24 +110,20 @@
 
       <!-- Device Specification -->
       <div class="form-group">
-        <label for="device-specification">Device Specification <span class="required">*</span></label>
-        <div class="dropdown-container">
-          <div class="search-container" id="device-specification-search" style="display: none;">
-            <input type="text" class="search-input" placeholder="Search Device Specification...">
-          </div>
-          <div class="dropdown-wrapper">
-            <select id="device-specification" name="device-specification" required>
-              <option value="" disabled selected>Select device specification</option>
-              <option value="add-custom">+ Add New Device Specification</option>
-            </select>
-            <div class="icons-container">
-              <img src="/icon/search.png" alt="Search Icon" onclick="toggleSearch('device-specification')">
-              <img src="/icon/edit.png" alt="Edit Icon"
-                onclick="openPopup('device-specification', 'Device Specification')">
-              <img src="/icon/trash.png" alt="Trash Icon" onclick="deleteOption('device-specification')">
+        <label>Device Specifications <span class="required">*</span></label>
+        <div class="custom-dropdown-wrapper">
+          <div class="custom-dropdown">
+            <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+              <span id="selected-device-spec">Select specification</span>
+              <span>▼</span>
+            </div>
+            <div class="dropdown-content">
+              <input type="text" class="dropdown-search" placeholder="Search specification..." oninput="filterDropdown(this, 'device-spec-options')">
+              <div class="dropdown-options" id="device-spec-options"></div>
             </div>
           </div>
         </div>
+        <input type="hidden" id="device-spec" name="device_spec" required />
       </div>
 
 
@@ -158,8 +163,9 @@
       <!-- Issue Description -->
       <div class="form-group">
         <label>Issue Description <span class="required">*</span></label>
-        <textarea placeholder="Describe the issue in detail..." required></textarea>
+        <textarea name="issue_description" placeholder="Describe the issue in detail..." required></textarea>
       </div>
+      
 
       <!-- Report Date/Time -->
       <div class="form-group">
@@ -171,20 +177,32 @@
       <button type="submit" class="submit-btn">Save Ticket</button>
     </form>
   </div>
-  <!-- Popup Modal for Adding New Section -->
-  <div id="popup-modal" class="popup-modal">
-    <div class="popup-content">
-      <h2 id="popup-title">Add New Section</h2>
-      <div id="popup-fields">
-        <label for="popup-input">Section:</label>
-        <input type="text" id="popup-input" placeholder="Enter new section name">
-      </div>
+<!-- ✅ Popup for Custom Device Specification -->
+<div id="popup-modal" class="popup-overlay" style="display: none;">
+  <div class="popup-content wide-popup">
+    <h3 id="popup-title">Enter Device Specifications</h3>
+    <form id="pc-spec-form">
+      <div id="popup-fields"></div> 
       <div class="popup-buttons">
-        <button id="popup-save-btn">Save</button>
-        <button onclick="closePopup()">Cancel</button>
+        <button type="button" class="save-btn" onclick="savePCSpec()">Save</button>
+        <button type="button" class="cancel-btn" onclick="closePopup()">Cancel</button>
       </div>
+    </form>
+  </div>
+</div>
+<!-- ✅ Popup for Adding Generic Options -->
+<div id="generic-popup" class="popup-overlay" style="display: none;">
+  <div class="popup-content">
+    <h3 id="generic-popup-title">Add New</h3>
+    <label for="generic-popup-input" id="generic-label">New Value</label>
+    <input type="text" id="generic-popup-input" placeholder="Enter new value..." required />
+    <input type="hidden" id="generic-popup-target-id" />
+    <div class="popup-buttons">
+      <button type="button" class="save-btn" onclick="saveGenericOption()">Save</button>
+      <button type="button" class="cancel-btn" onclick="closeGenericPopup()">Cancel</button>
     </div>
   </div>
+</div>
 
 
   <script src="External Ticket.js"></script>
