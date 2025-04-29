@@ -2432,7 +2432,7 @@ document.querySelector("form").addEventListener("submit", function (e) {
     CustomerName: document.querySelector('input[placeholder="Enter customer name"]').value,
     IDNumber: document.querySelector('input[placeholder="Enter ID number"]').value,
     ExtNumber: document.querySelector('input[placeholder="Enter extension number"]').value,
-    Technical: document.getElementById("technical").value
+    Technical: document.getElementById("technical-status").value  
   };
 
   fetch("http://localhost:5050/submit-general-maintenance", {
