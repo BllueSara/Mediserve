@@ -52,7 +52,28 @@
         <label for="reporter-name">Reporter Name <span class="required">*</span></label>
         <input type="text" id="reporter-name" placeholder="Enter reporter name" required>
       </div>
-      
+
+
+      <!-- Device Type -->
+      <div class="form-group">
+        <label for="device-type">Device Type <span class="required">*</span></label>
+        <div class="dropdown-container">
+          <div class="search-container" id="device-type-search" style="display: none;">
+            <input type="text" class="search-input" placeholder="Search Device Type...">
+          </div>
+          <div class="dropdown-wrapper">
+            <select id="device-type" name="device-type" required>
+              <option value="" disabled selected>Select device type</option>
+              <option value="add-custom">+ Add New Device Type</option>
+            </select>
+            <div class="icons-container">
+              <img src="/icon/search.png" alt="Search Icon" onclick="toggleSearch('device-type')">
+              <img src="/icon/edit.png" alt="Edit Icon" onclick="openPopup('device-type', 'Device Type')">
+              <img src="/icon/trash.png" alt="Trash Icon" onclick="deleteOption('device-type')">
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Section Dropdown -->
       <div class="form-group">
@@ -70,6 +91,31 @@
               <img src="/icon/search.png" alt="Search Icon" onclick="toggleSearch('section')">
               <img src="/icon/edit.png" alt="Edit Icon" onclick="openPopup('section', 'Section')">
               <img src="/icon/trash.png" alt="Trash Icon" onclick="deleteOption('section')">
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+
+
+      <!-- Device Specification -->
+      <div class="form-group">
+        <label for="device-specification">Device Specification <span class="required">*</span></label>
+        <div class="dropdown-container">
+          <div class="search-container" id="device-specification-search" style="display: none;">
+            <input type="text" class="search-input" placeholder="Search Device Specification...">
+          </div>
+          <div class="dropdown-wrapper">
+            <select id="device-specification" name="device-specification" required>
+              <option value="" disabled selected>Select device specification</option>
+              <option value="add-custom">+ Add New Device Specification</option>
+            </select>
+            <div class="icons-container">
+              <img src="/icon/search.png" alt="Search Icon" onclick="toggleSearch('device-specification')">
+              <img src="/icon/edit.png" alt="Edit Icon"
+                onclick="openPopup('device-specification', 'Device Specification')">
+              <img src="/icon/trash.png" alt="Trash Icon" onclick="deleteOption('device-specification')">
             </div>
           </div>
         </div>
