@@ -829,11 +829,13 @@ app.get("/device-types", (req, res) => {
     res.json(result.map(row => row.device_type));
   });
 });
+
 app.get("/get-external-reports", (req, res) => {
   const externalSql = `
     SELECT 
       id,
       created_at,
+      NULL AS ticket_id, -- ✅ أضفنا هذا
       ticket_number,
       device_name,
       department_name,
@@ -852,6 +854,7 @@ app.get("/get-external-reports", (req, res) => {
     SELECT 
       id,
       created_at,
+      NULL AS ticket_id, -- ✅ أضفنا هذا
       NULL AS ticket_number,
       NULL AS device_name,
       NULL AS department_name,
@@ -870,6 +873,7 @@ app.get("/get-external-reports", (req, res) => {
     SELECT 
       mr.id,
       mr.created_at,
+      mr.ticket_id,
       et.ticket_number,
       COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
       d.name AS department_name,
@@ -885,11 +889,9 @@ app.get("/get-external-reports", (req, res) => {
     LEFT JOIN External_Tickets et ON mr.ticket_id = et.id
     LEFT JOIN Maintenance_Devices md ON mr.device_id = md.id
     LEFT JOIN Departments d ON md.department_id = d.id
-
     LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number
     LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number
     LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number
-
     WHERE mr.maintenance_type = 'External'
   `;
 
@@ -909,6 +911,72 @@ app.get("/get-external-reports", (req, res) => {
     }
     res.json(result);
   });
+});
+
+app.put("/update-external-report-status/:id", async (req, res) => {
+  const reportId = req.params.id;
+  const { status } = req.body;
+
+  try {
+    // ✅ 1. جلب التقرير من Maintenance_Reports
+    const report = await new Promise((resolve, reject) => {
+      db.query("SELECT * FROM Maintenance_Reports WHERE id = ?", [reportId], (err, result) => {
+        if (err) return reject(err);
+        resolve(result[0]);
+      });
+    });
+
+    if (!report) return res.status(404).json({ error: "Report not found" });
+
+    // ✅ 2. تحديث الحالة في Maintenance_Reports
+    await new Promise((resolve, reject) => {
+      db.query("UPDATE Maintenance_Reports SET status = ? WHERE id = ?", [status, reportId], (err) => {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
+
+    // ✅ 3. تحديث التذكرة الخارجية المرتبطة (External_Tickets)
+    if (report.ticket_id) {
+      await new Promise((resolve, reject) => {
+        db.query("UPDATE External_Tickets SET status = ? WHERE id = ?", [status, report.ticket_id], (err) => {
+          if (err) return reject(err);
+          resolve();
+        });
+      });
+
+      // ✅ 4. تحديث باقي التقارير المرتبطة بنفس التذكرة الخارجية
+      await new Promise((resolve, reject) => {
+        db.query("UPDATE Maintenance_Reports SET status = ? WHERE ticket_id = ?", [status, report.ticket_id], (err) => {
+          if (err) return reject(err);
+          resolve();
+        });
+      });
+    }
+
+    // ✅ 5. إذا كان نوع الصيانة من النوع القديم (External_Maintenance)، نحدثه أيضًا
+    const legacy = await new Promise((resolve, reject) => {
+      db.query("SELECT * FROM External_Maintenance WHERE id = ?", [reportId], (err, result) => {
+        if (err) return reject(err);
+        resolve(result[0]);
+      });
+    });
+
+    if (legacy) {
+      await new Promise((resolve, reject) => {
+        db.query("UPDATE External_Maintenance SET status = ? WHERE id = ?", [status, reportId], (err) => {
+          if (err) return reject(err);
+          resolve();
+        });
+      });
+    }
+
+    res.json({ message: "✅ External report, ticket, and related entries updated successfully" });
+
+  } catch (err) {
+    console.error("❌ Failed to update external report status:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 
