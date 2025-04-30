@@ -215,6 +215,7 @@ function handleSubmit(event) {
   const status = document.getElementById("report-status")?.value;
   const deviceId = document.getElementById("device-spec")?.value?.trim(); // ✅ أضف هذا السطر
   const file = document.getElementById("upload-file")?.files[0];
+  const ticketType = document.getElementById("ticket-type")?.value.trim();
 
   if (!reportNumber || !priority || !departmentId || !issueDescription) {
     alert("❌ Please fill in the required fields: Ticket Number, Priority, Department, Issue Description.");
@@ -232,6 +233,8 @@ function handleSubmit(event) {
   formData.append("assigned_to", assignedTo || "");
   formData.append("status", status);
   formData.append("device_id", deviceId || ""); // ✅ أضف هذا هنا مع الفورم داتا
+  formData.append("ticket_type", ticketType);
+
 
   if (file) formData.append("attachment", file);
 
