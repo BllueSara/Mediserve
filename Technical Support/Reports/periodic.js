@@ -21,7 +21,7 @@ function loadMaintenance(type) {
         if (!item.device_name) return;
 
         total++;
-        if (item.status === 'Completed') completed++;
+        if (item.status === 'Closed') completed++;
 
         const row = document.createElement("tr");
         row.innerHTML = `
@@ -30,7 +30,11 @@ function loadMaintenance(type) {
           <td>${formatDate(item.last_maintenance_date)}</td>
           <td>${formatDate(item.next_due_date)}</td>
           <td>
-            <select onchange="updateStatus(${item.id}, this)" class="status-select ${getStatusClass(item.status)}">
+<select 
+  onchange="updateStatus(${item.id}, this)" 
+  class="status-select ${getStatusClass(item.status)}"
+  data-prev-status="${item.status}"
+>
               <option value="Open" ${item.status === 'Open' ? 'selected' : ''}>Open</option>
               <option value="In Progress" ${item.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
               <option value="Closed" ${item.status === 'Closed' ? 'selected' : ''}>Closed</option>
@@ -65,6 +69,7 @@ function updateHeaderCounts(completed, total, type = '3months') {
 // ✅ تحديث الحالة في قاعدة البيانات
 function updateStatus(id, selectElement) {
   const newStatus = selectElement.value;
+  const previousStatus = selectElement.getAttribute("data-prev-status");
 
   fetch(`http://localhost:5050/update-report-status/${id}`, {
     method: 'PUT',
@@ -75,24 +80,48 @@ function updateStatus(id, selectElement) {
     .then(data => {
       alert(data.message || "✅ Status updated");
 
-      // ✅ غير كلاس السلكت فقط (بدون reload)
+      // ✅ عدل الكلاس
       selectElement.className = `status-select ${getStatusClass(newStatus)}`;
 
-      // ✅ حدّث فقط العداد والشريط
-      updateSummaryCountsOnly();
+      // ✅ احفظ الحالة الجديدة
+      selectElement.setAttribute("data-prev-status", newStatus);
+
+      // ✅ حدّث العداد يدويًا
+      adjustHeaderCountManually(previousStatus, newStatus, currentType);
     })
     .catch(err => {
       console.error("❌ Error updating status:", err);
       alert("❌ Failed to update status");
     });
 }
+function adjustHeaderCountManually(prevStatus, newStatus, type = '3months') {
+  const countElement = document.querySelector(`.progress-count-${type}`);
+  const barElement = document.querySelector(`.progress-bar-${type}`);
+
+  let [completed, total] = countElement.textContent.split('/').map(Number);
+
+  // إذا تحولت من شيء غير Closed إلى Closed: زود واحد
+  if (prevStatus !== 'Closed' && newStatus === 'Closed') {
+    completed++;
+  }
+
+  // إذا تحولت من Closed إلى شيء ثاني: نقص واحد
+  if (prevStatus === 'Closed' && newStatus !== 'Closed') {
+    completed--;
+  }
+
+  const percentage = total > 0 ? (completed / total) * 100 : 0;
+  countElement.textContent = `${completed}/${total}`;
+  barElement.style.width = `${percentage}%`;
+}
+
 
 function updateSummaryCountsOnly() {
   const url = currentType === '3months'
     ? 'http://localhost:5050/regular-maintenance-summary'
     : 'http://localhost:5050/regular-maintenance-summary-4months';
 
-  fetch(url)
+    fetch(url, { cache: "no-store" })
     .then(res => res.json())
     .then(data => {
       let total = 0;
@@ -100,7 +129,7 @@ function updateSummaryCountsOnly() {
       data.forEach(item => {
         if (!item.device_name) return;
         total++;
-        if (item.status === 'Completed') completed++;
+        if (item.status === 'Closed') completed++;
       });
 
       updateHeaderCounts(completed, total, currentType);
@@ -150,7 +179,7 @@ document.addEventListener("DOMContentLoaded", () => {
       data.forEach(item => {
         if (!item.device_name) return;
         total++;
-        if (item.status === 'Completed') completed++;
+        if (item.status === 'Closed') completed++;
       });
 
       updateHeaderCounts(completed, total, "4months");
