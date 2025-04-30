@@ -190,8 +190,10 @@ function loadExternalReports(page = 1) {
           <div class="report-card-header">
             <img src="/icon/${isTicket ? "ticket" : "Maintenance"}.png" alt="icon" />
             ${sourceLabel}
-            <select class="status-select ${statusClass}">
-              <option value="Open" ${report.status === "Open" ? "selected" : ""}>Open</option>
+<select 
+  class="status-select ${statusClass}"
+  data-report-id="${report.id}"
+  data-ticket-id="${report.ticket_id || ''}">              <option value="Open" ${report.status === "Open" ? "selected" : ""}>Open</option>
               <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>In Progress</option>
               <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>Closed</option>
             </select>
@@ -261,17 +263,30 @@ function getStatusClass(status) {
   return "pending";
 }
 
-function updateReportStatus(id, selectElement) {
+function updateReportStatus(reportId, selectElement) {
   const newStatus = selectElement.value;
-  fetch(`http://localhost:5050/update-external-report-status/${id}`, {
+  const ticketId = selectElement.getAttribute("data-ticket-id");
+
+  fetch(`http://localhost:5050/update-external-report-status/${reportId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status: newStatus })
   })
     .then(res => res.json())
     .then(data => {
-      alert(data.message || "✅ Status updated successfully");
-      selectElement.className = `status-select ${getStatusClass(newStatus)}`;
+      alert(data.message || "✅ Status updated");
+
+      if (ticketId) {
+        document.querySelectorAll(`select[data-ticket-id="${ticketId}"]`).forEach(dropdown => {
+          dropdown.value = newStatus;
+          dropdown.className = `status-select ${getStatusClass(newStatus)}`;
+        });
+      } else {
+        document.querySelectorAll(`select[data-report-id="${reportId}"]`).forEach(dropdown => {
+          dropdown.value = newStatus;
+          dropdown.className = `status-select ${getStatusClass(newStatus)}`;
+        });
+      }
     })
     .catch(err => {
       console.error("❌ Failed to update external report status:", err);
