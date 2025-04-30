@@ -1676,13 +1676,21 @@ app.put("/update-report-status/:id", async (req, res) => {
     // If regular maintenance, update Regular_Maintenance table
     if (report.maintenance_type === "Regular") {
       await new Promise((resolve, reject) => {
-        db.query(  "UPDATE Regular_Maintenance SET status = ? WHERE device_id = ? AND DATE(last_maintenance_date) = DATE(?)",
-          [status, report.device_id, report.created_at], (err) => {
-          if (err) return reject(err);
-          resolve();
-        });
+        db.query(
+          `UPDATE Regular_Maintenance 
+           SET status = ? 
+           WHERE device_id = ?
+           ORDER BY last_maintenance_date DESC
+           LIMIT 1`,
+          [status, report.device_id],
+          (err) => {
+            if (err) return reject(err);
+            resolve();
+          }
+        );
       });
     }
+    
 
     res.json({ message: "✅ Status updated across report, ticket, and all linked reports" });
 
