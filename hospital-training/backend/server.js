@@ -1124,6 +1124,7 @@ WHERE r.id = ? LIMIT 1
   COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
   d.name AS department_name,
   it.ticket_number,
+  it.ticket_type,
   it.priority,
   it.assigned_to AS technical,
 
@@ -1187,6 +1188,7 @@ WHERE mr.id = ?
       return res.json({
         id: report.report_id,
           report_number: report.report_number,   // 🛠️ أضف هذا السطر عشان ترجع رقم التقرير!
+          ticket_type: report.ticket_type || "",
 
         ticket_number: report.ticket_number,
         drive_type: report.drive_type || "",
@@ -2515,7 +2517,9 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), async (req, 
       final_diagnosis,
       other_description,
       assigned_to,
-      status = 'Open'
+      status = 'Open',
+      ticket_type // 👈 أضف هذا السطر
+
     } = req.body;
 
     const file = req.file;
@@ -2545,11 +2549,11 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), async (req, 
         // ✅ 3. إدخال التذكرة في جدول Internal_Tickets
         const insertTicketQuery = `
           INSERT INTO Internal_Tickets (
-            ticket_number, priority, department_id, issue_description, 
-            assigned_to, status, attachment_name, attachment_path
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `;
+  ticket_number, priority, department_id, issue_description, 
+  assigned_to, status, attachment_name, attachment_path, ticket_type
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 
+        `;
         const ticketValues = [
           newTicketNumber,
           priority || "Medium",
@@ -2558,8 +2562,10 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), async (req, 
           assigned_to || '',
           status,
           fileName,
-          filePath
+          filePath,
+          ticket_type || ''
         ];
+        
 
         db.query(insertTicketQuery, ticketValues, (ticketErr, ticketResult) => {
           if (ticketErr) {

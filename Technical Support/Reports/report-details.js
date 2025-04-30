@@ -120,7 +120,7 @@ if (!ticketNumber) {
       if (report.maintenance_type === "Regular") titlePrefix = "Regular Maintenance";
       else if (report.maintenance_type === "General") titlePrefix = "General Maintenance";
       else if (report.maintenance_type === "Internal") titlePrefix = "Internal Ticket";
-      else if (report.maintenance_type === "External") titlePrefix = "External Maintenance"|| "External Ticket";
+      else if (report.maintenance_type === "External") titlePrefix = "External Ticket"|| "External Maintenance";
       
       const reportTitle = ticketNumber
         ? `${titlePrefix} #${ticketNumber}`
@@ -133,7 +133,7 @@ if (!ticketNumber) {
         report.report_number || report.request_number || `MR-${report.id}`;
       document.getElementById("priority").textContent = isExternal ? "" : (report.priority || "");
       document.getElementById("device-type").textContent = report.device_type || "";
-      if (report.maintenance_type === "Regular"|| report.maintenance_type === "Internal") {
+      if (report.maintenance_type === "Regular"|| report.maintenance_type === "Internal"|| report.maintenance_type === "General") {
         document.getElementById("assigned-to").textContent = report.technical_engineer;
       } else {
         document.getElementById("assigned-to").textContent = isExternal
@@ -144,7 +144,9 @@ if (!ticketNumber) {
       document.getElementById("category").textContent =
       isExternal ? "External" :
       report.maintenance_type === "Regular" ? "Regular" :
-      (report.report_type || "");
+      report.maintenance_type === "Internal" ? (report.ticket_type || "Internal") :
+      (report.maintenance_type || "");
+    
           document.getElementById("report-status").textContent = report.status || "Pending";
       document.getElementById("submitted-date").textContent = `Submitted on ${new Date(report.created_at).toLocaleString()}`;
       
