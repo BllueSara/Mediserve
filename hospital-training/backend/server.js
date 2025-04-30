@@ -302,7 +302,6 @@ app.get("/devices/:type/:department", (req, res) => {
   });
 });
 
-
 app.post("/submit-regular-maintenance", async (req, res) => {
   const {
     "maintenance-date": date,
@@ -312,10 +311,9 @@ app.post("/submit-regular-maintenance", async (req, res) => {
     "device-spec": deviceSpec,
     details = [],
     notes = "",
-  problem_status = "",
-   technical_engineer_id = null
+    problem_status = "",
+    technical_engineer_id = null
   } = req.body;
-  
 
   try {
     // 1️⃣ جلب رقم القسم
@@ -338,12 +336,9 @@ app.post("/submit-regular-maintenance", async (req, res) => {
                COALESCE(hdt.drive_type, '') AS drive_type,
                d.name AS department_name
         FROM Maintenance_Devices md
-        LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number
-          AND md.governmental_number = pc.Governmental_Number
-        LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number
-          AND md.governmental_number = pr.Governmental_Number
-        LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number
-          AND md.governmental_number = sc.Governmental_Number
+        LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
+        LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
+        LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
         LEFT JOIN CPU_Types c ON pc.Processor_id = c.id
         LEFT JOIN RAM_Types r ON pc.RAM_id = r.id
         LEFT JOIN OS_Types o ON pc.OS_id = o.id
@@ -363,16 +358,15 @@ app.post("/submit-regular-maintenance", async (req, res) => {
 
     if (!deviceInfo) return res.status(404).json({ error: "Device not found" });
 
-    // 3️⃣ أدخل صيانة دورية Regular_Maintenance
+    // 3️⃣ إدخال سجل الصيانة الدورية
     const checklist = JSON.stringify(details);
-
     await new Promise((resolve, reject) => {
       db.query(`
         INSERT INTO Regular_Maintenance (
           device_id, device_type, last_maintenance_date, frequency, checklist, notes,
           serial_number, governmental_number, device_name, department_name,
           cpu_name, ram_type, os_name, generation_number, model_name, drive_type, status,
-          problem_status,  technical_engineer_id
+          problem_status, technical_engineer_id
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         deviceSpec,
@@ -392,17 +386,16 @@ app.post("/submit-regular-maintenance", async (req, res) => {
         deviceInfo.model_name,
         deviceInfo.drive_type,
         "Open",
-        problem_status || "",  
-        technical_engineer_id // 🆕 حالة المشكلة
+        problem_status || "",
+        technical_engineer_id
       ], (err) => {
         if (err) return reject(err);
         resolve();
       });
     });
 
-    // 4️⃣ إنشاء تذكرة داخلية Internal_Tickets
+    // 4️⃣ إنشاء تذكرة
     const ticketNumber = `TIC-${Date.now()}`;
-
     const ticketId = await new Promise((resolve, reject) => {
       db.query(`
         INSERT INTO Internal_Tickets (
@@ -412,43 +405,92 @@ app.post("/submit-regular-maintenance", async (req, res) => {
         ticketNumber,
         "Medium",
         departmentId,
-        problem_status || "Regular Maintenance", // 🆕 شرح التذكرة من حالة المشكلة
-        +   technical_engineer_id || null
+        problem_status || "Regular Maintenance",
+        technical_engineer_id
       ], (err, result) => {
         if (err) return reject(err);
         resolve(result.insertId);
       });
     });
 
-    // 5️⃣ إضافة تقرير الصيانة
-    const reportNumber = `REP-${Date.now()}`;
-    await new Promise((resolve, reject) => {
+    // 5️⃣ التحقق من وجود تقرير صيانة اليوم
+    const alreadyReported = await new Promise((resolve, reject) => {
       db.query(`
-        INSERT INTO Maintenance_Reports (
-          report_number, ticket_id, device_id,
-          issue_summary, full_description, status, maintenance_type
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-      `, [
-        reportNumber,
-        ticketId,
-        deviceSpec,
-        checklist,
-        notes || "Routine periodic maintenance performed.",
-        "Open",
-        "Regular"
-      ], (err) => {
+        SELECT id FROM Maintenance_Reports 
+        WHERE device_id = ? AND maintenance_type = 'Regular' 
+        AND DATE(created_at) = CURDATE()
+      `, [deviceSpec], (err, result) => {
         if (err) return reject(err);
-        resolve();
+        resolve(result.length > 0);
       });
     });
 
-    res.json({ message: "✅ Regular maintenance, ticket, and report created successfully" });
+    // 6️⃣ إضافة تقرير صيانة إن لم يكن موجودًا
+    if (!alreadyReported) {
+      const reportNumberMain = `REP-${Date.now()}-MAIN`;
+      await new Promise((resolve, reject) => {
+        db.query(`
+          INSERT INTO Maintenance_Reports (
+            report_number, ticket_id, device_id,
+            issue_summary, full_description, status, maintenance_type
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `, [
+          reportNumberMain,
+          ticketId,
+          deviceSpec,
+          checklist,
+          notes || "Routine periodic maintenance performed.",
+          "Open",
+          "Regular"
+        ], (err) => {
+          if (err) return reject(err);
+          resolve();
+        });
+      });
+    }
+
+    // 7️⃣ تحقق من وجود تقرير "Ticket Created"
+    const ticketReportExists = await new Promise((resolve, reject) => {
+      db.query(`
+        SELECT id FROM Maintenance_Reports 
+        WHERE device_id = ? AND ticket_id = ? AND issue_summary = 'Ticket Created'
+      `, [deviceSpec, ticketId], (err, result) => {
+        if (err) return reject(err);
+        resolve(result.length > 0);
+      });
+    });
+
+    if (!ticketReportExists) {
+      const reportNumberTicket = `REP-${Date.now()}-TICKET`;
+      await new Promise((resolve, reject) => {
+        db.query(`
+          INSERT INTO Maintenance_Reports (
+            report_number, ticket_id, device_id,
+            issue_summary, full_description, status, maintenance_type
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `, [
+          reportNumberTicket,
+          ticketId,
+          deviceSpec,
+          "Ticket Created",
+          `Ticket (${ticketNumber}) for device: ${deviceInfo.device_name} - Department: ${deviceInfo.department_name}`,
+          "Open",
+          "Regular"
+        ], (err) => {
+          if (err) return reject(err);
+          resolve();
+        });
+      });
+    }
+
+    res.json({ message: "✅ Regular maintenance, ticket, and both reports created successfully." });
 
   } catch (error) {
     console.error("❌ Error in regular maintenance submission:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 
 
