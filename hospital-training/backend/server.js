@@ -95,6 +95,15 @@ app.get("/Hard_Drive_Types", (req, res) => {
     res.json(result);
   });
 });
+app.get("/RAM_Sizes", (req, res) => {
+  db.query("SELECT * FROM RAM_Sizes", (err, result) => {
+    if (err) {
+      console.error("❌ Error fetching RAM Sizes:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(result);
+  });
+});
 
 
 app.get("/TypeProplem", (req, res) => {
@@ -251,6 +260,168 @@ app.get("/device-specifications", (req, res) => {
 
 
 
+app.post("/submit-external-maintenance", async (req, res) => {
+  const {
+    ticket_number,
+    device_type: rawDeviceType,
+    device_specifications,
+    section,
+    maintenance_manager,
+    reporter_name,
+    initial_diagnosis,
+    final_diagnosis
+  } = req.body;
+
+  try {
+    // 🔍 جلب بيانات الجهاز
+    const getDeviceInfo = () =>
+      new Promise((resolve, reject) => {
+        const query = `
+SELECT 
+  md.*, 
+  COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
+  COALESCE(c.cpu_name, '') AS cpu_name,
+  COALESCE(r.ram_type, '') AS ram_type,
+  COALESCE(rs.ram_size, '') AS ram_size,  -- ✅ أضفناها هنا
+  COALESCE(o.os_name, '') AS os_name,
+  COALESCE(g.generation_number, '') AS generation_number,
+  COALESCE(pm.model_name, prm.model_name, scm.model_name, '') AS model_name,
+  COALESCE(hdt.drive_type, '') AS drive_type,
+  d.name AS department_name
+FROM Maintenance_Devices md
+LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
+LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
+LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
+LEFT JOIN CPU_Types c ON pc.Processor_id = c.id
+LEFT JOIN RAM_Types r ON pc.RAM_id = r.id
+LEFT JOIN RAM_Sizes rs ON pc.RamSize_id = rs.id  -- ✅ الربط هنا
+LEFT JOIN OS_Types o ON pc.OS_id = o.id
+LEFT JOIN Processor_Generations g ON pc.Generation_id = g.id
+LEFT JOIN PC_Model pm ON pc.Model_id = pm.id
+LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
+LEFT JOIN Scanner_Model scm ON sc.Model_id = scm.id
+LEFT JOIN Departments d ON md.department_id = d.id
+LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id
+WHERE md.id = ?
+
+
+        `;
+        db.query(query, [device_specifications], (err, result) => {
+          if (err) return reject(err);
+          resolve(result[0]);
+        });
+      });
+
+    const deviceInfo = await getDeviceInfo();
+
+    if (!deviceInfo) {
+      return res.status(404).json({ error: "❌ لم يتم العثور على معلومات الجهاز" });
+    }
+
+    // ✅ تجهيز نوع الجهاز
+    let deviceType = rawDeviceType?.toLowerCase();
+    const allowedTypes = ["pc", "printer", "scanner"];
+    deviceType = allowedTypes.includes(deviceType)
+      ? deviceType.charAt(0).toUpperCase() + deviceType.slice(1)
+      : deviceInfo.device_type;
+
+    // ✅ إنشاء التقرير الأساسي (التشخيص)
+    const insertMain = () =>
+      new Promise((resolve, reject) => {
+        const sql = `
+        INSERT INTO External_Maintenance (
+          ticket_number, device_type, device_specifications, section,
+          maintenance_manager, reporter_name,
+          initial_diagnosis, final_diagnosis,
+          serial_number, governmental_number, device_name,
+          department_name, cpu_name, ram_type, os_name,
+          generation_number, model_name, drive_type, ram_size  -- ✅ أضفناها هنا
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      
+      const values = [
+        ticket_number,
+        deviceType,
+        device_specifications,
+        section,
+        maintenance_manager,
+        reporter_name,
+        initial_diagnosis,
+        final_diagnosis,
+        deviceInfo.serial_number,
+        deviceInfo.governmental_number,
+        deviceInfo.device_name,
+        deviceInfo.department_name,
+        deviceInfo.cpu_name,
+        deviceInfo.ram_type,
+        deviceInfo.os_name,
+        deviceInfo.generation_number,
+        deviceInfo.model_name,
+        deviceInfo.drive_type,
+        deviceInfo.ram_size  // ✅ الجديد
+      ];
+      
+        db.query(sql, values, (err, result) => {
+          if (err) return reject(err);
+          resolve();
+        });
+      });
+
+    // ✅ إنشاء تقرير "Ticket Created"
+    const insertTicketSummary = () =>
+      new Promise((resolve, reject) => {
+        const sql = `
+        INSERT INTO External_Maintenance (
+          ticket_number, device_type, device_specifications, section,
+          maintenance_manager, reporter_name,
+          initial_diagnosis, final_diagnosis,
+          serial_number, governmental_number, device_name,
+          department_name, cpu_name, ram_type, os_name,
+          generation_number, model_name, ram_size  -- ✅ أضفناها هنا
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      
+      const values = [
+        ticket_number,
+        deviceType,
+        device_specifications,
+        section,
+        maintenance_manager,
+        reporter_name,
+        initial_diagnosis,
+        `Ticket (${ticket_number}) has been created by  (${reporter_name})`,
+        deviceInfo.serial_number,
+        deviceInfo.governmental_number,
+        deviceInfo.device_name,
+        deviceInfo.department_name,
+        deviceInfo.cpu_name,
+        deviceInfo.ram_type,
+        deviceInfo.os_name,
+        deviceInfo.generation_number,
+        deviceInfo.model_name,
+        deviceInfo.ram_size  // ✅ الجديد
+      ];
+      
+        db.query(sql, values, (err, result) => {
+          if (err) return reject(err);
+          resolve();
+        });
+      });
+
+    // ✨ تنفيذ الاثنين معًا
+    await insertMain();
+    await insertTicketSummary();
+
+    res.json({ message: "✅ External maintenance and ticket summary saved successfully." });
+
+  } catch (error) {
+    console.error("❌ Error:", error);
+    res.status(500).json({ error: "❌ Internal server error" });
+  }
+});
+
+
+
 
 // ✅ GET Devices with ID from Maintenance_Devices
 
@@ -327,29 +498,31 @@ app.post("/submit-regular-maintenance", async (req, res) => {
     // 2️⃣ جلب بيانات الجهاز
     const deviceInfo = await new Promise((resolve, reject) => {
       const query = `
-        SELECT md.*, COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
-               COALESCE(c.cpu_name, '') AS cpu_name,
-               COALESCE(r.ram_type, '') AS ram_type,
-               COALESCE(o.os_name, '') AS os_name,
-               COALESCE(g.generation_number, '') AS generation_number,
-               COALESCE(pm.model_name, prm.model_name, scm.model_name, '') AS model_name,
-               COALESCE(hdt.drive_type, '') AS drive_type,
-               d.name AS department_name
-        FROM Maintenance_Devices md
-        LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
-        LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
-        LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
-        LEFT JOIN CPU_Types c ON pc.Processor_id = c.id
-        LEFT JOIN RAM_Types r ON pc.RAM_id = r.id
-        LEFT JOIN OS_Types o ON pc.OS_id = o.id
-        LEFT JOIN Processor_Generations g ON pc.Generation_id = g.id
-        LEFT JOIN PC_Model pm ON pc.Model_id = pm.id
-        LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
-        LEFT JOIN Scanner_Model scm ON sc.Model_id = scm.id
-        LEFT JOIN Departments d ON md.department_id = d.id
-        LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id
-        WHERE md.id = ?
-      `;
+      SELECT md.*, COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
+             COALESCE(c.cpu_name, '') AS cpu_name,
+             COALESCE(r.ram_type, '') AS ram_type,
+             COALESCE(rs.ram_size, '') AS ram_size,
+             COALESCE(o.os_name, '') AS os_name,
+             COALESCE(g.generation_number, '') AS generation_number,
+             COALESCE(pm.model_name, prm.model_name, scm.model_name, '') AS model_name,
+             COALESCE(hdt.drive_type, '') AS drive_type,
+             d.name AS department_name
+      FROM Maintenance_Devices md
+      LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
+      LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
+      LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
+      LEFT JOIN CPU_Types c ON pc.Processor_id = c.id
+      LEFT JOIN RAM_Types r ON pc.RAM_id = r.id
+      LEFT JOIN RAM_Sizes rs ON pc.RAMSize_id = rs.id
+      LEFT JOIN OS_Types o ON pc.OS_id = o.id
+      LEFT JOIN Processor_Generations g ON pc.Generation_id = g.id
+      LEFT JOIN PC_Model pm ON pc.Model_id = pm.id
+      LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
+      LEFT JOIN Scanner_Model scm ON sc.Model_id = scm.id
+      LEFT JOIN Departments d ON md.department_id = d.id
+      LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id
+      WHERE md.id = ?
+    `;
       db.query(query, [deviceSpec], (err, result) => {
         if (err) return reject(err);
         resolve(result[0]);
@@ -365,10 +538,11 @@ app.post("/submit-regular-maintenance", async (req, res) => {
         INSERT INTO Regular_Maintenance (
           device_id, device_type, last_maintenance_date, frequency, checklist, notes,
           serial_number, governmental_number, device_name, department_name,
-          cpu_name, ram_type, os_name, generation_number, model_name, drive_type, status,
+          cpu_name, ram_type, ram_size, os_name, generation_number, model_name, drive_type, status,
           problem_status, technical_engineer_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
         deviceSpec,
         rawDeviceType || deviceInfo.device_type,
         date,
@@ -381,6 +555,7 @@ app.post("/submit-regular-maintenance", async (req, res) => {
         deviceInfo.department_name,
         deviceInfo.cpu_name,
         deviceInfo.ram_type,
+        deviceInfo.ram_size || '',
         deviceInfo.os_name,
         deviceInfo.generation_number,
         deviceInfo.model_name,
@@ -393,7 +568,9 @@ app.post("/submit-regular-maintenance", async (req, res) => {
         resolve();
       });
     });
-
+    
+    
+      
     // 4️⃣ إنشاء تذكرة
     const ticketNumber = `TIC-${Date.now()}`;
     const ticketId = await new Promise((resolve, reject) => {
@@ -549,7 +726,6 @@ app.post("/add-option-general", (req, res) => {
     "device-type": { table: "DeviceType", column: "DeviceType" },
     "section": { table: "Departments", column: "name" },
     "floor": { table: "Floors", column: "FloorNum" },
-    "technical-status": { table: "Engineers", column: "name" }, // ✅ هنا الصحيح
     "technical": { table: "Engineers", column: "name" },
     "problem-status": type === "pc"
       ? { table: "ProblemStates_Pc", column: "problem_text" }
@@ -560,6 +736,7 @@ app.post("/add-option-general", (req, res) => {
           : { table: "problemStates_Maintance_device", column: "problemStates_Maintance_device_name", extra: "device_type_name" },
     "os-select": { table: "OS_Types", column: "os_name" },
     "ram-select": { table: "RAM_Types", column: "ram_type" },
+    "ram-size-select": { table: "RAM_Sizes", column: "ram_size" },
     "cpu-select": { table: "CPU_Types", column: "cpu_name" },
     "generation-select": { table: "Processor_Generations", column: "generation_number" },
     "drive-select": { table: "Hard_Drive_Types", column: "drive_type" }
@@ -660,6 +837,7 @@ app.post("/add-options-regular", (req, res) => {
     "section": { table: "Departments", column: "name" },
     "os-select": { table: "OS_Types", column: "os_name" },
     "ram-select": { table: "RAM_Types", column: "ram_type" },
+    "ram-size-select": { table: "RAM_Sizes", column: "ram_size" },
     "cpu-select": { table: "CPU_Types", column: "cpu_name" },
     "generation-select": { table: "Processor_Generations", column: "generation_number" },
     "drive-select": { table: "Hard_Drive_Types", column: "drive_type" },
@@ -708,21 +886,22 @@ app.post("/add-options-regular", (req, res) => {
 });
 
 
-
 app.post("/submit-general-maintenance", async (req, res) => {
   const {
+    "maintenance-date": date,
     DeviceType: rawDeviceType,
     DeviceID: deviceSpec,
     Section: section,
     Floor: floor,
+    Extension: extension,
     ProblemStatus: problemStatus,
     InitialDiagnosis: initialDiagnosis,
     FinalDiagnosis: finalDiagnosis,
-    Technical: technical
+    Technical: technical,
+    Notes: notes = ""
   } = req.body;
 
   try {
-    // 1️⃣ Get Department ID
     const departmentId = await new Promise((resolve, reject) => {
       db.query("SELECT id FROM Departments WHERE name = ?", [section], (err, result) => {
         if (err) return reject(err);
@@ -730,18 +909,31 @@ app.post("/submit-general-maintenance", async (req, res) => {
       });
     });
 
-    // 2️⃣ Get Device Info
     const deviceInfo = await new Promise((resolve, reject) => {
       const query = `
-        SELECT 
-          md.*, 
-          COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
-          d.name AS department_name
+        SELECT md.*, COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
+               COALESCE(c.cpu_name, '') AS cpu_name,
+               COALESCE(r.ram_type, '') AS ram_type,
+               COALESCE(rs.ram_size, '') AS ram_size,
+               COALESCE(o.os_name, '') AS os_name,
+               COALESCE(g.generation_number, '') AS generation_number,
+               COALESCE(pm.model_name, prm.model_name, scm.model_name, '') AS model_name,
+               COALESCE(hdt.drive_type, '') AS drive_type,
+               d.name AS department_name
         FROM Maintenance_Devices md
         LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
         LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
         LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
+        LEFT JOIN CPU_Types c ON pc.Processor_id = c.id
+        LEFT JOIN RAM_Types r ON pc.RAM_id = r.id
+        LEFT JOIN RAM_Sizes rs ON pc.RAMSize_id = rs.id
+        LEFT JOIN OS_Types o ON pc.OS_id = o.id
+        LEFT JOIN Processor_Generations g ON pc.Generation_id = g.id
+        LEFT JOIN PC_Model pm ON pc.Model_id = pm.id
+        LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
+        LEFT JOIN Scanner_Model scm ON sc.Model_id = scm.id
         LEFT JOIN Departments d ON md.department_id = d.id
+        LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id
         WHERE md.id = ?
       `;
       db.query(query, [deviceSpec], (err, result) => {
@@ -754,13 +946,52 @@ app.post("/submit-general-maintenance", async (req, res) => {
 
     const deviceType = rawDeviceType || deviceInfo.device_type;
 
-    // 3️⃣ Create Internal Ticket
+    // 1️⃣ تخزين في General_Maintenance بكل الأعمدة المطلوبة
+    await new Promise((resolve, reject) => {
+      db.query(`
+        INSERT INTO General_Maintenance (
+          maintenance_date, issue_type, diagnosis_initial, diagnosis_final, device_id,
+          technician_name, floor, extension, problem_status, notes,
+          serial_number, governmental_number, device_name, department_name,
+          cpu_name, ram_type, os_name, generation_number, model_name,
+          drive_type, ram_size, created_at
+        ) VALUES (${date ? "?" : "CURRENT_DATE()"}, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      `,
+      [
+        ...(date ? [date] : []),  // إذا فيه date حطه، إذا لا لا تحطه
+        "General Maintenance",
+        initialDiagnosis || "",
+        finalDiagnosis || "",
+        deviceSpec,
+        technical,
+        floor || "",
+        extension || "",
+        problemStatus || "",
+        notes,
+        deviceInfo.serial_number,
+        deviceInfo.governmental_number,
+        deviceInfo.device_name,
+        deviceInfo.department_name,
+        deviceInfo.cpu_name,
+        deviceInfo.ram_type,
+        deviceInfo.os_name,
+        deviceInfo.generation_number,
+        deviceInfo.model_name,
+        deviceInfo.drive_type,
+        deviceInfo.ram_size
+      ], (err) => {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
+    
+
+    // 2️⃣ إنشاء التذكرة
     const ticketNumber = `TIC-${Date.now()}`;
     const ticketId = await new Promise((resolve, reject) => {
       db.query(
-"INSERT INTO Internal_Tickets (ticket_number, priority, department_id, issue_description, assigned_to) VALUES (?, ?, ?, ?, ?)",
-[ticketNumber, "Medium", departmentId, problemStatus, technical],
-
+        "INSERT INTO Internal_Tickets (ticket_number, priority, department_id, issue_description, assigned_to) VALUES (?, ?, ?, ?, ?)",
+        [ticketNumber, "Medium", departmentId, problemStatus, technical],
         (err, result) => {
           if (err) return reject(err);
           resolve(result.insertId);
@@ -768,7 +999,7 @@ app.post("/submit-general-maintenance", async (req, res) => {
       );
     });
 
-    // 4️⃣ Create Main General Maintenance Report
+    // 3️⃣ تقرير صيانة رئيسي
     const reportNumberMain = `REP-${Date.now()}-MAIN`;
     await new Promise((resolve, reject) => {
       db.query(
@@ -789,7 +1020,7 @@ app.post("/submit-general-maintenance", async (req, res) => {
       );
     });
 
-    // 5️⃣ Create Ticket Summary Report
+    // 4️⃣ تقرير Ticket Created
     const reportNumberTicket = `REP-${Date.now()}-TICKET`;
     await new Promise((resolve, reject) => {
       db.query(
@@ -810,14 +1041,14 @@ app.post("/submit-general-maintenance", async (req, res) => {
       );
     });
 
-    // ✅ Success
-    res.json({ message: "✅ General Maintenance and ticket created successfully" });
+    res.json({ message: "✅ General maintenance, ticket, and reports created successfully." });
 
   } catch (error) {
     console.error("❌ Error in general maintenance:", error);
     res.status(500).json({ error: "❌ Internal server error" });
   }
 });
+
 
 app.get("/device-types", (req, res) => {
   db.query("SELECT DISTINCT device_type FROM Maintenance_Devices WHERE device_type IS NOT NULL ORDER BY device_type ASC", (err, result) => {
@@ -983,8 +1214,8 @@ app.put("/update-external-report-status/:id", async (req, res) => {
 app.get("/report/:id", (req, res) => {
   const reportId = req.params.id;
   const reportType = req.query.type;
+
   if (reportType === "external") {
-    // أولاً: نحاول نجيب من التقارير الجديدة (External_Tickets + Maintenance_Reports)
     const newExternalSQL = `
       SELECT 
         mr.id AS report_id,
@@ -995,52 +1226,54 @@ app.get("/report/:id", (req, res) => {
         mr.full_description,
         mr.maintenance_type,
         mr.priority,
-  
+
         et.ticket_number,
         et.attachment_name,
         et.attachment_path,
         et.report_datetime,
         et.issue_description,
         et.assigned_to AS reporter_name,
-  
+
         d.name AS department_name,
         md.device_type,
         md.serial_number,
         md.governmental_number,
         COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
-  
+
         cpu.cpu_name,
         ram.ram_type,
+        rsize.ram_size,
         os.os_name,
         gen.generation_number,
         hdt.drive_type,
         COALESCE(pcm.model_name, prm.model_name, scm.model_name, mdm_fixed.model_name) AS model_name
-  
+
       FROM Maintenance_Reports mr
       LEFT JOIN External_Tickets et ON mr.ticket_id = et.id
       LEFT JOIN Maintenance_Devices md ON mr.device_id = md.id
       LEFT JOIN Departments d ON md.department_id = d.id
-  
+
       LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number
       LEFT JOIN CPU_Types cpu ON pc.Processor_id = cpu.id
       LEFT JOIN RAM_Types ram ON pc.RAM_id = ram.id
+      LEFT JOIN RAM_Sizes rsize ON pc.RamSize_id = rsize.id
       LEFT JOIN OS_Types os ON pc.OS_id = os.id
       LEFT JOIN Processor_Generations gen ON pc.Generation_id = gen.id
       LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id
       LEFT JOIN PC_Model pcm ON pc.Model_id = pcm.id
-  
+
       LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number
       LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
-  
+
       LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number
       LEFT JOIN Scanner_Model scm ON sc.model_id = scm.id
-  
+
       LEFT JOIN Maintance_Device_Model mdm_fixed ON md.model_id = mdm_fixed.id
-  
+
       WHERE mr.id = ? AND mr.maintenance_type = 'External'
       LIMIT 1
     `;
-  
+
     db.query(newExternalSQL, [reportId], (err, result) => {
       if (err) return res.status(500).json({ error: "Server error" });
       if (result.length) {
@@ -1051,10 +1284,10 @@ app.get("/report/:id", (req, res) => {
           ticket_number: r.ticket_number,
           created_at: r.created_at,
           reporter_name: r.reporter_name || "",
-          assigned_to: r.reporter_name || "", // ✅ جديد
-          report_type: "Incident",            // ✅ أو "External" أو حسب نظامك
-          priority: r.priority || "Medium",   // ✅ مهم للعرض والتعديل
-      
+          assigned_to: r.reporter_name || "",
+          report_type: "Incident",
+          priority: r.priority || "Medium",
+
           maintenance_manager: "",
           device_name: r.device_name || "",
           device_type: r.device_type || "",
@@ -1065,6 +1298,7 @@ app.get("/report/:id", (req, res) => {
           full_description: r.full_description || "",
           cpu_name: r.cpu_name || "",
           ram_type: r.ram_type || "",
+          ram_size: r.ram_size || "",
           os_name: r.os_name || "",
           generation_number: r.generation_number || "",
           model_name: r.model_name || "",
@@ -1075,25 +1309,23 @@ app.get("/report/:id", (req, res) => {
           status: r.status || "Open",
           source: "external-new"
         });
-      }
-       else {
-        // إذا ما لقى في external الجديدة، يبحث في External_Maintenance
+      } else {
         const oldExternalSQL = `SELECT * FROM External_Maintenance WHERE id = ? LIMIT 1`;
         db.query(oldExternalSQL, [reportId], (err2, result2) => {
           if (err2) return res.status(500).json({ error: "Server error" });
           if (!result2.length) return res.status(404).json({ error: "External report not found" });
-  
+
           const r = result2[0];
           return res.json({
             id: r.id,
-            report_number: r.ticket_number,         // ✅ توحيد التسمية
+            report_number: r.ticket_number,
             ticket_number: r.ticket_number,
             created_at: r.created_at,
             reporter_name: r.reporter_name,
-            assigned_to: r.reporter_name || "",     // ✅ مهم للعرض
-            report_type: "External",                // ✅ لتعرض في category
-            priority: r.priority || "Medium",       // ✅ إذا موجودة أو نعطي قيمة افتراضية
-          
+            assigned_to: r.reporter_name || "",
+            report_type: "External",
+            priority: r.priority || "Medium",
+
             maintenance_manager: r.maintenance_manager,
             device_name: r.device_name,
             device_type: r.device_type,
@@ -1104,6 +1336,7 @@ app.get("/report/:id", (req, res) => {
             full_description: r.final_diagnosis,
             cpu_name: r.cpu_name,
             ram_type: r.ram_type,
+            ram_size: r.ram_size || "",
             os_name: r.os_name,
             generation_number: r.generation_number,
             model_name: r.model_name,
@@ -1112,33 +1345,34 @@ app.get("/report/:id", (req, res) => {
             status: r.status || "Open",
             source: "external-legacy"
           });
-          
         });
       }
     });
-  }
-   else if (reportType === "new") {
+
+  } else if (reportType === "new") {
     const sql = `
-SELECT 
-  r.*, 
-  d.name AS department_name,
-  COALESCE(pc.model_name, pr.model_name, sc.model_name) AS model_name,
-  cpu.cpu_name,
-  ram.ram_type,
-  os.os_name,
-  gen.generation_number,
-  hdt.drive_type
-FROM New_Maintenance_Report r
-LEFT JOIN Departments d ON r.department_id = d.id
-LEFT JOIN PC_Model pc ON r.device_type = 'PC' AND r.model_id = pc.id
-LEFT JOIN Printer_Model pr ON r.device_type = 'Printer' AND r.model_id = pr.id
-LEFT JOIN Scanner_Model sc ON r.device_type = 'Scanner' AND r.model_id = sc.id
-LEFT JOIN CPU_Types cpu ON r.cpu_id = cpu.id
-LEFT JOIN RAM_Types ram ON r.ram_id = ram.id
-LEFT JOIN OS_Types os ON r.os_id = os.id
-LEFT JOIN Processor_Generations gen ON r.generation_id = gen.id
-LEFT JOIN Hard_Drive_Types hdt ON r.drive_id = hdt.id
-WHERE r.id = ? LIMIT 1
+      SELECT 
+        r.*, 
+        d.name AS department_name,
+        COALESCE(pc.model_name, pr.model_name, sc.model_name) AS model_name,
+        cpu.cpu_name,
+        ram.ram_type,
+        rsize.ram_size,
+        os.os_name,
+        gen.generation_number,
+        hdt.drive_type
+      FROM New_Maintenance_Report r
+      LEFT JOIN Departments d ON r.department_id = d.id
+      LEFT JOIN PC_Model pc ON r.device_type = 'PC' AND r.model_id = pc.id
+      LEFT JOIN Printer_Model pr ON r.device_type = 'Printer' AND r.model_id = pr.id
+      LEFT JOIN Scanner_Model sc ON r.device_type = 'Scanner' AND r.model_id = sc.id
+      LEFT JOIN CPU_Types cpu ON r.cpu_id = cpu.id
+      LEFT JOIN RAM_Types ram ON r.ram_id = ram.id
+      LEFT JOIN RAM_Sizes rsize ON r.ram_size_id = rsize.id
+      LEFT JOIN OS_Types os ON r.os_id = os.id
+      LEFT JOIN Processor_Generations gen ON r.generation_id = gen.id
+      LEFT JOIN Hard_Drive_Types hdt ON r.drive_id = hdt.id
+      WHERE r.id = ? LIMIT 1
     `;
 
     db.query(sql, [reportId], (err, result) => {
@@ -1167,97 +1401,138 @@ WHERE r.id = ? LIMIT 1
         model_name: r.model_name,
         cpu_name: r.cpu_name,
         ram_type: r.ram_type,
+        ram_size: r.ram_size || "",
         os_name: r.os_name,
         generation_number: r.generation_number,
-        drive_type: r.drive_type || "", // ✅ أضفناها هنا
+        drive_type: r.drive_type || "",
         source: "new"
       });
     });
 
-  } else {
-    const sql = `
+  }
+ else if (reportType === "general") {
+  const sql = `
     SELECT 
-  mr.id AS report_id,
-  mr.report_number,
-  mr.report_type,
-  mr.status,
-  mr.created_at,
-  mr.issue_summary,
-  mr.full_description,
-  mr.maintenance_type,
+      gm.*,
+      e.name AS technician_name
+    FROM General_Maintenance gm
+    LEFT JOIN Engineers e ON gm.technician_name = e.id
+    WHERE gm.id = ?
+    LIMIT 1
+  `;
 
-  md.device_type,
-  md.serial_number,
-  md.governmental_number,
-  COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
-  d.name AS department_name,
-  it.ticket_number,
-  it.ticket_type,
-  it.priority,
-  it.assigned_to AS technical,
+  db.query(sql, [reportId], (err, result) => {
+    if (err) return res.status(500).json({ error: "Server error" });
+    if (!result.length) return res.status(404).json({ error: "General report not found" });
 
-  pc_os.os_name,
-  cpu.cpu_name,
-  gen.generation_number,
-  ram.ram_type,
-  hdt.drive_type,
+    const r = result[0];
+    return res.json({
+      id: r.id,
+      maintenance_date: r.maintenance_date,
+      issue_type: r.issue_type,
+      diagnosis_initial: r.diagnosis_initial,
+      diagnosis_final: r.diagnosis_final,
+      device_id: r.device_id,
+      technical_engineer: r.technician_name || "",
+      technical: r.technician_name || "",
 
-  COALESCE(
-    pcm.model_name,
-    prm.model_name,
-    scm.model_name,
-    mdm_fixed.model_name
-    
-  ) AS model_name,
+      floor: r.floor,
+      extension: r.extension,
+      problem_status: r.problem_status,
+      notes: r.notes,
+      serial_number: r.serial_number,
+      governmental_number: r.governmental_number,
+      device_name: r.device_name,
+      department_name: r.department_name,
+      cpu_name: r.cpu_name,
+      ram_type: r.ram_type,
+      os_name: r.os_name,
+      generation_number: r.generation_number,
+      model_name: r.model_name,
+      drive_type: r.drive_type,
+      ram_size: r.ram_size,
+      created_at: r.created_at,
+      source: "general"
+    });
+  });
+}
 
-  rm.problem_status,
-  eng.name AS technical_engineer -- ✅ هنا جلبنا اسم الفني
-FROM Maintenance_Reports mr
-LEFT JOIN Maintenance_Devices md ON mr.device_id = md.id
-LEFT JOIN Departments d ON md.department_id = d.id
-LEFT JOIN Internal_Tickets it ON mr.ticket_id = it.id
+   else {
+    const sql = `
+      SELECT 
+        mr.id AS report_id,
+        mr.report_number,
+        mr.report_type,
+        mr.status,
+        mr.created_at,
+        mr.issue_summary,
+        mr.full_description,
+        mr.maintenance_type,
 
-LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number
-LEFT JOIN CPU_Types cpu ON pc.Processor_id = cpu.id
-LEFT JOIN RAM_Types ram ON pc.RAM_id = ram.id
-LEFT JOIN OS_Types pc_os ON pc.OS_id = pc_os.id
-LEFT JOIN Processor_Generations gen ON pc.Generation_id = gen.id
-LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id
-LEFT JOIN PC_Model pcm ON pc.Model_id = pcm.id
+        md.device_type,
+        md.serial_number,
+        md.governmental_number,
+        COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
+        d.name AS department_name,
+        it.ticket_number,
+        it.ticket_type,
+        it.priority,
+        it.assigned_to AS technical,
 
-LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number
-LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
+        pc_os.os_name,
+        cpu.cpu_name,
+        gen.generation_number,
+        ram.ram_type,
+        rsize.ram_size,
+        hdt.drive_type,
 
-LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number
-LEFT JOIN Scanner_Model scm ON sc.model_id = scm.id
+        COALESCE(pcm.model_name, prm.model_name, scm.model_name, mdm_fixed.model_name) AS model_name,
 
-LEFT JOIN Maintance_Device_Model mdm_fixed ON md.model_id = mdm_fixed.id
+        rm.problem_status,
+        eng.name AS technical_engineer
+      FROM Maintenance_Reports mr
+      LEFT JOIN Maintenance_Devices md ON mr.device_id = md.id
+      LEFT JOIN Departments d ON md.department_id = d.id
+      LEFT JOIN Internal_Tickets it ON mr.ticket_id = it.id
 
-LEFT JOIN (
-  SELECT *
-  FROM Regular_Maintenance
-  ORDER BY last_maintenance_date DESC
-) AS rm ON rm.device_id = mr.device_id
+      LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number
+      LEFT JOIN CPU_Types cpu ON pc.Processor_id = cpu.id
+      LEFT JOIN RAM_Types ram ON pc.RAM_id = ram.id
+      LEFT JOIN RAM_Sizes rsize ON pc.RamSize_id = rsize.id
+      LEFT JOIN OS_Types pc_os ON pc.OS_id = pc_os.id
+      LEFT JOIN Processor_Generations gen ON pc.Generation_id = gen.id
+      LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id
+      LEFT JOIN PC_Model pcm ON pc.Model_id = pcm.id
 
+      LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number
+      LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
 
-LEFT JOIN Engineers eng
-  ON rm.technical_engineer_id = eng.id -- ✅ الربط الصح للفني
+      LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number
+      LEFT JOIN Scanner_Model scm ON sc.model_id = scm.id
 
-WHERE mr.id = ?
+      LEFT JOIN Maintance_Device_Model mdm_fixed ON md.model_id = mdm_fixed.id
 
+      LEFT JOIN (
+        SELECT *
+        FROM Regular_Maintenance
+        ORDER BY last_maintenance_date DESC
+      ) AS rm ON rm.device_id = mr.device_id
+
+      LEFT JOIN Engineers eng ON rm.technical_engineer_id = eng.id
+
+      WHERE mr.id = ?
     `;
-    
+
     db.query(sql, [reportId], (err2, result2) => {
       if (err2) return res.status(500).json({ error: "Server error" });
       if (!result2.length) return res.status(404).json({ error: "Internal report not found" });
-    
+
       const report = result2[0];
-    
+
       return res.json({
         id: report.report_id,
-          report_number: report.report_number,   // 🛠️ أضف هذا السطر عشان ترجع رقم التقرير!
-          ticket_type: report.ticket_type || "",
-
+        report_number: report.report_number,
+        ticket_type: report.ticket_type || "",
         ticket_number: report.ticket_number,
         drive_type: report.drive_type || "",
         device_type: report.device_type,
@@ -1274,172 +1549,17 @@ WHERE mr.id = ?
         report_type: report.report_type,
         cpu_name: report.cpu_name || "",
         ram_type: report.ram_type || "",
+        ram_size: report.ram_size || "",
         os_name: report.os_name || "",
         generation_number: report.generation_number || "",
-        drive_type: report.drive_type || "",
-        model_name: report.model_name || "",        
-        problem_status: report.problem_status || "",        // 🆕 إرجاع حالة المشكلة
-        technical_engineer: report.technical_engineer || "",// 🆕 إرجاع اسم الفني
+        model_name: report.model_name || "",
+        problem_status: report.problem_status || "",
+        technical_engineer: report.technical_engineer || "",
         source: "internal"
       });
-    });    
+    });
   }
 });
-
-
-app.post("/submit-external-maintenance", async (req, res) => {
-  const {
-    ticket_number,
-    device_type: rawDeviceType,
-    device_specifications,
-    section,
-    maintenance_manager,
-    reporter_name,
-    initial_diagnosis,
-    final_diagnosis
-  } = req.body;
-
-  try {
-    // 🔍 جلب بيانات الجهاز
-    const getDeviceInfo = () =>
-      new Promise((resolve, reject) => {
-        const query = `
-         SELECT 
-  md.*, 
-  COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
-  COALESCE(c.cpu_name, '') AS cpu_name,
-  COALESCE(r.ram_type, '') AS ram_type,
-  COALESCE(o.os_name, '') AS os_name,
-  COALESCE(g.generation_number, '') AS generation_number,
-  COALESCE(pm.model_name, prm.model_name, scm.model_name, '') AS model_name,
- COALESCE(hdt.drive_type, '') AS drive_type,
-  d.name AS department_name
-FROM Maintenance_Devices md
-LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
-LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
-LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
-LEFT JOIN CPU_Types c ON pc.Processor_id = c.id
-LEFT JOIN RAM_Types r ON pc.RAM_id = r.id
-LEFT JOIN OS_Types o ON pc.OS_id = o.id
-LEFT JOIN Processor_Generations g ON pc.Generation_id = g.id
-LEFT JOIN PC_Model pm ON pc.Model_id = pm.id
-LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
-LEFT JOIN Scanner_Model scm ON sc.Model_id = scm.id
-LEFT JOIN Departments d ON md.department_id = d.id
- LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id
-WHERE md.id = ?
-
-        `;
-        db.query(query, [device_specifications], (err, result) => {
-          if (err) return reject(err);
-          resolve(result[0]);
-        });
-      });
-
-    const deviceInfo = await getDeviceInfo();
-
-    if (!deviceInfo) {
-      return res.status(404).json({ error: "❌ لم يتم العثور على معلومات الجهاز" });
-    }
-
-    // ✅ تجهيز نوع الجهاز
-    let deviceType = rawDeviceType?.toLowerCase();
-    const allowedTypes = ["pc", "printer", "scanner"];
-    deviceType = allowedTypes.includes(deviceType)
-      ? deviceType.charAt(0).toUpperCase() + deviceType.slice(1)
-      : deviceInfo.device_type;
-
-    // ✅ إنشاء التقرير الأساسي (التشخيص)
-    const insertMain = () =>
-      new Promise((resolve, reject) => {
-        const sql = `
-         INSERT INTO External_Maintenance (
-  ticket_number, device_type, device_specifications, section,
-  maintenance_manager, reporter_name,
-  initial_diagnosis, final_diagnosis,
-  serial_number, governmental_number, device_name,
-  department_name, cpu_name, ram_type, os_name,
-  generation_number, model_name, drive_type
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-
-        `;
-        const values = [
-          ticket_number,
-          deviceType,
-          device_specifications,
-          section,
-          maintenance_manager,
-          reporter_name,
-          initial_diagnosis,
-          final_diagnosis,
-          deviceInfo.serial_number,
-          deviceInfo.governmental_number,
-          deviceInfo.device_name,
-          deviceInfo.department_name,
-          deviceInfo.cpu_name,
-          deviceInfo.ram_type,
-          deviceInfo.os_name,
-          deviceInfo.generation_number,
-          deviceInfo.model_name,
-          deviceInfo.drive_type // ✅ أضفنا هذا آخر شيء
-        ];
-        db.query(sql, values, (err, result) => {
-          if (err) return reject(err);
-          resolve();
-        });
-      });
-
-    // ✅ إنشاء تقرير "Ticket Created"
-    const insertTicketSummary = () =>
-      new Promise((resolve, reject) => {
-        const sql = `
-          INSERT INTO External_Maintenance (
-            ticket_number, device_type, device_specifications, section,
-            maintenance_manager, reporter_name,
-            initial_diagnosis, final_diagnosis,
-            serial_number, governmental_number, device_name,
-            department_name, cpu_name, ram_type, os_name,
-            generation_number, model_name
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-        const values = [
-          ticket_number,
-          deviceType,
-          device_specifications,
-          section,
-          maintenance_manager,
-          reporter_name,
-          "Ticket Created", // 🟦 initial_diagnosis
-          `Ticket (${ticket_number}) for device: ${deviceInfo.device_name} - Department: ${deviceInfo.department_name}`, // 🟦 final_diagnosis
-          deviceInfo.serial_number,
-          deviceInfo.governmental_number,
-          deviceInfo.device_name,
-          deviceInfo.department_name,
-          deviceInfo.cpu_name,
-          deviceInfo.ram_type,
-          deviceInfo.os_name,
-          deviceInfo.generation_number,
-          deviceInfo.model_name
-        ];
-        db.query(sql, values, (err, result) => {
-          if (err) return reject(err);
-          resolve();
-        });
-      });
-
-    // ✨ تنفيذ الاثنين معًا
-    await insertMain();
-    await insertTicketSummary();
-
-    res.json({ message: "✅ External maintenance and ticket summary saved successfully." });
-
-  } catch (error) {
-    console.error("❌ Error:", error);
-    res.status(500).json({ error: "❌ Internal server error" });
-  }
-});
-
-
 
 
 
@@ -1523,6 +1643,7 @@ app.post('/AddDevice/:type', async (req, res) => {
       const RAM_id = await getId('RAM_Types', 'ram_type', req.body.ram);
       const Model_id = await getId("PC_Model", "model_name", model);
       const Drive_id = await getId('Hard_Drive_Types', 'drive_type', req.body.drive);
+      const RamSize_id = await getId('RAM_Sizes', 'ram_size', req.body.ram_size);
 
 
       if (!OS_id || !Processor_id || !Generation_id || !RAM_id || !Model_id || !Drive_id) {
@@ -1530,24 +1651,25 @@ app.post('/AddDevice/:type', async (req, res) => {
       }
 
       const insertQuery = `
-        INSERT INTO PC_info 
-       (Serial_Number, Computer_Name, Governmental_Number, Department, OS_id, Processor_id, Generation_id, RAM_id, Drive_id, Model_id)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-
-      `;
-      const values = [
-        Serial_Number,
-        Device_Name,
-        Governmental_Number,
-        Department_id,
-        OS_id,
-        Processor_id,
-        Generation_id,
-        RAM_id,
-        Drive_id,
-        Model_id,
-      ];
-
+      INSERT INTO PC_info 
+     (Serial_Number, Computer_Name, Governmental_Number, Department, OS_id, Processor_id, Generation_id, RAM_id, RamSize_id, Drive_id, Model_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    
+    const values = [
+      Serial_Number,
+      Device_Name,
+      Governmental_Number,
+      Department_id,
+      OS_id,
+      Processor_id,
+      Generation_id,
+      RAM_id,
+      RamSize_id,
+      Drive_id,
+      Model_id
+    ];
+    
       await new Promise((resolve, reject) => {
         db.query(insertQuery, values, (err, result) => {
           if (err) return reject(err);
@@ -1972,7 +2094,8 @@ app.post("/update-report-full", upload.single("attachment"), async (req, res) =>
     id, issue_summary, full_description, priority, status, device_type,
     technical, department_name, category, source,
     device_id, device_name, serial_number, governmental_number,
-    cpu_name, ram_type, os_name, generation_number, model_name, drive_type
+    cpu_name, ram_type,ram_size,
+     os_name, generation_number, model_name, drive_type
   } = updatedData;
 
   const attachmentFile = req.file;
@@ -1994,6 +2117,7 @@ app.post("/update-report-full", upload.single("attachment"), async (req, res) =>
       osId = await getId("OS_Types", "os_name", os_name);
       generationId = await getId("Processor_Generations", "generation_number", generation_number);
       driveId = await getId("Hard_Drive_Types", "drive_type", drive_type);
+      ramSizeId = await getId("RAM_Sizes", "ram_size", ram_size);
     }
 
     // ✅ تحديث تقرير جديد
@@ -2005,7 +2129,7 @@ app.post("/update-report-full", upload.single("attachment"), async (req, res) =>
           priority = ?, status = ?, device_type = ?,
           device_name = ?, serial_number = ?, governmental_number = ?,
           department_id = ?, model_id = ?,
-          ${isPC ? "cpu_id = ?, ram_id = ?, os_id = ?, generation_id = ?, drive_id = ?," : ""}
+          ${isPC ? "cpu_id = ?, ram_id = ?, os_id = ?, generation_id = ?, drive_id = ?,ram_size_id = ?," : ""}
           ${attachmentFile ? "attachment_name = ?, attachment_path = ?," : ""}
           details = ?
         WHERE id = ?`;
@@ -2094,7 +2218,7 @@ app.post("/update-report-full", upload.single("attachment"), async (req, res) =>
       ];
 
       if (isPC) {
-        updates.push("cpu_id = ?", "ram_id = ?", "os_id = ?", "generation_id = ?", "drive_id = ?");
+        updates.push("cpu_id = ?", "ram_id = ?", "os_id = ?", "generation_id = ?", "drive_id = ?", "ram_size_id = ?");
         values.push(cpuId, ramId, osId, generationId, driveId);
       }
 
@@ -2123,11 +2247,12 @@ app.post("/update-report-full", upload.single("attachment"), async (req, res) =>
           UPDATE General_Maintenance 
           SET 
             device_name = ?, serial_number = ?, governmental_number = ?, department_name = ?,
-            model_name = ?, cpu_name = ?, ram_type = ?, os_name = ?, generation_number = ?, drive_type = ?
+            model_name = ?, cpu_name = ?, ram_type = ?, os_name = ?, generation_number = ?, drive_type = ?,
+            ram_size = ?
           WHERE device_id = ?
         `, [
           updates.device_name, updates.serial_number, updates.governmental_number, updates.department_name,
-          updates.model_name, updates.cpu_name, updates.ram_type, updates.os_name, updates.generation_number, updates.drive_type,
+          updates.model_name, updates.cpu_name, updates.ram_type, updates.os_name, updates.generation_number, updates.drive_type,updates.ram_size,
           actualDeviceId
         ]);
 
@@ -2135,11 +2260,11 @@ app.post("/update-report-full", upload.single("attachment"), async (req, res) =>
           UPDATE Regular_Maintenance 
           SET 
             device_name = ?, serial_number = ?, governmental_number = ?, department_name = ?,
-            model_name = ?, cpu_name = ?, ram_type = ?, os_name = ?, generation_number = ?, drive_type = ?
+            model_name = ?, cpu_name = ?, ram_type = ?,ram_size = ?, os_name = ?, generation_number = ?, drive_type = ?
           WHERE device_id = ?
         `, [
           updates.device_name, updates.serial_number, updates.governmental_number, updates.department_name,
-          updates.model_name, updates.cpu_name, updates.ram_type, updates.os_name, updates.generation_number, updates.drive_type,
+          updates.model_name, updates.cpu_name, updates.ram_type,updates.ram_size, updates.os_name, updates.generation_number, updates.drive_type,
           actualDeviceId
         ]);
 
@@ -2147,11 +2272,12 @@ app.post("/update-report-full", upload.single("attachment"), async (req, res) =>
           UPDATE External_Maintenance 
           SET 
             device_name = ?, governmental_number = ?, department_name = ?,
-            model_name = ?, cpu_name = ?, ram_type = ?, os_name = ?, generation_number = ?, drive_type = ?
+            model_name = ?, cpu_name = ?, ram_type = ?,ram_size = ?,
+             os_name = ?, generation_number = ?, drive_type = ?
           WHERE serial_number = ?
         `, [
           updates.device_name, updates.governmental_number, updates.department_name,
-          updates.model_name, updates.cpu_name, updates.ram_type, updates.os_name, updates.generation_number, updates.drive_type,
+          updates.model_name, updates.cpu_name, updates.ram_type,updates.ram_size, updates.os_name, updates.generation_number, updates.drive_type,
           updates.serial_number
         ]);
       };
@@ -2290,6 +2416,21 @@ app.post("/add-department", (req, res) => {
     db.query("INSERT INTO Departments (name) VALUES (?)", [value], (err2) => {
       if (err2) return res.status(500).json({ error: "Insert error" });
       res.json({ message: "✅ Department added successfully" });
+    });
+  });
+});
+
+app.post("add-ram-size", (req, res) => {
+  const { value } = req.body;
+  if (!value) return res.status(400).json({ error: "❌ Missing RAM size value" });
+
+  db.query("SELECT * FROM RAM_Sizes WHERE ram_size = ?", [value], (err, result) => {
+    if (err) return res.status(500).json({ error: "DB error" });
+    if (result.length > 0) return res.status(400).json({ error: "⚠️ RAM size already exists" });
+
+    db.query("INSERT INTO RAM_Sizes (ram_size) VALUES (?)", [value], (err2) => {
+      if (err2) return res.status(500).json({ error: "Insert error" });
+      res.json({ message: "✅ RAM size added successfully" });
     });
   });
 });
@@ -2713,6 +2854,7 @@ app.get("/ticket-types", (req, res) => {
     res.json(result);
   });
 });
+
 app.post("/submit-new-report", upload.fields([
   { name: "attachment", maxCount: 1 },
   { name: "signature", maxCount: 1 }
@@ -2728,6 +2870,7 @@ app.post("/submit-new-report", upload.fields([
     department_name,
     cpu_name,
     ram_type,
+    ram_size,
     os_name,
     generation_number,
     model_name,
@@ -2749,11 +2892,11 @@ app.post("/submit-new-report", upload.fields([
         report_type, device_type, priority, status,
         attachment_name, attachment_path, signature_path,
         details, device_id, department_id, model_id,
-        ${isPC ? "cpu_id, ram_id, os_id, generation_id, drive_id," : ""}
+        ${isPC ? "cpu_id, ram_id, os_id,ram_size, generation_id, drive_id," : ""}
         device_name, serial_number, governmental_number
       )
       VALUES (?, ?, ?, 'Open', ?, ?, ?, ?, NULL, ?, ?, 
-        ${isPC ? "?, ?, ?, ?, ?," : ""}
+        ${isPC ? "?, ?, ?, ?,?, ?," : ""}
         ?, ?, ?
       )
     `;
@@ -2776,7 +2919,8 @@ app.post("/submit-new-report", upload.fields([
         await getId("RAM_Types", "ram_type", ram_type),
         await getId("OS_Types", "os_name", os_name),
         await getId("Processor_Generations", "generation_number", generation_number),
-        await getId("Hard_Drive_Types", "drive_type", drive_type)
+        await getId("Hard_Drive_Types", "drive_type", drive_type),
+        await getId("RAM_Sizes", "ram_size", ram_size)
       );
     }
 
@@ -2832,7 +2976,7 @@ app.post("/delete-option-complete", async (req, res) => {
       table: "Departments",
       column: "name",
       referencedTables: [
-        { table: "Maintenance_Devices", column: "department_id" }, // يحتاج التعامل بالأرقام
+        { table: "Maintenance_Devices", column: "department_id" },
         { table: "General_Maintenance", column: "department_name" },
         { table: "Regular_Maintenance", column: "department_name" },
         { table: "External_Maintenance", column: "department_name" }
@@ -2849,6 +2993,82 @@ app.post("/delete-option-complete", async (req, res) => {
         { table: "problemStates_Maintance_device", column: "device_type_name" }
       ]
     },
+    "os-select": {
+      table: "OS_Types",
+      column: "os_name",
+      referencedTables: [
+        { table: "PC_info", column: "OS_id" },
+        { table: "General_Maintenance", column: "os_name" },
+        { table: "Regular_Maintenance", column: "os_name" },
+        { table: "External_Maintenance", column: "os_name" }
+      ]
+    },
+    "ram-select": {
+      table: "RAM_Types",
+      column: "ram_type",
+      referencedTables: [
+        { table: "PC_info", column: "RAM_id" },
+        { table: "General_Maintenance", column: "ram_type" },
+        { table: "Regular_Maintenance", column: "ram_type" },
+        { table: "External_Maintenance", column: "ram_type" }
+      ]
+    },
+    "cpu-select": {
+      table: "CPU_Types",
+      column: "cpu_name",
+      referencedTables: [
+        { table: "PC_info", column: "Processor_id" },
+        { table: "General_Maintenance", column: "cpu_name" },
+        { table: "Regular_Maintenance", column: "cpu_name" },
+        { table: "External_Maintenance", column: "cpu_name" }
+      ]
+    },
+    "generation-select": {
+      table: "Processor_Generations",
+      column: "generation_number",
+      referencedTables: [
+        { table: "PC_info", column: "Generation_id" },
+        { table: "General_Maintenance", column: "generation_number" },
+        { table: "Regular_Maintenance", column: "generation_number" },
+        { table: "External_Maintenance", column: "generation_number" }
+      ]
+    },
+    "drive-select": {
+      table: "Hard_Drive_Types",
+      column: "drive_type",
+      referencedTables: [
+        { table: "PC_info", column: "Drive_id" },
+        { table: "General_Maintenance", column: "drive_type" },
+        { table: "Regular_Maintenance", column: "drive_type" },
+        { table: "External_Maintenance", column: "drive_type" }
+      ]
+    },
+    "ram-size-select": {
+      table: "RAM_Sizes",
+      column: "ram_size",
+      referencedTables: [
+        { table: "PC_info", column: "RamSize_id" },
+        { table: "General_Maintenance", column: "ram_size" },
+        { table: "Regular_Maintenance", column: "ram_size" },
+        { table: "External_Maintenance", column: "ram_size" }
+      ]
+    },
+    "model": {
+      table: type === "pc" ? "PC_Model"
+           : type === "printer" ? "Printer_Model"
+           : type === "scanner" ? "Scanner_Model"
+           : "Maintance_Device_Model",
+      column: "model_name",
+      referencedTables: [
+        { table: "PC_info", column: "Model_id" },
+        { table: "Printer_info", column: "Model_id" },
+        { table: "Scanner_info", column: "Model_id" },
+        { table: "Maintenance_Devices", column: "model_id" },
+        { table: "General_Maintenance", column: "model_name" },
+        { table: "Regular_Maintenance", column: "model_name" },
+        { table: "External_Maintenance", column: "model_name" }
+      ]
+    },
     "floor": {
       table: "Floors",
       column: "FloorNum",
@@ -2860,14 +3080,8 @@ app.post("/delete-option-complete", async (req, res) => {
       table: "Engineers",
       column: "name",
       referencedTables: [
-        { table: "General_Maintenance", column: "technician_name" }
-      ]
-    },
-    "ticket-type": {
-      table: "ticket_types",
-      column: "type_name",
-      referencedTables: [
-        { table: "ticket_types", column: "type_name" }
+        { table: "General_Maintenance", column: "technician_name" },
+        { table: "Regular_Maintenance", column: "technical_engineer_id" }
       ]
     },
     "problem-status": {
@@ -2884,6 +3098,7 @@ app.post("/delete-option-complete", async (req, res) => {
       referencedTables: []
     }
   };
+  
 
   const mapping = deleteMap[target];
   if (!mapping) return res.status(400).json({ error: "❌ Invalid target field" });
@@ -2990,6 +3205,7 @@ app.post("/update-option-complete", async (req, res) => {
     "cpu-select": { table: "CPU_Types", column: "cpu_name", propagate: [] },
     "generation-select": { table: "Processor_Generations", column: "generation_number", propagate: [] },
     "drive-select": { table: "Hard_Drive_Types", column: "drive_type", propagate: [] },
+    "ram-size-select": { table: "RAM_Sizes", column: "ram_size", propagate: [] },
     "model": {
       table: type === "pc" ? "PC_Model"
            : type === "printer" ? "Printer_Model"
@@ -3188,6 +3404,11 @@ app.post('/add-option-internal-ticket', async (req, res) => {
         query = "INSERT INTO Hard_Drive_Types (drive_type) VALUES (?)";
         values = [value];
         break;
+        case "ram-size":
+    query = "INSERT INTO RAM_Sizes (ram_size) VALUES (?)";
+    values = [value];
+    break;
+
       default:
         return res.status(400).json({ error: "❌ Invalid target." });
     }
@@ -3256,6 +3477,11 @@ app.post('/add-option-external-ticket', async (req, res) => {
         query = "INSERT INTO Hard_Drive_Types (drive_type) VALUES (?)";
         values = [value];
         break;
+        case "ram-size":
+    query = "INSERT INTO RAM_Sizes (ram_size) VALUES (?)";
+    values = [value];
+    break;
+
       default:
         return res.status(400).json({ error: "❌ Invalid target." });
     }

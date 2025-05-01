@@ -512,7 +512,24 @@ function updatePopupHeadingAndFields(type) {
           </div>
         </div>
         <input type="hidden" id="os-select" name="os">
+        
       `;
+      fieldsHtml += `
+      <label>RAM Size:</label>
+      <div class="custom-dropdown-wrapper">
+        <div class="custom-dropdown">
+          <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+            <span id="selected-ram-size-select">Select RAM Size</span>
+            <span>▼</span>
+          </div>
+          <div class="dropdown-content">
+            <input type="text" class="dropdown-search" placeholder="Search RAM size..." oninput="filterDropdown(this, 'ram-size-select-options')">
+            <div class="dropdown-options" id="ram-size-select-options"></div>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" id="ram-size-select" name="ram_size">
+    `;
     }
 
     popupHeading.textContent = `Enter ${type.charAt(0).toUpperCase() + type.slice(1)} Specifications`;
@@ -527,6 +544,7 @@ function updatePopupHeadingAndFields(type) {
       fetchOS();
       fetchProcessorGen();
       fetchDrives(); // ✅ أضفناها هنا
+      fetchRAMSize(); // ✅ أضفناها هنا
 
     }
   } else {
@@ -794,8 +812,91 @@ setTimeout(() => {
         alert("❌ Error saving section");
       });
   }
+  function fetchRAMSize() {
+    fetch("http://localhost:5050/RAM_Sizes")
+      .then(res => res.json())
+      .then(data => {
+        const optionsContainer = document.getElementById("ram-size-select-options");
+        const displaySpan = document.getElementById("selected-ram-size-select");
+        const hiddenInput = document.getElementById("ram-size-select");
   
-
+        if (!optionsContainer || !displaySpan || !hiddenInput) return;
+  
+        optionsContainer.innerHTML = "";
+  
+        // ✅ زر + Add New RAM Size
+        const addNewRow = document.createElement("div");
+        addNewRow.className = "dropdown-option-row add-new-option";
+        addNewRow.innerHTML = `<div class="dropdown-option-text">+ Add New RAM Size</div>`;
+        addNewRow.onclick = () => {
+          sessionStorage.setItem("lastDropdownOpened", "ram-size-select");
+          openAddOptionPopup("ram-size-select");
+          closeAllDropdowns();
+        };
+        optionsContainer.appendChild(addNewRow);
+  
+        // ✅ الأنواع من السيرفر
+        data.forEach(item => {
+          const row = document.createElement("div");
+          row.className = "dropdown-option-row";
+  
+          const text = document.createElement("div");
+          text.className = "dropdown-option-text";
+          text.textContent = item.ram_size;
+          text.onclick = () => {
+            displaySpan.textContent = item.ram_size;
+            hiddenInput.value = item.ram_size;
+            closeAllDropdowns();
+          };
+  
+          const icons = document.createElement("div");
+          icons.className = "dropdown-actions-icons";
+  
+          // ✏️ زر التعديل
+          const editIcon = document.createElement("i");
+          editIcon.className = "fas fa-edit";
+          editIcon.title = "Edit";
+          editIcon.onclick = (e) => {
+            e.stopPropagation();
+            const newValue = prompt("Edit RAM Size:", item.ram_size);
+            if (newValue) {
+              editOption("ram-size-select", item.ram_size, newValue);
+            }
+          };
+  
+          // 🗑️ زر الحذف
+          const deleteIcon = document.createElement("i");
+          deleteIcon.className = "fas fa-trash";
+          deleteIcon.title = "Delete";
+          deleteIcon.onclick = (e) => {
+            e.stopPropagation();
+            if (confirm(`Delete "${item.ram_size}"?`)) {
+              deleteOption("ram-size-select", item.ram_size);
+            }
+          };
+  
+          icons.appendChild(editIcon);
+          icons.appendChild(deleteIcon);
+          row.appendChild(text);
+          row.appendChild(icons);
+          optionsContainer.appendChild(row);
+        });
+  
+        // ✅ استعادة القيمة المحفوظة
+        const saved = sessionStorage.getItem("ram-size-select");
+        if (saved) {
+          displaySpan.textContent = saved;
+          hiddenInput.value = saved;
+          sessionStorage.removeItem("ram-size-select");
+        }
+  
+        attachEditDeleteHandlers("ram-size-select-options", "RAM Size");
+      })
+      .catch(err => {
+        console.error("❌ Error fetching RAM sizes:", err);
+      });
+  }
+  
 
 function fetchDrives() {
   fetch("http://localhost:5050/Hard_Drive_Types")
@@ -1207,6 +1308,7 @@ function openAddOptionPopup(targetId) {
   else if (targetId === "cpu-select") label = "CPU";
   else if (targetId === "os-select") label = "Operating System";
   else if (targetId === "drive-select") label = "Hard Drive Type";
+  else if (targetId === "ram-size-select") label = "RAM Size";
 
   else if (targetId === "generation-select") label = "Processor Generation";
 
@@ -1253,6 +1355,7 @@ function saveOptionForSelect() {
         else if (targetId === "cpu-select") fetchCPU();
         else if (targetId === "generation-select") fetchProcessorGen();
         else if (targetId === "drive-select") fetchDrives();
+        else if (targetId === "ram-size-select") fetchRAMSize();
 
         // ✅ نحفظ القيمة الجديدة عشان نرجع نحددها تلقائيًا
         sessionStorage.setItem(targetId, value);
@@ -1793,6 +1896,8 @@ function mapSelectIdToServerTarget(selectId) {
     "drive-select": "drive-select",
     "cpu-select": "cpu-select",
     "ram-select": "ram-select",
+    "ram-size-select": "ram-size-select",
+
     "os-select": "os-select",
     "generation-select": "generation-select",
     "device-spec": "device-spec"
@@ -1840,7 +1945,10 @@ function refreshDropdown(selectId) {
     fetchDepartments(selectId);
   } else if (selectId === "ram-select") {
     fetchRAM();
-  } else if (selectId === "cpu-select") {
+  }else if (selectId === "ram-size-select") {
+    fetchRAMSize();
+  } 
+   else if (selectId === "cpu-select") {
     fetchCPU();
   } else if (selectId === "os-select") {
     fetchOS();

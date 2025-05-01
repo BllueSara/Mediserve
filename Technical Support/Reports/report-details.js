@@ -57,6 +57,8 @@ document.addEventListener("DOMContentLoaded", () => {
               
              },
              { label: "💽 Hard Drive:", value: report.drive_type, showForPC: true },
+             { label: "📏 RAM Size:", value: report.ram_size, showForPC: true },
+
 
           ];
           
@@ -120,7 +122,7 @@ if (!ticketNumber) {
       if (report.maintenance_type === "Regular") titlePrefix = "Regular Maintenance";
       else if (report.maintenance_type === "General") titlePrefix = "General Maintenance";
       else if (report.maintenance_type === "Internal") titlePrefix = "Internal Ticket";
-      else if (report.maintenance_type === "External") titlePrefix = "External Ticket"|| "External Maintenance";
+      else if (report.maintenance_type === "External") titlePrefix = "External Maintenance "|| "External Maintenance Ticket";
       
       const reportTitle = ticketNumber
         ? `${titlePrefix} #${ticketNumber}`
@@ -133,13 +135,14 @@ if (!ticketNumber) {
         report.report_number || report.request_number || `MR-${report.id}`;
       document.getElementById("priority").textContent = isExternal ? "" : (report.priority || "");
       document.getElementById("device-type").textContent = report.device_type || "";
-      if (report.maintenance_type === "Regular"|| report.maintenance_type === "Internal"|| report.maintenance_type === "General") {
-        document.getElementById("assigned-to").textContent = report.technical_engineer;
+      if (report.maintenance_type === "Regular" || report.maintenance_type === "Internal" || report.maintenance_type === "General") {
+        document.getElementById("assigned-to").textContent = report.technical_engineer || "";
       } else {
         document.getElementById("assigned-to").textContent = isExternal
           ? (report.reporter_name || "")
-          : (report.assigned_to || report.technical || "");
+          : (report.assigned_to || report.reporter_name || report.technical_engineer);
       }
+      
       document.getElementById("department").textContent = report.department_name || "";
       document.getElementById("category").textContent =
       isExternal ? "External" :
@@ -173,6 +176,8 @@ if (!ticketNumber) {
       if (report.generation_number) specs.push(`📶 Generation: ${report.generation_number}`);
       if (report.model_name) specs.push(`🔧 Model: ${report.model_name}`);
       if (report.drive_type) specs.push(`💽 Hard Drive: ${report.drive_type}`);
+      if (report.ram_size) specs.push(`📏 RAM Size: ${report.ram_size}`);
+
 
       
 
@@ -196,6 +201,7 @@ if (!ticketNumber) {
           { label: "🔧 Model:", value: report.model_name, alwaysShow: true },
           { label: "📟 Device Type:", value: report.device_type },
           { label: "💽 Hard Drive:", value: report.drive_type, showForPC: true },
+          { label: "📏 RAM Size:", value: report.ram_size, showForPC: true },
         ];
         
         fields.forEach(({ label, value, showForPC, alwaysShow }) => {
@@ -381,9 +387,11 @@ if (!ticketNumber) {
       cpu_name: null,
       ram_type: null,
       drive_type: null,
+      ram_size: null,
       os_name: null,
       generation_number: null,
       model_name: null
+
     };
   
     // مواصفات الجهاز
@@ -402,6 +410,7 @@ document.querySelectorAll("#device-specs .spec-box").forEach(box => {
     case "generation": updatedData.generation_number = value; break;
     case "model": updatedData.model_name = value; break;
     case "harddrive": updatedData.drive_type = value; break; // ✅ الجديد
+    case "ramsize": updatedData.ram_size = value; break;
 
 
   }
