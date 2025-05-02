@@ -53,11 +53,10 @@ document.addEventListener("DOMContentLoaded", () => {
             { label: "🖥️ OS:", value: report.os_name, showForPC: true },
             { label: "📶 Generation:", value: report.generation_number, showForPC: true },
             { label: "🔧 Model:", value: report.model_name, alwaysShow: true },
-            { label: "📟 Device Type:", value: report.device_type,
-              
-             },
+            { label: "📟 Device Type:", value: report.device_type, },
              { label: "💽 Hard Drive:", value: report.drive_type, showForPC: true },
              { label: "📏 RAM Size:", value: report.ram_size, showForPC: true },
+             { label: "🌐 MAC Address:", value: report.mac_address, showForPC: true },
 
 
           ];
@@ -177,6 +176,7 @@ if (!ticketNumber) {
       if (report.model_name) specs.push(`🔧 Model: ${report.model_name}`);
       if (report.drive_type) specs.push(`💽 Hard Drive: ${report.drive_type}`);
       if (report.ram_size) specs.push(`📏 RAM Size: ${report.ram_size}`);
+      if (report.mac_address) specs.push(`🌐 MAC Address: ${report.mac_address}`);
 
 
       
@@ -202,6 +202,8 @@ if (!ticketNumber) {
           { label: "📟 Device Type:", value: report.device_type },
           { label: "💽 Hard Drive:", value: report.drive_type, showForPC: true },
           { label: "📏 RAM Size:", value: report.ram_size, showForPC: true },
+          { label: "🌐 MAC Address:", value: report.mac_address, showForPC: true },
+
         ];
         
         fields.forEach(({ label, value, showForPC, alwaysShow }) => {
@@ -380,6 +382,7 @@ if (!ticketNumber) {
       category: document.getElementById("category")?.innerText.trim() === "" ? null : document.getElementById("category")?.innerText.trim(),
       source: reportData.source || reportType, // ✅ أضف هذا السطر
       device_id: reportData.device_id || null, // ✅ هذا هو
+      mac_address: reportData.mac_address || null,
 
       device_name: null,
       serial_number: null,
@@ -411,6 +414,8 @@ document.querySelectorAll("#device-specs .spec-box").forEach(box => {
     case "model": updatedData.model_name = value; break;
     case "harddrive": updatedData.drive_type = value; break; // ✅ الجديد
     case "ramsize": updatedData.ram_size = value; break;
+    case "macaddress": updatedData.mac_address = value; break;
+
 
 
   }

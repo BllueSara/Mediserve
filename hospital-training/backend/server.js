@@ -287,6 +287,8 @@ SELECT
   COALESCE(g.generation_number, '') AS generation_number,
   COALESCE(pm.model_name, prm.model_name, scm.model_name, '') AS model_name,
   COALESCE(hdt.drive_type, '') AS drive_type,
+    COALESCE(pc.Mac_Address, '') AS mac_address,  -- ✅ أضفنا MAC هنا
+
   d.name AS department_name
 FROM Maintenance_Devices md
 LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
@@ -335,8 +337,9 @@ WHERE md.id = ?
           initial_diagnosis, final_diagnosis,
           serial_number, governmental_number, device_name,
           department_name, cpu_name, ram_type, os_name,
-          generation_number, model_name, drive_type, ram_size  -- ✅ أضفناها هنا
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          generation_number, model_name, drive_type, ram_size,mac_address
+
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       
       const values = [
@@ -358,7 +361,9 @@ WHERE md.id = ?
         deviceInfo.generation_number,
         deviceInfo.model_name,
         deviceInfo.drive_type,
-        deviceInfo.ram_size  // ✅ الجديد
+        deviceInfo.ram_size,  // ✅ الجديد
+        deviceInfo.mac_address
+
       ];
       
         db.query(sql, values, (err, result) => {
@@ -377,8 +382,8 @@ WHERE md.id = ?
           initial_diagnosis, final_diagnosis,
           serial_number, governmental_number, device_name,
           department_name, cpu_name, ram_type, os_name,
-          generation_number, model_name, ram_size  -- ✅ أضفناها هنا
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          generation_number, model_name, ram_size,mac_address  -- ✅ أضفناها هنا
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
       `;
       
       const values = [
@@ -399,7 +404,9 @@ WHERE md.id = ?
         deviceInfo.os_name,
         deviceInfo.generation_number,
         deviceInfo.model_name,
-        deviceInfo.ram_size  // ✅ الجديد
+        deviceInfo.ram_size,  // ✅ الجديد
+        deviceInfo.mac_address
+
       ];
       
         db.query(sql, values, (err, result) => {
@@ -472,7 +479,6 @@ app.get("/devices/:type/:department", (req, res) => {
     res.json(result);
   });
 });
-
 app.post("/submit-regular-maintenance", async (req, res) => {
   const {
     "maintenance-date": date,
@@ -487,7 +493,6 @@ app.post("/submit-regular-maintenance", async (req, res) => {
   } = req.body;
 
   try {
-    // 1️⃣ جلب رقم القسم
     const departmentId = await new Promise((resolve, reject) => {
       db.query("SELECT id FROM Departments WHERE name = ?", [section], (err, result) => {
         if (err) return reject(err);
@@ -495,7 +500,6 @@ app.post("/submit-regular-maintenance", async (req, res) => {
       });
     });
 
-    // 2️⃣ جلب بيانات الجهاز
     const deviceInfo = await new Promise((resolve, reject) => {
       const query = `
       SELECT md.*, COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
@@ -506,7 +510,8 @@ app.post("/submit-regular-maintenance", async (req, res) => {
              COALESCE(g.generation_number, '') AS generation_number,
              COALESCE(pm.model_name, prm.model_name, scm.model_name, '') AS model_name,
              COALESCE(hdt.drive_type, '') AS drive_type,
-             d.name AS department_name
+             d.name AS department_name,
+             md.mac_address AS mac_address -- 🆕 جلب mac_address
       FROM Maintenance_Devices md
       LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
       LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
@@ -531,7 +536,6 @@ app.post("/submit-regular-maintenance", async (req, res) => {
 
     if (!deviceInfo) return res.status(404).json({ error: "Device not found" });
 
-    // 3️⃣ إدخال سجل الصيانة الدورية
     const checklist = JSON.stringify(details);
     await new Promise((resolve, reject) => {
       db.query(`
@@ -539,8 +543,8 @@ app.post("/submit-regular-maintenance", async (req, res) => {
           device_id, device_type, last_maintenance_date, frequency, checklist, notes,
           serial_number, governmental_number, device_name, department_name,
           cpu_name, ram_type, ram_size, os_name, generation_number, model_name, drive_type, status,
-          problem_status, technical_engineer_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          problem_status, technical_engineer_id, mac_address -- 🆕
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         deviceSpec,
@@ -562,35 +566,33 @@ app.post("/submit-regular-maintenance", async (req, res) => {
         deviceInfo.drive_type,
         "Open",
         problem_status || "",
-        technical_engineer_id
+        technical_engineer_id,
+        deviceInfo.mac_address // 🆕
       ], (err) => {
         if (err) return reject(err);
         resolve();
       });
     });
-    
-    
-      
-    // 4️⃣ إنشاء تذكرة
+
     const ticketNumber = `TIC-${Date.now()}`;
     const ticketId = await new Promise((resolve, reject) => {
       db.query(`
         INSERT INTO Internal_Tickets (
-          ticket_number, priority, department_id, issue_description, assigned_to
-        ) VALUES (?, ?, ?, ?, ?)
+          ticket_number, priority, department_id, issue_description, assigned_to, mac_address -- 🆕 إذا تريد
+        ) VALUES (?, ?, ?, ?, ?, ?)
       `, [
         ticketNumber,
         "Medium",
         departmentId,
         problem_status || "Regular Maintenance",
-        technical_engineer_id
+        technical_engineer_id,
+        deviceInfo.mac_address // 🆕
       ], (err, result) => {
         if (err) return reject(err);
         resolve(result.insertId);
       });
     });
 
-    // 5️⃣ التحقق من وجود تقرير صيانة اليوم
     const alreadyReported = await new Promise((resolve, reject) => {
       db.query(`
         SELECT id FROM Maintenance_Reports 
@@ -602,15 +604,14 @@ app.post("/submit-regular-maintenance", async (req, res) => {
       });
     });
 
-    // 6️⃣ إضافة تقرير صيانة إن لم يكن موجودًا
     if (!alreadyReported) {
       const reportNumberMain = `REP-${Date.now()}-MAIN`;
       await new Promise((resolve, reject) => {
         db.query(`
           INSERT INTO Maintenance_Reports (
             report_number, ticket_id, device_id,
-            issue_summary, full_description, status, maintenance_type
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            issue_summary, full_description, status, maintenance_type, mac_address -- 🆕
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `, [
           reportNumberMain,
           ticketId,
@@ -618,7 +619,8 @@ app.post("/submit-regular-maintenance", async (req, res) => {
           checklist,
           notes || "Routine periodic maintenance performed.",
           "Open",
-          "Regular"
+          "Regular",
+          deviceInfo.mac_address // 🆕
         ], (err) => {
           if (err) return reject(err);
           resolve();
@@ -626,7 +628,6 @@ app.post("/submit-regular-maintenance", async (req, res) => {
       });
     }
 
-    // 7️⃣ تحقق من وجود تقرير "Ticket Created"
     const ticketReportExists = await new Promise((resolve, reject) => {
       db.query(`
         SELECT id FROM Maintenance_Reports 
@@ -643,8 +644,8 @@ app.post("/submit-regular-maintenance", async (req, res) => {
         db.query(`
           INSERT INTO Maintenance_Reports (
             report_number, ticket_id, device_id,
-            issue_summary, full_description, status, maintenance_type
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            issue_summary, full_description, status, maintenance_type, mac_address -- 🆕
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `, [
           reportNumberTicket,
           ticketId,
@@ -652,7 +653,8 @@ app.post("/submit-regular-maintenance", async (req, res) => {
           "Ticket Created",
           `Ticket (${ticketNumber}) for device: ${deviceInfo.device_name} - Department: ${deviceInfo.department_name}`,
           "Open",
-          "Regular"
+          "Regular",
+          deviceInfo.mac_address // 🆕
         ], (err) => {
           if (err) return reject(err);
           resolve();
@@ -660,7 +662,7 @@ app.post("/submit-regular-maintenance", async (req, res) => {
       });
     }
 
-    res.json({ message: "✅ Regular maintenance, ticket, and both reports created successfully." });
+    res.json({ message: "✅ Regular maintenance, ticket, and both reports created successfully with MAC Address." });
 
   } catch (error) {
     console.error("❌ Error in regular maintenance submission:", error);
@@ -885,7 +887,6 @@ app.post("/add-options-regular", (req, res) => {
   });
 });
 
-
 app.post("/submit-general-maintenance", async (req, res) => {
   const {
     "maintenance-date": date,
@@ -919,7 +920,8 @@ app.post("/submit-general-maintenance", async (req, res) => {
                COALESCE(g.generation_number, '') AS generation_number,
                COALESCE(pm.model_name, prm.model_name, scm.model_name, '') AS model_name,
                COALESCE(hdt.drive_type, '') AS drive_type,
-               d.name AS department_name
+               d.name AS department_name,
+               md.mac_address AS mac_address -- 🆕 جلب mac_address
         FROM Maintenance_Devices md
         LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
         LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
@@ -946,7 +948,6 @@ app.post("/submit-general-maintenance", async (req, res) => {
 
     const deviceType = rawDeviceType || deviceInfo.device_type;
 
-    // 1️⃣ تخزين في General_Maintenance بكل الأعمدة المطلوبة
     await new Promise((resolve, reject) => {
       db.query(`
         INSERT INTO General_Maintenance (
@@ -954,11 +955,11 @@ app.post("/submit-general-maintenance", async (req, res) => {
           technician_name, floor, extension, problem_status, notes,
           serial_number, governmental_number, device_name, department_name,
           cpu_name, ram_type, os_name, generation_number, model_name,
-          drive_type, ram_size, created_at
-        ) VALUES (${date ? "?" : "CURRENT_DATE()"}, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          drive_type, ram_size, mac_address, created_at -- 🆕 mac_address
+        ) VALUES (${date ? "?" : "CURRENT_DATE()"}, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       `,
       [
-        ...(date ? [date] : []),  // إذا فيه date حطه، إذا لا لا تحطه
+        ...(date ? [date] : []),
         "General Maintenance",
         initialDiagnosis || "",
         finalDiagnosis || "",
@@ -978,20 +979,19 @@ app.post("/submit-general-maintenance", async (req, res) => {
         deviceInfo.generation_number,
         deviceInfo.model_name,
         deviceInfo.drive_type,
-        deviceInfo.ram_size
+        deviceInfo.ram_size,
+        deviceInfo.mac_address // 🆕
       ], (err) => {
         if (err) return reject(err);
         resolve();
       });
     });
-    
 
-    // 2️⃣ إنشاء التذكرة
     const ticketNumber = `TIC-${Date.now()}`;
     const ticketId = await new Promise((resolve, reject) => {
       db.query(
-        "INSERT INTO Internal_Tickets (ticket_number, priority, department_id, issue_description, assigned_to) VALUES (?, ?, ?, ?, ?)",
-        [ticketNumber, "Medium", departmentId, problemStatus, technical],
+        "INSERT INTO Internal_Tickets (ticket_number, priority, department_id, issue_description, assigned_to, mac_address) VALUES (?, ?, ?, ?, ?, ?)", // 🆕 mac_address
+        [ticketNumber, "Medium", departmentId, problemStatus, technical, deviceInfo.mac_address], // 🆕
         (err, result) => {
           if (err) return reject(err);
           resolve(result.insertId);
@@ -999,11 +999,10 @@ app.post("/submit-general-maintenance", async (req, res) => {
       );
     });
 
-    // 3️⃣ تقرير صيانة رئيسي
     const reportNumberMain = `REP-${Date.now()}-MAIN`;
     await new Promise((resolve, reject) => {
       db.query(
-        "INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", // 🆕 mac_address
         [
           reportNumberMain,
           ticketId,
@@ -1011,7 +1010,8 @@ app.post("/submit-general-maintenance", async (req, res) => {
           `Selected Issue: ${problemStatus}`,
           `Initial Diagnosis: ${initialDiagnosis}`,
           "Open",
-          "General"
+          "General",
+          deviceInfo.mac_address // 🆕
         ],
         (err) => {
           if (err) return reject(err);
@@ -1020,11 +1020,10 @@ app.post("/submit-general-maintenance", async (req, res) => {
       );
     });
 
-    // 4️⃣ تقرير Ticket Created
     const reportNumberTicket = `REP-${Date.now()}-TICKET`;
     await new Promise((resolve, reject) => {
       db.query(
-        "INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", // 🆕 mac_address
         [
           reportNumberTicket,
           ticketId,
@@ -1032,7 +1031,8 @@ app.post("/submit-general-maintenance", async (req, res) => {
           "Ticket Created",
           `Ticket (${ticketNumber}) for device: ${deviceInfo.device_name} - Department: ${deviceInfo.department_name}`,
           "Open",
-          "General"
+          "General",
+          deviceInfo.mac_address // 🆕
         ],
         (err) => {
           if (err) return reject(err);
@@ -1041,7 +1041,7 @@ app.post("/submit-general-maintenance", async (req, res) => {
       );
     });
 
-    res.json({ message: "✅ General maintenance, ticket, and reports created successfully." });
+    res.json({ message: "✅ General maintenance, ticket, and reports created successfully with MAC Address." });
 
   } catch (error) {
     console.error("❌ Error in general maintenance:", error);
@@ -1060,13 +1060,12 @@ app.get("/device-types", (req, res) => {
     res.json(result.map(row => row.device_type));
   });
 });
-
 app.get("/get-external-reports", (req, res) => {
   const externalSql = `
     SELECT 
       id,
       created_at,
-      NULL AS ticket_id, -- ✅ أضفنا هذا
+      NULL AS ticket_id,
       ticket_number,
       device_name,
       department_name,
@@ -1077,7 +1076,8 @@ app.get("/get-external-reports", (req, res) => {
       NULL AS priority,
       'external-legacy' AS source,
       NULL AS attachment_name,
-      NULL AS attachment_path
+      NULL AS attachment_path,
+      mac_address -- ✅ جديد
     FROM External_Maintenance
   `;
 
@@ -1085,7 +1085,7 @@ app.get("/get-external-reports", (req, res) => {
     SELECT 
       id,
       created_at,
-      NULL AS ticket_id, -- ✅ أضفنا هذا
+      NULL AS ticket_id,
       NULL AS ticket_number,
       NULL AS device_name,
       NULL AS department_name,
@@ -1096,7 +1096,9 @@ app.get("/get-external-reports", (req, res) => {
       priority,
       'new' AS source,
       attachment_name,
-      attachment_path
+      attachment_path,
+          NULL AS mac_address -- ✅ أضفنا هذا السطر حتى يتطابق مع البقية
+
     FROM New_Maintenance_Reports
   `;
 
@@ -1115,7 +1117,8 @@ app.get("/get-external-reports", (req, res) => {
       mr.priority,
       'external-new' AS source,
       et.attachment_name,
-      et.attachment_path
+      et.attachment_path,
+      md.mac_address -- ✅ جديد
     FROM Maintenance_Reports mr
     LEFT JOIN External_Tickets et ON mr.ticket_id = et.id
     LEFT JOIN Maintenance_Devices md ON mr.device_id = md.id
@@ -1143,6 +1146,7 @@ app.get("/get-external-reports", (req, res) => {
     res.json(result);
   });
 });
+
 
 app.put("/update-external-report-status/:id", async (req, res) => {
   const reportId = req.params.id;
@@ -1239,6 +1243,7 @@ app.get("/report/:id", (req, res) => {
         md.serial_number,
         md.governmental_number,
         COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
+pc.Mac_Address AS mac_address,
 
         cpu.cpu_name,
         ram.ram_type,
@@ -1287,6 +1292,7 @@ app.get("/report/:id", (req, res) => {
           assigned_to: r.reporter_name || "",
           report_type: "Incident",
           priority: r.priority || "Medium",
+          mac_address: r.mac_address || "",
 
           maintenance_manager: "",
           device_name: r.device_name || "",
@@ -1325,6 +1331,7 @@ app.get("/report/:id", (req, res) => {
             assigned_to: r.reporter_name || "",
             report_type: "External",
             priority: r.priority || "Medium",
+            mac_address: r.mac_address || "",
 
             maintenance_manager: r.maintenance_manager,
             device_name: r.device_name,
@@ -1360,6 +1367,7 @@ app.get("/report/:id", (req, res) => {
         rsize.ram_size,
         os.os_name,
         gen.generation_number,
+        pc.Mac_Address AS mac_address,
         hdt.drive_type
       FROM New_Maintenance_Report r
       LEFT JOIN Departments d ON r.department_id = d.id
@@ -1399,6 +1407,8 @@ app.get("/report/:id", (req, res) => {
         serial_number: r.serial_number,
         governmental_number: r.governmental_number,
         model_name: r.model_name,
+        mac_address: r.mac_address || "",
+
         cpu_name: r.cpu_name,
         ram_type: r.ram_type,
         ram_size: r.ram_size || "",
@@ -1473,6 +1483,8 @@ app.get("/report/:id", (req, res) => {
         md.serial_number,
         md.governmental_number,
         COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
+        pc.Mac_Address AS mac_address,
+
         d.name AS department_name,
         it.ticket_number,
         it.ticket_type,
@@ -1537,6 +1549,7 @@ app.get("/report/:id", (req, res) => {
         drive_type: report.drive_type || "",
         device_type: report.device_type,
         serial_number: report.serial_number,
+        mac_address: report.mac_address,
         governmental_number: report.governmental_number,
         device_name: report.device_name,
         department_name: report.department_name,
@@ -1610,7 +1623,6 @@ app.post("/add-device-specification", async (req, res) => {
 });
 
 
-
 app.post('/AddDevice/:type', async (req, res) => {
   const deviceType = req.params.type.toLowerCase();
   const Serial_Number = req.body.serial;
@@ -1618,6 +1630,7 @@ app.post('/AddDevice/:type', async (req, res) => {
   const department = req.body.department;
   const model = req.body.model;
   const Device_Name = req.body["device-name"] || req.body["pc-name"] || null;
+  const Mac_Address = req.body["mac-address"] || null;
 
   try {
     const getId = async (table, column, value) => {
@@ -1635,7 +1648,6 @@ app.post('/AddDevice/:type', async (req, res) => {
       return res.status(400).json({ error: "❌ تأكد من تعبئة جميع الحقول المطلوبة" });
     }
 
-    // ✅ إذا الجهاز من الأنواع المعروفة
     if (deviceType === 'pc') {
       const OS_id = await getId('OS_Types', 'os_name', req.body.os);
       const Processor_id = await getId('CPU_Types', 'cpu_name', req.body.processor);
@@ -1645,31 +1657,31 @@ app.post('/AddDevice/:type', async (req, res) => {
       const Drive_id = await getId('Hard_Drive_Types', 'drive_type', req.body.drive);
       const RamSize_id = await getId('RAM_Sizes', 'ram_size', req.body.ram_size);
 
-
       if (!OS_id || !Processor_id || !Generation_id || !RAM_id || !Model_id || !Drive_id) {
         return res.status(400).json({ error: "❌ تأكد من اختيار كل الخيارات للجهاز (PC)" });
       }
 
       const insertQuery = `
-      INSERT INTO PC_info 
-     (Serial_Number, Computer_Name, Governmental_Number, Department, OS_id, Processor_id, Generation_id, RAM_id, RamSize_id, Drive_id, Model_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-    
-    const values = [
-      Serial_Number,
-      Device_Name,
-      Governmental_Number,
-      Department_id,
-      OS_id,
-      Processor_id,
-      Generation_id,
-      RAM_id,
-      RamSize_id,
-      Drive_id,
-      Model_id
-    ];
-    
+        INSERT INTO PC_info 
+        (Serial_Number, Computer_Name, Governmental_Number, Department, OS_id, Processor_id, Generation_id, RAM_id, RamSize_id, Drive_id, Model_id, Mac_Address)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      const values = [
+        Serial_Number,
+        Device_Name,
+        Governmental_Number,
+        Department_id,
+        OS_id,
+        Processor_id,
+        Generation_id,
+        RAM_id,
+        RamSize_id,
+        Drive_id,
+        Model_id,
+        Mac_Address // ✅ أضفنا الماك هنا فقط للـ PC
+      ];
+
       await new Promise((resolve, reject) => {
         db.query(insertQuery, values, (err, result) => {
           if (err) return reject(err);
@@ -1688,13 +1700,7 @@ app.post('/AddDevice/:type', async (req, res) => {
         (Serial_Number, Printer_Name, Governmental_Number, Department, Model_id)
         VALUES (?, ?, ?, ?, ?)
       `;
-      const values = [
-        Serial_Number,
-        Device_Name,
-        Governmental_Number,
-        Department_id,
-        Model_id
-      ];
+      const values = [Serial_Number, Device_Name, Governmental_Number, Department_id, Model_id];
 
       await new Promise((resolve, reject) => {
         db.query(insertQuery, values, (err, result) => {
@@ -1714,13 +1720,7 @@ app.post('/AddDevice/:type', async (req, res) => {
         (Serial_Number, Scanner_Name, Governmental_Number, Department, Model_id)
         VALUES (?, ?, ?, ?, ?)
       `;
-      const values = [
-        Serial_Number,
-        Device_Name,
-        Governmental_Number,
-        Department_id,
-        Model_id
-      ];
+      const values = [Serial_Number, Device_Name, Governmental_Number, Department_id, Model_id];
 
       await new Promise((resolve, reject) => {
         db.query(insertQuery, values, (err, result) => {
@@ -1733,7 +1733,6 @@ app.post('/AddDevice/:type', async (req, res) => {
       console.log(`🔶 نوع جديد سيتم تخزينه فقط في Maintenance_Devices: ${deviceType}`);
     }
 
-    // ✅ إدخال الجهاز في Maintenance_Devices
     const insertMaintenanceDevice = `
       INSERT INTO Maintenance_Devices (serial_number, governmental_number, device_type, device_name, department_id)
       VALUES (?, ?, ?, ?, ?)
@@ -2095,7 +2094,9 @@ app.post("/update-report-full", upload.single("attachment"), async (req, res) =>
     technical, department_name, category, source,
     device_id, device_name, serial_number, governmental_number,
     cpu_name, ram_type,ram_size,
-     os_name, generation_number, model_name, drive_type
+     os_name, generation_number, model_name, drive_type,
+     mac_address // ✅ أضفنا mac_address هنا
+
   } = updatedData;
 
   const attachmentFile = req.file;
@@ -2218,9 +2219,13 @@ app.post("/update-report-full", upload.single("attachment"), async (req, res) =>
       ];
 
       if (isPC) {
-        updates.push("cpu_id = ?", "ram_id = ?", "os_id = ?", "generation_id = ?", "drive_id = ?", "ram_size_id = ?");
-        values.push(cpuId, ramId, osId, generationId, driveId);
+        updates.push(
+          "cpu_id = ?", "ram_id = ?", "os_id = ?", 
+          "generation_id = ?", "drive_id = ?", "ram_size_id = ?", "mac_address = ?" // ✅ أضفنا الماك
+        );
+        values.push(cpuId, ramId, osId, generationId, driveId, ramSizeId, mac_address);
       }
+      
 
       const sql = `UPDATE Maintenance_Devices SET ${updates.join(", ")} WHERE id = ?`;
       values.push(actualDeviceId);
@@ -2240,7 +2245,9 @@ app.post("/update-report-full", upload.single("attachment"), async (req, res) =>
           ram_type,
           os_name,
           generation_number,
-          drive_type
+          drive_type,
+          mac_address // ✅ أضفنا الماك
+
         };
 
         await db.promise().query(`
@@ -2248,38 +2255,43 @@ app.post("/update-report-full", upload.single("attachment"), async (req, res) =>
           SET 
             device_name = ?, serial_number = ?, governmental_number = ?, department_name = ?,
             model_name = ?, cpu_name = ?, ram_type = ?, os_name = ?, generation_number = ?, drive_type = ?,
-            ram_size = ?
+            ram_size = ?, mac_address = ?
           WHERE device_id = ?
         `, [
           updates.device_name, updates.serial_number, updates.governmental_number, updates.department_name,
-          updates.model_name, updates.cpu_name, updates.ram_type, updates.os_name, updates.generation_number, updates.drive_type,updates.ram_size,
+          updates.model_name, updates.cpu_name, updates.ram_type, updates.os_name, updates.generation_number, updates.drive_type,
+          updates.ram_size, updates.mac_address,
           actualDeviceId
         ]);
-
+        
         await db.promise().query(`
           UPDATE Regular_Maintenance 
           SET 
             device_name = ?, serial_number = ?, governmental_number = ?, department_name = ?,
-            model_name = ?, cpu_name = ?, ram_type = ?,ram_size = ?, os_name = ?, generation_number = ?, drive_type = ?
+            model_name = ?, cpu_name = ?, ram_type = ?, ram_size = ?, os_name = ?, generation_number = ?, drive_type = ?,
+            mac_address = ?
           WHERE device_id = ?
         `, [
           updates.device_name, updates.serial_number, updates.governmental_number, updates.department_name,
-          updates.model_name, updates.cpu_name, updates.ram_type,updates.ram_size, updates.os_name, updates.generation_number, updates.drive_type,
+          updates.model_name, updates.cpu_name, updates.ram_type, updates.ram_size, updates.os_name, updates.generation_number, updates.drive_type,
+          updates.mac_address,
           actualDeviceId
         ]);
-
+        
         await db.promise().query(`
           UPDATE External_Maintenance 
           SET 
             device_name = ?, governmental_number = ?, department_name = ?,
-            model_name = ?, cpu_name = ?, ram_type = ?,ram_size = ?,
-             os_name = ?, generation_number = ?, drive_type = ?
+            model_name = ?, cpu_name = ?, ram_type = ?, ram_size = ?, os_name = ?, generation_number = ?, drive_type = ?,
+            mac_address = ?
           WHERE serial_number = ?
         `, [
           updates.device_name, updates.governmental_number, updates.department_name,
-          updates.model_name, updates.cpu_name, updates.ram_type,updates.ram_size, updates.os_name, updates.generation_number, updates.drive_type,
+          updates.model_name, updates.cpu_name, updates.ram_type, updates.ram_size, updates.os_name, updates.generation_number, updates.drive_type,
+          updates.mac_address,
           updates.serial_number
         ]);
+        
       };
 
       await updateSharedTables();
@@ -2874,7 +2886,9 @@ app.post("/submit-new-report", upload.fields([
     os_name,
     generation_number,
     model_name,
-    drive_type
+    drive_type,
+    mac_address // ✅ أضفنا الماك هنا
+
   } = req.body;
 
   const attachment = req.files?.attachment?.[0] || null;
@@ -2888,47 +2902,49 @@ app.post("/submit-new-report", upload.fields([
     const isPC = device_type?.toLowerCase() === "pc";
 
     const insertReportSql = `
-      INSERT INTO New_Maintenance_Report (
-        report_type, device_type, priority, status,
-        attachment_name, attachment_path, signature_path,
-        details, device_id, department_id, model_id,
-        ${isPC ? "cpu_id, ram_id, os_id,ram_size, generation_id, drive_id," : ""}
-        device_name, serial_number, governmental_number
-      )
-      VALUES (?, ?, ?, 'Open', ?, ?, ?, ?, NULL, ?, ?, 
-        ${isPC ? "?, ?, ?, ?,?, ?," : ""}
-        ?, ?, ?
-      )
-    `;
+    INSERT INTO New_Maintenance_Report (
+      report_type, device_type, priority, status,
+      attachment_name, attachment_path, signature_path,
+      details, device_id, department_id, model_id,
+      ${isPC ? "cpu_id, ram_id, os_id, ram_size, generation_id, drive_id, mac_address," : ""}
+      device_name, serial_number, governmental_number
+    )
+    VALUES (?, ?, ?, 'Open', ?, ?, ?, ?, NULL, ?, ?,
+      ${isPC ? "?, ?, ?, ?, ?, ?, ?," : ""}
+      ?, ?, ?
+    )
+  `;
+  
 
-    const insertParams = [
-      report_type,
-      device_type,
-      priority || "Medium",
-      attachmentName,
-      attachmentPath,
-      signaturePath,
-      details?.trim() || null,
-      await getId("Departments", "name", department_name),
-      await getModelId(device_type, model_name)
-    ];
-
-    if (isPC) {
-      insertParams.push(
-        await getId("CPU_Types", "cpu_name", cpu_name),
-        await getId("RAM_Types", "ram_type", ram_type),
-        await getId("OS_Types", "os_name", os_name),
-        await getId("Processor_Generations", "generation_number", generation_number),
-        await getId("Hard_Drive_Types", "drive_type", drive_type),
-        await getId("RAM_Sizes", "ram_size", ram_size)
-      );
-    }
-
+  const insertParams = [
+    report_type,
+    device_type,
+    priority || "Medium",
+    attachmentName,
+    attachmentPath,
+    signaturePath,
+    details?.trim() || null,
+    await getId("Departments", "name", department_name),
+    await getModelId(device_type, model_name)
+  ];
+  
+  if (isPC) {
     insertParams.push(
-      device_name || null,
-      serial_number || null,
-      governmental_number || null
+      await getId("CPU_Types", "cpu_name", cpu_name),
+      await getId("RAM_Types", "ram_type", ram_type),
+      await getId("OS_Types", "os_name", os_name),
+      await getId("Processor_Generations", "generation_number", generation_number),
+      await getId("Hard_Drive_Types", "drive_type", drive_type),
+      mac_address || null // ✅ أضفنا الماك
     );
+  }
+  
+  insertParams.push(
+    device_name || null,
+    serial_number || null,
+    governmental_number || null
+  );
+  
 
     await db.promise().query(insertReportSql, insertParams);
 
