@@ -416,6 +416,8 @@ function updatePopupHeadingAndFields(type) {
 
     if (typeCleaned === "pc") {
       fieldsHtml += `
+            <label>MAC Address:</label>
+<input type="text" name="mac-address" required>
         <label>Processor Generation:</label>
         <div class="custom-dropdown-wrapper">
           <div class="custom-dropdown">
@@ -573,6 +575,9 @@ function savePCSpec() {
   });
 
   const deviceType = document.getElementById("device-type").value.toLowerCase();
+  if (deviceType !== "pc") {
+    delete deviceData["mac-address"];
+  }
 
   // 🔥 هنا التعديل المهم 🔥
   const departmentInput = document.getElementById("department-" + deviceType);
