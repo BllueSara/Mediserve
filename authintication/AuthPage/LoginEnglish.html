@@ -1,0 +1,118 @@
+<!DOCTYPE html> <!-- Declares the document as an HTML5 document -->
+<html lang="en"> <!-- Sets the language of the document to English -->
+
+<head>
+  <meta charset="UTF-8" /> <!-- Sets the character encoding to UTF-8 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Ensures responsive scaling on different devices -->
+  <title>Login and Sign Up</title> <!-- Sets the title of the page -->
+  <link rel="stylesheet" href="style.css" /> <!-- Links the external CSS file -->
+</head>
+
+<body>
+  <div class="container" id="container"> <!-- Main container for the entire layout -->
+
+    <!-- Logo section -->
+    <div class="logo-container">
+      <img src="/icon/Ms Logo.png" class="right-logo" id="logo1" alt="Logo 1" /> <!-- Logo 1 (default visible) -->
+      <img src="/icon/hospital-logo.png" class="right-logo" id="logo2" alt="Logo 2" style="display: none;" />
+      <!-- Logo 2 (hidden by default) -->
+      <img src="/icon/hospital-logo.png" class="left-logo" id="logo3" alt="شعار 3" /> <!-- Logo 3 (default visible) -->
+      <img src="/icon/Ms Logo.png" class="left-logo" id="logo4" alt="شعار 4" style="display: none;" />
+      <!-- Logo 4 (hidden by default) -->
+    </div>
+
+    <!-- Login form container -->
+    <div class="form-container login-container">
+      <form action="#" id="loginForm"> <!-- Login form -->
+        <h1 class="align-left">Welcome</h1> <!-- Main title -->
+        <h2 class="align-left">Please enter your information</h2> <!-- Subtitle -->
+        <br />
+        <label for="loginEmail" class="align-left">Email</label> <!-- Email label -->
+        <input type="text" id="loginEmail" placeholder="Enter your email" /> <!-- Email input -->
+        <label for="loginPassword" class="align-left">Password</label> <!-- Password label -->
+        <input type="password" id="loginPassword" placeholder="Password" /> <!-- Password input -->
+        <span class="error-message" id="loginError"></span> <!-- Error message display -->
+
+        <!-- Checkbox and forgot password section -->
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <div style="display: flex; align-items: center;">
+            <input type="checkbox" id="rememberMe" /> <!-- Remember Me checkbox -->
+            <label for="rememberMe" style="margin-left: 5px;">Remember Me</label> <!-- Label for checkbox -->
+          </div>
+          <a href="password.html" style="font-size: 16px;">Forgot your password?</a> <!-- Link to password recovery -->
+        </div>
+        <button type="submit">Sign In</button> <!-- Login button -->
+      </form>
+    </div>
+
+    <!-- Signup form container -->
+    <div class="form-container signup-container">
+      <form action="#" id="signupForm"> <!-- Sign up form -->
+        <h1 class="align-left">Create Account</h1> <!-- Main title -->
+        <h2 class="align-left">Please enter your information</h2> <!-- Subtitle -->
+        <br />
+        <input type="text" id="signupUsername" placeholder="Username" /> <!-- Username input -->
+        <input type="text" id="employeeID" placeholder="Employee ID" /> <!-- Employee ID input -->
+        <input type="text" id="signupPhone" placeholder="Phone Number" />
+
+
+
+
+             <!-- Department searchable dropdown -->
+        <!-- Custom Department Dropdown -->
+        <div class="custom-dropdown-wrapper">
+          <div class="custom-dropdown full-width" onclick="toggleDropdown(this)">
+            <span id="selected-section" class="dropdown-placeholder">Select Department</span>
+            <span class="dropdown-arrow">▼</span>
+          </div>
+          <div class="dropdown-content">
+            <input type="text" class="dropdown-search" placeholder="Search department..."
+              oninput="filterDropdown(this)">
+            <div class="dropdown-options" id="section-options"></div>
+          </div>
+          <input type="hidden" id="section" name="section" required>
+        </div>
+
+        <input type="email" id="signupEmail" placeholder="Email" /> <!-- Email input -->
+        <input type="password" id="signupPassword" placeholder="Password" /> <!-- Password input -->
+
+   
+
+        <span class="error-message" id="signupError"></span> <!-- Error message display -->
+        <button type="submit">Sign Up</button> <!-- Sign up button -->
+      </form>
+    </div>
+
+    <!-- Overlay container for switching between login/signup -->
+    <div class="overlay-container">
+      <div class="overlay">
+        <!-- Left overlay panel (for login) -->
+        <div class="overlay-panel overlay-left">
+          <br /><br />
+          <h1>Login</h1>
+          <br />
+          <p>If you already have an account</p>
+          <br /><br /><br />
+          <button class="ghost" id="signIn">Sign In</button> <!-- Button to switch to login -->
+        </div>
+        <!-- Right overlay panel (for signup) -->
+        <div class="overlay-panel overlay-right">
+          <br /><br />
+          <h1>Create Account</h1>
+          <br />
+          <p>If you're new here, create an account</p>
+          <br /><br /><br />
+          <button class="ghost" id="signUp">Sign Up</button> <!-- Button to switch to signup -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button id="lang-switch-btn" class="lang-switch-btn">ع</button> <!-- Language switch button -->
+
+  <script src="signup.js"></script>
+
+</body>
+
+</html>

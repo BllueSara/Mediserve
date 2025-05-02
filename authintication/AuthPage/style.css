@@ -1,119 +1,134 @@
-/* Reset and box-sizing */
+/* Reset and box-sizing for all elements */
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+    margin: 0; /* Remove default margin */
+    padding: 0; /* Remove default padding */
+    box-sizing: border-box; /* Include padding and border in element's total width/height */
 }
 
+/* Base styles for the body */
 body {
-    font-family: Arial, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background-color: #f6f5f7;
+    font-family: Arial, sans-serif; /* Set default font */
+    display: flex; /* Use flex layout */
+    justify-content: center; /* Center content horizontally */
+    align-items: center; /* Center content vertically */
+    height: 100vh; /* Full viewport height */
+    background-color: #f6f5f7; /* Light background color */
 }
 
-/* Main container */
+/* Main container styles */
 .container {
-    background-color: #fff;
-    border-radius: 10px;
-    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25),
+    background-color: #fff; /* White background */
+    border-radius: 10px; /* Rounded corners */
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25), /* Drop shadow */
                 0 10px 10px rgba(0, 0, 0, 0.22);
-    position: relative;
-    overflow: hidden;
-    width: 100%;
-    max-width: 1300px;
-    min-height: 685px;
-    transition: transform 0.6s ease-in-out;
+    position: relative; /* Needed for absolute children */
+    overflow: hidden; /* Hide overflowing content */
+    width: 100%; /* Full width */
+    max-width: 1300px; /* Max width */
+    min-height: 685px; /* Minimum height */
+    transition: transform 0.6s ease-in-out; /* Smooth transform animation */
 }
 
-/* Logo container now inside the main container */
-.logo-container {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    z-index: 110; /* Higher than other elements inside container */
+/* Right logos */
+.right-logo {
+    position: absolute; /* Position relative to container */
+    top: 20px; /* 20px from top */
+    left: 5px; /* 5px from left */
+    z-index: 110; /* High z-index to appear above content */
+    width: 150px; /* Set width */
+    height: auto; /* Auto height */
+    transition: opacity 0.6s ease-in-out; /* Smooth fade effect */
 }
 
-.logo {
-    width: 150px;
-    height: auto;
-    transition: opacity 0.6s ease-in-out;
+/* Left logos */
+.left-logo {
+    position: absolute; /* Absolute inside container */
+    top: 20px; /* Distance from top */
+    right: 640px; /* Distance from right */
+    z-index: 110; /* Ensure it's on top */
+    width: 150px; /* Set width */
+    height: auto; /* Auto height */
+    transition: opacity 0.6s ease-in-out; /* Smooth opacity change */
 }
 
-/* Overlay container with rounded corners on the right side initially */
+/* Overlay container rounded initially on the right side */
 .overlay-container {
-    border-radius: 0 13px 13px 0;
-    transition: transform 0.6s ease-in-out, border-radius 0.6s ease-in-out;
+    border-radius: 0 13px 13px 0; /* Rounded corners on right side */
+    transition: transform 0.6s ease-in-out, border-radius 0.6s ease-in-out; /* Animate changes */
 }
 
+/* When right panel is active, shift and round opposite side */
 .right-panel-active .overlay-container {
-    transform: translateX(-150%);
-    border-radius: 13px 0 0 13px;
+    transform: translateX(-150%); /* Move overlay */
+    border-radius: 13px 0 0 13px; /* Rounded corners on left instead */
 }
 
+/* Animate signup form when active */
 .right-panel-active .sign-up-container {
-    transform: translateX(66.7%);
-    opacity: 1;
-    z-index: 5;
-    animation: show 0.6s;
+    transform: translateX(66.7%); /* Slide into view */
+    opacity: 1; /* Make visible */
+    z-index: 5; /* Bring to front */
+    animation: show 0.6s; /* Apply animation */
 }
 
-/* Form container (shared styling for login and signup) */
+/* Shared form container styles */
 .form-container {
-    position: absolute;
+    position: absolute; /* Positioned inside container */
     top: 0;
-    height: 100%;
-    width: 50%;
-    transition: transform 0.6s ease-in-out, opacity 0.4s ease-in-out;
+    height: 100%; /* Full height */
+    width: 50%; /* Half the container */
+    transition: transform 0.6s ease-in-out, opacity 0.4s ease-in-out; /* Smooth effects */
 }
 
-/* Login form container */
+/* Login form specific styles */
 .login-container {
-    left: 0;
-    width: 50%;
-    z-index: 2;
+    left: 0; /* Align to left */
+    width: 50%; /* Half the container */
+    z-index: 2; /* Above signup by default */
 }
 
-/* Signup form container */
+/* Signup form specific styles */
 .signup-container {
     left: 0;
     width: 50%;
-    opacity: 0;
-    z-index: 1;
+    opacity: 0; /* Hidden initially */
+    z-index: 1; /* Behind login initially */
     transition: transform 0.6s ease-in-out, opacity 0.6s ease-in-out;
 }
 
+/* Move login form when panel is active */
 .container.right-panel-active .login-container {
     transform: translateX(100%);
-    opacity: 0;
+    opacity: 0; /* Hide */
 }
 
+/* Show signup form when panel is active */
 .container.right-panel-active .signup-container {
     transform: translateX(100%);
     opacity: 1;
     z-index: 5;
 }
 
-/* Overlay styling */
+/* Overlay container styles */
 .overlay-container {
     position: absolute;
     top: 0;
-    left: 50%;
+    left: 50%; /* Start from middle */
     width: 50%;
     height: 100%;
-    overflow: hidden;
+    overflow: hidden; /* Hide content overflow */
     transition: transform 0.6s ease-in-out;
     z-index: 100;
 }
 
+/* Move overlay container when active */
 .container.right-panel-active .overlay-container {
     transform: translateX(-100%);
 }
 
+/* Overlay background and positioning */
 .overlay {
-    background: linear-gradient(to right, #172F4A, #3BAAE0);
+    background: linear-gradient(to right, #172F4A, #3BAAE0); /* Gradient background */
     background-repeat: no-repeat;
     background-size: cover;
     background-position: 0 0;
@@ -121,16 +136,17 @@ body {
     position: relative;
     left: -100%;
     height: 100%;
-    width: 200%;
+    width: 200%; /* Double width for sliding */
     transform: translateX(0);
     transition: transform 0.6s ease-in-out;
 }
 
+/* Move overlay when active */
 .container.right-panel-active .overlay {
     transform: translateX(50%);
 }
 
-/* Overlay panels (left and right) */
+/* Overlay panel shared styles */
 .overlay-panel {
     position: absolute;
     display: flex;
@@ -146,39 +162,39 @@ body {
     transition: transform 0.6s ease-in-out, opacity 0.6s ease-in-out;
 }
 
+/* Left overlay panel hidden initially */
 .overlay-left {
     transform: translateX(-20%);
     opacity: 0;
 }
 
+/* Show left panel when active */
 .container.right-panel-active .overlay-left {
     transform: translateX(0);
     opacity: 1;
 }
 
+/* Right panel default */
 .overlay-right {
     right: 0;
     transform: translateX(0);
     opacity: 1;
 }
 
+/* Hide right panel when active */
 .container.right-panel-active .overlay-right {
     transform: translateX(20%);
     opacity: 0;
 }
 
-.overlay-left, .overlay-right {
-    transition: transform 0.6s ease-in-out, opacity 0.6s ease-in-out;
-}
-
-/* Error messages */
+/* Error message styling */
 .error-message {
     color: red;
     font-size: 12px;
     margin-top: 5px;
 }
 
-/* Buttons */
+/* Button styles */
 button {
     border-radius: 10px;
     border: 1px solid #ffffff;
@@ -193,20 +209,23 @@ button {
     cursor: pointer;
 }
 
+/* Click effect */
 button:active {
     transform: scale(0.95);
 }
 
+/* Remove button outline */
 button:focus {
     outline: none;
 }
 
+/* Ghost button style */
 button.ghost {
     background-color: transparent;
     border-color: #fff;
 }
 
-/* Forms */
+/* Form base styling */
 form {
     background-color: #fff;
     display: flex;
@@ -218,22 +237,30 @@ form {
     text-align: center;
 }
 
-/* Align-left utility class */
+/* Left alignment utility for RTL */
 form .align-left {
     text-align: left;
     width: 100%;
 }
 
-/* Inputs */
+/* Input styles */
 input {
     background-color: #eee;
-    border: none;
+    border: 2px solid transparent;
     padding: 12px 15px;
     margin: 8px 0;
     width: 100%;
+    border-radius: 5px;
+    transition: border-color 0.3s;
 }
 
-/* Links */
+/* Input focus effect */
+input:focus {
+    border-color: #3BAAE0;
+    outline: none;
+}
+
+/* Link styling */
 a {
     color: #333;
     font-size: 14px;
@@ -241,7 +268,7 @@ a {
     margin: 15px 0;
 }
 
-/* Checkbox styling */
+/* Checkbox appearance */
 input[type="checkbox"] {
     width: 14px;
     height: 14px;
@@ -249,7 +276,7 @@ input[type="checkbox"] {
     vertical-align: baseline;
 }
 
-/* Subtitle styling */
+/* Subtitle (h2) styling */
 h2 {
     font-size: 18px;
     font-weight: normal;
@@ -257,7 +284,76 @@ h2 {
     margin-bottom: 20px;
     text-align: left;
 }
-/* Media Queries for Responsive Design */
+
+/* Custom dropdown select styling */
+.custom-dropdown {
+    background-color: #eee;
+    border: 2px solid transparent;
+    padding: 12px 15px;
+    margin: 8px 0;
+    width: 100%;
+    border-radius: 5px;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #666;
+    transition: border-color 0.3s;
+  }
+  
+  .custom-dropdown:hover {
+    border-color: #3BAAE0;
+  }
+  
+
+
+
+/* Dropdown hover effect */
+.custom-dropdown:hover {
+    background-color: #ddd;
+}
+
+/* Dropdown focus border effect */
+.custom-dropdown:focus {
+    border-color: #3BAAE0;
+    outline: none;
+}
+
+/* Language switch button */
+.lang-switch-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #ffffff;
+    color: #333;
+    border: none;
+    padding: 8px 16px;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s ease;
+    z-index: 1000;
+}
+
+/* Hover effect for language button */
+.lang-switch-btn:hover {
+    background-color: #f0f0f0;
+}
+
+/* RTL "Remember me" styling */
+.remember-me {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    direction: rtl;
+}
+
+/* ----------------- Responsive Layout ----------------- */
+
+/* For medium screens */
 @media screen and (max-width: 1024px) {
     .container {
         max-width: 900px;
@@ -273,6 +369,7 @@ h2 {
     }
 }
 
+/* For tablets */
 @media screen and (max-width: 768px) {
     .container {
         max-width: 600px;
@@ -295,6 +392,7 @@ h2 {
     }
 }
 
+/* For small screens (mobiles) */
 @media screen and (max-width: 480px) {
     .container {
         max-width: 90%;
@@ -320,3 +418,136 @@ h2 {
         width: 100%;
     }
 }
+
+
+.custom-dropdown-wrapper{
+    width: 100%;
+    position: relative;
+}
+
+
+.custom-dropdown{
+    background-color: #eee;
+    border-radius: 5px;
+    cursor: pointer;
+    padding: 10px;
+    position: relative;
+}
+
+
+.dropdown-content{
+    display: none;
+    position: absolute;
+    top: 100%;
+    width: 100%;
+    background-color: white;
+    border: 1px solid #ccc;
+    z-index: 1000;
+    border-radius: 5px;
+    margin-top: 5px;
+}
+
+
+.dropdown-content input.dropdown-search{
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-bottom: 1px solid #ccc;
+}
+
+.dropdown-options{
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.dropdown-option{
+    padding: 10px;
+    cursor: pointer;
+}
+
+
+
+.dropdown-option:hover{
+    background-color: #f0f0f0;
+}
+
+
+
+
+.dropdown-toggle {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+
+
+  .custom-dropdown-wrapper {
+    position: relative;
+    width: 100%;
+    z-index: 10; /* 🔸 يحطها فوق باقي العناصر */
+  }
+  
+  
+  .custom-dropdown {
+    background-color: #eee;
+    border: 2px solid transparent;
+    border-radius: 5px;
+    padding: 12px 15px;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #666;
+    transition: border-color 0.3s;
+    cursor: pointer;
+  }
+  
+  .custom-dropdown:hover {
+    border-color: #3BAAE0;
+  }
+  
+  .dropdown-placeholder {
+    color: #999;
+  }
+  
+  .dropdown-content {
+    display: none;
+    position: absolute;
+    top: 105%;
+    left: 0;
+    width: 100%;
+    background-color: white;
+    border: 1px solid #ccc;
+    z-index: 1000;
+    border-radius: 5px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    max-height: 250px; /* 🔸 أقصى ارتفاع مناسب */
+    overflow-y: auto;   /* 🔸 يعمل Scroll لو زاد المحتوى */
+  }
+  
+  
+  .dropdown-search {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    outline: none;
+  }
+  
+  .dropdown-options {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  
+  .dropdown-option {
+    padding: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  
+  .dropdown-option:hover {
+    background-color: #f0f0f0;
+  }
+  
