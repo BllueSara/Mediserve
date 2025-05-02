@@ -153,6 +153,9 @@ function updatePopupHeadingAndFields(type) {
 
     if (typeCleaned === "pc") {
       fieldsHtml += `
+      <label>MAC Address:</label>
+<input type="text" name="mac-address" required>
+
         <label>Processor Generation:</label>
         <div class="custom-dropdown-wrapper">
           <div class="custom-dropdown">
@@ -314,6 +317,11 @@ function savePCSpec() {
 
   const deviceType = document.getElementById("device-type").value.toLowerCase();
 
+  // ✅ لو مو PC نحذف الماك من البيانات المرسلة
+  if (deviceType !== "pc") {
+    delete deviceData["mac-address"];
+  }
+
   fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -336,7 +344,6 @@ function savePCSpec() {
         dropdown.appendChild(option);
         dropdown.value = option.value;
 
-        // ✅ 👇 هذه الإضافة ضرورية لعرض الاسم بدل "Select"
         const displaySpan = document.getElementById("selected-device-spec");
         if (displaySpan) {
           displaySpan.textContent = option.textContent;
@@ -344,7 +351,6 @@ function savePCSpec() {
 
         popup.style.display = "none";
         fetchDeviceSpecsByTypeAndDepartment();
-
       } else {
         alert("❌ فشل في الحفظ: " + result.error);
       }
