@@ -149,9 +149,46 @@ function updatePopupHeadingAndFields(type) {
       </div>
       <input type="hidden" id="department-${typeCleaned}" name="department" required>
     `;
-
+    if (typeCleaned === "printer") {
+      fieldsHtml += `
+      <label>Printer Type:</label>
+      <div class="custom-dropdown-wrapper">
+        <div class="custom-dropdown">
+          <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+            <span id="selected-printer-type">Select Printer Type</span>
+            <span>▼</span>
+          </div>
+          <div class="dropdown-content">
+            <input type="text" class="dropdown-search" placeholder="Search printer type..." oninput="filterDropdown(this, 'printer-type-options')">
+            <div class="dropdown-options" id="printer-type-options"></div>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" id="printer-type" name="printer-type">
+    
+      <label>Ink Type:</label>
+      <div class="custom-dropdown-wrapper">
+        <div class="custom-dropdown">
+          <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+            <span id="selected-ink-type">Select Ink Type</span>
+            <span>▼</span>
+          </div>
+          <div class="dropdown-content">
+            <input type="text" class="dropdown-search" placeholder="Search ink type..." oninput="filterDropdown(this, 'ink-type-options')">
+            <div class="dropdown-options" id="ink-type-options"></div>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" id="ink-type" name="ink-type">
+    
+      <label>Ink Serial Number:</label>
+      <input type="text" name="ink-serial-number">
+      `;
+    }
     if (typeCleaned === "pc") {
       fieldsHtml += `
+            <label>MAC Address:</label>
+<input type="text" name="mac-address" required>
         <label>Processor Generation:</label>
         <div class="custom-dropdown-wrapper">
           <div class="custom-dropdown">
@@ -281,6 +318,10 @@ function updatePopupHeadingAndFields(type) {
       fetchDrives(); // ✅ أضفناها هنا
       fetchRAMSize(); // ✅ أضفناها هنا
 
+    }   if(typeCleaned ==="printer"){
+      fetchPrinterTypes();
+      fetchInkTypes();
+      
     }
   } else {
     popupHeading.textContent = "Enter Device Specifications";
@@ -310,6 +351,11 @@ function savePCSpec() {
 
   const deviceType = document.getElementById("device-type").value.toLowerCase();
 
+  // ✅ لو مو PC نحذف الماك من البيانات المرسلة
+  if (deviceType !== "pc") {
+    delete deviceData["mac-address"];
+  }
+
   fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -332,7 +378,6 @@ function savePCSpec() {
         dropdown.appendChild(option);
         dropdown.value = option.value;
 
-        // ✅ 👇 هذه الإضافة ضرورية لعرض الاسم بدل "Select"
         const displaySpan = document.getElementById("selected-device-spec");
         if (displaySpan) {
           displaySpan.textContent = option.textContent;
@@ -340,7 +385,6 @@ function savePCSpec() {
 
         popup.style.display = "none";
         fetchDeviceSpecsByTypeAndDepartment();
-
       } else {
         alert("❌ فشل في الحفظ: " + result.error);
       }
@@ -348,6 +392,167 @@ function savePCSpec() {
     .catch(err => {
       console.error("❌ خطأ أثناء الاتصال بالسيرفر:", err);
       alert("❌ حدث خطأ في الاتصال بالسيرفر. تأكد أن السيرفر يعمل");
+    });
+}
+
+function fetchPrinterTypes() {
+  fetch("http://localhost:5050/Printer_Types")
+    .then(res => res.json())
+    .then(data => {
+      const optionsContainer = document.getElementById("printer-type-options");
+      const displaySpan = document.getElementById("selected-printer-type");
+      const hiddenInput = document.getElementById("printer-type");
+
+      if (!optionsContainer || !displaySpan || !hiddenInput) return;
+
+      optionsContainer.innerHTML = "";
+
+      // + Add New Printer Type
+      const addNewRow = document.createElement("div");
+      addNewRow.className = "dropdown-option-row add-new-option";
+      addNewRow.innerHTML = `<div class="dropdown-option-text">+ Add New Printer Type</div>`;
+      addNewRow.onclick = () => {
+        sessionStorage.setItem("lastDropdownOpened", "printer-type");
+        openAddOptionPopup("printer-type");
+        closeAllDropdowns();
+      };
+      optionsContainer.appendChild(addNewRow);
+
+      data.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "dropdown-option-row";
+
+        const text = document.createElement("div");
+        text.className = "dropdown-option-text";
+        text.textContent = item.printer_type;
+        text.onclick = () => {
+          displaySpan.textContent = item.printer_type;
+          hiddenInput.value = item.printer_type;
+          closeAllDropdowns();
+        };
+
+        const icons = document.createElement("div");
+        icons.className = "dropdown-actions-icons";
+
+        const editIcon = document.createElement("i");
+        editIcon.className = "fas fa-edit";
+        editIcon.title = "Edit";
+        editIcon.onclick = (e) => {
+          e.stopPropagation();
+          const newValue = prompt("Edit Printer Type:", item.printer_type);
+          if (newValue) {
+            editOption("printer-type", item.printer_type, newValue);
+          }
+        };
+
+        const deleteIcon = document.createElement("i");
+        deleteIcon.className = "fas fa-trash";
+        deleteIcon.title = "Delete";
+        deleteIcon.onclick = (e) => {
+          e.stopPropagation();
+          if (confirm(`Delete "${item.printer_type}"?`)) {
+            deleteOption("printer-type", item.printer_type);
+          }
+        };
+
+        icons.appendChild(editIcon);
+        icons.appendChild(deleteIcon);
+        row.appendChild(text);
+        row.appendChild(icons);
+        optionsContainer.appendChild(row);
+      });
+
+      const saved = sessionStorage.getItem("printer-type");
+      if (saved) {
+        displaySpan.textContent = saved;
+        hiddenInput.value = saved;
+        sessionStorage.removeItem("printer-type");
+      }
+
+      attachEditDeleteHandlers("printer-type-options", "Printer Type");
+    })
+    .catch(err => {
+      console.error("❌ Error fetching printer types:", err);
+    });
+}
+function fetchInkTypes() {
+  fetch("http://localhost:5050/Ink_Types")
+    .then(res => res.json())
+    .then(data => {
+      const optionsContainer = document.getElementById("ink-type-options");
+      const displaySpan = document.getElementById("selected-ink-type");
+      const hiddenInput = document.getElementById("ink-type");
+
+      if (!optionsContainer || !displaySpan || !hiddenInput) return;
+
+      optionsContainer.innerHTML = "";
+
+      // + Add New Ink Type
+      const addNewRow = document.createElement("div");
+      addNewRow.className = "dropdown-option-row add-new-option";
+      addNewRow.innerHTML = `<div class="dropdown-option-text">+ Add New Ink Type</div>`;
+      addNewRow.onclick = () => {
+        sessionStorage.setItem("lastDropdownOpened", "ink-type");
+        openAddOptionPopup("ink-type");
+        closeAllDropdowns();
+      };
+      optionsContainer.appendChild(addNewRow);
+
+      data.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "dropdown-option-row";
+
+        const text = document.createElement("div");
+        text.className = "dropdown-option-text";
+        text.textContent = item.ink_type;
+        text.onclick = () => {
+          displaySpan.textContent = item.ink_type;
+          hiddenInput.value = item.ink_type;
+          closeAllDropdowns();
+        };
+
+        const icons = document.createElement("div");
+        icons.className = "dropdown-actions-icons";
+
+        const editIcon = document.createElement("i");
+        editIcon.className = "fas fa-edit";
+        editIcon.title = "Edit";
+        editIcon.onclick = (e) => {
+          e.stopPropagation();
+          const newValue = prompt("Edit Ink Type:", item.ink_type);
+          if (newValue) {
+            editOption("ink-type", item.ink_type, newValue);
+          }
+        };
+
+        const deleteIcon = document.createElement("i");
+        deleteIcon.className = "fas fa-trash";
+        deleteIcon.title = "Delete";
+        deleteIcon.onclick = (e) => {
+          e.stopPropagation();
+          if (confirm(`Delete "${item.ink_type}"?`)) {
+            deleteOption("ink-type", item.ink_type);
+          }
+        };
+
+        icons.appendChild(editIcon);
+        icons.appendChild(deleteIcon);
+        row.appendChild(text);
+        row.appendChild(icons);
+        optionsContainer.appendChild(row);
+      });
+
+      const saved = sessionStorage.getItem("ink-type");
+      if (saved) {
+        displaySpan.textContent = saved;
+        hiddenInput.value = saved;
+        sessionStorage.removeItem("ink-type");
+      }
+
+      attachEditDeleteHandlers("ink-type-options", "Ink Type");
+    })
+    .catch(err => {
+      console.error("❌ Error fetching ink types:", err);
     });
 }
 
@@ -1036,7 +1241,8 @@ function openAddOptionPopup(targetId) {
   else if (targetId === "ram-size-select") label = "RAM Size";
 
   else if (targetId === "generation-select") label = "Processor Generation";
-
+  else if (targetId === "printer-type") label = "Printer Type";
+  else if (targetId === "ink-type") label = "Ink Type";
   const popup = document.getElementById("generic-popup");
   popup.innerHTML = `
     <div class="popup-content">
@@ -1081,6 +1287,8 @@ function saveOptionForSelect() {
         else if (targetId === "generation-select") fetchProcessorGen();
         else if (targetId === "drive-select") fetchDrives();
         else if (targetId === "ram-size-select") fetchRAMSize();
+        else if (targetId === "printer-type") fetchPrinterTypes();
+        else if (targetId === "ink-type") fetchInkTypes();
 
         // ✅ نحفظ القيمة الجديدة عشان نرجع نحددها تلقائيًا
         sessionStorage.setItem(targetId, value);
@@ -1488,6 +1696,8 @@ function mapSelectIdToServerTarget(selectId) {
     "drive-select": "drive-select",
     "cpu-select": "cpu-select",
     "ram-select": "ram-select",
+    "printer-type": "printer-type",
+    "ink-type": "ink-type",
     "ram-size-select": "ram-size-select",
     "os-select": "os-select",
     "generation-select": "generation-select",
@@ -1555,7 +1765,14 @@ function refreshDropdown(selectId) {
     fetchOS();
   } else if (selectId === "drive-select") {
     fetchDrives();
-  } else if (selectId === "generation-select") {
+  }
+  else if (selectId === "printer-type") {
+    fetchPrinterTypes();
+  }
+  else if (selectId === "ink-type") {
+    fetchInkTypes();
+  }
+   else if (selectId === "generation-select") {
     fetchProcessorGen();
   } else if (selectId.startsWith("model-")) {
     const type = selectId.replace("model-", "");

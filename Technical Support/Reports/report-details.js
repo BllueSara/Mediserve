@@ -20,6 +20,8 @@ document.addEventListener("DOMContentLoaded", () => {
     .then(report => {
       console.log("📦 التقرير:", report);
 
+      
+
       reportData = report;
       const isExternal = report.source === "external";
 
@@ -43,7 +45,6 @@ document.addEventListener("DOMContentLoaded", () => {
           specsContainer.innerHTML = "";
           
           const deviceType = report.device_type?.trim()?.toLowerCase() || "";
-          
           const fields = [
             { label: "🔘 Device Name:", value: report.device_name, alwaysShow: true },
             { label: "🔑 Serial Number:", value: report.serial_number, alwaysShow: true },
@@ -53,18 +54,22 @@ document.addEventListener("DOMContentLoaded", () => {
             { label: "🖥️ OS:", value: report.os_name, showForPC: true },
             { label: "📶 Generation:", value: report.generation_number, showForPC: true },
             { label: "🔧 Model:", value: report.model_name, alwaysShow: true },
-            { label: "📟 Device Type:", value: report.device_type,
-              
-             },
-             { label: "💽 Hard Drive:", value: report.drive_type, showForPC: true },
-             { label: "📏 RAM Size:", value: report.ram_size, showForPC: true },
-
-
+            { label: "📟 Device Type:", value: report.device_type },
+            { label: "💽 Hard Drive:", value: report.drive_type, showForPC: true },
+            { label: "📏 RAM Size:", value: report.ram_size, showForPC: true },
+            { label: "🌐 MAC Address:", value: report.mac_address, showForPC: true },
+            { label: "🖨️ Printer Type:", value: report.printer_type, showForPrinter: true },
+            { label: "🖋️ Ink Type:", value: report.ink_type, showForPrinter: true },
+            { label: "🔖 Ink Serial Number:", value: report.ink_serial_number, showForPrinter: true },
           ];
           
-          fields.forEach(({ label, value, showForPC, alwaysShow }) => {
+          fields.forEach(({ label, value, showForPC, showForPrinter, alwaysShow }) => {
             const shouldShow =
-              alwaysShow || (showForPC && deviceType === "pc") || !!value;
+              alwaysShow ||
+              isInternal ||
+              (showForPC && deviceType === "pc") ||
+              (showForPrinter && deviceType === "printer") ||
+              !!value;
           
             if (shouldShow) {
               const div = document.createElement("div");
@@ -73,6 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
               specsContainer.appendChild(div);
             }
           });
+          
           
           
           
@@ -156,15 +162,106 @@ if (!ticketNumber) {
       if (report.maintenance_type === "Regular") {
         document.getElementById("description").textContent =
           report.problem_status || report.issue_summary || report.initial_diagnosis || "No description.";
-      }else{
-        document.getElementById("description").textContent =
-          report.issue_summary || report.initial_diagnosis || "No description.";
+      }else {
+        const problem = (report.problem_status || "").trim();
+        const summary = (report.issue_summary || report.initial_diagnosis || "").trim();
+        const isInternalTicket = report.maintenance_type === "Internal";
+      
+        let descriptionHtml = "";
+      
+        // لو Internal Ticket → اعرض فقط problem_status
+        if (isInternalTicket) {
+          descriptionHtml = summary || "No description.";
+        } 
+        else {
+          const normalizedProblem = problem.toLowerCase();
+          const normalizedSummary = summary.toLowerCase();
+      
+          if (problem && summary) {
+            if (normalizedSummary.includes(normalizedProblem)) {
+              descriptionHtml = summary;
+            } else if (normalizedProblem.includes(normalizedSummary)) {
+              descriptionHtml = problem;
+            } else {
+              descriptionHtml = `${summary}<br>${problem}`;
+            }
+          } 
+          else if (problem) {
+            descriptionHtml = problem;
+          } 
+          else if (summary) {
+            descriptionHtml = summary;
+          } 
+          else {
+            descriptionHtml = "No description.";
+          }
+        }
+      
+        document.getElementById("description").innerHTML = descriptionHtml;
       }
-    
-      document.getElementById("note").innerHTML = `
-        <strong>${isExternal ? "Final Diagnosis" : "Technical Team Note"}:</strong><br>
-        ${report.full_description || report.final_diagnosis || "No notes."}
-      `;
+      
+      
+      
+      if (report.maintenance_type === "General") {
+        const generalInfo = [
+          ["Customer Name", report.customer_name],
+          ["ID Number", report.id_number],
+          ["Ext Number", report.extension],
+          ["Initial Diagnosis", report.diagnosis_initial],
+          ["Final Diagnosis", report.diagnosis_final],
+          ["Floor", report.floor],
+        ];
+      
+        const generalHtml = generalInfo.map(([label, value]) =>
+          `<div class="info-row"><span class="info-label">${label}:</span><span class="info-value">${value || "N/A"}</span></div>`
+        ).join("");
+      
+        document.getElementById("note").innerHTML = `
+          <div class="info-box">
+            <div class="info-title">Additional Information:</div>
+            ${generalHtml}
+          </div>
+        `;
+      } else {
+        let noteHtml = `
+          <div class="info-box">
+            <div class="info-title">${isExternal ? "Final Diagnosis" : "Technical Team Note"}:</div>
+            <div class="info-row">
+              <span class="info-value">${report.full_description || report.final_diagnosis || "No notes."}</span>
+            </div>
+          </div>
+        `;
+      
+        // ✅ إضافة box جديد إذا فيه ticket_type
+        if (report.ticket_type) {
+          noteHtml += `
+            <div class="info-box" style="margin-top:10px;">
+              <div class="info-title">Issue Summary:</div>
+              <div class="info-row">
+                <span class="info-value">${report.issue_description}</span>
+              </div>
+            </div>
+          `;
+        }
+      
+        // ✅ Box المانجر القديم
+        if (report.source === "external-legacy" && report.maintenance_manager) {
+          noteHtml += `
+            <div class="info-box" style="margin-top:10px;">
+              <div class="info-title">Maintenance Manager:</div>
+              <div class="info-row">
+                <span class="info-value">${report.maintenance_manager}</span>
+              </div>
+            </div>
+          `;
+        }
+      
+        document.getElementById("note").innerHTML = noteHtml;
+      }
+      
+      
+      
+      
 
       const specs = [];
       if (report.device_name) specs.push(`🔘 Device Name: ${report.device_name}`);
@@ -177,7 +274,12 @@ if (!ticketNumber) {
       if (report.model_name) specs.push(`🔧 Model: ${report.model_name}`);
       if (report.drive_type) specs.push(`💽 Hard Drive: ${report.drive_type}`);
       if (report.ram_size) specs.push(`📏 RAM Size: ${report.ram_size}`);
-
+      if (report.mac_address) specs.push(`🌐 MAC Address: ${report.mac_address}`);
+      if (report.mac_address) specs.push(`🌐 MAC Address: ${report.mac_address}`);
+      if (report.printer_type) specs.push(`🖨️ Printer Type: ${report.printer_type}`);
+      if (report.ink_type) specs.push(`🖋️ Ink Type: ${report.ink_type}`);
+      if (report.ink_serial_number) specs.push(`🔖 Ink Serial Number: ${report.ink_serial_number}`);
+      
 
       
 
@@ -188,7 +290,6 @@ if (!ticketNumber) {
         specsContainer.innerHTML = "";
         
         const deviceType = (report.device_type || "").trim().toLowerCase();
-        const isInternal = report.maintenance_type === "Internal";
         
         const fields = [
           { label: "🔘 Device Name:", value: report.device_name, alwaysShow: true },
@@ -202,11 +303,18 @@ if (!ticketNumber) {
           { label: "📟 Device Type:", value: report.device_type },
           { label: "💽 Hard Drive:", value: report.drive_type, showForPC: true },
           { label: "📏 RAM Size:", value: report.ram_size, showForPC: true },
+          { label: "🌐 MAC Address:", value: report.mac_address, showForPC: true },
+          { label: "🖨️ Printer Type:", value: report.printer_type, showForPrinter: true },
+          { label: "🖋️ Ink Type:", value: report.ink_type, showForPrinter: true },
+          { label: "🔖 Ink Serial Number:", value: report.ink_serial_number, showForPrinter: true },
         ];
         
-        fields.forEach(({ label, value, showForPC, alwaysShow }) => {
+        fields.forEach(({ label, value, showForPC, showForPrinter, alwaysShow }) => {
           const shouldShow =
-            alwaysShow || isInternal || (showForPC && deviceType === "pc") || !!value;
+            alwaysShow ||
+            (showForPC && deviceType === "pc") ||
+            (showForPrinter && deviceType === "printer") ||
+            !!value;
         
           if (shouldShow) {
             const div = document.createElement("div");
@@ -215,6 +323,7 @@ if (!ticketNumber) {
             specsContainer.appendChild(div);
           }
         });
+        
         
       }
       
@@ -298,10 +407,22 @@ if (!ticketNumber) {
   if (showNote) {
     doc.setFont("helvetica", "bold").text("Technical Notes:", 15, y);
     y += 6;
-    const lines = doc.splitTextToSize(document.getElementById("note")?.textContent?.replace(/^.*?:\s*/, "") || "", pageWidth - 30);
-    doc.setFont("helvetica", "normal").text(lines, 15, y);
-    y += lines.length * 6 + 5;
+  
+    const noteElement = document.getElementById("note");
+    if (noteElement) {
+      const rows = Array.from(noteElement.querySelectorAll(".info-row"));
+      rows.forEach(row => {
+        const label = row.querySelector(".info-label")?.textContent || "";
+        const value = row.querySelector(".info-value")?.textContent || "";
+        const line = `${label} ${value}`;
+        const lines = doc.splitTextToSize(line, pageWidth - 30);
+        doc.setFont("helvetica", "normal").text(lines, 15, y);
+        y += lines.length * 6 + 2;
+      });
+    }
+    y += 5;
   }
+  
 
   if (showSpecs) {
     doc.setFont("helvetica", "bold").text("Device Specifications:", 15, y);
@@ -378,9 +499,10 @@ if (!ticketNumber) {
       technical: document.getElementById("assigned-to")?.innerText.trim(),
       department_name: document.getElementById("department")?.innerText.trim(),
       category: document.getElementById("category")?.innerText.trim() === "" ? null : document.getElementById("category")?.innerText.trim(),
-      source: reportData.source || reportType, // ✅ أضف هذا السطر
-      device_id: reportData.device_id || null, // ✅ هذا هو
-
+      source: reportData.source || reportType,
+      device_id: reportData.device_id || null,
+      mac_address: reportData.mac_address || null,
+    
       device_name: null,
       serial_number: null,
       governmental_number: null,
@@ -390,31 +512,37 @@ if (!ticketNumber) {
       ram_size: null,
       os_name: null,
       generation_number: null,
-      model_name: null
-
+      model_name: null,
+      printer_type: null,
+      ink_type: null,
+      ink_serial_number: null,
     };
+    
   
     // مواصفات الجهاز
   // مواصفات الجهاز
-document.querySelectorAll("#device-specs .spec-box").forEach(box => {
-  const [rawLabel, value] = box.textContent.split(":").map(str => str.trim());
-  const label = rawLabel.toLowerCase().replace(/[^\w]/gi, "").trim(); // تنظيف الرموز والمسافات
-
-  switch (label) {
-    case "devicename": updatedData.device_name = value; break;
-    case "serialnumber": updatedData.serial_number = value; break;
-    case "ministrynumber": updatedData.governmental_number = value; break;
-    case "cpu": updatedData.cpu_name = value; break;
-    case "ram": updatedData.ram_type = value; break;
-    case "os": updatedData.os_name = value; break;
-    case "generation": updatedData.generation_number = value; break;
-    case "model": updatedData.model_name = value; break;
-    case "harddrive": updatedData.drive_type = value; break; // ✅ الجديد
-    case "ramsize": updatedData.ram_size = value; break;
-
-
-  }
-});
+  document.querySelectorAll("#device-specs .spec-box").forEach(box => {
+    const [rawLabel, value] = box.textContent.split(":").map(str => str.trim());
+    const label = rawLabel.toLowerCase().replace(/[^\w]/gi, "").trim();
+  
+    switch (label) {
+      case "devicename": updatedData.device_name = value; break;
+      case "serialnumber": updatedData.serial_number = value; break;
+      case "ministrynumber": updatedData.governmental_number = value; break;
+      case "cpu": updatedData.cpu_name = value; break;
+      case "ram": updatedData.ram_type = value; break;
+      case "os": updatedData.os_name = value; break;
+      case "generation": updatedData.generation_number = value; break;
+      case "model": updatedData.model_name = value; break;
+      case "harddrive": updatedData.drive_type = value; break;
+      case "ramsize": updatedData.ram_size = value; break;
+      case "macaddress": updatedData.mac_address = value; break;
+      case "printertype": updatedData.printer_type = value; break;
+      case "inktype": updatedData.ink_type = value; break;
+      case "inkserialnumber": updatedData.ink_serial_number = value; break;
+    }
+  });
+  
 
     const fileInput = document.getElementById("attachment-input");
     const file = fileInput.files[0];

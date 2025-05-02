@@ -258,3 +258,39 @@ header {
   background-color: #e5e7eb;
   color: #374151;
 }
+.info-box {
+  background-color: #f5f7fa;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 10px 15px;
+  margin-top: 10px;
+  max-width: 600px;
+  font-family: Arial, sans-serif;
+}
+
+.info-title {
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px dotted #ddd;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-weight: 500;
+  color: #555;
+}
+
+.info-value {
+  color: #000;
+}
