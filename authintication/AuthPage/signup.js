@@ -134,7 +134,7 @@ document.getElementById("signupForm").addEventListener("submit", function (event
         .then((data) => {
             if (data.message === " User resgistered successfully") {
                 alert("Registration successful!");
-                window.location.href = "Home/Home.html";
+                window.location.href = "/Home/Home.html";
             } else {
                 errorMessage.textContent = data.message;
             }
@@ -171,7 +171,7 @@ document.getElementById("loginForm").addEventListener("submit", function (event)
                 localStorage.setItem("userRole", data.role); // 🔧 تم تصحيح الكلمة
                 localStorage.setItem("userName", data.user.name);
 
-                window.location.href = "Home/Home.html";
+                window.location.href = "/Home/Home.html";
 
             } else {
                 errorMessage.textContent = data.message || "Login failed.";
