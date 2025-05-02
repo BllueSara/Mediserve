@@ -45,24 +45,6 @@ const upload = multer({
 });
 
 
-const admin = {
-  email: 'admin',
-  password: 'Eng.2030&Admin'
-};
-
-
-
-app.post("/login", (req, res) => {
-  const {email, password} = req.body;
-
-
-  if (email == admin.email && password == admin.password){
-    res.status(200).json({success: true })
-  }
-  else {
-    res.status(401).json({ success: fals })
-  }
-})
 
 app.get("/floors", (req, res) => {
   const query = "SELECT * FROM Floors";
