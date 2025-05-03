@@ -170,6 +170,8 @@ document.getElementById("loginForm").addEventListener("submit", function (event)
                 localStorage.setItem("token", data.token);
                 localStorage.setItem("userRole", data.role); // 🔧 تم تصحيح الكلمة
                 localStorage.setItem("userName", data.user.name);
+                localStorage.setItem("userEmail", data.user.email);
+
 
                 window.location.href = "/Home/Home.html";
 
