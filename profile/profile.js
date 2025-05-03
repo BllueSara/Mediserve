@@ -1,19 +1,16 @@
 window.addEventListener("DOMContentLoaded", () => {
-    const usernameInput = document.getElementById("username");
-    const emailInput = document.getElementById("email");
-    const roleInput = document.getElementById("role");
-  
-    // جلب البيانات من localStorage
     const name = localStorage.getItem("userName");
-    const email = localStorage.getItem("userEmail"); // تأكد من تخزينه وقت تسجيل الدخول
+    const email = localStorage.getItem("userEmail");
     const role = localStorage.getItem("userRole");
-  
-    if (name) usernameInput.value = name;
-    if (email) emailInput.value = email;
-    if (role) roleInput.value = role;
-  });
-  
-  function signOutClicked() {
-    localStorage.clear(); // مسح كل البيانات
-  }
-  
+
+    console.log("Loaded from storage:", { name, email, role }); // للتأكد من التخزين
+
+    // عرض البيانات
+    document.getElementById("username").value = name;
+    document.getElementById("email").value = email;
+    document.getElementById("role").value = role;
+});
+
+function signOutClicked() {
+    localStorage.clear();
+}
