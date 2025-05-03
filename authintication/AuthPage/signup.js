@@ -168,7 +168,7 @@ document.getElementById("loginForm").addEventListener("submit", function (event)
         .then(data => {
             if (data.token) {
                 localStorage.setItem("token", data.token);
-                localStorage.setItem("userRole", data.role); // 🔧 تم تصحيح الكلمة
+                localStorage.setItem("userRole", data.role); 
                 localStorage.setItem("userName", data.user.name);
                 localStorage.setItem("userEmail", data.user.email);
 
