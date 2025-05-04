@@ -62,7 +62,8 @@ document.addEventListener("DOMContentLoaded", () => {
             { label: "🖋️ Ink Type:", value: report.ink_type, showForPrinter: true },
             { label: "🔖 Ink Serial Number:", value: report.ink_serial_number, showForPrinter: true },
           ];
-          
+          const isInternal = false;
+
           fields.forEach(({ label, value, showForPC, showForPrinter, alwaysShow }) => {
             const shouldShow =
               alwaysShow ||
@@ -83,22 +84,25 @@ document.addEventListener("DOMContentLoaded", () => {
           
           
         }
+        const attachmentSection = document.getElementById("attachment-section");
 
+        // ✅ عرض المرفق إذا موجود
+        if (report.attachment_name && report.attachment_path) {
+          const attachmentLink = document.createElement("a");
+          attachmentLink.href = `http://localhost:5050/uploads/${report.attachment_path}`;
+          attachmentLink.textContent = `📎 ${report.attachment_name}`;
+          attachmentLink.download = report.attachment_name;
+          attachmentLink.style = "display: block; margin-top: 10px; color: #007bff; text-decoration: underline;";
+          attachmentSection.appendChild(attachmentLink);
+        }
+        
+        // ✅ عرض التوقيع إذا موجود (نفس مكان المرفق)
         if (report.signature_path) {
           const sigImg = document.createElement("img");
           sigImg.src = `http://localhost:5050/${report.signature_path}`;
           sigImg.alt = "Signature";
-          sigImg.style = "margin-top: 10px; max-width: 200px; border: 1px solid #ccc";
-          specsContainer.appendChild(sigImg);
-        }
-        if (report.attachment_name && report.attachment_path) {
-          const attachmentSection = document.getElementById("attachment-section");
-          const attachmentLink = document.createElement("a");
-          attachmentLink.href = `http://localhost:5050/uploads/${report.attachment_path}`; // ✅ التصحيح هنا
-          attachmentLink.textContent = `📎 ${report.attachment_name}`;
-          attachmentLink.download = report.attachment_name;
-          attachmentLink.style = "display: inline-block; margin-top: 10px; color: #007bff; text-decoration: underline;";
-          attachmentSection.appendChild(attachmentLink); // ✅ يوديه لمكانه الصحيح
+          sigImg.style = "margin-top: 10px; max-width: 200px; border: 1px solid #ccc; display: block;";
+          attachmentSection.appendChild(sigImg);
         }
         
         

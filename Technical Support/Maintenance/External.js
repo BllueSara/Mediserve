@@ -2655,11 +2655,13 @@ document.addEventListener("DOMContentLoaded", function () {
     };
 
     console.log("📤 Sending data to server:", data); // للتأكد من البيانات
+    const token = localStorage.getItem('token');  // احفظ التوكن بعد تسجيل الدخول
 
     fetch("http://localhost:5050/submit-external-maintenance", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
       },
       body: JSON.stringify(data)
     })

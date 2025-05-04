@@ -132,13 +132,20 @@ document.getElementById("signupForm").addEventListener("submit", function (event
     })
         .then((res) => res.json())
         .then((data) => {
-            if (data.message === " User resgistered successfully") {
+            if (data.token) {
+                localStorage.setItem("userId", data.user.id);  // ← صح هنا
+                localStorage.setItem("token", data.token);
+                localStorage.setItem("userRole", data.role);
+                localStorage.setItem("userName", data.user.name);
+                localStorage.setItem("userEmail", data.user.email);
+        
                 alert("Registration successful!");
                 window.location.href = "/Home/Home.html";
             } else {
                 errorMessage.textContent = data.message;
             }
         })
+        
         .catch((error) => {
             console.error("Signup error:", error);
             errorMessage.textContent = "Server error. Please try again later.";
@@ -171,6 +178,8 @@ document.getElementById("loginForm").addEventListener("submit", function (event)
                 localStorage.setItem("userRole", data.role); 
                 localStorage.setItem("userName", data.user.name);
                 localStorage.setItem("userEmail", data.user.email);
+                localStorage.setItem("userId", data.user.id); // ⬅️ مهم جداً
+
 
 
                 window.location.href = "/Home/Home.html";

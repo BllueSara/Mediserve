@@ -63,7 +63,13 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function loadExternalReports(page = 1) {
-  fetch(`http://localhost:5050/get-external-reports?page=${page}`)
+  const token = localStorage.getItem('token');  // ✅ احصل على التوكن من localStorage
+
+  fetch(`http://localhost:5050/get-external-reports?page=${page}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`  // ✅ أرسل التوكن في الهيدر
+    }
+  })
     .then(res => res.json())
     .then(data => {
       const container = document.getElementById("report-list");

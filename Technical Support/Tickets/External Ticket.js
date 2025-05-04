@@ -1675,10 +1675,13 @@ document.querySelector("form").addEventListener("submit", function (e) {
   // إرسال البيانات إلى السيرفر
   async function submitExternalTicket(data) {
     try {
+      const token = localStorage.getItem('token');  // احفظ التوكن بعد تسجيل الدخول
+
       const response = await fetch("http://localhost:5050/external-ticket-with-file", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify(data)
       });
