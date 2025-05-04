@@ -12,5 +12,9 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 function signOutClicked() {
-    localStorage.clear();
-}
+    localStorage.removeItem("token");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userId"); // ⬅️ مهم تنظفها
+    window.location.href = "/login.html";}

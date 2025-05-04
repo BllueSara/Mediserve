@@ -70,8 +70,13 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function loadReports(page = 1) {
-  fetch(`http://localhost:5050/get-internal-reports?page=${page}`)
-    .then(res => res.json())
+const token = localStorage.getItem('token');
+fetch(`http://localhost:5050/get-internal-reports`, {
+    headers: {
+        "Authorization": `Bearer ${token}`
+    }
+})
+  .then(res => res.json())
     .then(data => {
       const container = document.getElementById("report-list");
       container.innerHTML = "";
