@@ -1,0 +1,8 @@
+#notifications-list::-webkit-scrollbar {
+    width: 6px;
+  }
+  #notifications-list::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 3px;
+  }
+  
