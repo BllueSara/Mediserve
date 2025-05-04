@@ -6,11 +6,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Enterprise Technology Solutions</title>
     <link rel="stylesheet" href="/Home/Home.css" />
+    <link rel="stylesheet" href="/Notifications/notifications.css">
+
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="/Notifications/notifications.js"></script>
+
 </head>
 
 <body class="bg-gray-40">
-
+    <div id="notifications-popup" class="hidden fixed top-20 right-6 w-96 bg-white shadow-lg rounded-lg overflow-hidden z-50">
+        <div class="flex justify-between items-center p-4 border-b">
+          <h3 class="text-lg font-semibold">Notifications</h3>
+          <button onclick="clearNotifications()" class="text-blue-500 text-sm">Clear all</button>
+        </div>
+        <div id="notifications-list" class="max-h-80 overflow-y-auto"></div>
+        <div class="text-center p-2 bg-gray-50 text-blue-500 cursor-pointer" onclick="viewAll()">View All Notifications</div>
+      </div>
+      
     <header class="relative bg-white px-6 py-4 w-full flex items-center justify-between">
         <!-- يسار: شعار MS -->
         <div class="absolute left-6 top-4">
