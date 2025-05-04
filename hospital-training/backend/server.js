@@ -2,9 +2,10 @@ const express = require("express");
 const cors = require("cors");
 const db = require("./db");
 const path = require("path");
-
+const jwt = require('jsonwebtoken');
 const app = express();
 const port = 5050;
+const JWT_SECRET = 'super_secret_key_123';
 
 app.use(express.json());
 app.use(cors());
@@ -32,6 +33,17 @@ const storage = multer.diskStorage({
   },
 });
 
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ message: 'No token provided' });
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ message: 'Invalid token' });
+    req.user = user;  // ← هنا يصير معك user.id في كل route
+    next();
+  });
+}
 
 
 // إعداد رفع ملف واحد فقط باسم `attachment`
@@ -262,7 +274,8 @@ app.get("/device-specifications", (req, res) => {
 });
 
 
-app.post("/submit-external-maintenance", async (req, res) => {
+app.post("/submit-external-maintenance",authenticateToken, async (req, res) => {
+  const userId = req.user.id;
   const {
     ticket_number,
     device_type: rawDeviceType,
@@ -340,8 +353,8 @@ WHERE md.id = ?
           serial_number, governmental_number, device_name,
           department_name, cpu_name, ram_type, os_name,
           generation_number, model_name, drive_type, ram_size, mac_address,
-          printer_type, ink_type, ink_serial_number
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          printer_type, ink_type, ink_serial_number, user_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
         const values = [
           ticket_number,
@@ -366,7 +379,8 @@ WHERE md.id = ?
           deviceInfo.mac_address,
           deviceInfo.printer_type,
           deviceInfo.ink_type,
-          deviceInfo.ink_serial_number
+          deviceInfo.ink_serial_number,
+          userId
         ];
         db.query(sql, values, (err) => {
           if (err) return reject(err);
@@ -384,8 +398,8 @@ WHERE md.id = ?
           serial_number, governmental_number, device_name,
           department_name, cpu_name, ram_type, os_name,
           generation_number, model_name, drive_type, ram_size, mac_address,
-          printer_type, ink_type, ink_serial_number
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          printer_type, ink_type, ink_serial_number, user_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
         const values = [
           ticket_number,
@@ -410,7 +424,8 @@ WHERE md.id = ?
           deviceInfo.mac_address,
           deviceInfo.printer_type,
           deviceInfo.ink_type,
-          deviceInfo.ink_serial_number
+          deviceInfo.ink_serial_number,
+          userId
         ];
         db.query(sql, values, (err) => {
           if (err) return reject(err);
@@ -478,7 +493,9 @@ app.get("/devices/:type/:department", (req, res) => {
     res.json(result);
   });
 });
-app.post("/submit-regular-maintenance", async (req, res) => {
+
+app.post("/submit-regular-maintenance", authenticateToken, async (req, res) => {
+  const userId = req.user.id;    
   const {
     "maintenance-date": date,
     frequency,
@@ -548,8 +565,9 @@ app.post("/submit-regular-maintenance", async (req, res) => {
           device_id, device_type, last_maintenance_date, frequency, checklist, notes,
           serial_number, governmental_number, device_name, department_name,
           cpu_name, ram_type, ram_size, os_name, generation_number, model_name, drive_type, status,
-          problem_status, technical_engineer_id, mac_address, printer_type, ink_type, ink_serial_number
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          problem_status, technical_engineer_id, mac_address, printer_type, ink_type, ink_serial_number,
+          user_id  -- ⬅️ أضف هذا
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         deviceSpec,
@@ -575,51 +593,55 @@ app.post("/submit-regular-maintenance", async (req, res) => {
         deviceInfo.mac_address,
         deviceInfo.printer_type,
         deviceInfo.ink_type,
-        deviceInfo.ink_serial_number
+        deviceInfo.ink_serial_number,
+        userId  // ⬅️ هنا نمررها
       ], (err) => {
         if (err) return reject(err);
         resolve();
       });
     });
+    
 
     const ticketNumber = `TIC-${Date.now()}`;
+
     const ticketId = await new Promise((resolve, reject) => {
       db.query(`
         INSERT INTO Internal_Tickets (
-          ticket_number, priority, department_id, issue_description, assigned_to, mac_address -- 🆕 إذا تريد
-        ) VALUES (?, ?, ?, ?, ?, ?)
+          ticket_number, priority, department_id, issue_description, assigned_to, mac_address, user_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `, [
         ticketNumber,
         "Medium",
         departmentId,
         problem_status || "Regular Maintenance",
         technical_engineer_id,
-        deviceInfo.mac_address // 🆕
+        deviceInfo.mac_address,
+        userId  // ← أضفنا user_id هنا
       ], (err, result) => {
         if (err) return reject(err);
         resolve(result.insertId);
       });
     });
-
+    
     const alreadyReported = await new Promise((resolve, reject) => {
       db.query(`
         SELECT id FROM Maintenance_Reports 
         WHERE device_id = ? AND maintenance_type = 'Regular' 
-        AND DATE(created_at) = CURDATE()
-      `, [deviceSpec], (err, result) => {
+        AND DATE(created_at) = CURDATE() AND user_id = ?
+      `, [deviceSpec, userId], (err, result) => {  // ← تحقق أيضًا من user_id
         if (err) return reject(err);
         resolve(result.length > 0);
       });
     });
-
+    
     if (!alreadyReported) {
       const reportNumberMain = `REP-${Date.now()}-MAIN`;
       await new Promise((resolve, reject) => {
         db.query(`
           INSERT INTO Maintenance_Reports (
             report_number, ticket_id, device_id,
-            issue_summary, full_description, status, maintenance_type, mac_address -- 🆕
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            issue_summary, full_description, status, maintenance_type, mac_address, user_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
           reportNumberMain,
           ticketId,
@@ -628,32 +650,33 @@ app.post("/submit-regular-maintenance", async (req, res) => {
           notes || "Routine periodic maintenance performed.",
           "Open",
           "Regular",
-          deviceInfo.mac_address // 🆕
+          deviceInfo.mac_address,
+          userId  // ← أضفنا user_id هنا
         ], (err) => {
           if (err) return reject(err);
           resolve();
         });
       });
     }
-
+    
     const ticketReportExists = await new Promise((resolve, reject) => {
       db.query(`
         SELECT id FROM Maintenance_Reports 
-        WHERE device_id = ? AND ticket_id = ? AND issue_summary = 'Ticket Created'
-      `, [deviceSpec, ticketId], (err, result) => {
+        WHERE device_id = ? AND ticket_id = ? AND issue_summary = 'Ticket Created' AND user_id = ?
+      `, [deviceSpec, ticketId, userId], (err, result) => {  // ← تحقق من user_id أيضًا
         if (err) return reject(err);
         resolve(result.length > 0);
       });
     });
-
+    
     if (!ticketReportExists) {
       const reportNumberTicket = `REP-${Date.now()}-TICKET`;
       await new Promise((resolve, reject) => {
         db.query(`
           INSERT INTO Maintenance_Reports (
             report_number, ticket_id, device_id,
-            issue_summary, full_description, status, maintenance_type, mac_address -- 🆕
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            issue_summary, full_description, status, maintenance_type, mac_address, user_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
           reportNumberTicket,
           ticketId,
@@ -662,13 +685,15 @@ app.post("/submit-regular-maintenance", async (req, res) => {
           `Ticket (${ticketNumber}) for device: ${deviceInfo.device_name} - Department: ${deviceInfo.department_name}`,
           "Open",
           "Regular",
-          deviceInfo.mac_address // 🆕
+          deviceInfo.mac_address,
+          userId  // ← أضفنا user_id هنا
         ], (err) => {
           if (err) return reject(err);
           resolve();
         });
       });
     }
+    
 
 
     res.json({ message: "✅ Regular maintenance, ticket, and reports created successfully ." });
@@ -896,7 +921,9 @@ app.post("/add-options-regular", (req, res) => {
     });
   });
 });
-app.post("/submit-general-maintenance", async (req, res) => {
+app.post("/submit-general-maintenance",authenticateToken, async (req, res) => {
+  const userId = req.user.id;    
+
   const {
     "maintenance-date": date,
     DeviceType: rawDeviceType,
@@ -975,8 +1002,8 @@ app.post("/submit-general-maintenance", async (req, res) => {
           technician_name, floor, extension, problem_status, notes,
           serial_number, governmental_number, device_name, department_name,
           cpu_name, ram_type, os_name, generation_number, model_name,
-          drive_type, ram_size, mac_address, printer_type, ink_type, ink_serial_number, created_at
-        ) VALUES (?, ?, ${date ? "?" : "CURRENT_DATE()"}, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          drive_type, ram_size, mac_address, printer_type, ink_type, ink_serial_number, created_at,user_id
+        ) VALUES (?, ?, ${date ? "?" : "CURRENT_DATE()"}, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
       `,
       [
         customerName,
@@ -1005,7 +1032,8 @@ app.post("/submit-general-maintenance", async (req, res) => {
         deviceInfo.mac_address,
         deviceInfo.printer_type,
         deviceInfo.ink_type,
-        deviceInfo.ink_serial_number
+        deviceInfo.ink_serial_number,
+        userId
       ], (err) => {
         if (err) return reject(err);
         resolve();
@@ -1016,8 +1044,8 @@ app.post("/submit-general-maintenance", async (req, res) => {
     const ticketNumber = `TIC-${Date.now()}`;
     const ticketId = await new Promise((resolve, reject) => {
       db.query(
-        "INSERT INTO Internal_Tickets (ticket_number, priority, department_id, issue_description, assigned_to, mac_address) VALUES (?, ?, ?, ?, ?, ?)",
-        [ticketNumber, "Medium", departmentId, problemStatus, technical, deviceInfo.mac_address],
+        "INSERT INTO Internal_Tickets (ticket_number, priority, department_id, issue_description, assigned_to, mac_address, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [ticketNumber, "Medium", departmentId, problemStatus, technical, deviceInfo.mac_address, userId],
         (err, result) => {
           if (err) return reject(err);
           resolve(result.insertId);
@@ -1029,7 +1057,7 @@ app.post("/submit-general-maintenance", async (req, res) => {
     const reportNumberMain = `REP-${Date.now()}-MAIN`;
     await new Promise((resolve, reject) => {
       db.query(
-        "INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         [
           reportNumberMain,
           ticketId,
@@ -1038,7 +1066,8 @@ app.post("/submit-general-maintenance", async (req, res) => {
           `Initial Diagnosis: ${initialDiagnosis}`,
           "Open",
           "General",
-          deviceInfo.mac_address
+          deviceInfo.mac_address,
+          userId
         ],
         (err) => {
           if (err) return reject(err);
@@ -1050,7 +1079,7 @@ app.post("/submit-general-maintenance", async (req, res) => {
     const reportNumberTicket = `REP-${Date.now()}-TICKET`;
     await new Promise((resolve, reject) => {
       db.query(
-        "INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         [
           reportNumberTicket,
           ticketId,
@@ -1059,7 +1088,8 @@ app.post("/submit-general-maintenance", async (req, res) => {
           `Ticket (${ticketNumber}) for device: ${deviceInfo.device_name} - Department: ${deviceInfo.department_name}`,
           "Open",
           "General",
-          deviceInfo.mac_address
+          deviceInfo.mac_address,
+          userId
         ],
         (err) => {
           if (err) return reject(err);
@@ -1088,65 +1118,67 @@ app.get("/device-types", (req, res) => {
   });
 });
 
-app.get("/get-external-reports", (req, res) => {
-  const externalSql = `
+app.get("/get-external-reports", authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  const userRole = req.user.role;
+
+  let externalSql = `
     SELECT 
-      id,
-      created_at,
+      MAX(id) AS id,
+      MAX(created_at) AS created_at,
       NULL AS ticket_id,
-      ticket_number,
-      device_name,
-      department_name,
-      initial_diagnosis AS issue_summary,
-      final_diagnosis AS full_description,
-      status,
-      device_type,
+      MAX(ticket_number) AS ticket_number,
+      MAX(device_name) AS device_name,
+      MAX(department_name) AS department_name,
+      MAX(initial_diagnosis) AS issue_summary,
+      MAX(final_diagnosis) AS full_description,
+      MAX(status) AS status,
+      MAX(device_type) AS device_type,
       NULL AS priority,
       'external-legacy' AS source,
       NULL AS attachment_name,
       NULL AS attachment_path,
-      mac_address -- ✅ جديد
+      MAX(mac_address) AS mac_address
     FROM External_Maintenance
   `;
 
-  const newSql = `
+  let newSql = `
     SELECT 
-      id,
-      created_at,
+      MAX(id) AS id,
+      MAX(created_at) AS created_at,
       NULL AS ticket_id,
       NULL AS ticket_number,
       NULL AS device_name,
       NULL AS department_name,
       NULL AS issue_summary,
       NULL AS full_description,
-      status,
-      device_type,
-      priority,
+      MAX(status) AS status,
+      MAX(device_type) AS device_type,
+      MAX(priority) AS priority,
       'new' AS source,
-      attachment_name,
-      attachment_path,
-          NULL AS mac_address -- ✅ أضفنا هذا السطر حتى يتطابق مع البقية
-
+      MAX(attachment_name) AS attachment_name,
+      MAX(attachment_path) AS attachment_path,
+      NULL AS mac_address
     FROM New_Maintenance_Reports
   `;
 
-  const externalReportsSQL = `
+  let externalReportsSQL = `
     SELECT 
       mr.id,
-      mr.created_at,
+      MAX(mr.created_at) AS created_at,
       mr.ticket_id,
-      et.ticket_number,
-      COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
-      d.name AS department_name,
-      mr.issue_summary,
-      mr.full_description,
-      mr.status,
-      md.device_type,
-      mr.priority,
+      MAX(et.ticket_number) AS ticket_number,
+      MAX(COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name)) AS device_name,
+      MAX(d.name) AS department_name,
+      MAX(mr.issue_summary) AS issue_summary,
+      MAX(mr.full_description) AS full_description,
+      MAX(mr.status) AS status,
+      MAX(md.device_type) AS device_type,
+      MAX(mr.priority) AS priority,
       'external-new' AS source,
-      et.attachment_name,
-      et.attachment_path,
-      md.mac_address -- ✅ جديد
+      MAX(et.attachment_name) AS attachment_name,
+      MAX(et.attachment_path) AS attachment_path,
+      MAX(md.mac_address) AS mac_address
     FROM Maintenance_Reports mr
     LEFT JOIN External_Tickets et ON mr.ticket_id = et.id
     LEFT JOIN Maintenance_Devices md ON mr.device_id = md.id
@@ -1157,12 +1189,19 @@ app.get("/get-external-reports", (req, res) => {
     WHERE mr.maintenance_type = 'External'
   `;
 
+  // لو ليس admin → فلتر بالتقارير المملوكة للمستخدم فقط
+  if (userRole !== 'admin') {
+    externalSql += ` WHERE user_id = ${db.escape(userId)} `;
+    newSql += ` WHERE user_id = ${db.escape(userId)} `;
+    externalReportsSQL += ` AND mr.user_id = ${db.escape(userId)} `;
+  }
+
   const combinedSql = `
-    (${externalSql})
+    (${externalSql} GROUP BY id)
     UNION ALL
-    (${externalReportsSQL})
+    (${externalReportsSQL} GROUP BY mr.id)
     UNION ALL
-    (${newSql})
+    (${newSql} GROUP BY id)
     ORDER BY created_at DESC
   `;
 
@@ -1174,6 +1213,7 @@ app.get("/get-external-reports", (req, res) => {
     res.json(result);
   });
 });
+
 
 
 app.put("/update-external-report-status/:id", async (req, res) => {
@@ -1418,7 +1458,6 @@ pc.Mac_Address AS mac_address,
         rsize.ram_size,
         os.os_name,
         gen.generation_number,
-        pc.Mac_Address AS mac_address,
         hdt.drive_type,
         pr_type.printer_type,
         ink_type.ink_type,
@@ -1958,26 +1997,29 @@ app.post("/add-device-model", (req, res) => {
 
 
 
-app.get('/regular-maintenance-summary', (req, res) => {
-  const sql = `
+app.get('/regular-maintenance-summary', authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  const userRole = req.user.role;
+
+  let sql = `
     SELECT 
-      id,
-      device_name,
-      device_type,
-      last_maintenance_date,
-      frequency,
-      status, -- ✅ نستخدم الحالة المخزنة، ما نحسبها
+      id, device_name, device_type, last_maintenance_date, frequency, status,
       DATE_ADD(last_maintenance_date, INTERVAL 
-        CASE 
-          WHEN frequency = '3months' THEN 3
-          WHEN frequency = '4months' THEN 4
-        END MONTH) AS next_due_date
+        CASE WHEN frequency = '3months' THEN 3 WHEN frequency = '4months' THEN 4 END MONTH) AS next_due_date
     FROM Regular_Maintenance
     WHERE frequency = '3months'
-    ORDER BY next_due_date DESC
   `;
 
-  db.query(sql, (err, result) => {
+  // فلترة حسب اليوزر لو مو ادمن
+  if (userRole !== 'admin') {
+    sql += ' AND user_id = ?';
+  }
+
+  sql += ' ORDER BY next_due_date DESC';
+
+  const params = userRole === 'admin' ? [] : [userId];
+
+  db.query(sql, params, (err, result) => {
     if (err) return res.status(500).json({ error: 'Error fetching data' });
     res.json(result);
   });
@@ -2079,8 +2121,11 @@ app.get('/maintenance-stats', (req, res) => {
 });
 
 
-app.get('/regular-maintenance-summary-4months', (req, res) => {
-  const sql = `
+app.get('/regular-maintenance-summary-4months', authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  const userRole = req.user.role;
+
+  let sql = `
     SELECT 
       id,
       device_name,
@@ -2091,105 +2136,73 @@ app.get('/regular-maintenance-summary-4months', (req, res) => {
       DATE_ADD(last_maintenance_date, INTERVAL 4 MONTH) AS next_due_date
     FROM Regular_Maintenance
     WHERE frequency = '4months'
-    ORDER BY next_due_date DESC;
   `;
 
-  db.query(sql, (err, result) => {
+  if (userRole !== 'admin') {
+    sql += ' AND user_id = ?';
+  }
+
+  sql += ' ORDER BY next_due_date DESC';
+
+  const params = userRole === 'admin' ? [] : [userId];
+
+  db.query(sql, params, (err, result) => {
     if (err) return res.status(500).json({ error: 'Error fetching 4-month data' });
     res.json(result);
   });
 });
 
-app.get('/get-internal-reports', (req, res) => {
-  const internalSql = `
+app.get('/get-internal-reports', authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  const userRole = req.user.role;
+
+  let internalSql = `
     SELECT 
-      R.id,
-      R.created_at,
-      R.issue_summary,
-      R.full_description,
-      R.status,
-      R.device_id,
-      R.report_number,
-      R.ticket_id,
-      R.maintenance_type,
-
-      CASE 
-        WHEN R.maintenance_type = 'Regular' THEN NULL 
-        ELSE T.ticket_number
-      END AS ticket_number,
-
-      CASE 
-        WHEN R.maintenance_type = 'Regular' THEN NULL 
-        ELSE T.issue_description
-      END AS issue_description,
-
-      CASE 
-        WHEN R.maintenance_type = 'Regular' THEN RM.problem_status
-        ELSE T.priority
-      END AS priority,
-
-      COALESCE(GM.department_name, D.name) AS department_name,
-      COALESCE(GM.device_name, M.device_name) AS device_name,
-      RM.frequency,
-      M.device_type,
+      R.id, R.created_at, R.issue_summary, R.full_description, R.status,
+      R.device_id, R.report_number, R.ticket_id, R.maintenance_type,
+      MAX(CASE WHEN R.maintenance_type = 'Regular' THEN NULL ELSE T.ticket_number END) AS ticket_number,
+      MAX(CASE WHEN R.maintenance_type = 'Regular' THEN NULL ELSE T.issue_description END) AS issue_description,
+      MAX(CASE WHEN R.maintenance_type = 'Regular' THEN RM.problem_status ELSE T.priority END) AS priority,
+      MAX(COALESCE(GM.department_name, D.name)) AS department_name,
+      MAX(COALESCE(GM.device_name, M.device_name)) AS device_name,
+      MAX(RM.frequency) AS frequency,
+      MAX(M.device_type) AS device_type,
       'internal' AS source,
-
-      CASE 
-        WHEN R.maintenance_type = 'Regular' THEN NULL 
-        ELSE T.attachment_name
-      END AS attachment_name,
-
-      CASE 
-        WHEN R.maintenance_type = 'Regular' THEN NULL 
-        ELSE T.attachment_path
-      END AS attachment_path,
-
-      COALESCE(RM.problem_status, T.issue_description) AS problem_status,
-      COALESCE(E.name, T.assigned_to) AS technical_engineer
-
+      MAX(CASE WHEN R.maintenance_type = 'Regular' THEN NULL ELSE T.attachment_name END) AS attachment_name,
+      MAX(CASE WHEN R.maintenance_type = 'Regular' THEN NULL ELSE T.attachment_path END) AS attachment_path,
+      MAX(COALESCE(RM.problem_status, T.issue_description)) AS problem_status,
+      MAX(COALESCE(E.name, T.assigned_to)) AS technical_engineer
     FROM Maintenance_Reports R
     LEFT JOIN Maintenance_Devices M ON R.device_id = M.id
     LEFT JOIN Departments D ON M.department_id = D.id
-    LEFT JOIN (
-        SELECT *
-        FROM Regular_Maintenance
-        ORDER BY last_maintenance_date DESC
-    ) AS RM ON RM.device_id = R.device_id
+    LEFT JOIN (SELECT * FROM Regular_Maintenance ORDER BY last_maintenance_date DESC) AS RM ON RM.device_id = R.device_id
     LEFT JOIN Engineers E ON RM.technical_engineer_id = E.id
     LEFT JOIN General_Maintenance GM ON GM.device_id = R.device_id
     LEFT JOIN Internal_Tickets T ON R.ticket_id = T.id
     WHERE R.maintenance_type IN ('Regular', 'General', 'Internal')
   `;
 
-  const newSql = `
+  let newSql = `
     SELECT 
-      id,
-      created_at,
-      issue_summary,
-      NULL AS full_description,
-      status,
-      device_id,
-      NULL AS report_number,
-      NULL AS ticket_id,
-      'New' AS maintenance_type,
-      NULL AS ticket_number,
-      NULL AS issue_description,
-      priority,
-      NULL AS department_name,
-      NULL AS device_name,
-      NULL AS frequency,
-      device_type,
-      'new' AS source,
-      attachment_name,
-      attachment_path,
-      NULL AS problem_status,
-      NULL AS technical_engineer
+      id, created_at, issue_summary, NULL AS full_description, status, device_id,
+      NULL AS report_number, NULL AS ticket_id, 'New' AS maintenance_type, NULL AS ticket_number,
+      NULL AS issue_description, priority, NULL AS department_name, NULL AS device_name, NULL AS frequency,
+      device_type, 'new' AS source, attachment_name, attachment_path, NULL AS problem_status, NULL AS technical_engineer
     FROM New_Maintenance_Report
   `;
 
-  const combinedSql = `${internalSql} UNION ALL ${newSql} ORDER BY created_at DESC`;
+  if (userRole !== 'admin') {
+    internalSql += ` AND R.user_id = ? `;
+    newSql += ` WHERE user_id = ? `;
+  }
 
-  db.query(combinedSql, (err, results) => {
+  // أضف GROUP BY هنا ↓↓↓↓↓↓
+  internalSql += ` GROUP BY R.id `;
+
+  const combinedSql = `${internalSql} UNION ALL ${newSql} ORDER BY created_at DESC`;
+  const params = userRole === 'admin' ? [] : [userId, userId];
+
+  db.query(combinedSql, params, (err, results) => {
     if (err) {
       console.error("❌ Failed to fetch reports:", err);
       return res.status(500).json({ error: "Error fetching reports" });
@@ -2820,8 +2833,10 @@ async function generateTicketNumber(type) {
   });
 }
 
-app.post("/internal-ticket-with-file", upload.single("attachment"), async (req, res) => {
+app.post("/internal-ticket-with-file", upload.single("attachment"),authenticateToken, async (req, res) => {
+const userId = req.userId;
   try {
+
     const {
       report_number,
       priority,
@@ -2866,8 +2881,8 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), async (req, 
         const insertTicketQuery = `
           INSERT INTO Internal_Tickets (
   ticket_number, priority, department_id, issue_description, 
-  assigned_to, status, attachment_name, attachment_path, ticket_type
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  assigned_to, status, attachment_name, attachment_path, ticket_type,user_id
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 
         `;
         const ticketValues = [
@@ -2879,7 +2894,8 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), async (req, 
           status,
           fileName,
           filePath,
-          ticket_type || ''
+          ticket_type || '',
+          userId
         ];
         
 
@@ -2895,8 +2911,8 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), async (req, 
           const insertReportQuery = `
           INSERT INTO Maintenance_Reports (
             report_number, ticket_id, device_id, issue_summary, full_description, 
-            status, maintenance_type, report_type
-          ) VALUES (?, ?, ?, ?, ?, ?, 'Internal', 'Incident')
+            status, maintenance_type, report_type,user_id
+          ) VALUES (?, ?, ?, ?, ?, ?, 'Internal', 'Incident', ?)
         `;
         
         const reportValues = [
@@ -2905,7 +2921,8 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), async (req, 
           device_id || null, // 👈 أضفنا الـ device_id مع القيم
           initial_diagnosis || '',
           final_diagnosis || other_description || '',
-          status
+          status,
+          userId
         ];
         
 
@@ -2962,10 +2979,12 @@ app.get("/ticket-types", (req, res) => {
   });
 });
 
-app.post("/submit-new-report", upload.fields([
+app.post("/submit-new-report",authenticateToken, upload.fields([
   { name: "attachment", maxCount: 1 },
   { name: "signature", maxCount: 1 }
 ]), async (req, res) => {
+  const userId = req.user.id;    
+
   const {
     report_type,
     device_type,
@@ -3004,11 +3023,11 @@ app.post("/submit-new-report", upload.fields([
         details, device_id, department_id, model_id,
         ${isPC ? "cpu_id, ram_id, os_id, generation_id, drive_id, ram_size, mac_address," : ""}
         printer_type, ink_type, 
-        device_name, serial_number, governmental_number
+        device_name, serial_number, governmental_number, user_id
       )
       VALUES (?, ?, ?, 'Open', ?, ?, ?, ?, NULL, ?, ?,
         ${isPC ? "?, ?, ?, ?, ?, ?, ?," : ""}
-        ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?
       )
     `;
 
@@ -3041,7 +3060,8 @@ app.post("/submit-new-report", upload.fields([
       ink_type || null,        // ✅ نوع الحبر (يسمح null)
       device_name || null,
       serial_number || null,   // ✅ رقم سيريال (يسمح null للحبر)
-      governmental_number || null
+      governmental_number || null,
+      userId
     );
 
     await db.promise().query(insertReportSql, insertParams);
@@ -3663,7 +3683,8 @@ app.post('/add-option-external-ticket', async (req, res) => {
 
 
 
-app.post("/external-ticket-with-file", upload.single("attachment"), (req, res) => {
+app.post("/external-ticket-with-file", upload.single("attachment"),authenticateToken, (req, res) => {
+  const userId = req.user.id;
   try {
     const {
       ticket_number,      // ✅ المستخدم يدخله
@@ -3691,8 +3712,8 @@ app.post("/external-ticket-with-file", upload.single("attachment"), (req, res) =
       status,
       attachment_name,
       attachment_path,
-      report_datetime
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      report_datetime,user_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
   
 
@@ -3706,6 +3727,7 @@ app.post("/external-ticket-with-file", upload.single("attachment"), (req, res) =
     fileName || '',                     // attachment_name
     filePath || '',                     // attachment_path
     report_datetime || new Date()       // report_datetime
+    ,userId
   ];
   
 
@@ -3728,8 +3750,8 @@ app.post("/external-ticket-with-file", upload.single("attachment"), (req, res) =
         status,
         maintenance_type,
         report_type,
-        priority
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        priority,user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     
     const reportValues = [
@@ -3741,7 +3763,8 @@ app.post("/external-ticket-with-file", upload.single("attachment"), (req, res) =
       'Open',                          // status
       'External',                      // maintenance_type
       'Incident',                      // report_type
-      priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase() || 'Medium' // priority (High/Medium/Low)
+      priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase() || 'Medium' // priority (High/Medium/Low),
+      ,userId
     ];
     
 

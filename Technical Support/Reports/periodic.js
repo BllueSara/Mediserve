@@ -8,8 +8,13 @@ function loadMaintenance(type) {
     ? 'http://localhost:5050/regular-maintenance-summary' 
     : 'http://localhost:5050/regular-maintenance-summary-4months';
 
-    fetch(url, { cache: "no-store" }) // ✅ منع الكاش
-    .then(res => res.json())
+    fetch(url, {
+      cache: "no-store",
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+        .then(res => res.json())
     .then(data => {
       const tableBody = document.getElementById("maintenance-table-body");
       tableBody.innerHTML = "";

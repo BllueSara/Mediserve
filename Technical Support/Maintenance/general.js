@@ -2763,10 +2763,11 @@ document.querySelector("form").addEventListener("submit", function (e) {
     Technical: document.getElementById("technical-status").value  
   };
   
+  const token = localStorage.getItem('token');  // احفظ التوكن بعد تسجيل الدخول
 
   fetch("http://localhost:5050/submit-general-maintenance", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
     body: JSON.stringify(data)
   })
     .then(res => res.json())

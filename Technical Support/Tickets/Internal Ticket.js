@@ -237,9 +237,13 @@ function handleSubmit(event) {
 
 
   if (file) formData.append("attachment", file);
+  const token = localStorage.getItem('token');  // احفظ التوكن بعد تسجيل الدخول
 
   fetch("http://localhost:5050/internal-ticket-with-file", {
     method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`
+    },
     body: formData
   })
     .then(res => res.json())

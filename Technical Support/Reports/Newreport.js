@@ -141,10 +141,14 @@ document.getElementById("report-form").addEventListener("submit", async (e) => {
       });
     });
   }
+  const token = localStorage.getItem('token');  // احفظ التوكن بعد تسجيل الدخول
 
   // الإرسال للسيرفر
   fetch("http://localhost:5050/submit-new-report", {
     method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`
+    },
     body: formData
   })
   .then(async res => {
