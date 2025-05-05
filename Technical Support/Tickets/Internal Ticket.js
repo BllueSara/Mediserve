@@ -1814,26 +1814,36 @@ function fetchProblemStatus(deviceType, callback) {
         return;
       }
 
+      let selectedProblems = [];
+
       data.forEach(item => {
         const row = document.createElement("div");
         row.className = "dropdown-option-row";
-
+      
         const text = document.createElement("div");
         text.className = "dropdown-option-text";
         const problemText = item.problem_text || item.problemStates_Maintance_device_name || "Unnamed Problem";
         text.textContent = problemText;
-
+      
         text.onclick = () => {
-          displaySpan.textContent = problemText;
-          hiddenInput.value = problemText;
-          closeAllDropdowns();
+          const index = selectedProblems.indexOf(problemText);
+          if (index === -1) {
+            // إذا لم تكن موجودة → نضيفها + نلون العنصر
+            selectedProblems.push(problemText);
+            text.style.backgroundColor = "#d0f0fd"; // لون أزرق فاتح مثل highlight
+          } else {
+            // إذا كانت موجودة → نحذفها + نرجع اللون
+            selectedProblems.splice(index, 1);
+            text.style.backgroundColor = ""; // يرجع للون الطبيعي
+          }
+          displaySpan.textContent = selectedProblems.join(", ");
+          hiddenInput.value = JSON.stringify(selectedProblems);
         };
-
+      
         row.appendChild(text);
         optionsContainer.appendChild(row);
       });
-
-      // ✅ بعد ما تخلص بناء العناصر, اربط الازرار
+      
       attachEditDeleteHandlers("problem-status-options", "problem-status");
 
       if (typeof callback === "function") callback();
@@ -1846,6 +1856,7 @@ function fetchProblemStatus(deviceType, callback) {
       optionsContainer.appendChild(errorRow);
     });
 }
+
 
 
 

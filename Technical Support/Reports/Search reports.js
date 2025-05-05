@@ -90,7 +90,7 @@ fetch(`http://localhost:5050/get-internal-reports`, {
 
       const filtered = data.filter(report => {
         const createdAt = new Date(report.created_at);
-        const isInternalTicket = report.maintenance_type === "Internal";
+        const isInternalTicket = report.maintenance_type === "Internal" || (report.ticket_number && report.ticket_number.startsWith("INT-"));
         const isTicketFromOtherType = report.issue_summary?.includes("Ticket Created");
 
         let typeMatch = true;
