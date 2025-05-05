@@ -22,7 +22,7 @@ async function toggleNotifications() {
 async function loadNotifications() {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5050/notifications', {
+      const res = await fetch('http://localhost:4000/notifications', {
         headers: {
           'Authorization': 'Bearer ' + token
         }
@@ -44,10 +44,11 @@ function renderNotifications() {
     const div = document.createElement('div');
     div.className = `p-3 border-b ${getColor(n.type)}`;
     div.innerHTML = `
-    <div class="font-semibold">Notification</div>
+    <div class="font-semibold">${getTypeLabel(n.type)}</div>
     <div class="text-sm text-gray-600">${n.message}</div>
     <div class="text-xs text-gray-400">${new Date(n.created_at).toLocaleString()}</div>
   `;
+  
   
     notifList.appendChild(div);
   });
@@ -68,11 +69,25 @@ function viewAll() {
 }
 
 function getColor(type) {
+  if (type.includes('maintenance')) return 'border-l-4 border-blue-500';
+  if (type.includes('report')) return 'border-l-4 border-green-500';
+  if (type.includes('ticket')) return 'border-l-4 border-yellow-500';
+  return 'border-l-4 border-gray-500';
+}
+
+
+function getTypeLabel(type) {
   switch (type) {
-    case 'error': return 'border-l-4 border-red-500';
-    case 'info': return 'border-l-4 border-blue-500';
-    case 'warning': return 'border-l-4 border-yellow-500';
-    case 'success': return 'border-l-4 border-green-500';
-    default: return '';
+    case 'regular-maintenance': return ' Regular Maintenance';
+    case 'general-maintenance': return ' General Maintenance';
+    case 'external-maintenance': return ' External Maintenance';
+    case 'internal-ticket': return ' Internal Ticket';
+    case 'external-ticket': return ' External Ticket';
+    case 'general-report': return ' General Report';
+    case 'regular-report': return ' Regular Report';
+    case 'external-report': return ' External Report';
+    case 'internal-ticket-report': return ' Internal Ticket Report';
+    case 'external-ticket-report': return ' External Ticket Report';
+    default: return ' Notification';
   }
 }
