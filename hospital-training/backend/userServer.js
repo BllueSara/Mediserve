@@ -13,7 +13,7 @@ app.use(bodyParser.json());
 const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
-  password: '12345678', // ← غيّرها إذا عندك كلمة مرور
+  password: '123455678', // ← غيّرها إذا عندك كلمة مرور
   database: 'MediServee'
 });
 

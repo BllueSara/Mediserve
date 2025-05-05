@@ -273,8 +273,7 @@ app.get("/device-specifications", (req, res) => {
   });
 });
 
-
-app.post("/submit-external-maintenance",authenticateToken, async (req, res) => {
+app.post("/submit-external-maintenance", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const {
     ticket_number,
@@ -286,53 +285,45 @@ app.post("/submit-external-maintenance",authenticateToken, async (req, res) => {
     initial_diagnosis,
     final_diagnosis
   } = req.body;
+  const userName = await getUserNameById(userId);
 
   try {
-    const getDeviceInfo = () =>
-      new Promise((resolve, reject) => {
-        const query = `
-SELECT 
-  md.*, 
-  COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
-  COALESCE(c.cpu_name, '') AS cpu_name,
-  COALESCE(r.ram_type, '') AS ram_type,
-  COALESCE(rs.ram_size, '') AS ram_size,
-  COALESCE(o.os_name, '') AS os_name,
-  COALESCE(g.generation_number, '') AS generation_number,
-  COALESCE(pm.model_name, prm.model_name, scm.model_name, '') AS model_name,
-  COALESCE(hdt.drive_type, '') AS drive_type,
-  COALESCE(pc.Mac_Address, '') AS mac_address,
-  COALESCE(pt.printer_type, '') AS printer_type,
-  COALESCE(it.ink_type, '') AS ink_type,
-  COALESCE(iser.serial_number, '') AS ink_serial_number,
-  d.name AS department_name
-FROM Maintenance_Devices md
-LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
-LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
-LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
-LEFT JOIN CPU_Types c ON pc.Processor_id = c.id
-LEFT JOIN RAM_Types r ON pc.RAM_id = r.id
-LEFT JOIN RAM_Sizes rs ON pc.RamSize_id = rs.id
-LEFT JOIN OS_Types o ON pc.OS_id = o.id
-LEFT JOIN Processor_Generations g ON pc.Generation_id = g.id
-LEFT JOIN PC_Model pm ON pc.Model_id = pm.id
-LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
-LEFT JOIN Scanner_Model scm ON sc.Model_id = scm.id
-LEFT JOIN Printer_Types pt ON pr.PrinterType_id = pt.id
-LEFT JOIN Ink_Types it ON pr.InkType_id = it.id
-LEFT JOIN Ink_Serials iser ON pr.InkSerial_id = iser.id
-LEFT JOIN Departments d ON md.department_id = d.id
-LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id
-WHERE md.id = ?
-        `;
-        db.query(query, [device_specifications], (err, result) => {
-          if (err) return reject(err);
-          resolve(result[0]);
-        });
-      });
+    const deviceRes = await queryAsync(`
+      SELECT md.*, 
+        COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
+        COALESCE(c.cpu_name, '') AS cpu_name,
+        COALESCE(r.ram_type, '') AS ram_type,
+        COALESCE(rs.ram_size, '') AS ram_size,
+        COALESCE(o.os_name, '') AS os_name,
+        COALESCE(g.generation_number, '') AS generation_number,
+        COALESCE(pm.model_name, prm.model_name, scm.model_name, '') AS model_name,
+        COALESCE(hdt.drive_type, '') AS drive_type,
+        COALESCE(pc.Mac_Address, '') AS mac_address,
+        COALESCE(pt.printer_type, '') AS printer_type,
+        COALESCE(it.ink_type, '') AS ink_type,
+        COALESCE(iser.serial_number, '') AS ink_serial_number,
+        d.name AS department_name
+      FROM Maintenance_Devices md
+      LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
+      LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
+      LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
+      LEFT JOIN CPU_Types c ON pc.Processor_id = c.id
+      LEFT JOIN RAM_Types r ON pc.RAM_id = r.id
+      LEFT JOIN RAM_Sizes rs ON pc.RamSize_id = rs.id
+      LEFT JOIN OS_Types o ON pc.OS_id = o.id
+      LEFT JOIN Processor_Generations g ON pc.Generation_id = g.id
+      LEFT JOIN PC_Model pm ON pc.Model_id = pm.id
+      LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
+      LEFT JOIN Scanner_Model scm ON sc.Model_id = scm.id
+      LEFT JOIN Printer_Types pt ON pr.PrinterType_id = pt.id
+      LEFT JOIN Ink_Types it ON pr.InkType_id = it.id
+      LEFT JOIN Ink_Serials iser ON pr.InkSerial_id = iser.id
+      LEFT JOIN Departments d ON md.department_id = d.id
+      LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id
+      WHERE md.id = ?
+    `, [device_specifications]);
 
-    const deviceInfo = await getDeviceInfo();
-
+    const deviceInfo = deviceRes[0];
     if (!deviceInfo) {
       return res.status(404).json({ error: "❌ لم يتم العثور على معلومات الجهاز" });
     }
@@ -343,105 +334,84 @@ WHERE md.id = ?
       ? deviceType.charAt(0).toUpperCase() + deviceType.slice(1)
       : deviceInfo.device_type;
 
-    const insertMain = () =>
-      new Promise((resolve, reject) => {
-        const sql = `
-        INSERT INTO External_Maintenance (
-          ticket_number, device_type, device_specifications, section,
-          maintenance_manager, reporter_name,
-          initial_diagnosis, final_diagnosis,
-          serial_number, governmental_number, device_name,
-          department_name, cpu_name, ram_type, os_name,
-          generation_number, model_name, drive_type, ram_size, mac_address,
-          printer_type, ink_type, ink_serial_number, user_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-        const values = [
-          ticket_number,
-          deviceType,
-          device_specifications,
-          section,
-          maintenance_manager,
-          reporter_name,
-          initial_diagnosis,
-          final_diagnosis,
-          deviceInfo.serial_number,
-          deviceInfo.governmental_number,
-          deviceInfo.device_name,
-          deviceInfo.department_name,
-          deviceInfo.cpu_name,
-          deviceInfo.ram_type,
-          deviceInfo.os_name,
-          deviceInfo.generation_number,
-          deviceInfo.model_name,
-          deviceInfo.drive_type,
-          deviceInfo.ram_size,
-          deviceInfo.mac_address,
-          deviceInfo.printer_type,
-          deviceInfo.ink_type,
-          deviceInfo.ink_serial_number,
-          userId
-        ];
-        db.query(sql, values, (err) => {
-          if (err) return reject(err);
-          resolve();
-        });
-      });
+    const commonValues = [
+      ticket_number, deviceType, device_specifications, section,
+      maintenance_manager, reporter_name,
+      initial_diagnosis, final_diagnosis,
+      deviceInfo.serial_number, deviceInfo.governmental_number, deviceInfo.device_name,
+      deviceInfo.department_name, deviceInfo.cpu_name, deviceInfo.ram_type, deviceInfo.os_name,
+      deviceInfo.generation_number, deviceInfo.model_name, deviceInfo.drive_type, deviceInfo.ram_size,
+      deviceInfo.mac_address, deviceInfo.printer_type, deviceInfo.ink_type, deviceInfo.ink_serial_number,
+      userId
+    ];
 
-    const insertTicketSummary = () =>
-      new Promise((resolve, reject) => {
-        const sql = `
-        INSERT INTO External_Maintenance (
-          ticket_number, device_type, device_specifications, section,
-          maintenance_manager, reporter_name,
-          initial_diagnosis, final_diagnosis,
-          serial_number, governmental_number, device_name,
-          department_name, cpu_name, ram_type, os_name,
-          generation_number, model_name, drive_type, ram_size, mac_address,
-          printer_type, ink_type, ink_serial_number, user_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-        const values = [
-          ticket_number,
-          deviceType,
-          device_specifications,
-          section,
-          maintenance_manager,
-          reporter_name,
-          initial_diagnosis,
-          `Ticket (${ticket_number}) has been created by (${reporter_name})`,
-          deviceInfo.serial_number,
-          deviceInfo.governmental_number,
-          deviceInfo.device_name,
-          deviceInfo.department_name,
-          deviceInfo.cpu_name,
-          deviceInfo.ram_type,
-          deviceInfo.os_name,
-          deviceInfo.generation_number,
-          deviceInfo.model_name,
-          deviceInfo.drive_type,
-          deviceInfo.ram_size,
-          deviceInfo.mac_address,
-          deviceInfo.printer_type,
-          deviceInfo.ink_type,
-          deviceInfo.ink_serial_number,
-          userId
-        ];
-        db.query(sql, values, (err) => {
-          if (err) return reject(err);
-          resolve();
-        });
-      });
+    // 1️⃣ إدخال التقرير الأساسي
+    await queryAsync(`
+      INSERT INTO External_Maintenance (
+        ticket_number, device_type, device_specifications, section,
+        maintenance_manager, reporter_name,
+        initial_diagnosis, final_diagnosis,
+        serial_number, governmental_number, device_name,
+        department_name, cpu_name, ram_type, os_name,
+        generation_number, model_name, drive_type, ram_size, mac_address,
+        printer_type, ink_type, ink_serial_number, user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, commonValues);
 
-    await insertMain();
-    await insertTicketSummary();
+    // 2️⃣ إدخال تلخيص التذكرة
+    await queryAsync(`
+      INSERT INTO External_Maintenance (
+        ticket_number, device_type, device_specifications, section,
+        maintenance_manager, reporter_name,
+        initial_diagnosis, final_diagnosis,
+        serial_number, governmental_number, device_name,
+        department_name, cpu_name, ram_type, os_name,
+        generation_number, model_name, drive_type, ram_size, mac_address,
+        printer_type, ink_type, ink_serial_number, user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      ticket_number, deviceType, device_specifications, section,
+      maintenance_manager, reporter_name,
+      initial_diagnosis, `Ticket (${ticket_number}) has been created by (${reporter_name})`,
+      deviceInfo.serial_number, deviceInfo.governmental_number, deviceInfo.device_name,
+      deviceInfo.department_name, deviceInfo.cpu_name, deviceInfo.ram_type, deviceInfo.os_name,
+      deviceInfo.generation_number, deviceInfo.model_name, deviceInfo.drive_type, deviceInfo.ram_size,
+      deviceInfo.mac_address, deviceInfo.printer_type, deviceInfo.ink_type, deviceInfo.ink_serial_number,
+      userId
+    ]);
 
-    res.json({ message: "✅ External maintenance and ticket summary saved successfully." });
+    // 🛎️ إشعار 1: تقرير الصيانة
+    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+      userId,
+      `External maintenance report saved for ${deviceInfo.device_name} (${deviceInfo.device_type}) problem is ${initial_diagnosis} by ${userName}`,
+      'external-maintenance'
+    ]);
+
+    // 🛎️ إشعار 2: تلخيص التذكرة
+    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+      userId,
+      `Ticket  (${ticket_number}) saved for ${deviceInfo.device_name} (${deviceInfo.device_type} problem is ${initial_diagnosis} by ${userName})`,
+      'external-ticket-report'
+    ]);
+
+    // 🛎️ إشعار 3: للمدير (admin) إذا موجود
+    const adminRes = await queryAsync(`SELECT id FROM users WHERE name = ?`, [reporter_name]);
+    const adminId = adminRes[0]?.id;
+    if (adminId) {
+      await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+        adminId,
+        `New external maintenance task assigned on ${deviceInfo.device_name} (${deviceInfo.device_type}) by ${userName}`,
+        'external-maintenance-assigned'
+      ]);
+    }
+
+    res.json({ message: "✅ External maintenance, ticket summary, and notifications saved successfully." });
   } catch (error) {
     console.error("❌ Error:", error);
     res.status(500).json({ error: "❌ Internal server error" });
   }
 });
+
 
 
 // ✅ GET Devices with ID from Maintenance_Devices
@@ -634,7 +604,31 @@ app.post("/submit-regular-maintenance", authenticateToken, async (req, res) => {
       userId
     ]);
     const ticketId = ticketRes.insertId;
-
+    const reportNumberTicket = `REP-${Date.now()}-TICKET`;
+    await queryAsync(`
+      INSERT INTO Maintenance_Reports (
+        report_number, ticket_id, device_id,
+        issue_summary, full_description, status, maintenance_type, mac_address, user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      reportNumberTicket,
+      ticketId,
+      deviceSpec,
+      "Ticket Created",
+      `Ticket (${ticketNumber}) for device: ${deviceInfo.device_name} - Department: ${deviceInfo.department_name}`,
+      "Open",
+      "Regular",
+      deviceInfo.mac_address,
+      userId
+    ]);
+    await queryAsync(`
+      INSERT INTO Notifications (user_id, message, type)
+      VALUES (?, ?, ?)
+    `, [
+      userId,
+      `Report created   ${ticketNumber} for device ${deviceInfo.device_name} (${deviceInfo.device_type}) by engineer ${engineerName || 'N/A'} (${problem_status})`,
+      'internal-ticket-report'
+    ]);
     const reportNumberMain = `REP-${Date.now()}-MAIN`;
     await queryAsync(`
       INSERT INTO Maintenance_Reports (
@@ -902,8 +896,9 @@ app.post("/add-options-regular", (req, res) => {
     });
   });
 });
-app.post("/submit-general-maintenance",authenticateToken, async (req, res) => {
-  const userId = req.user.id;    
+
+app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
 
   const {
     "maintenance-date": date,
@@ -921,163 +916,129 @@ app.post("/submit-general-maintenance",authenticateToken, async (req, res) => {
     Notes: notes = ""
   } = req.body;
 
+  const adminUser = await getUserById(userId);
+  const userName = await getUserNameById(userId);
+
+  let engineerName;
+  if (adminUser?.role === 'admin' && technical) {
+    const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE id = ?`, [technical]);
+    engineerName = techEngineerRes[0]?.name || userName;
+  } else {
+    engineerName = userName;
+  }
+
   try {
-    // 1️⃣ احضر القسم
-    const departmentId = await new Promise((resolve, reject) => {
-      db.query("SELECT id FROM Departments WHERE name = ?", [section], (err, result) => {
-        if (err) return reject(err);
-        resolve(result[0]?.id || null);
-      });
-    });
+    const departmentRes = await queryAsync("SELECT id FROM Departments WHERE name = ?", [section]);
+    const departmentId = departmentRes[0]?.id || null;
 
-    // 2️⃣ احضر بيانات الجهاز
-    const deviceInfo = await new Promise((resolve, reject) => {
-      const query = `
-        SELECT md.*, COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
-               COALESCE(c.cpu_name, '') AS cpu_name,
-               COALESCE(r.ram_type, '') AS ram_type,
-               COALESCE(rs.ram_size, '') AS ram_size,
-               COALESCE(o.os_name, '') AS os_name,
-               COALESCE(g.generation_number, '') AS generation_number,
-               COALESCE(pm.model_name, prm.model_name, scm.model_name, '') AS model_name,
-               COALESCE(hdt.drive_type, '') AS drive_type,
-               COALESCE(pc.Mac_Address, '') AS mac_address,
-               COALESCE(pt.printer_type, '') AS printer_type,
-               COALESCE(it.ink_type, '') AS ink_type,
-               COALESCE(iser.serial_number, '') AS ink_serial_number,
-               d.name AS department_name
-        FROM Maintenance_Devices md
-        LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
-        LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
-        LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
-        LEFT JOIN CPU_Types c ON pc.Processor_id = c.id
-        LEFT JOIN RAM_Types r ON pc.RAM_id = r.id
-        LEFT JOIN RAM_Sizes rs ON pc.RamSize_id = rs.id
-        LEFT JOIN OS_Types o ON pc.OS_id = o.id
-        LEFT JOIN Processor_Generations g ON pc.Generation_id = g.id
-        LEFT JOIN PC_Model pm ON pc.Model_id = pm.id
-        LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
-        LEFT JOIN Scanner_Model scm ON sc.Model_id = scm.id
-        LEFT JOIN Printer_Types pt ON pr.PrinterType_id = pt.id
-        LEFT JOIN Ink_Types it ON pr.InkType_id = it.id
-        LEFT JOIN Ink_Serials iser ON pr.InkSerial_id = iser.id
-        LEFT JOIN Departments d ON md.department_id = d.id
-        LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id
-        WHERE md.id = ?
-      `;
-      db.query(query, [deviceSpec], (err, result) => {
-        if (err) return reject(err);
-        resolve(result[0]);
-      });
-    });
+    const deviceRes = await queryAsync(`
+      SELECT md.*, COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
+             COALESCE(c.cpu_name, '') AS cpu_name,
+             COALESCE(r.ram_type, '') AS ram_type,
+             COALESCE(rs.ram_size, '') AS ram_size,
+             COALESCE(o.os_name, '') AS os_name,
+             COALESCE(g.generation_number, '') AS generation_number,
+             COALESCE(pm.model_name, prm.model_name, scm.model_name, '') AS model_name,
+             COALESCE(hdt.drive_type, '') AS drive_type,
+             COALESCE(pc.Mac_Address, '') AS mac_address,
+             COALESCE(pt.printer_type, '') AS printer_type,
+             COALESCE(it.ink_type, '') AS ink_type,
+             COALESCE(iser.serial_number, '') AS ink_serial_number,
+             d.name AS department_name
+      FROM Maintenance_Devices md
+      LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
+      LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
+      LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
+      LEFT JOIN CPU_Types c ON pc.Processor_id = c.id
+      LEFT JOIN RAM_Types r ON pc.RAM_id = r.id
+      LEFT JOIN RAM_Sizes rs ON pc.RamSize_id = rs.id
+      LEFT JOIN OS_Types o ON pc.OS_id = o.id
+      LEFT JOIN Processor_Generations g ON pc.Generation_id = g.id
+      LEFT JOIN PC_Model pm ON pc.Model_id = pm.id
+      LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
+      LEFT JOIN Scanner_Model scm ON sc.Model_id = scm.id
+      LEFT JOIN Printer_Types pt ON pr.PrinterType_id = pt.id
+      LEFT JOIN Ink_Types it ON pr.InkType_id = it.id
+      LEFT JOIN Ink_Serials iser ON pr.InkSerial_id = iser.id
+      LEFT JOIN Departments d ON md.department_id = d.id
+      LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id
+      WHERE md.id = ?
+    `, [deviceSpec]);
 
+    const deviceInfo = deviceRes[0];
     if (!deviceInfo) return res.status(404).json({ error: "❌ Device not found" });
 
-    const deviceType = rawDeviceType || deviceInfo.device_type;
+    await queryAsync(`
+      INSERT INTO General_Maintenance (
+        customer_name, id_number, maintenance_date, issue_type, diagnosis_initial, diagnosis_final, device_id,
+        technician_name, floor, extension, problem_status, notes,
+        serial_number, governmental_number, device_name, department_name,
+        cpu_name, ram_type, os_name, generation_number, model_name,
+        drive_type, ram_size, mac_address, printer_type, ink_type, ink_serial_number, created_at, user_id
+      ) VALUES (?, ?, ${date ? "?" : "CURRENT_DATE()"}, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+    `, [
+      customerName, idNumber, ...(date ? [date] : []),
+      "General Maintenance", initialDiagnosis || "", finalDiagnosis || "", deviceSpec,
+      technical, floor || "", extension || "", problemStatus || "", notes,
+      deviceInfo.serial_number, deviceInfo.governmental_number, deviceInfo.device_name, deviceInfo.department_name,
+      deviceInfo.cpu_name, deviceInfo.ram_type, deviceInfo.os_name, deviceInfo.generation_number, deviceInfo.model_name,
+      deviceInfo.drive_type, deviceInfo.ram_size, deviceInfo.mac_address, deviceInfo.printer_type, deviceInfo.ink_type,
+      deviceInfo.ink_serial_number, userId
+    ]);
 
-    // 3️⃣ أدخل في General_Maintenance مع اسم العميل والهوية
-    await new Promise((resolve, reject) => {
-      db.query(`
-        INSERT INTO General_Maintenance (
-          customer_name, id_number, maintenance_date, issue_type, diagnosis_initial, diagnosis_final, device_id,
-          technician_name, floor, extension, problem_status, notes,
-          serial_number, governmental_number, device_name, department_name,
-          cpu_name, ram_type, os_name, generation_number, model_name,
-          drive_type, ram_size, mac_address, printer_type, ink_type, ink_serial_number, created_at,user_id
-        ) VALUES (?, ?, ${date ? "?" : "CURRENT_DATE()"}, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
-      `,
-      [
-        customerName,
-        idNumber,
-        ...(date ? [date] : []),
-        "General Maintenance",
-        initialDiagnosis || "",
-        finalDiagnosis || "",
-        deviceSpec,
-        technical,
-        floor || "",
-        extension || "",
-        problemStatus || "",
-        notes,
-        deviceInfo.serial_number,
-        deviceInfo.governmental_number,
-        deviceInfo.device_name,
-        deviceInfo.department_name,
-        deviceInfo.cpu_name,
-        deviceInfo.ram_type,
-        deviceInfo.os_name,
-        deviceInfo.generation_number,
-        deviceInfo.model_name,
-        deviceInfo.drive_type,
-        deviceInfo.ram_size,
-        deviceInfo.mac_address,
-        deviceInfo.printer_type,
-        deviceInfo.ink_type,
-        deviceInfo.ink_serial_number,
-        userId
-      ], (err) => {
-        if (err) return reject(err);
-        resolve();
-      });
-    });
-
-    // 4️⃣ أنشئ تذكرة داخلية
     const ticketNumber = `TIC-${Date.now()}`;
-    const ticketId = await new Promise((resolve, reject) => {
-      db.query(
-        "INSERT INTO Internal_Tickets (ticket_number, priority, department_id, issue_description, assigned_to, mac_address, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [ticketNumber, "Medium", departmentId, problemStatus, technical, deviceInfo.mac_address, userId],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result.insertId);
-        }
-      );
-    });
+    const ticketRes = await queryAsync(
+      "INSERT INTO Internal_Tickets (ticket_number, priority, department_id, issue_description, assigned_to, mac_address, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [ticketNumber, "Medium", departmentId, problemStatus, technical, deviceInfo.mac_address, userId]
+    );
+    const ticketId = ticketRes.insertId;
 
-    // 5️⃣ أنشئ تقارير مرتبطة بالتذكرة
     const reportNumberMain = `REP-${Date.now()}-MAIN`;
-    await new Promise((resolve, reject) => {
-      db.query(
-        "INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [
-          reportNumberMain,
-          ticketId,
-          deviceSpec,
-          `Selected Issue: ${problemStatus}`,
-          `Initial Diagnosis: ${initialDiagnosis}`,
-          "Open",
-          "General",
-          deviceInfo.mac_address,
-          userId
-        ],
-        (err) => {
-          if (err) return reject(err);
-          resolve();
-        }
-      );
-    });
+    await queryAsync(
+      "INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [reportNumberMain, ticketId, deviceSpec, `Selected Issue: ${problemStatus}`, `Initial Diagnosis: ${initialDiagnosis}`, "Open", "General", deviceInfo.mac_address, userId]
+    );
 
     const reportNumberTicket = `REP-${Date.now()}-TICKET`;
-    await new Promise((resolve, reject) => {
-      db.query(
-        "INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [
-          reportNumberTicket,
-          ticketId,
-          deviceSpec,
-          "Ticket Created",
-          `Ticket (${ticketNumber}) for device: ${deviceInfo.device_name} - Department: ${deviceInfo.department_name}`,
-          "Open",
-          "General",
-          deviceInfo.mac_address,
-          userId
-        ],
-        (err) => {
-          if (err) return reject(err);
-          resolve();
-        }
-      );
-    });
+    await queryAsync(
+      "INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [reportNumberTicket, ticketId, deviceSpec, "Ticket Created", `Ticket (${ticketNumber}) for device: ${deviceInfo.device_name} - Department: ${deviceInfo.department_name}`, "Open", "General", deviceInfo.mac_address, userId]
+    );
+
+    // ✅ إشعارات مثل regular
+    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+      userId,
+      `General maintenance created for ${deviceInfo.device_name} (${deviceInfo.device_type}) by engineer ${engineerName || 'N/A'} (${problemStatus})`,
+      'general-maintenance'
+    ]);
+
+    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+      userId,
+      `Report created ${reportNumberMain} for device ${deviceInfo.device_name} (${deviceInfo.device_type}) by engineer ${engineerName || 'N/A'}`,
+      'general-report'
+    ]);
+
+    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+      userId,
+      `Report created (Ticket) ${reportNumberTicket} for device ${deviceInfo.device_name} (${deviceInfo.device_type}) by engineer ${engineerName || 'N/A'}`,
+      'internal-ticket-report'
+    ]);
+
+    const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE id = ?`, [technical]);
+    const techEngineerName = techEngineerRes[0]?.name;
+
+    if (adminUser?.role === 'admin' && techEngineerName) {
+      const techUserRes = await queryAsync(`SELECT id FROM Users WHERE name = ?`, [techEngineerName]);
+      const techUserId = techUserRes[0]?.id;
+
+      if (techUserId) {
+        await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+          techUserId,
+          `You have been assigned a new General maintenance task on ${deviceInfo.device_name} (${deviceInfo.device_type}) by ${adminUser.name}`,
+          'technical-notification'
+        ]);
+      }
+    }
 
     res.json({ message: "✅ General maintenance, ticket, and reports created successfully." });
 
@@ -1104,23 +1065,25 @@ app.get("/get-external-reports", authenticateToken, (req, res) => {
   const userRole = req.user.role;
 
   let externalSql = `
-    SELECT 
-      MAX(id) AS id,
-      MAX(created_at) AS created_at,
-      NULL AS ticket_id,
-      MAX(ticket_number) AS ticket_number,
-      MAX(device_name) AS device_name,
-      MAX(department_name) AS department_name,
-      MAX(initial_diagnosis) AS issue_summary,
-      MAX(final_diagnosis) AS full_description,
-      MAX(status) AS status,
-      MAX(device_type) AS device_type,
-      NULL AS priority,
-      'external-legacy' AS source,
-      NULL AS attachment_name,
-      NULL AS attachment_path,
-      MAX(mac_address) AS mac_address
-    FROM External_Maintenance
+SELECT 
+  MAX(id) AS id,
+  MAX(created_at) AS created_at,
+  NULL AS ticket_id,
+  MAX(ticket_number) AS ticket_number,
+  MAX(device_name) AS device_name,
+  MAX(department_name) AS department_name,
+  MAX(initial_diagnosis) AS issue_summary,
+  MAX(final_diagnosis) AS full_description,
+  MAX(status) AS status,
+  MAX(device_type) AS device_type,
+  NULL AS priority,
+  'external-legacy' AS source,
+  NULL AS attachment_name,
+  NULL AS attachment_path,
+  MAX(mac_address) AS mac_address,
+  MAX(user_id) AS user_id   -- 👈 أضفه هنا
+FROM External_Maintenance
+
   `;
 
   let newSql = `
@@ -1139,8 +1102,10 @@ app.get("/get-external-reports", authenticateToken, (req, res) => {
       'new' AS source,
       MAX(attachment_name) AS attachment_name,
       MAX(attachment_path) AS attachment_path,
-      NULL AS mac_address
-    FROM New_Maintenance_Reports
+      NULL AS mac_address,
+      MAX(user_id) AS user_id
+
+    FROM New_Maintenance_Report
   `;
 
   let externalReportsSQL = `
@@ -1159,7 +1124,8 @@ app.get("/get-external-reports", authenticateToken, (req, res) => {
       'external-new' AS source,
       MAX(et.attachment_name) AS attachment_name,
       MAX(et.attachment_path) AS attachment_path,
-      MAX(md.mac_address) AS mac_address
+      MAX(md.mac_address) AS mac_address,
+      MAX(mr.user_id) AS user_id
     FROM Maintenance_Reports mr
     LEFT JOIN External_Tickets et ON mr.ticket_id = et.id
     LEFT JOIN Maintenance_Devices md ON mr.device_id = md.id
@@ -2138,58 +2104,73 @@ app.get('/get-internal-reports', authenticateToken, (req, res) => {
   const userRole = req.user.role;
 
   let internalSql = `
-    SELECT 
-      R.id, R.created_at, R.issue_summary, R.full_description, R.status,
-      R.device_id, R.report_number, R.ticket_id, R.maintenance_type,
-      MAX(CASE WHEN R.maintenance_type = 'Regular' THEN NULL ELSE T.ticket_number END) AS ticket_number,
-      MAX(CASE WHEN R.maintenance_type = 'Regular' THEN NULL ELSE T.issue_description END) AS issue_description,
-      MAX(CASE WHEN R.maintenance_type = 'Regular' THEN RM.problem_status ELSE T.priority END) AS priority,
-      MAX(COALESCE(GM.department_name, D.name)) AS department_name,
-      MAX(COALESCE(GM.device_name, M.device_name)) AS device_name,
-      MAX(RM.frequency) AS frequency,
-      MAX(M.device_type) AS device_type,
-      'internal' AS source,
-      MAX(CASE WHEN R.maintenance_type = 'Regular' THEN NULL ELSE T.attachment_name END) AS attachment_name,
-      MAX(CASE WHEN R.maintenance_type = 'Regular' THEN NULL ELSE T.attachment_path END) AS attachment_path,
-      MAX(COALESCE(RM.problem_status, T.issue_description)) AS problem_status,
-      MAX(COALESCE(E.name, T.assigned_to)) AS technical_engineer
-    FROM Maintenance_Reports R
-    LEFT JOIN Maintenance_Devices M ON R.device_id = M.id
-    LEFT JOIN Departments D ON M.department_id = D.id
-    LEFT JOIN (SELECT * FROM Regular_Maintenance ORDER BY last_maintenance_date DESC) AS RM ON RM.device_id = R.device_id
-    LEFT JOIN Engineers E ON RM.technical_engineer_id = E.id
-    LEFT JOIN General_Maintenance GM ON GM.device_id = R.device_id
-    LEFT JOIN Internal_Tickets T ON R.ticket_id = T.id
-    WHERE R.maintenance_type IN ('Regular', 'General', 'Internal')
-  `;
+SELECT 
+  R.id,
+  MAX(R.created_at) AS created_at,
+  MAX(R.issue_summary) AS issue_summary,
+  MAX(R.full_description) AS full_description,
+  MAX(R.status) AS status,
+  MAX(R.device_id) AS device_id,
+  MAX(R.report_number) AS report_number,
+  MAX(R.ticket_id) AS ticket_id,
+  MAX(R.maintenance_type) AS maintenance_type,
+  MAX(
+    CASE 
+      WHEN R.maintenance_type = 'Internal' THEN R.report_number
+      WHEN R.maintenance_type = 'Regular' THEN NULL
+      ELSE T.ticket_number
+    END
+  ) AS ticket_number,
+  MAX(CASE WHEN R.maintenance_type = 'Regular' THEN NULL ELSE T.issue_description END) AS issue_description,
+  MAX(CASE WHEN R.maintenance_type = 'Regular' THEN RM.problem_status ELSE T.priority END) AS priority,
+  MAX(COALESCE(GM.department_name, D.name)) AS department_name,
+  MAX(COALESCE(GM.device_name, M.device_name)) AS device_name,
+  MAX(RM.frequency) AS frequency,
+  MAX(M.device_type) AS device_type,
+  'internal' AS source,
+  MAX(CASE WHEN R.maintenance_type = 'Regular' THEN NULL ELSE T.attachment_name END) AS attachment_name,
+  MAX(CASE WHEN R.maintenance_type = 'Regular' THEN NULL ELSE T.attachment_path END) AS attachment_path,
+  MAX(COALESCE(RM.problem_status, T.issue_description)) AS problem_status,
+  MAX(COALESCE(E.name, T.assigned_to)) AS technical_engineer
+FROM Maintenance_Reports R
+LEFT JOIN Maintenance_Devices M ON R.device_id = M.id
+LEFT JOIN Departments D ON M.department_id = D.id
+LEFT JOIN (SELECT * FROM Regular_Maintenance ORDER BY last_maintenance_date DESC) AS RM ON RM.device_id = R.device_id
+LEFT JOIN Engineers E ON RM.technical_engineer_id = E.id
+LEFT JOIN General_Maintenance GM ON GM.device_id = R.device_id
+LEFT JOIN Internal_Tickets T ON R.ticket_id = T.id
+WHERE R.maintenance_type IN ('Regular', 'General', 'Internal')
 
-  let newSql = `
-    SELECT 
-      id, created_at, issue_summary, NULL AS full_description, status, device_id,
-      NULL AS report_number, NULL AS ticket_id, 'New' AS maintenance_type, NULL AS ticket_number,
-      NULL AS issue_description, priority, NULL AS department_name, NULL AS device_name, NULL AS frequency,
-      device_type, 'new' AS source, attachment_name, attachment_path, NULL AS problem_status, NULL AS technical_engineer
-    FROM New_Maintenance_Report
-  `;
+`;
+if (userRole !== 'admin') {
+  internalSql += ` AND R.user_id = ? `;
+}
 
-  if (userRole !== 'admin') {
-    internalSql += ` AND R.user_id = ? `;
-    newSql += ` WHERE user_id = ? `;
+internalSql += ` GROUP BY R.id `;
+
+let newSql = `
+SELECT 
+  id, created_at, issue_summary, NULL AS full_description, status, device_id,
+  NULL AS report_number, NULL AS ticket_id, 'New' AS maintenance_type, NULL AS ticket_number,
+  NULL AS issue_description, priority, NULL AS department_name, NULL AS device_name, NULL AS frequency,
+  device_type, 'new' AS source, attachment_name, attachment_path, NULL AS problem_status, NULL AS technical_engineer
+FROM New_Maintenance_Report
+`;
+
+if (userRole !== 'admin') {
+  newSql += ` WHERE user_id = ? `;
+}
+
+const combinedSql = `${internalSql} UNION ALL ${newSql} ORDER BY created_at DESC`;
+const params = userRole === 'admin' ? [] : [userId, userId];
+
+db.query(combinedSql, params, (err, results) => {
+  if (err) {
+    console.error("❌ Failed to fetch reports:", err);
+    return res.status(500).json({ error: "Error fetching reports" });
   }
-
-  // أضف GROUP BY هنا ↓↓↓↓↓↓
-  internalSql += ` GROUP BY R.id `;
-
-  const combinedSql = `${internalSql} UNION ALL ${newSql} ORDER BY created_at DESC`;
-  const params = userRole === 'admin' ? [] : [userId, userId];
-
-  db.query(combinedSql, params, (err, results) => {
-    if (err) {
-      console.error("❌ Failed to fetch reports:", err);
-      return res.status(500).json({ error: "Error fetching reports" });
-    }
-    res.json(results);
-  });
+  res.json(results);
+});
 });
 
 app.post("/update-report-full", upload.single("attachment"), async (req, res) => {
@@ -2813,32 +2794,39 @@ async function generateTicketNumber(type) {
     );
   });
 }
+app.post("/internal-ticket-with-file", upload.single("attachment"), authenticateToken, async (req, res) => {
+  const userId = req.user.id;
 
-app.post("/internal-ticket-with-file", upload.single("attachment"),authenticateToken, async (req, res) => {
-const userId = req.userId;
   try {
-
     const {
       report_number,
       priority,
       department_id,
-      device_id, // 👈 أضفناها هنا ✅
-
+      device_id,
       issue_description,
       initial_diagnosis,
       final_diagnosis,
       other_description,
       assigned_to,
       status = 'Open',
-      ticket_type // 👈 أضف هذا السطر
-
+      ticket_type
     } = req.body;
 
     const file = req.file;
     const fileName = file ? file.filename : null;
     const filePath = file ? file.path : null;
 
-    // ✅ 1. نجيب الرقم الأخير من جدول العدادات
+    const adminUser = await getUserById(userId);
+    const userName = await getUserNameById(userId);
+
+    let engineerName;
+    if (adminUser?.role === 'admin' && assigned_to) {
+      const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE id = ?`, [assigned_to]);
+      engineerName = techEngineerRes[0]?.name || userName;
+    } else {
+      engineerName = userName;
+    }
+
     const counterQuery = `SELECT last_number FROM Ticket_Counters WHERE type = 'INT'`;
     db.query(counterQuery, (counterErr, counterResult) => {
       if (counterErr) {
@@ -2850,7 +2838,6 @@ const userId = req.userId;
       let today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       let newTicketNumber = `INT-${today}-${String(newNumber).padStart(3, '0')}`;
 
-      // ✅ 2. نحدث جدول العدادات
       const updateCounterQuery = `UPDATE Ticket_Counters SET last_number = ? WHERE type = 'INT'`;
       db.query(updateCounterQuery, [newNumber], (updateErr) => {
         if (updateErr) {
@@ -2858,13 +2845,11 @@ const userId = req.userId;
           return res.status(500).json({ error: "Failed to update ticket counter" });
         }
 
-        // ✅ 3. إدخال التذكرة في جدول Internal_Tickets
         const insertTicketQuery = `
           INSERT INTO Internal_Tickets (
-  ticket_number, priority, department_id, issue_description, 
-  assigned_to, status, attachment_name, attachment_path, ticket_type,user_id
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-
+            ticket_number, priority, department_id, issue_description, 
+            assigned_to, status, attachment_name, attachment_path, ticket_type, user_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         const ticketValues = [
           newTicketNumber,
@@ -2878,7 +2863,6 @@ const userId = req.userId;
           ticket_type || '',
           userId
         ];
-        
 
         db.query(insertTicketQuery, ticketValues, (ticketErr, ticketResult) => {
           if (ticketErr) {
@@ -2888,29 +2872,54 @@ const userId = req.userId;
 
           const ticketId = ticketResult.insertId;
 
-          // ✅ 4. ربط التقرير بالتذكرة
           const insertReportQuery = `
-          INSERT INTO Maintenance_Reports (
-            report_number, ticket_id, device_id, issue_summary, full_description, 
-            status, maintenance_type, report_type,user_id
-          ) VALUES (?, ?, ?, ?, ?, ?, 'Internal', 'Incident', ?)
-        `;
-        
-        const reportValues = [
-          report_number,
-          ticketId,
-          device_id || null, // 👈 أضفنا الـ device_id مع القيم
-          initial_diagnosis || '',
-          final_diagnosis || other_description || '',
-          status,
-          userId
-        ];
-        
+            INSERT INTO Maintenance_Reports (
+              report_number, ticket_id, device_id, issue_summary, full_description, 
+              status, maintenance_type, report_type, user_id
+            ) VALUES (?, ?, ?, ?, ?, ?, 'Internal', 'Incident', ?)
+          `;
+          const reportValues = [
+            report_number,
+            ticketId,
+            device_id || null,
+            initial_diagnosis || '',
+            final_diagnosis || other_description || '',
+            status,
+            userId
+          ];
 
-          db.query(insertReportQuery, reportValues, (reportErr) => {
+          db.query(insertReportQuery, reportValues, async (reportErr) => {
             if (reportErr) {
               console.error("❌ Insert error (Maintenance_Reports):", reportErr);
               return res.status(500).json({ error: "Failed to insert maintenance report" });
+            }
+
+            // ✅ إشعار إنشاء التذكرة
+            await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+              userId,
+              `Internal ticket created: ${newTicketNumber} for ${ticket_type} by ${engineerName || 'N/A'}`,
+              'internal-ticket'
+            ]);
+
+            // ✅ إشعار إنشاء التقرير
+            await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+              userId,
+              `Report created ${report_number} linked to ticket ${newTicketNumber} for ${ticket_type} by ${engineerName || 'N/A'}`,
+              'internal-ticket-report'
+            ]);
+
+            // ✅ إشعار للمهندس لو فيه تعيين من admin
+            if (adminUser?.role === 'admin' && assigned_to) {
+              const techUserRes = await queryAsync(`SELECT id FROM Users WHERE name = (SELECT name FROM Engineers WHERE id = ?)`, [assigned_to]);
+              const techUserId = techUserRes[0]?.id;
+
+              if (techUserId) {
+                await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+                  techUserId,
+                  `You have been assigned a new internal ticket ${newTicketNumber} by ${adminUser.name}`,
+                  'technical-notification'
+                ]);
+              }
             }
 
             res.status(201).json({
@@ -2928,6 +2937,7 @@ const userId = req.userId;
     res.status(500).json({ error: "Unexpected server error" });
   }
 });
+
 
 app.get("/generate-internal-ticket-number", async (req, res) => {
   try {
@@ -3664,12 +3674,12 @@ app.post('/add-option-external-ticket', async (req, res) => {
 
 
 
-app.post("/external-ticket-with-file", upload.single("attachment"),authenticateToken, (req, res) => {
+app.post("/external-ticket-with-file", upload.single("attachment"), authenticateToken, async (req, res) => {
   const userId = req.user.id;
   try {
     const {
-      ticket_number,      // ✅ المستخدم يدخله
-      reporter_name,      // ✅ المستخدم يدخله
+      ticket_number,
+      reporter_name,
       device_type,
       section,
       device_spec,
@@ -3682,46 +3692,43 @@ app.post("/external-ticket-with-file", upload.single("attachment"),authenticateT
     const fileName = file ? file.filename : null;
     const filePath = file ? file.path : null;
 
-    // ✅ إدخال التذكرة في External_Tickets
+    const capitalizedPriority = priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase();
+
+    const userName = await getUserNameById(userId);
+
+  
     const insertTicketQuery = `
-    INSERT INTO External_Tickets (
+      INSERT INTO External_Tickets (
+        ticket_number,
+        department_id,
+        priority,
+        issue_description,
+        assigned_to,
+        status,
+        attachment_name,
+        attachment_path,
+        report_datetime,
+        user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const ticketValues = [
       ticket_number,
-      department_id,
-      priority,
-      issue_description,
-      assigned_to,
-      status,
-      attachment_name,
-      attachment_path,
-      report_datetime,user_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-  
+      section || null,
+      capitalizedPriority,
+      issue_description || '',
+      reporter_name || '',
+      'Open',
+      fileName || '',
+      filePath || '',
+      report_datetime || new Date(),
+      userId
+    ];
 
-  const ticketValues = [
-    ticket_number,                      // ticket_number
-    section || null,                    // department_id
-    priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase(), // priority (High/Medium/Low)
-    issue_description || '',            // issue_description
-    reporter_name || '',                // assigned_to
-    'Open',                             // status
-    fileName || '',                     // attachment_name
-    filePath || '',                     // attachment_path
-    report_datetime || new Date()       // report_datetime
-    ,userId
-  ];
-  
+    const ticketResult = await queryAsync(insertTicketQuery, ticketValues);
+    const ticketId = ticketResult.insertId;
 
-    db.query(insertTicketQuery, ticketValues, (ticketErr, ticketResult) => {
-      if (ticketErr) {
-        console.error("❌ Insert external ticket error:", ticketErr);
-        return res.status(500).json({ error: "Failed to create external ticket" });
-      }
-
-      const ticketId = ticketResult.insertId;
-
-      // ✅ بعد إنشاء التذكرة نضيف تقرير صيانة
-      const insertReportQuery = `
+    const insertReportQuery = `
       INSERT INTO Maintenance_Reports (
         report_number,
         ticket_id,
@@ -3731,36 +3738,44 @@ app.post("/external-ticket-with-file", upload.single("attachment"),authenticateT
         status,
         maintenance_type,
         report_type,
-        priority,user_id
+        priority,
+        user_id
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
-    
+
     const reportValues = [
-      ticket_number,                  // report_number
-      ticketId,                        // ticket_id
-      device_spec || null,             // device_id
-      issue_description || '',         // issue_summary
-      '',                              // full_description (فارغ مؤقتاً)
-      'Open',                          // status
-      'External',                      // maintenance_type
-      'Incident',                      // report_type
-      priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase() || 'Medium' // priority (High/Medium/Low),
-      ,userId
+      ticket_number,
+      null,
+      device_spec || null,
+      issue_description || '',
+      '',
+      'Open',
+      'External',
+      'Incident',
+      capitalizedPriority || 'Medium',
+      userId
     ];
-    
 
-      db.query(insertReportQuery, reportValues, (reportErr) => {
-        if (reportErr) {
-          console.error("❌ Insert report error:", reportErr);
-          return res.status(500).json({ error: "Failed to create maintenance report" });
-        }
+    await queryAsync(insertReportQuery, reportValues);
 
-        res.status(201).json({
-          message: "✅ External ticket and report created successfully",
-          ticket_number: ticket_number,
-          ticket_id: ticketId
-        });
-      });
+    // ✅ إشعار إنشاء التذكرة
+    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+      userId,
+      `External ticket created: ${ticket_number} by ${userName || 'N/A'}`,
+      'external-ticket'
+    ]);
+
+    // ✅ إشعار إنشاء التقرير
+    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+      userId,
+      `Report created for external ticket ${ticket_number} by ${userName || 'N/A'}`,
+      'external-ticket-report'
+    ]);
+
+    res.status(201).json({
+      message: "✅ External ticket and report created successfully",
+      ticket_number: ticket_number,
+      ticket_id: ticketId
     });
 
   } catch (err) {
