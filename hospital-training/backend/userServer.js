@@ -59,7 +59,17 @@ const adminData = {
     console.error('❌ Error:', err);
 return  }
 })();
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ message: 'No token provided' });
 
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ message: 'Invalid token' });
+    req.user = user;  // ← هنا يصير معك user.id في كل route
+    next();
+  });
+}
 
 //post route to register a new user
 app.post('/register', async (req, res) => {
@@ -167,7 +177,23 @@ app.get("/Departments", (req, res) => {
   });
   
 
-
+  app.get('/notifications', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    const role = req.user.role;
+  
+    const query = role === 'admin'
+      ? `SELECT * FROM Notifications ORDER BY created_at DESC LIMIT 50`
+      : `SELECT * FROM Notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`;
+  
+    db.query(query, role === 'admin' ? [] : [userId], (err, result) => {
+      if (err) {
+        console.error('❌ Error loading notifications:', err);
+        return res.status(500).json({ error: 'Failed to load notifications' });
+      }
+      res.json(result);
+    });
+  });
+  
 
 
 
