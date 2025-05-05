@@ -34,3 +34,14 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 });
+
+
+window.addEventListener('DOMContentLoaded', () => {
+    const role = localStorage.getItem('userRole'); // ← مهم يكون نفس الاسم المستخدم في login
+    const logsLink = document.getElementById('logs-link');
+
+    if (role === 'admin' && logsLink) {
+        logsLink.classList.remove('hidden');
+    }
+});
+
