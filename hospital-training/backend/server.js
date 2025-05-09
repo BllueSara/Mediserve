@@ -100,37 +100,63 @@ app.get("/RAM_Sizes", (req, res) => {
 });
 
 
-app.get("/TypeProplem", (req, res) => {
-  const query = "SELECT * FROM DeviceType";
-  db.query(query, (err, result) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    res.json(result);
-  });
-});
-
-app.get("/problem-states/pc", (req, res) => {
-  db.query("SELECT * FROM ProblemStates_Pc", (err, result) => {
+app.get('/TypeProplem', authenticateToken, (req, res) => {
+  const role = req.user.role;  // هذا يجيك من التوكن
+  db.query("SELECT * FROM DeviceType", (err, result) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.json(result);
+    res.json({ deviceTypes: result, role });
   });
 });
 
-app.get("/problem-states/printer", (req, res) => {
-  db.query("SELECT * FROM ProblemStates_Printer", (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(result);
-  });
+app.get("/problem-states/:deviceType", (req, res) => {
+  const { deviceType } = req.params;
+  const allowedTables = {
+    pc: 'ProblemStates_Pc',
+    printer: 'ProblemStates_Printer',
+    scanner: 'ProblemStates_Scanner'
+  };
+
+  if (deviceType === 'all-devices') {
+    const sql = `
+      SELECT problem_text, 'PC' AS device_type FROM ProblemStates_Pc
+      UNION ALL
+      SELECT problem_text, 'Printer' AS device_type FROM ProblemStates_Printer
+      UNION ALL
+      SELECT problem_text, 'Scanner' AS device_type FROM ProblemStates_Scanner
+    `;
+    db.query(sql, (err, results) => {
+      if (err) {
+        console.error("❌ Error fetching all problem states:", err);
+        return res.status(500).json({ error: "Server error" });
+      }
+      res.json(results);
+    });
+  } else if (allowedTables[deviceType.toLowerCase()]) {
+    const tableName = allowedTables[deviceType.toLowerCase()];
+    db.query(`SELECT * FROM ${tableName}`, (err, result) => {
+      if (err) {
+        console.error("❌ DB Error:", err);
+        return res.status(500).json({ error: "Server error" });
+      }
+      res.json(result);
+    });
+  } else {
+    db.query(
+      "SELECT problemStates_Maintance_device_name FROM `problemStates_Maintance_device` WHERE device_type_name = ?",
+      [deviceType],
+      (err, results) => {
+        if (err) {
+          console.error("❌ DB Error:", err);
+          return res.status(500).json({ error: "DB error" });
+        }
+        res.json(results);
+      }
+    );
+  }
 });
 
-app.get("/problem-states/scanner", (req, res) => {
-  db.query("SELECT * FROM ProblemStates_Scanner", (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(result);
-  });
-});
 
+// 💾 راوت للمشكلة حق الصيانة
 app.get("/problem-states/maintenance/:deviceType", (req, res) => {
   const { deviceType } = req.params;
 
@@ -146,6 +172,34 @@ app.get("/problem-states/maintenance/:deviceType", (req, res) => {
     }
   );
 });
+
+
+
+// ✅ كل الأجهزة
+app.get('/all-devices-specs', (req, res) => {
+  const sql = `
+    SELECT 
+      md.id, md.serial_number AS Serial_Number, md.governmental_number AS Governmental_Number,
+      COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS name,
+      md.device_type
+    FROM Maintenance_Devices md
+    LEFT JOIN PC_info pc 
+      ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
+    LEFT JOIN Printer_info pr 
+      ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
+    LEFT JOIN Scanner_info sc 
+      ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
+  `;
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("❌ Error fetching all device specs:", err);
+      return res.status(500).json({ error: "Server error" });
+    }
+    res.json(results);
+  });
+});
+
+
 
 
 app.get("/Departments", (req, res) => {
@@ -287,6 +341,11 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
   } = req.body;
   const userName = await getUserNameById(userId);
 
+  const isAllDevices = (rawDeviceType && rawDeviceType.toLowerCase() === "all-devices");
+
+const displayDevice = isAllDevices 
+  ? 'ALL DEVICES'
+  : `${deviceInfo.device_name} (${deviceInfo.device_type})`;
   try {
     const deviceRes = await queryAsync(`
       SELECT md.*, 
@@ -383,14 +442,14 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
     // 🛎️ إشعار 1: تقرير الصيانة
     await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
       userId,
-      `External maintenance report saved for ${deviceInfo.device_name} (${deviceInfo.device_type}) problem is ${initial_diagnosis} by ${userName}`,
+      `External maintenance report saved for ${deviceInfo.device_name} (${displayDevice}) problem is ${initial_diagnosis} by ${userName}`,
       'external-maintenance'
     ]);
 
     // 🛎️ إشعار 2: تلخيص التذكرة
     await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
       userId,
-      `Ticket  (${ticket_number}) saved for ${deviceInfo.device_name} (${deviceInfo.device_type} problem is ${initial_diagnosis} by ${userName})`,
+      `Ticket  (${ticket_number}) saved for ${deviceInfo.device_name} (${displayDevice} problem is ${initial_diagnosis} by ${userName})`,
       'external-ticket-report'
     ]);
 
@@ -400,7 +459,7 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
     if (adminId) {
       await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
         adminId,
-        `New external maintenance task assigned on ${deviceInfo.device_name} (${deviceInfo.device_type}) by ${userName}`,
+        `New external maintenance task assigned on ${deviceInfo.device_name} (${displayDevice}) by ${userName}`,
         'external-maintenance-assigned'
       ]);
     }
@@ -480,6 +539,7 @@ async function getUserNameById(id) {
   const res = await queryAsync('SELECT name FROM Users WHERE id = ?', [id]);
   return res[0]?.name || null;
 }
+
 app.post("/submit-regular-maintenance", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const {
@@ -505,6 +565,12 @@ app.post("/submit-regular-maintenance", authenticateToken, async (req, res) => {
   } else {
     engineerName = userName;
   }
+  const isAllDevices = (rawDeviceType && rawDeviceType.toLowerCase() === "all-devices");
+
+const displayDevice = isAllDevices 
+  ? 'ALL DEVICES'
+  : `${deviceInfo.device_name} (${deviceInfo.device_type})`;
+
 
   try {
     const departmentRes = await queryAsync("SELECT id FROM Departments WHERE name = ?", [section]);
@@ -585,9 +651,10 @@ app.post("/submit-regular-maintenance", authenticateToken, async (req, res) => {
 
     await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
       userId,
-      `Regular maintenance created for ${deviceInfo.device_name} (${deviceInfo.device_type}) by engineer ${engineerName || 'N/A'} {${problem_status}}`,
+      `Regular maintenance created for ${displayDevice} by engineer ${engineerName || 'N/A'} {${problem_status}}`,
       'regular-maintenance'
     ]);
+    
 
     const ticketNumber = `TIC-${Date.now()}`;
     const ticketRes = await queryAsync(`
@@ -626,9 +693,10 @@ app.post("/submit-regular-maintenance", authenticateToken, async (req, res) => {
       VALUES (?, ?, ?)
     `, [
       userId,
-      `Report created   ${ticketNumber} for device ${deviceInfo.device_name} (${deviceInfo.device_type}) by engineer ${engineerName || 'N/A'} (${problem_status})`,
+      `Report created ${ticketNumber} for ${displayDevice} by engineer ${engineerName || 'N/A'} (${problem_status})`,
       'internal-ticket-report'
     ]);
+    
     const reportNumberMain = `REP-${Date.now()}-MAIN`;
     await queryAsync(`
       INSERT INTO Maintenance_Reports (
@@ -652,7 +720,7 @@ app.post("/submit-regular-maintenance", authenticateToken, async (req, res) => {
       VALUES (?, ?, ?)
     `, [
       userId,
-      `Report created ${reportNumberMain} for device ${deviceInfo.device_name} (${deviceInfo.device_type}) by engineer ${engineerName || 'N/A'}`,
+      `Report created ${reportNumberMain} for device ${deviceInfo.device_name} (${displayDevice}) by engineer ${engineerName || 'N/A'}`,
       'regular-report'
     ]);
 
@@ -662,15 +730,16 @@ app.post("/submit-regular-maintenance", authenticateToken, async (req, res) => {
     if (adminUser?.role === 'admin' && techEngineerName) {
       const techUserRes = await queryAsync(`SELECT id FROM Users WHERE name = ?`, [techEngineerName]);
       const techUserId = techUserRes[0]?.id;
-
+    
       if (techUserId) {
         await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
           techUserId,
-          `You have been assigned a new Regular maintenance task on ${deviceInfo.device_name} (${deviceInfo.device_type}) by ${adminUser.name}`,
+          `You have been assigned a new Regular maintenance task on ${displayDevice} by ${adminUser.name}`,
           'technical-notification'
         ]);
       }
     }
+    
 
     res.json({ message: "✅ Regular maintenance, ticket, and reports created successfully." });
 
@@ -926,6 +995,11 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
   } else {
     engineerName = userName;
   }
+  const isAllDevices = (rawDeviceType && rawDeviceType.toLowerCase() === "all-devices");
+
+const displayDevice = isAllDevices 
+  ? 'ALL DEVICES'
+  : `${deviceInfo.device_name} (${deviceInfo.device_type})`;
 
   try {
     const departmentRes = await queryAsync("SELECT id FROM Departments WHERE name = ?", [section]);
@@ -1008,19 +1082,19 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
     // ✅ إشعارات مثل regular
     await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
       userId,
-      `General maintenance created for ${deviceInfo.device_name} (${deviceInfo.device_type}) by engineer ${engineerName || 'N/A'} (${problemStatus})`,
+      `General maintenance created for ${deviceInfo.device_name} (${displayDevice}) by engineer ${engineerName || 'N/A'} (${problemStatus})`,
       'general-maintenance'
     ]);
 
     await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
       userId,
-      `Report created ${reportNumberMain} for device ${deviceInfo.device_name} (${deviceInfo.device_type}) by engineer ${engineerName || 'N/A'}`,
+      `Report created ${reportNumberMain} for device ${deviceInfo.device_name} (${displayDevice}) by engineer ${engineerName || 'N/A'}`,
       'general-report'
     ]);
 
     await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
       userId,
-      `Report created (Ticket) ${reportNumberTicket} for device ${deviceInfo.device_name} (${deviceInfo.device_type}) by engineer ${engineerName || 'N/A'}`,
+      `Report created (Ticket) ${reportNumberTicket} for device ${deviceInfo.device_name} (${displayDevice}) by engineer ${engineerName || 'N/A'}`,
       'internal-ticket-report'
     ]);
 
@@ -1034,7 +1108,7 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
       if (techUserId) {
         await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
           techUserId,
-          `You have been assigned a new General maintenance task on ${deviceInfo.device_name} (${deviceInfo.device_type}) by ${adminUser.name}`,
+          `You have been assigned a new General maintenance task on ${deviceInfo.device_name} (${displayDevice}) by ${adminUser.name}`,
           'technical-notification'
         ]);
       }
