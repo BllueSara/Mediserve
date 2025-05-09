@@ -1,25 +1,5 @@
-/* خلفية كاملة بيضاء */
-body {
-    font-family: 'Segoe UI', sans-serif;
-    background-color: #ffffff !important;
-    color: #111;
-    margin: 0;
-    padding: 0;
-  }
-  
-  /* الخلفية البيضاء للجزء الداخلي أيضًا */
-  main {
-    background-color: #ffffff !important;
-  }
-  
-  /* العنوان */
-  main h1 {
-    font-size: 1.75rem;
-    font-weight: 600;
-  }
-  
-  /* أزرار الفلاتر */
-  .filter-btns button {
+/* فلاتر */
+.filter-btns button {
     border-radius: 9999px;
     font-size: 14px;
     padding: 6px 16px;
@@ -39,7 +19,7 @@ body {
     background-color: #d1d5db;
   }
   
-  /* كروت السجلات */
+  /* البطاقات */
   .activity-card {
     background-color: #fff;
     border-radius: 12px;
@@ -51,7 +31,6 @@ body {
     gap: 12px;
   }
   
-  /* الأيقونة */
   .icon {
     width: 28px;
     height: 28px;
@@ -79,7 +58,6 @@ body {
     margin-top: 4px;
   }
   
-  /* الوقت */
   .activity-time {
     text-align: right;
     font-size: 14px;
@@ -91,7 +69,6 @@ body {
     color: #9ca3af;
   }
   
-  /* شاشات صغيرة */
   @media (max-width: 640px) {
     .activity-card {
       flex-direction: column;

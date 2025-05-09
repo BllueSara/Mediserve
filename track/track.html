@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,156 +7,149 @@
   <link rel="stylesheet" href="/track/track.css" />
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
+<body class="bg-white font-sans">
 
-<body class="bg-white">
-
-  <!-- الهيدر نفسه من Home -->
-  <header class="relative bg-white px-6 py-4 w-full flex items-center justify-between">
-    <div class="absolute left-6 top-4">
+  <!-- Header -->
+  <header class="bg-white px-6 py-4 flex items-center justify-between w-full">
+    <!-- Left: Logo -->
+    <div class="flex items-center gap-6">
       <img src="/icon/MS Logo.png" alt="MS Logo" class="w-[120px]" />
     </div>
 
-    <nav class="mx-auto flex space-x-6 items-center relative top-[8px]">
-      <a href="/Home/Home.html" class="flex items-center gap-2 text-gray-700 hover:underline cursor-pointer">
-        <img src="/icon/Home-b.png" alt="Home" class="w-5 h-5" />
-        <span>Home</span>
+    <!-- Center: Navigation -->
+    <nav class="flex items-center gap-6">
+      <a href="/Home/Home.html" class="flex items-center gap-1 text-gray-700 hover:underline text-sm">
+        <img src="/icon/Home-b.png" class="w-4 h-4" />
+        Home
       </a>
-      <a href="/profile/profile.html" class="flex items-center gap-2 text-gray-700 hover:underline cursor-pointer">
-        <img src="/icon/profile.png" alt="Profile" class="w-5 h-5" />
-        <span>Profile</span>
+      <a href="/profile/profile.html" class="flex items-center gap-1 text-gray-700 hover:underline text-sm">
+        <img src="/icon/profile.png" class="w-4 h-4" />
+        Profile
       </a>
-      <a href="/Notifications/Notifications.html" class="flex items-center gap-2 text-gray-700 hover:underline cursor-pointer">
-        <img src="/icon/notifications.png" alt="Notifications" class="w-5 h-5" />
-        <span>Notifications</span>
+      <a href="/Notifications/Notifications.html" class="flex items-center gap-1 text-gray-700 hover:underline text-sm">
+        <img src="/icon/notifications.png" class="w-4 h-4" />
+        Notifications
       </a>
-      <a href="/logs/track.html" class="flex items-center gap-2 text-gray-700 hover:underline cursor-pointer">
-        <img src="/icon/track.png" alt="Logs" class="w-5 h-5" />
-        <span>Logs</span>
+      <a href="/logs/track.html" class="flex items-center gap-1 text-gray-700 hover:underline text-sm">
+        <img src="/icon/track.png" class="w-4 h-4" />
+        Logs
       </a>
     </nav>
 
-    <div class="absolute right-6 top-2">
+    <!-- Right: Hospital Logo -->
+    <div>
       <img src="/icon/hospital-logo.png" alt="Hospital Logo" class="h-[50px]" />
     </div>
   </header>
 
-  <!-- المحتوى -->
-  <main class="max-w-6xl mx-auto px-4 py-10">
+  <!-- Main Content -->
+  <main class="max-w-6xl mx-auto px-4">
+    <div class="mt-20 mb-6">
+      <h1 class="text-2xl font-semibold mb-4">Activity Log</h1>
 
-    <!-- رأس الصفحة مع البحث والفلتر -->
-    <div class="mb-4">
-      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <h1 class="text-2xl font-semibold">Activity Log</h1>
-        <div class="flex gap-2 w-full sm:w-auto">
-          <input type="text" placeholder="Search activities..."
-            class="border border-gray-300 rounded px-4 py-2 text-sm w-full sm:w-72" />
-          <button class="border border-gray-300 rounded px-3 text-sm flex items-center gap-1">
-            <span>Filter</span>
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L14 
-                15.414V19a1 1 0 01-.553.894l-4 2A1 1 0 018 21v-5.586L3.293 
-                6.707A1 1 0 013 6V4z" />
-            </svg>
-          </button>
+      <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div class="filter-btns flex flex-wrap gap-2">
+          <button class="active">All Activities</button>
+          <button>Added</button>
+          <button>Deleted</button>
+          <button>Edited</button>
+          <button>Submitted</button>
+          <button>Uploaded</button>
         </div>
-      </div>
-
-      <!-- فلاتر دائرية -->
-      <div class="filter-btns flex flex-wrap gap-2 mt-4">
-        <button class="active">All Activities</button>
-        <button>Added</button>
-        <button>Deleted</button>
-        <button>Edited</button>
-        <button>Submitted</button>
-        <button>Uploaded</button>
+        <input type="text" placeholder="Search activities..."
+          class="border border-gray-300 rounded px-4 py-2 text-sm w-full sm:w-72" />
       </div>
     </div>
 
-    <!-- الأنشطة -->
-    <div class="space-y-4">
-      <!-- البطاقة 1 -->
+    <!-- Activity Cards -->
+    <div class="space-y-4 mb-10">
+      <!-- Card 1 -->
       <div class="activity-card">
         <div class="flex gap-4">
           <img src="/icon/add.png" class="icon" alt="add" />
           <div class="activity-content">
-            <h2>Added new ticket #1234</h2>
-            <p>Support ticket for server maintenance</p>
-            <p class="meta">Priority: High • Category: Infrastructure</p>
+            <h2>Added new device</h2>
+            <p>Device type: Printer • Model: HP LaserJet</p>
+            <p class="meta">By: Username</p>
           </div>
         </div>
         <div class="activity-time">
-          <p>2 minutes ago</p>
-          <p class="date">Today at 3:45 PM</p>
+          <p>Just now</p>
+          <p class="date">May 8, 2025 at 2:15 PM</p>
         </div>
       </div>
+      
 
-      <!-- البطاقة 2 -->
-      <div class="activity-card">
-        <div class="flex gap-4">
-          <img src="/icon/delete.png" class="icon" alt="delete" />
-          <div class="activity-content">
-            <h2 class="text-red-600">Deleted report</h2>
-            <p>Monthly performance report - April 2024</p>
-            <p class="meta">Document type: PDF • Size: 2.4 MB</p>
-          </div>
-        </div>
-        <div class="activity-time">
-          <p>1 hour ago</p>
-          <p class="date">Today at 2:30 PM</p>
-        </div>
-      </div>
+      <!-- Card 2 -->
+<!-- Card 2 -->
+<div class="activity-card">
+  <div class="flex gap-4">
+    <img src="/icon/delete.png" class="icon" alt="delete" />
+    <div class="activity-content">
+      <h2>Deleted device</h2>
+      <p>Device: Scanner • Serial: SN20391</p>
+      <p class="meta">By: Username</p>
+    </div>
+  </div>
+  <div class="activity-time">
+    <p>10 minutes ago</p>
+    <p class="date">May 8, 2025 at 2:05 PM</p>
+  </div>
+</div>
 
-      <!-- البطاقة 3 -->
+
+
+      <!-- Card 3 -->
       <div class="activity-card">
         <div class="flex gap-4">
           <img src="/icon/edit.png" class="icon" alt="edit" />
           <div class="activity-content">
-            <h2>Edited maintenance request</h2>
-            <p>Updated priority level from Medium to High</p>
-            <p class="meta">Request ID: MR-2024-089 • Status: In Progress</p>
+            <h2>Updated ticket status</h2>
+            <p>Ticket #3245 changed from "In Progress" to "Resolved"</p>
+            <p class="meta">By: Username</p>
           </div>
         </div>
         <div class="activity-time">
-          <p>3 hours ago</p>
-          <p class="date">Today at 12:15 PM</p>
+          <p>1 hour ago</p>
+          <p class="date">May 8, 2025 at 1:00 PM</p>
         </div>
       </div>
-
-      <!-- البطاقة 4 -->
+      
+      <!-- Card 4 -->
       <div class="activity-card">
         <div class="flex gap-4">
           <img src="/icon/submit.png" class="icon" alt="submit" />
           <div class="activity-content">
-            <h2>Submitted ticket #1235</h2>
-            <p>Network connectivity issue report</p>
-            <p class="meta">Department: IT • Location: Floor 3</p>
+            <h2>Submitted maintenance request</h2>
+            <p>Request: Printer not responding • Location: Lab 2</p>
+            <p class="meta">By: Username</p>
           </div>
         </div>
         <div class="activity-time">
           <p>Yesterday</p>
-          <p class="date">Apr 15, 2024 at 3:45 PM</p>
+          <p class="date">May 7, 2025 at 4:40 PM</p>
         </div>
       </div>
+      
 
-      <!-- البطاقة 5 -->
+      <!-- Card 5 -->
       <div class="activity-card">
         <div class="flex gap-4">
-          <img src="/icon/upload.png" class="icon" alt="upload" />
+          <img src="/icon/login.png" class="icon" alt="login" />
           <div class="activity-content">
-            <h2>Uploaded document</h2>
-            <p>Q1 2024 Security Assessment.pdf</p>
-            <p class="meta">File type: PDF • Size: 5.8 MB</p>
+            <h2>User logged in</h2>
+            <p>Accessed the dashboard</p>
+            <p class="meta">User: Username</p>
           </div>
         </div>
         <div class="activity-time">
-          <p>Yesterday</p>
-          <p class="date">Apr 15, 2024 at 2:30 PM</p>
+          <p>Today</p>
+          <p class="date">May 8, 2025 at 9:00 AM</p>
         </div>
       </div>
+      
     </div>
-
   </main>
-</body>
 
+</body>
 </html>
