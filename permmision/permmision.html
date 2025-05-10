@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="permmision.css">
+      <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+   
+  </style>
+</head>
+<body>
+  <div class="header">
+  <header class="relative bg-white px-6 py-4 w-full flex items-center justify-between">
+    <div class="absolute left-6 top-4">
+      <img src="/icon/MS Logo.png" alt="MS Logo" class="w-[120px]" />
+    </div>
+
+    <nav class="mx-auto flex space-x-6 items-center relative top-[8px]">
+      <a href="/Home/Home.html" class="flex items-center gap-2 text-gray-700 hover:underline cursor-pointer">
+        <img src="/icon/Home-b.png" alt="Home" class="w-5 h-5" />
+        <span>Home</span>
+      </a>
+      <a href="/profile/profile.html" class="flex items-center gap-2 text-gray-700 hover:underline cursor-pointer">
+        <img src="/icon/profile.png" alt="Profile" class="w-5 h-5" />
+        <span>Profile</span>
+      </a>
+      <a href="/Notifications/Notifications.html" class="flex items-center gap-2 text-gray-700 hover:underline cursor-pointer">
+        <img src="/icon/notifications.png" alt="Notifications" class="w-5 h-5" />
+        <span>Notifications</span>
+      </a>
+      <a href="/logs/track.html" class="flex items-center gap-2 text-gray-700 hover:underline cursor-pointer">
+        <img src="/icon/track.png" alt="Logs" class="w-5 h-5" />
+        <span>Logs</span>
+      </a>
+    </nav>
+
+    <div class="absolute right-6 top-2">
+      <img src="/icon/hospital-logo.png" alt="Hospital Logo" class="h-[50px]" />
+    </div>
+  </header>
+  </div>
+  <div class="container">
+    <aside class="sidebar">
+      <input type="text" placeholder="Search users...">
+      <div class="user-item"> Sara Hamed <span style="margin-left:auto;width:8px;height:8px;background:#10b981;border-radius:50%;"></span></div>
+      <div class="user-item"> Hani omar <span style="margin-left:auto;width:8px;height:8px;background:#10b981;border-radius:50%;"></span></div>
+    <div class="user-item"> Osama Ali <span style="margin-left:auto;width:8px;height:8px;background:#10b981;border-radius:50%;"></span></div>
+
+      <button class="add-user">+ Add New User</button>
+    </aside>
+    <main class="main">
+<div class="profile-header">
+  <div class="info" style="display: flex; align-items: center; gap: 16px;">
+    <div style="display: flex; flex-direction: column;">
+      <strong style="font-size: 16px; color: #111827;">Sara Hamed</strong>
+      <span style="font-size: 14px; color: #6b7280;">sara.Hamed@company.com</span>
+    </div>
+  </div>
+  <div class="actions" style="display: flex; align-items: center; gap: 20px;">
+    <span style="font-size: 14px; color: #6b7280;">Status:</span>
+    <span style="display: flex; align-items: center; gap: 6px; background: #ecfdf5; color: #10b981; padding: 4px 10px; border-radius: 9999px; font-size: 14px; font-weight: 500;">
+      <span style="width: 8px; height: 8px; background: #10b981; border-radius: 50%;"></span>
+      Active
+    </span>
+    <span style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: #ef4444; font-size: 14px;">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px; height:18px;">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+      Delete
+    </span>
+    <span style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: #3DA9E0; font-size: 14px;">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px; height:18px;">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5v-1.125A4.125 4.125 0 0012.375 5.25h-.75A4.125 4.125 0 007.5 9.375V10.5m9 0H7.5m9 0v6.375a2.625 2.625 0 01-2.625 2.625h-3.75A2.625 2.625 0 017.5 16.875V10.5" />
+      </svg>
+      Reset Password
+    </span>
+  </div>
+</div>
+
+
+<div class="permissions-section">
+  <div class="permissions-title">Device Access Permissions</div>
+  <div class="permissions-grid">
+    <label class="radio-wrapper">
+      <input type="radio" name="device" checked>
+      <div class="permission-text"><strong>All Devices</strong></div>
+    </label>
+    <label class="radio-wrapper">
+      <input type="radio" name="device">
+      <div class="permission-text"><strong>PC Only</strong></div>
+    </label>
+    <label class="radio-wrapper">
+      <input type="radio" name="device">
+      <div class="permission-text"><strong>Scanner Only</strong></div>
+    </label>
+    <label class="radio-wrapper">
+      <input type="radio" name="device">
+      <div class="permission-text"><strong>Printer Only</strong></div>
+    </label>
+  </div>
+</div>
+      <div class="permissions-section">
+        <div class="permissions-title">Action Permissions</div>
+        <div class="permissions-grid">
+          <div class="permission-item"><div class="permission-text"><strong>Full Access</strong><span>Can perform all actions</span></div><label class="switch"><input type="checkbox"><span class="slider"></span></label></div>
+          <div class="permission-item"><div class="permission-text"><strong>View Access</strong><span>Can view information only</span></div><label class="switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="permission-item"><div class="permission-text"><strong>Add Items</strong><span>Can add new items</span></div><label class="switch"><input type="checkbox"><span class="slider"></span></label></div>
+          <div class="permission-item"><div class="permission-text"><strong>Edit Items</strong><span>Can modify existing items</span></div><label class="switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="permission-item"><div class="permission-text"><strong>Delete Items</strong><span>Can remove items</span></div><label class="switch"><input type="checkbox"><span class="slider"></span></label></div>
+          <div class="permission-item"><div class="permission-text"><strong>Check Logs</strong><span>Can check logs</span></div><label class="switch"><input type="checkbox"><span class="slider"></span></label></div>
+          <div class="permission-item"><div class="permission-text"><strong>Edit Permission</strong><span>Can edit permission</span></div><label class="switch"><input type="checkbox"><span class="slider"></span></label></div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script>
+  const radios = document.querySelectorAll('.radio-wrapper input[type="radio"]');
+
+  radios.forEach(radio => {
+    radio.addEventListener('change', () => {
+      document.querySelectorAll('.radio-wrapper').forEach(wrapper => {
+        wrapper.classList.remove('active');
+      });
+      if (radio.checked) {
+        radio.parentElement.classList.add('active');
+      }
+    });
+  });
+
+  // Initialize active state on load
+  document.querySelectorAll('.radio-wrapper input[type="radio"]').forEach(radio => {
+    if (radio.checked) {
+      radio.parentElement.classList.add('active');
+    }
+  });
+</script>
+</body>
+</html>
