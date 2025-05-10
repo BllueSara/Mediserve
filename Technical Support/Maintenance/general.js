@@ -1418,7 +1418,7 @@ function saveNewTechnical() {
   fetch("http://localhost:5050/add-option-general", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ target: "technical-status", value: name })
+body: JSON.stringify({ target: "technical", value: name })
   })
     .then(res => res.json())
     .then(result => {
