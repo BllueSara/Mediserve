@@ -326,6 +326,9 @@ app.get("/device-specifications", (req, res) => {
     res.json(result);
   });
 });
+
+
+
 app.post("/submit-external-maintenance", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const {
@@ -464,6 +467,17 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
         'external-maintenance-assigned'
       ]);
     }
+
+    await queryAsync(`
+      INSERT INTO Activity_Logs (user_id, user_name, action, details)
+      VALUES (?, ?, ?, ?)
+    `, [
+      userId,
+      userName,
+      'Submitted External Maintenance',
+      `Submitted external maintenance for a ${deviceInfo.device_type} | Device Name: ${deviceInfo.device_name} | Serial: ${deviceInfo.serial_number} | Governmental No.: ${deviceInfo.governmental_number}`
+    ]);
+    
 
     res.json({ message: "✅ External maintenance, ticket summary, and notifications saved successfully." });
   } catch (error) {
@@ -742,6 +756,16 @@ const displayDevice = isAllDevices
       }
     }
     
+    await queryAsync(`
+      INSERT INTO Activity_Logs (user_id, user_name, action, details)
+      VALUES (?, ?, ?, ?)
+    `, [
+      userId,
+      userName,
+      'Submitted Regular Maintenance',
+      `Submitted regular maintenance for a ${deviceInfo.device_type} | Device: ${deviceInfo.device_name} | Serial: ${deviceInfo.serial_number} | Governmental No.: ${deviceInfo.governmental_number}`
+    ]);
+    
 
     res.json({ message: "✅ Regular maintenance, ticket, and reports created successfully." });
 
@@ -791,6 +815,8 @@ app.post("/add-popup-option", (req, res) => {
     const insertQuery = `INSERT INTO ${mapping.table} (${mapping.column}) VALUES (?)`;
     db.query(insertQuery, [value], (err) => {
       if (err) return res.status(500).json({ success: false, message: "❌ Insert error" });
+
+      
       res.json({ success: true });
     });
   });
