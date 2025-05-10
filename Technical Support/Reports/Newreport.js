@@ -4,13 +4,17 @@ window.addEventListener("DOMContentLoaded", () => {
   fillSelect("reportType", ["Incident Report", "Maintenance", "Other"]);
 
   Promise.all([
-    fetch("http://localhost:5050/TypeProplem").then(res => res.json()),
-    fetch("http://localhost:5050/ticket-status").then(res => res.json())
+  fetch("http://localhost:5050/TypeProplem", {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    }
+  })    .then(res => res.json()),    fetch("http://localhost:5050/ticket-status").then(res => res.json())
   ])
-  .then(([deviceTypes, statuses]) => {
-    fillSelect("deviceType", deviceTypes.map(t => t.DeviceType));
-    fillSelect("status", statuses.map(s => s.status_name));
-  })
+.then(([deviceRes, statuses]) => {
+  fillSelect("deviceType", deviceRes.deviceTypes.map(t => t.DeviceType));
+  fillSelect("status", statuses.map(s => s.status_name));
+})
+
   .catch(err => {
     console.error("❌ Failed to fetch select data:", err);
   });
