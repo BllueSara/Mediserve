@@ -45,3 +45,22 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+document.addEventListener("DOMContentLoaded", () => {
+    const role = localStorage.getItem('userRole'); // ← مهم يكون نفس الاسم المستخدم في login
+
+  // إظهار مربع الأدمن فقط إذا كان الدور هو admin
+  if (role === "admin") {
+    const adminBox = document.getElementById("admin-panel");
+    if (adminBox) {
+      adminBox.classList.remove("hidden");
+    }
+  }
+
+  // التنقل عند الضغط على أي مربع خدمة
+  document.querySelectorAll(".service-box").forEach(box => {
+    box.addEventListener("click", () => {
+      const url = box.getAttribute("data-url");
+      if (url) window.location.href = url;
+    });
+  });
+});
