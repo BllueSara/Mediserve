@@ -30,7 +30,7 @@
         <img src="/icon/notifications.png" class="w-4 h-4" />
         Notifications
       </a>
-      <a href="/logs/track.html" class="flex items-center gap-1 text-gray-700 hover:underline text-sm">
+      <a href="/track/track.html" class="flex items-center gap-1 text-gray-700 hover:underline text-sm">
         <img src="/icon/track.png" class="w-4 h-4" />
         Logs
       </a>
@@ -61,95 +61,14 @@
       </div>
     </div>
 
-    <!-- Activity Cards -->
-    <div class="space-y-4 mb-10">
-      <!-- Card 1 -->
-      <div class="activity-card">
-        <div class="flex gap-4">
-          <img src="/icon/add.png" class="icon" alt="add" />
-          <div class="activity-content">
-            <h2>Added new device</h2>
-            <p>Device type: Printer • Model: HP LaserJet</p>
-            <p class="meta">By: Username</p>
-          </div>
-        </div>
-        <div class="activity-time">
-          <p>Just now</p>
-          <p class="date">May 8, 2025 at 2:15 PM</p>
-        </div>
-      </div>
-      
-
-      <!-- Card 2 -->
-<!-- Card 2 -->
-<div class="activity-card">
-  <div class="flex gap-4">
-    <img src="/icon/delete.png" class="icon" alt="delete" />
-    <div class="activity-content">
-      <h2>Deleted device</h2>
-      <p>Device: Scanner • Serial: SN20391</p>
-      <p class="meta">By: Username</p>
-    </div>
-  </div>
-  <div class="activity-time">
-    <p>10 minutes ago</p>
-    <p class="date">May 8, 2025 at 2:05 PM</p>
-  </div>
-</div>
-
-
-
-      <!-- Card 3 -->
-      <div class="activity-card">
-        <div class="flex gap-4">
-          <img src="/icon/edit.png" class="icon" alt="edit" />
-          <div class="activity-content">
-            <h2>Updated ticket status</h2>
-            <p>Ticket #3245 changed from "In Progress" to "Resolved"</p>
-            <p class="meta">By: Username</p>
-          </div>
-        </div>
-        <div class="activity-time">
-          <p>1 hour ago</p>
-          <p class="date">May 8, 2025 at 1:00 PM</p>
-        </div>
-      </div>
-      
-      <!-- Card 4 -->
-      <div class="activity-card">
-        <div class="flex gap-4">
-          <img src="/icon/submit.png" class="icon" alt="submit" />
-          <div class="activity-content">
-            <h2>Submitted maintenance request</h2>
-            <p>Request: Printer not responding • Location: Lab 2</p>
-            <p class="meta">By: Username</p>
-          </div>
-        </div>
-        <div class="activity-time">
-          <p>Yesterday</p>
-          <p class="date">May 7, 2025 at 4:40 PM</p>
-        </div>
-      </div>
-      
-
-      <!-- Card 5 -->
-      <div class="activity-card">
-        <div class="flex gap-4">
-          <img src="/icon/login.png" class="icon" alt="login" />
-          <div class="activity-content">
-            <h2>User logged in</h2>
-            <p>Accessed the dashboard</p>
-            <p class="meta">User: Username</p>
-          </div>
-        </div>
-        <div class="activity-time">
-          <p>Today</p>
-          <p class="date">May 8, 2025 at 9:00 AM</p>
-        </div>
-      </div>
-      
+    <!-- Activity Cards (to be filled dynamically) -->
+    <div class="space-y-4 mb-10" id="activity-log-container">
+      <!-- JavaScript will populate logs here -->
     </div>
   </main>
 
 </body>
+
+<!-- Script file (external JS) -->
+<script src="track.js"></script>
 </html>
