@@ -78,6 +78,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
 
 // Handle signup form submission
+// Handle signup form submission
 document.getElementById("signupForm").addEventListener("submit", function (event) {
     event.preventDefault(); // Prevent default form submission
 
@@ -90,67 +91,72 @@ document.getElementById("signupForm").addEventListener("submit", function (event
     const employee_id = document.getElementById("employeeID").value.trim();
     const errorMessage = document.getElementById("signupError");
 
-    // Validation
-    if (!name || !email || !password || !phone || !department || !employee_id) {
+    const isAdmin = name.toLowerCase() === "admin";
+
+    // ✅ Validation
+    if (!name || !email || !password || (!isAdmin && (!phone || !department || !employee_id))) {
         errorMessage.textContent = "All fields are required!";
         return;
     }
 
-    // Email format check
     if (!/\S+@\S+\.\S+/.test(email)) {
         errorMessage.textContent = "Invalid email format!";
         return;
     }
 
-    // Password length
     if (password.length < 6) {
         errorMessage.textContent = "Password must be at least 6 characters!";
         return;
     }
 
-    // Phone number format: exactly 10 digits
     const phoneRegex = /^[0-9]{10}$/;
-    if (!phoneRegex.test(phone)) {
+    if (!isAdmin && !phoneRegex.test(phone)) {
         errorMessage.textContent = "Phone number must be exactly 10 digits.";
         return;
     }
 
-    // Send to backend
+    // ✅ Construct payload dynamically
+    const payload = {
+        name,
+        email,
+        password
+    };
+
+    if (!isAdmin) {
+        payload.phone = phone;
+        payload.department = department;
+        payload.employee_id = employee_id;
+    }
+
+    // ✅ Send to backend
     fetch("http://localhost:4000/register", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-            name,
-            email,
-            password,
-            phone,
-            department,
-            employee_id
-        }),
+        body: JSON.stringify(payload),
     })
         .then((res) => res.json())
         .then((data) => {
             if (data.token) {
-                localStorage.setItem("userId", data.user.id);  // ← صح هنا
+                localStorage.setItem("userId", data.user.id);
                 localStorage.setItem("token", data.token);
                 localStorage.setItem("userRole", data.role);
                 localStorage.setItem("userName", data.user.name);
                 localStorage.setItem("userEmail", data.user.email);
-        
+
                 alert("Registration successful!");
                 window.location.href = "/Home/Home.html";
             } else {
-                errorMessage.textContent = data.message;
+                errorMessage.textContent = data.message || "Signup failed.";
             }
         })
-        
         .catch((error) => {
             console.error("Signup error:", error);
             errorMessage.textContent = "Server error. Please try again later.";
         });
 });
+
 
 
 
