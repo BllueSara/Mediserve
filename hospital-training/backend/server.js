@@ -326,7 +326,6 @@ app.get("/device-specifications", (req, res) => {
     res.json(result);
   });
 });
-
 app.post("/submit-external-maintenance", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const {
@@ -339,13 +338,10 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
     initial_diagnosis,
     final_diagnosis
   } = req.body;
-  const userName = await getUserNameById(userId);
 
+  const userName = await getUserNameById(userId);
   const isAllDevices = (rawDeviceType && rawDeviceType.toLowerCase() === "all-devices");
 
-const displayDevice = isAllDevices 
-  ? 'ALL DEVICES'
-  : `${deviceInfo.device_name} (${deviceInfo.device_type})`;
   try {
     const deviceRes = await queryAsync(`
       SELECT md.*, 
@@ -386,6 +382,11 @@ const displayDevice = isAllDevices
     if (!deviceInfo) {
       return res.status(404).json({ error: "❌ لم يتم العثور على معلومات الجهاز" });
     }
+
+    // ✅ displayDevice صار بعد ما جبنا deviceInfo
+    const displayDevice = isAllDevices
+      ? 'ALL DEVICES'
+      : `${deviceInfo.device_name} (${deviceInfo.device_type})`;
 
     let deviceType = rawDeviceType?.toLowerCase();
     const allowedTypes = ["pc", "printer", "scanner"];
@@ -449,7 +450,7 @@ const displayDevice = isAllDevices
     // 🛎️ إشعار 2: تلخيص التذكرة
     await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
       userId,
-      `Ticket  (${ticket_number}) saved for ${deviceInfo.device_name} (${displayDevice} problem is ${initial_diagnosis} by ${userName})`,
+      `Ticket (${ticket_number}) saved for ${deviceInfo.device_name} (${displayDevice}) problem is ${initial_diagnosis} by ${userName}`,
       'external-ticket-report'
     ]);
 
@@ -567,9 +568,7 @@ app.post("/submit-regular-maintenance", authenticateToken, async (req, res) => {
   }
   const isAllDevices = (rawDeviceType && rawDeviceType.toLowerCase() === "all-devices");
 
-const displayDevice = isAllDevices 
-  ? 'ALL DEVICES'
-  : `${deviceInfo.device_name} (${deviceInfo.device_type})`;
+
 
 
   try {
@@ -612,6 +611,9 @@ const displayDevice = isAllDevices
     const deviceInfo = deviceRes[0];
     if (!deviceInfo) return res.status(404).json({ error: "Device not found" });
 
+const displayDevice = isAllDevices 
+  ? 'ALL DEVICES'
+  : `${deviceInfo.device_name} (${deviceInfo.device_type})`;
     const checklist = JSON.stringify(details);
     await queryAsync(`
       INSERT INTO Regular_Maintenance (
@@ -997,9 +999,7 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
   }
   const isAllDevices = (rawDeviceType && rawDeviceType.toLowerCase() === "all-devices");
 
-const displayDevice = isAllDevices 
-  ? 'ALL DEVICES'
-  : `${deviceInfo.device_name} (${deviceInfo.device_type})`;
+
 
   try {
     const departmentRes = await queryAsync("SELECT id FROM Departments WHERE name = ?", [section]);
@@ -1041,7 +1041,9 @@ const displayDevice = isAllDevices
 
     const deviceInfo = deviceRes[0];
     if (!deviceInfo) return res.status(404).json({ error: "❌ Device not found" });
-
+const displayDevice = isAllDevices 
+  ? 'ALL DEVICES'
+  : `${deviceInfo.device_name} (${deviceInfo.device_type})`;
     await queryAsync(`
       INSERT INTO General_Maintenance (
         customer_name, id_number, maintenance_date, issue_type, diagnosis_initial, diagnosis_final, device_id,
