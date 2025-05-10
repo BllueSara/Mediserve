@@ -16,45 +16,6 @@ app.use(bodyParser.json());
 // مفتاح التوكن (مهم تحفظه بمكان آمن)
 const JWT_SECRET = 'super_secret_key_123';
 
-const adminData = {
-  name: 'Admin User',
-  email: 'admin',
-  password: 'Eng.2030@admin',
-  phone: '1234567890',
-  department: 'IT',
-  employee_id: 'EMP001',
-  role: 'admin'
-};
-
-(async () => {
-  try {
-    // تحقق إذا الأدمن موجود مسبقًا
-    db.query('SELECT * FROM users WHERE email = ?', [adminData.email], async (err, results) => {
-      if (err) throw err;
-
-      if (results.length > 0) {
-        console.log('❗️ Admin already exists.');
-        return;
-      }
-
-      // شفر كلمة المرور
-      const hashedPassword = await bcrypt.hash(adminData.password, 12);
-
-      // أضف الأدمن
-      db.query(
-        `INSERT INTO users (name, email, password, phone, department, employee_id, role)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [adminData.name, adminData.email, hashedPassword, adminData.phone, adminData.department, adminData.employee_id, adminData.role],
-        (err, result) => {
-          if (err) throw err;
-          console.log('✅ Admin user inserted successfully!');
-        }
-      );
-    });
-  } catch (err) {
-    console.error('❌ Error:', err);
-return  }
-})();
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -71,13 +32,25 @@ function authenticateToken(req, res, next) {
 app.post('/register', async (req, res) => {
   const { name, email, password, phone, department, employee_id } = req.body;
 
-  if (!name || !email || !password || !employee_id) {
+  const isAdmin = name?.toLowerCase() === 'admin';
+  const isEngineer = department?.toLowerCase().includes('technology') || department?.includes('تقنية');
+
+  // ✅ تحقق من الحقول المطلوبة
+  if (!name || !email || !password || (!isAdmin && !employee_id)) {
     return res.status(400).json({ message: 'Missing required fields' });
   }
 
+  if (isAdmin) {
+    const checkAdmin = await queryAsync(`SELECT * FROM users WHERE role = 'admin'`);
+    if (checkAdmin.length > 0) {
+      return res.status(400).json({ message: 'Admin already exists' });
+    }
+  }
+
+  // ✅ التحقق من القيم المكررة
   db.query(
     'SELECT * FROM users WHERE email = ? OR phone = ? OR employee_id = ?',
-    [email, phone, employee_id],
+    [email, phone || null, employee_id || null],
     async (err, results) => {
       if (err) return res.status(500).json({ message: 'Database Error' });
 
@@ -86,33 +59,54 @@ app.post('/register', async (req, res) => {
         if (existing.email === email) {
           return res.status(409).json({ message: 'Email already registered' });
         }
-        if (existing.phone === phone) {
+        if (!isAdmin && existing.phone === phone) {
           return res.status(409).json({ message: 'Phone number already registered' });
         }
-        if (existing.employee_id === employee_id) {
+        if (!isAdmin && existing.employee_id === employee_id) {
           return res.status(409).json({ message: 'Employee ID already registered' });
         }
       }
 
       const hashedPassword = await bcrypt.hash(password, 12);
+      const role = isAdmin ? 'admin' : 'user';
+
       const sql = `INSERT INTO users (name, email, password, phone, department, employee_id, role)
                    VALUES (?, ?, ?, ?, ?, ?, ?)`;
-      const values = [name, email, hashedPassword, phone, department, employee_id, 'user'];
 
-      db.query(sql, values, (err, result) => {
+      const values = [
+        name,
+        email,
+        hashedPassword,
+        isAdmin ? null : phone,
+        department || '',
+        isAdmin ? null : employee_id,
+        role
+      ];
+
+      db.query(sql, values, async (err, result) => {
         if (err) return res.status(500).json({ message: 'Error saving user' });
 
         const userId = result.insertId;
-        const token = jwt.sign({ id: userId, role: 'user' }, JWT_SECRET, { expiresIn: '1d' });
 
-        // ✅ تسجيل الحدث في جدول السجلات
-        logActivity(userId, name, 'Register', `User ${name} created a new account using the email ${email}`);
+        // ✅ إذا المستخدم من قسم التقنية → نضيفه في جدول Engineers
+        if (isEngineer) {
+          db.query(
+            `INSERT INTO Engineers (name) VALUES (?)`,
+            [name],
+            (engErr) => {
+              if (engErr) console.warn("⚠️ Couldn't insert into Engineers:", engErr);
+            }
+          );
+        }
 
+        const token = jwt.sign({ id: userId, role }, JWT_SECRET, { expiresIn: '1d' });
+
+        logActivity(userId, name, 'Register', `User ${name} created an account using ${email}`);
 
         res.status(201).json({
           message: 'User registered successfully',
           token,
-          role: 'user',
+          role,
           user: {
             id: userId,
             name,
@@ -123,6 +117,10 @@ app.post('/register', async (req, res) => {
     }
   );
 });
+
+
+
+
 
 
 app.post('/login', (req, res) => {
