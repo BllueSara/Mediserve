@@ -1,21 +1,17 @@
 const express = require('express');
-const mysql = require('mysql2');
+const db = require("./db");
 const bodyParser = require('body-parser');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors'); 
 
+
+
 const app = express();
 app.use(cors()); 
 app.use(bodyParser.json());
 
-// إعداد الاتصال بقاعدة البيانات
-const db = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: '123455678', // ← غيّرها إذا عندك كلمة مرور
-  database: 'MediServee'
-});
+
 
 // مفتاح التوكن (مهم تحفظه بمكان آمن)
 const JWT_SECRET = 'super_secret_key_123';
