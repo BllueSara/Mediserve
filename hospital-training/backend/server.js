@@ -1023,9 +1023,8 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
   } else {
     engineerName = userName;
   }
+
   const isAllDevices = (rawDeviceType && rawDeviceType.toLowerCase() === "all-devices");
-
-
 
   try {
     const departmentRes = await queryAsync("SELECT id FROM Departments WHERE name = ?", [section]);
@@ -1067,9 +1066,14 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
 
     const deviceInfo = deviceRes[0];
     if (!deviceInfo) return res.status(404).json({ error: "❌ Device not found" });
-const displayDevice = isAllDevices 
-  ? 'ALL DEVICES'
-  : `${deviceInfo.device_name} (${deviceInfo.device_type})`;
+
+    const displayDevice = isAllDevices 
+      ? 'ALL DEVICES'
+      : `${deviceInfo.device_name} (${deviceInfo.device_type})`;
+
+    // 👇 نحدد التاريخ (إما التاريخ المُرسل أو CURRENT_DATE)
+    const maintenanceDate = date || new Date().toISOString().split("T")[0];
+
     await queryAsync(`
       INSERT INTO General_Maintenance (
         customer_name, id_number, maintenance_date, issue_type, diagnosis_initial, diagnosis_final, device_id,
@@ -1077,9 +1081,9 @@ const displayDevice = isAllDevices
         serial_number, governmental_number, device_name, department_name,
         cpu_name, ram_type, os_name, generation_number, model_name,
         drive_type, ram_size, mac_address, printer_type, ink_type, ink_serial_number, created_at, user_id
-      ) VALUES (?, ?, ${date ? "?" : "CURRENT_DATE()"}, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
     `, [
-      customerName, idNumber, ...(date ? [date] : []),
+      customerName, idNumber, maintenanceDate,
       "General Maintenance", initialDiagnosis || "", finalDiagnosis || "", deviceSpec,
       technical, floor || "", extension || "", problemStatus || "", notes,
       deviceInfo.serial_number, deviceInfo.governmental_number, deviceInfo.device_name, deviceInfo.department_name,
@@ -1096,18 +1100,27 @@ const displayDevice = isAllDevices
     const ticketId = ticketRes.insertId;
 
     const reportNumberMain = `REP-${Date.now()}-MAIN`;
-    await queryAsync(
-      "INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      [reportNumberMain, ticketId, deviceSpec, `Selected Issue: ${problemStatus}`, `Initial Diagnosis: ${initialDiagnosis}`, "Open", "General", deviceInfo.mac_address, userId]
-    );
+    await queryAsync(`
+      INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address, user_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      reportNumberMain, ticketId, deviceSpec,
+      `Selected Issue: ${problemStatus}`,
+      `Initial Diagnosis: ${initialDiagnosis}`,
+      "Open", "General", deviceInfo.mac_address, userId
+    ]);
 
     const reportNumberTicket = `REP-${Date.now()}-TICKET`;
-    await queryAsync(
-      "INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      [reportNumberTicket, ticketId, deviceSpec, "Ticket Created", `Ticket (${ticketNumber}) for device: ${deviceInfo.device_name} - Department: ${deviceInfo.department_name}`, "Open", "General", deviceInfo.mac_address, userId]
-    );
+    await queryAsync(`
+      INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address, user_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      reportNumberTicket, ticketId, deviceSpec,
+      "Ticket Created",
+      `Ticket (${ticketNumber}) for device: ${deviceInfo.device_name} - Department: ${deviceInfo.department_name}`,
+      "Open", "General", deviceInfo.mac_address, userId
+    ]);
 
-    // ✅ إشعارات مثل regular
     await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
       userId,
       `General maintenance created for ${deviceInfo.device_name} (${displayDevice}) by engineer ${engineerName || 'N/A'} (${problemStatus})`,
@@ -1141,6 +1154,16 @@ const displayDevice = isAllDevices
         ]);
       }
     }
+
+    await queryAsync(`
+      INSERT INTO Activity_Logs (user_id, user_name, action, details)
+      VALUES (?, ?, ?, ?)
+    `, [
+      userId,
+      userName,
+      'Submitted General Maintenance',
+      `General maintenance for ${deviceInfo.device_type} | Device Name: ${deviceInfo.device_name} | Serial: ${deviceInfo.serial_number} | Gov: ${deviceInfo.governmental_number}`
+    ]);
 
     res.json({ message: "✅ General maintenance, ticket, and reports created successfully." });
 
@@ -2896,6 +2919,7 @@ async function generateTicketNumber(type) {
     );
   });
 }
+
 app.post("/internal-ticket-with-file", upload.single("attachment"), authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
@@ -2996,21 +3020,18 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), authenticate
               return res.status(500).json({ error: "Failed to insert maintenance report" });
             }
 
-            // ✅ إشعار إنشاء التذكرة
             await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
               userId,
               `Internal ticket created: ${newTicketNumber} for ${ticket_type} by ${engineerName || 'N/A'}`,
               'internal-ticket'
             ]);
 
-            // ✅ إشعار إنشاء التقرير
             await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
               userId,
               `Report created ${report_number} linked to ticket ${newTicketNumber} for ${ticket_type} by ${engineerName || 'N/A'}`,
               'internal-ticket-report'
             ]);
 
-            // ✅ إشعار للمهندس لو فيه تعيين من admin
             if (adminUser?.role === 'admin' && assigned_to) {
               const techUserRes = await queryAsync(`SELECT id FROM Users WHERE name = (SELECT name FROM Engineers WHERE id = ?)`, [assigned_to]);
               const techUserId = techUserRes[0]?.id;
@@ -3023,6 +3044,17 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), authenticate
                 ]);
               }
             }
+
+            // ✅ سجل في اللوق
+            await queryAsync(`
+              INSERT INTO Activity_Logs (user_id, user_name, action, details)
+              VALUES (?, ?, ?, ?)
+            `, [
+              userId,
+              userName,
+              'Submitted Internal Ticket',
+              `Internal ticket submitted (${newTicketNumber}) with report (${report_number}) for: ${ticket_type} | Priority: ${priority}`
+            ]);
 
             res.status(201).json({
               message: "✅ Internal ticket and report created",
@@ -3094,9 +3126,9 @@ app.post("/submit-new-report",authenticateToken, upload.fields([
     generation_number,
     model_name,
     drive_type,
-    mac_address,    // ✅ أضفنا الماك هنا
-    printer_type,   // ✅ نوع الطابعة
-    ink_type        // ✅ نوع الحبر
+    mac_address,   
+    printer_type,   
+    ink_type        
   } = req.body;
 
   const attachment = req.files?.attachment?.[0] || null;
@@ -3158,6 +3190,18 @@ app.post("/submit-new-report",authenticateToken, upload.fields([
     );
 
     await db.promise().query(insertReportSql, insertParams);
+
+
+    await queryAsync(`
+      INSERT INTO Activity_Logs (user_id, user_name, action, details)
+      VALUES (?, ?, ?, ?)
+    `, [
+      userId,
+      await getUserNameById(userId),
+      'Submitted New Maintenance Report',
+      `New report for ${device_type} | Device Name: ${device_name || 'N/A'} | Serial: ${serial_number || 'N/A'} | Department: ${department_name || 'N/A'}`
+    ]);
+    
 
     res.json({ message: "✅ Report saved successfully with printer type and ink type" });
 
