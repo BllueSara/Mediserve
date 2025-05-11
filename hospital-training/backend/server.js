@@ -2206,46 +2206,75 @@ app.get("/models-by-type/:type", (req, res) => {
   });
 });
 
-app.post("/add-device-model", (req, res) => {
-  const { model_name, device_type_name } = req.body; // 🟢 Extract model name and type from request
-  if (!model_name || !device_type_name) {
-    return res.status(400).json({ error: "❌ Missing model name or type" }); // 🔴 Validation
-  }
+app.post("/add-device-model", authenticateToken, (req, res) => {
+  const { model_name, device_type_name } = req.body;
+  const userId = req.user?.id;
 
-  const cleanedType = device_type_name.trim().toLowerCase(); // 🟢 Normalize type input
-  let table = "";
-  if (cleanedType === "pc") table = "PC_Model";
-  else if (cleanedType === "printer") table = "Printer_Model";
-  else if (cleanedType === "scanner") table = "Scanner_Model";
-  else table = "Maintance_Device_Model"; // 🟢 Use general model table for custom types
-
-  // 🟢 Check if model already exists
-  const checkQuery = table === "Maintance_Device_Model"
-    ? `SELECT * FROM ${table} WHERE model_name = ? AND device_type_name = ?`
-    : `SELECT * FROM ${table} WHERE model_name = ?`;
-
-  const checkValues = table === "Maintance_Device_Model"
-    ? [model_name, device_type_name]
-    : [model_name];
-
-  db.query(checkQuery, checkValues, (err, existing) => {
-    if (err) return res.status(500).json({ error: "Database check failed" });
-    if (existing.length > 0) {
-      return res.status(400).json({ error: `⚠️ Model \"${model_name}\" already exists` });
+  db.query("SELECT name FROM users WHERE id = ?", [userId], (err, result) => {
+    if (err || result.length === 0) {
+      return res.status(500).json({ error: "❌ Failed to get user name" });
     }
 
-    // 🟢 Insert model into appropriate table
-    const insertQuery = table === "Maintance_Device_Model"
-      ? `INSERT INTO ${table} (model_name, device_type_name) VALUES (?, ?)`
-      : `INSERT INTO ${table} (model_name) VALUES (?)`;
-    const insertValues = table === "Maintance_Device_Model" ? [model_name, device_type_name] : [model_name];
+    const userName = result[0].name;
 
-    db.query(insertQuery, insertValues, (err2) => {
-      if (err2) return res.status(500).json({ error: "Database insert failed" });
-      res.json({ message: `✅ Model '${model_name}' added successfully` });
+    if (!model_name || !device_type_name) {
+      return res.status(400).json({ error: "❌ Missing model name or type" });
+    }
+
+    const cleanedType = device_type_name.trim().toLowerCase();
+    let table = "";
+    if (cleanedType === "pc") table = "PC_Model";
+    else if (cleanedType === "printer") table = "Printer_Model";
+    else if (cleanedType === "scanner") table = "Scanner_Model";
+    else table = "Maintance_Device_Model";
+
+    const checkQuery = table === "Maintance_Device_Model"
+      ? `SELECT * FROM ${table} WHERE model_name = ? AND device_type_name = ?`
+      : `SELECT * FROM ${table} WHERE model_name = ?`;
+
+    const checkValues = table === "Maintance_Device_Model"
+      ? [model_name, device_type_name]
+      : [model_name];
+
+    db.query(checkQuery, checkValues, (err, existing) => {
+      if (err) return res.status(500).json({ error: "Database check failed" });
+      if (existing.length > 0) {
+        return res.status(400).json({ error: `⚠️ Model "${model_name}" already exists` });
+      }
+
+      const insertQuery = table === "Maintance_Device_Model"
+        ? `INSERT INTO ${table} (model_name, device_type_name) VALUES (?, ?)`
+        : `INSERT INTO ${table} (model_name) VALUES (?)`;
+      const insertValues = table === "Maintance_Device_Model"
+        ? [model_name, device_type_name]
+        : [model_name];
+
+      db.query(insertQuery, insertValues, (err2, result) => {
+        if (err2) return res.status(500).json({ error: "Database insert failed" });
+
+        const logQuery = `
+          INSERT INTO Activity_Logs (user_id, user_name, action, details)
+          VALUES (?, ?, ?, ?)
+        `;
+        const logValues = [
+          userId,
+          userName,
+          "Add Device Model",
+          `Added new model '${model_name}' for device type '${device_type_name}'`
+        ];
+        
+        db.query(logQuery, logValues, (logErr) => {
+          if (logErr) console.error("❌ Failed to log activity:", logErr);
+        });
+
+        res.json({ message: `✅ Model '${model_name}' added successfully` });
+      });
     });
   });
 });
+
+
+
 
 
 
