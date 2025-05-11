@@ -61,15 +61,18 @@ document.addEventListener("DOMContentLoaded", () => {
             { label: "🖨️ Printer Type:", value: report.printer_type, showForPrinter: true },
             { label: "🖋️ Ink Type:", value: report.ink_type, showForPrinter: true },
             { label: "🔖 Ink Serial Number:", value: report.ink_serial_number, showForPrinter: true },
+            { label: "📠 Scanner Type:", value: report.scanner_type, showForScanner: true },
+
           ];
           const isInternal = false;
 
-          fields.forEach(({ label, value, showForPC, showForPrinter, alwaysShow }) => {
+fields.forEach(({ label, value, showForPC, showForPrinter, showForScanner, alwaysShow }) => {
             const shouldShow =
               alwaysShow ||
               isInternal ||
               (showForPC && deviceType === "pc") ||
               (showForPrinter && deviceType === "printer") ||
+              (showForScanner && deviceType === "scanner") ||
               !!value;
           
             if (shouldShow) {
@@ -283,6 +286,7 @@ if (!ticketNumber) {
       if (report.printer_type) specs.push(`🖨️ Printer Type: ${report.printer_type}`);
       if (report.ink_type) specs.push(`🖋️ Ink Type: ${report.ink_type}`);
       if (report.ink_serial_number) specs.push(`🔖 Ink Serial Number: ${report.ink_serial_number}`);
+      if (report.scanner_type) specs.push(`📠 Scanner Type: ${report.scanner_type}`);
       
 
       
@@ -311,13 +315,15 @@ if (!ticketNumber) {
           { label: "🖨️ Printer Type:", value: report.printer_type, showForPrinter: true },
           { label: "🖋️ Ink Type:", value: report.ink_type, showForPrinter: true },
           { label: "🔖 Ink Serial Number:", value: report.ink_serial_number, showForPrinter: true },
+          { label: "📠 Scanner Type:", value: report.scanner_type, showForScanner: true },
         ];
         
-        fields.forEach(({ label, value, showForPC, showForPrinter, alwaysShow }) => {
+        fields.forEach(({ label, value, showForPC, showForPrinter, alwaysShow , showForScanner}) => {
           const shouldShow =
             alwaysShow ||
             (showForPC && deviceType === "pc") ||
             (showForPrinter && deviceType === "printer") ||
+            (showForScanner && deviceType === "scanner") ||
             !!value;
         
           if (shouldShow) {
@@ -336,7 +342,6 @@ if (!ticketNumber) {
     })
     .catch(err => {
       console.error("❌ Error fetching report:", err);
-      alert("Failed to load report data.");
     });
 
   // ⬇️ تحميل PDF
@@ -518,6 +523,7 @@ if (!ticketNumber) {
       generation_number: null,
       model_name: null,
       printer_type: null,
+      scanner_type: null,
       ink_type: null,
       ink_serial_number: null,
     };
@@ -544,6 +550,7 @@ if (!ticketNumber) {
       case "printertype": updatedData.printer_type = value; break;
       case "inktype": updatedData.ink_type = value; break;
       case "inkserialnumber": updatedData.ink_serial_number = value; break;
+      case "scannertype": updatedData.scanner_type = value; break;
     }
   });
   
