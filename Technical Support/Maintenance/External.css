@@ -286,7 +286,7 @@ textarea:focus {
 .popup-content {
     background: white;
     padding: 30px;
-    width: 600px;
+    width: 900px;
     max-height: 90vh;
     overflow-y: auto;
     border-radius: 10px;
@@ -378,7 +378,7 @@ textarea:focus {
     align-items: center;
     z-index: 1000;
 }
-.popup-content {
+/* .popup-content {
     background: white;
     padding: 30px;
     width: 600px;
@@ -386,7 +386,7 @@ textarea:focus {
     overflow-y: auto;
     border-radius: 10px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
+} */
 .popup-content label {
     margin-top: 15px;
     display: block;
@@ -425,6 +425,15 @@ textarea:focus {
     padding: 30px;
     border-radius: 10px;
     max-width: 500px;
+    width: 90%;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    text-align: center;
+  }
+  .popup-contentt {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    max-width: 900px;
     width: 90%;
     box-shadow: 0 0 10px rgba(0,0,0,0.2);
     text-align: center;
@@ -636,4 +645,8 @@ textarea:focus {
     color: #007bb8;
   }
    
-  
+  .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* حقلين جنب بعض */
+  gap: 20px; /* مسافة بينهم */
+}
