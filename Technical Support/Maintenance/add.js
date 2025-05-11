@@ -2226,6 +2226,7 @@ function openAddSectionPopup(contextId = "section") {
 function saveNewModel() {
   const deviceType = document.getElementById("device-type").value.trim().toLowerCase();
   const modelName = document.getElementById("new-model-name").value.trim();
+  const token = localStorage.getItem("token");
 
   if (!modelName) {
     alert("❌ Please enter a model name");
@@ -2234,7 +2235,7 @@ function saveNewModel() {
 
   fetch("http://localhost:5050/add-device-model", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" ,   },
     body: JSON.stringify({ model_name: modelName, device_type_name: deviceType })
   })
     .then(res => res.json())
