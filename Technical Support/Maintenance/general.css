@@ -225,6 +225,7 @@ label {
 .popup-content {
     background: white;
     padding: 30px;
+    
     width: 600px;
     max-height: 90vh;
     overflow-y: auto;
@@ -236,14 +237,15 @@ label {
     display: block;
     font-size: 14px;
 }
-.popup-content input, .popup-content select {
-    width: 80%;
-    margin: 5px auto;
-    padding: 10px;
-    display: block;
-    border: 1px solid #ccc;
-    border-radius: 5px;
+.popup-content input,
+.popup-content select,
+.custom-dropdown .dropdown-toggle {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 15px;
+    min-height: 45px;
 }
+
 .popup-buttons {
     margin-top: 20px;
     display: flex;
@@ -265,6 +267,16 @@ label {
   }
   
   .popup-content {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    max-width: 1000px;
+    width: 90%;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    text-align: center;
+  }
+  
+  .popup-contentt {
     background: white;
     padding: 30px;
     border-radius: 10px;

@@ -523,6 +523,22 @@ textarea {
   border-radius: 10px;
   box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
+.popup-contentt {
+  background: white;
+  padding: 30px;
+  width: 900px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* حقلين جنب بعض */
+  gap: 20px; /* مسافة بينهم */
+}
+
+
 .popup-content label {
   margin-top: 15px;
   display: block;

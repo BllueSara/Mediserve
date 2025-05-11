@@ -295,6 +295,23 @@ button:hover {
     border-radius: 10px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
+  .popup-contentt {
+ background: white;
+  padding: 20px 20px;    /* ← هنا المهم: padding من اليمين واليسار */
+  width: 900px;          /* عرض مريح للحقول */
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    
+  }
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px 40px; /* row-gap ثم column-gap */
+}
+
+
 .popup-content label {
     margin-top: 15px;
     display: block;

@@ -417,6 +417,20 @@ textarea {
   box-shadow: 0 0 10px rgba(0,0,0,0.2);
   text-align: center;
 }
+.popup-contentt {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  max-width: 900px;
+  width: 90%;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  text-align: center;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* حقلين جنب بعض */
+  gap: 20px; /* مسافة بينهم */
+}
 
 .popup-content label {
   margin-top: 15px;
