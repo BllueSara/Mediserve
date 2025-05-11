@@ -236,6 +236,16 @@ app.get("/RAM_Types", (req, res) => {
   });
 });
 
+app.get("/Scanner_Types", (req, res) => {
+  const query = "SELECT * FROM Scanner_Types ORDER BY scanner_type ASC";
+  db.query(query, (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(result);
+  });
+});
+
 app.get("/OS_Types", (req, res) => {
   const query = "SELECT * FROM OS_Types";
   db.query(query, (err, result) => {
@@ -360,6 +370,7 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
         COALESCE(pt.printer_type, '') AS printer_type,
         COALESCE(it.ink_type, '') AS ink_type,
         COALESCE(iser.serial_number, '') AS ink_serial_number,
+        COALESCE(st.scanner_type, '') AS scanner_type,
         d.name AS department_name
       FROM Maintenance_Devices md
       LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
@@ -376,6 +387,7 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
       LEFT JOIN Printer_Types pt ON pr.PrinterType_id = pt.id
       LEFT JOIN Ink_Types it ON pr.InkType_id = it.id
       LEFT JOIN Ink_Serials iser ON pr.InkSerial_id = iser.id
+      LEFT JOIN Scanner_Types st ON sc.ScannerType_id = st.id
       LEFT JOIN Departments d ON md.department_id = d.id
       LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id
       WHERE md.id = ?
@@ -405,6 +417,7 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
       deviceInfo.department_name, deviceInfo.cpu_name, deviceInfo.ram_type, deviceInfo.os_name,
       deviceInfo.generation_number, deviceInfo.model_name, deviceInfo.drive_type, deviceInfo.ram_size,
       deviceInfo.mac_address, deviceInfo.printer_type, deviceInfo.ink_type, deviceInfo.ink_serial_number,
+      deviceInfo.scanner_type,
       userId
     ];
 
@@ -417,8 +430,8 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
         serial_number, governmental_number, device_name,
         department_name, cpu_name, ram_type, os_name,
         generation_number, model_name, drive_type, ram_size, mac_address,
-        printer_type, ink_type, ink_serial_number, user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        printer_type, ink_type, ink_serial_number,scanner_type, user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
     `, commonValues);
 
     // 2️⃣ إدخال تلخيص التذكرة
@@ -430,7 +443,7 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
         serial_number, governmental_number, device_name,
         department_name, cpu_name, ram_type, os_name,
         generation_number, model_name, drive_type, ram_size, mac_address,
-        printer_type, ink_type, ink_serial_number, user_id
+        printer_type, ink_type, ink_serial_number,scanner_type, user_id
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       ticket_number, deviceType, device_specifications, section,
@@ -440,6 +453,7 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
       deviceInfo.department_name, deviceInfo.cpu_name, deviceInfo.ram_type, deviceInfo.os_name,
       deviceInfo.generation_number, deviceInfo.model_name, deviceInfo.drive_type, deviceInfo.ram_size,
       deviceInfo.mac_address, deviceInfo.printer_type, deviceInfo.ink_type, deviceInfo.ink_serial_number,
+      deviceInfo.scanner_type,
       userId
     ]);
 
@@ -589,39 +603,42 @@ app.post("/submit-regular-maintenance", authenticateToken, async (req, res) => {
     const departmentRes = await queryAsync("SELECT id FROM Departments WHERE name = ?", [section]);
     const departmentId = departmentRes[0]?.id || null;
 
-    const deviceRes = await queryAsync(`
-      SELECT md.*, COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
-             COALESCE(c.cpu_name, '') AS cpu_name,
-             COALESCE(r.ram_type, '') AS ram_type,
-             COALESCE(rs.ram_size, '') AS ram_size,
-             COALESCE(o.os_name, '') AS os_name,
-             COALESCE(g.generation_number, '') AS generation_number,
-             COALESCE(pm.model_name, prm.model_name, scm.model_name, '') AS model_name,
-             COALESCE(hdt.drive_type, '') AS drive_type,
-             COALESCE(pc.Mac_Address, '') AS mac_address,
-             COALESCE(pt.printer_type, '') AS printer_type,
-             COALESCE(it.ink_type, '') AS ink_type,
-             COALESCE(iser.serial_number, '') AS ink_serial_number,
-             d.name AS department_name
-      FROM Maintenance_Devices md
-      LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
-      LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
-      LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
-      LEFT JOIN CPU_Types c ON pc.Processor_id = c.id
-      LEFT JOIN RAM_Types r ON pc.RAM_id = r.id
-      LEFT JOIN RAM_Sizes rs ON pc.RAMSize_id = rs.id
-      LEFT JOIN OS_Types o ON pc.OS_id = o.id
-      LEFT JOIN Processor_Generations g ON pc.Generation_id = g.id
-      LEFT JOIN PC_Model pm ON pc.Model_id = pm.id
-      LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
-      LEFT JOIN Scanner_Model scm ON sc.Model_id = scm.id
-      LEFT JOIN Printer_Types pt ON pr.PrinterType_id = pt.id
-      LEFT JOIN Ink_Types it ON pr.InkType_id = it.id
-      LEFT JOIN Ink_Serials iser ON pr.InkSerial_id = iser.id
-      LEFT JOIN Departments d ON md.department_id = d.id
-      LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id
-      WHERE md.id = ?
-    `, [deviceSpec]);
+const deviceRes = await queryAsync(`
+  SELECT md.*, COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
+         COALESCE(c.cpu_name, '') AS cpu_name,
+         COALESCE(r.ram_type, '') AS ram_type,
+         COALESCE(rs.ram_size, '') AS ram_size,
+         COALESCE(o.os_name, '') AS os_name,
+         COALESCE(g.generation_number, '') AS generation_number,
+         COALESCE(pm.model_name, prm.model_name, scm.model_name, '') AS model_name,
+         COALESCE(hdt.drive_type, '') AS drive_type,
+         COALESCE(pc.Mac_Address, '') AS mac_address,
+         COALESCE(pt.printer_type, '') AS printer_type,
+         COALESCE(it.ink_type, '') AS ink_type,
+         COALESCE(iser.serial_number, '') AS ink_serial_number,
+         COALESCE(st.scanner_type, '') AS scanner_type,
+         d.name AS department_name
+  FROM Maintenance_Devices md
+  LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
+  LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
+  LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
+  LEFT JOIN CPU_Types c ON pc.Processor_id = c.id
+  LEFT JOIN RAM_Types r ON pc.RAM_id = r.id
+  LEFT JOIN RAM_Sizes rs ON pc.RAMSize_id = rs.id
+  LEFT JOIN OS_Types o ON pc.OS_id = o.id
+  LEFT JOIN Processor_Generations g ON pc.Generation_id = g.id
+  LEFT JOIN PC_Model pm ON pc.Model_id = pm.id
+  LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
+  LEFT JOIN Scanner_Model scm ON sc.Model_id = scm.id
+  LEFT JOIN Printer_Types pt ON pr.PrinterType_id = pt.id
+  LEFT JOIN Ink_Types it ON pr.InkType_id = it.id
+  LEFT JOIN Ink_Serials iser ON pr.InkSerial_id = iser.id
+  LEFT JOIN Scanner_Types st ON sc.ScannerType_id = st.id
+  LEFT JOIN Departments d ON md.department_id = d.id
+  LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id
+  WHERE md.id = ?
+`, [deviceSpec]);
+
     const deviceInfo = deviceRes[0];
     if (!deviceInfo) return res.status(404).json({ error: "Device not found" });
 
@@ -630,40 +647,41 @@ const displayDevice = isAllDevices
   : `${deviceInfo.device_name} (${deviceInfo.device_type})`;
     const checklist = JSON.stringify(details);
     await queryAsync(`
-      INSERT INTO Regular_Maintenance (
-        device_id, device_type, last_maintenance_date, frequency, checklist, notes,
-        serial_number, governmental_number, device_name, department_name,
-        cpu_name, ram_type, ram_size, os_name, generation_number, model_name, drive_type, status,
-        problem_status, technical_engineer_id, mac_address, printer_type, ink_type, ink_serial_number,
-        user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      deviceSpec,
-      rawDeviceType || deviceInfo.device_type,
-      date,
-      frequency,
-      checklist,
-      notes,
-      deviceInfo.serial_number,
-      deviceInfo.governmental_number,
-      deviceInfo.device_name,
-      deviceInfo.department_name,
-      deviceInfo.cpu_name,
-      deviceInfo.ram_type,
-      deviceInfo.ram_size || '',
-      deviceInfo.os_name,
-      deviceInfo.generation_number,
-      deviceInfo.model_name,
-      deviceInfo.drive_type,
-      "Open",
-      problem_status || "",
-      technical_engineer_id,
-      deviceInfo.mac_address,
-      deviceInfo.printer_type,
-      deviceInfo.ink_type,
-      deviceInfo.ink_serial_number,
-      userId
-    ]);
+  INSERT INTO Regular_Maintenance (
+    device_id, device_type, last_maintenance_date, frequency, checklist, notes,
+    serial_number, governmental_number, device_name, department_name,
+    cpu_name, ram_type, ram_size, os_name, generation_number, model_name, drive_type, status,
+    problem_status, technical_engineer_id, mac_address, printer_type, ink_type, ink_serial_number,
+    scanner_type, user_id
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, [
+  deviceSpec,
+  rawDeviceType || deviceInfo.device_type,
+  date,
+  frequency,
+  checklist,
+  notes,
+  deviceInfo.serial_number,
+  deviceInfo.governmental_number,
+  deviceInfo.device_name,
+  deviceInfo.department_name,
+  deviceInfo.cpu_name,
+  deviceInfo.ram_type,
+  deviceInfo.ram_size || '',
+  deviceInfo.os_name,
+  deviceInfo.generation_number,
+  deviceInfo.model_name,
+  deviceInfo.drive_type,
+  "Open",
+  problem_status || "",
+  technical_engineer_id,
+  deviceInfo.mac_address,
+  deviceInfo.printer_type,
+  deviceInfo.ink_type,
+  deviceInfo.ink_serial_number,
+  deviceInfo.scanner_type,
+  userId
+]);
 
     await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
       userId,
@@ -822,6 +840,68 @@ app.post("/add-popup-option", (req, res) => {
   });
 });
 
+app.post("/submit-new-device", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const {
+    "device-spec": deviceId,
+    "device-type": rawDeviceType,
+    section
+  } = req.body;
+
+  try {
+    // 1. تحقق من القسم
+    const deptRes = await queryAsync("SELECT id FROM Departments WHERE name = ?", [section]);
+    const departmentId = deptRes[0]?.id;
+    if (!departmentId) return res.status(400).json({ error: "❌ القسم غير موجود" });
+
+    // 2. تحقق من الجهاز
+    const deviceRes = await queryAsync(`
+      SELECT md.*, 
+             COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
+             d.name AS department_name
+      FROM Maintenance_Devices md
+      LEFT JOIN PC_info pc ON md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
+      LEFT JOIN Printer_info pr ON md.serial_number = pr.Serial_Number AND md.governmental_number = pr.Governmental_Number
+      LEFT JOIN Scanner_info sc ON md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
+      LEFT JOIN Departments d ON md.department_id = d.id
+      WHERE md.id = ?
+    `, [deviceId]);
+
+    const device = deviceRes[0];
+    if (!device) return res.status(404).json({ error: "❌ الجهاز غير موجود" });
+
+    // 3. تحقق من تطابق النوع والقسم
+    const dbType = device.device_type?.toLowerCase();
+    const reqType = rawDeviceType?.toLowerCase();
+    if (dbType !== reqType) {
+      return res.status(400).json({ error: `❌ نوع الجهاز غير متطابق (Expected: ${dbType}, Received: ${reqType})` });
+    }
+
+    if (device.department_id !== departmentId) {
+      return res.status(400).json({ error: `❌ القسم المختار لا يطابق قسم الجهاز المحفوظ` });
+    }
+
+    // 5. سجل النشاط
+    const userName = await getUserNameById(userId);
+    await queryAsync(`
+      INSERT INTO Activity_Logs (user_id, user_name, action, details)
+      VALUES (?, ?, ?, ?)
+    `, [
+      userId,
+      userName,
+      "Used Existing Device",
+      `تم استخدام جهاز محفوظ مسبقًا (ID: ${device.id}) - النوع: ${device.device_type} - القسم: ${device.department_name}`
+    ]);
+
+    res.json({ message: "✅ تم استخدام الجهاز المحفوظ بنجاح." });
+
+  } catch (err) {
+    console.error("❌ Error using existing device:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
 
 
 app.post("/add-option-general", (req, res) => {
@@ -846,7 +926,8 @@ app.post("/add-option-general", (req, res) => {
     "generation-select": { table: "Processor_Generations", column: "generation_number" },
     "drive-select": { table: "Hard_Drive_Types", column: "drive_type" },
     "printer-type": { table: "Printer_Types", column: "printer_type" }, // ✅ NEW
-    "ink-type": { table: "Ink_Types", column: "ink_type" },             // ✅ NEW
+    "ink-type": { table: "Ink_Types", column: "ink_type" }, 
+    "scanner-type": { table: "Scanner_Types", column: "scanner_type" },            // ✅ NEW
   };
 
   const mapping = tableMap[target];
@@ -958,6 +1039,7 @@ app.post("/add-options-regular", (req, res) => {
     "technical": { table: "Engineers", column: "name" },
     "printer-type": { table: "Printer_Types", column: "printer_type" },
     "ink-type": { table: "Ink_Types", column: "ink_type" },
+    "scanner-type": { table: "Scanner_Types", column: "scanner_type" },
   };
 
   const mapping = tableMap[target];
@@ -1043,6 +1125,8 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
              COALESCE(pt.printer_type, '') AS printer_type,
              COALESCE(it.ink_type, '') AS ink_type,
              COALESCE(iser.serial_number, '') AS ink_serial_number,
+                      COALESCE(st.scanner_type, '') AS scanner_type,
+
              d.name AS department_name
       FROM Maintenance_Devices md
       LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number AND md.governmental_number = pc.Governmental_Number
@@ -1059,6 +1143,7 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
       LEFT JOIN Printer_Types pt ON pr.PrinterType_id = pt.id
       LEFT JOIN Ink_Types it ON pr.InkType_id = it.id
       LEFT JOIN Ink_Serials iser ON pr.InkSerial_id = iser.id
+      LEFT JOIN Scanner_Types st ON sc.ScannerType_id = st.id
       LEFT JOIN Departments d ON md.department_id = d.id
       LEFT JOIN Hard_Drive_Types hdt ON pc.Drive_id = hdt.id
       WHERE md.id = ?
@@ -1080,8 +1165,8 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
         technician_name, floor, extension, problem_status, notes,
         serial_number, governmental_number, device_name, department_name,
         cpu_name, ram_type, os_name, generation_number, model_name,
-        drive_type, ram_size, mac_address, printer_type, ink_type, ink_serial_number, created_at, user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+        drive_type, ram_size, mac_address, printer_type, ink_type, ink_serial_number,scanner_type, created_at, user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,CURRENT_TIMESTAMP, ?)
     `, [
       customerName, idNumber, maintenanceDate,
       "General Maintenance", initialDiagnosis || "", finalDiagnosis || "", deviceSpec,
@@ -1089,7 +1174,7 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
       deviceInfo.serial_number, deviceInfo.governmental_number, deviceInfo.device_name, deviceInfo.department_name,
       deviceInfo.cpu_name, deviceInfo.ram_type, deviceInfo.os_name, deviceInfo.generation_number, deviceInfo.model_name,
       deviceInfo.drive_type, deviceInfo.ram_size, deviceInfo.mac_address, deviceInfo.printer_type, deviceInfo.ink_type,
-      deviceInfo.ink_serial_number, userId
+      deviceInfo.ink_serial_number,deviceInfo.scanner_type, userId
     ]);
 
     const ticketNumber = `TIC-${Date.now()}`;
@@ -1400,7 +1485,8 @@ pc.Mac_Address AS mac_address,
         COALESCE(pcm.model_name, prm.model_name, scm.model_name, mdm_fixed.model_name) AS model_name,
         pr_type.printer_type,
         ink_type.ink_type,
-        ink_serial.serial_number AS ink_serial_number
+        ink_serial.serial_number AS ink_serial_number,
+        st.scanner_type
 
       FROM Maintenance_Reports mr
       LEFT JOIN External_Tickets et ON mr.ticket_id = et.id
@@ -1421,6 +1507,7 @@ pc.Mac_Address AS mac_address,
 
       LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number
       LEFT JOIN Scanner_Model scm ON sc.model_id = scm.id
+      LEFT JOIN Scanner_Types st ON sc.ScannerType_id = st.id
 
       LEFT JOIN Maintance_Device_Model mdm_fixed ON md.model_id = mdm_fixed.id
       ${printerJoin}
@@ -1448,6 +1535,7 @@ pc.Mac_Address AS mac_address,
           report_type: "Incident",
           priority: r.priority || "Medium",
           mac_address: r.mac_address || "",
+          scanner_type: r.scanner_type || "",
 
           maintenance_manager: "",
           device_name: r.device_name || "",
@@ -1504,6 +1592,7 @@ pc.Mac_Address AS mac_address,
             cpu_name: r.cpu_name,
             ram_type: r.ram_type,
             ram_size: r.ram_size || "",
+            scanner_type: r.scanner_type || "",
             os_name: r.os_name,
             generation_number: r.generation_number,
             model_name: r.model_name,
@@ -1533,12 +1622,14 @@ pc.Mac_Address AS mac_address,
         hdt.drive_type,
         pr_type.printer_type,
         ink_type.ink_type,
-        ink_serial.serial_number AS ink_serial_number
+        ink_serial.serial_number AS ink_serial_number,
+        st.scanner_type,
       FROM New_Maintenance_Report r
       LEFT JOIN Departments d ON r.department_id = d.id
       LEFT JOIN PC_Model pc ON r.device_type = 'PC' AND r.model_id = pc.id
       LEFT JOIN Printer_Model pr ON r.device_type = 'Printer' AND r.model_id = pr.id
       LEFT JOIN Scanner_Model sc ON r.device_type = 'Scanner' AND r.model_id = sc.id
+      LEFT JOIN Scanner_Types st ON r.device_type = 'Scanner' AND r.scanner_type_id = st.id
       LEFT JOIN CPU_Types cpu ON r.cpu_id = cpu.id
       LEFT JOIN RAM_Types ram ON r.ram_id = ram.id
       LEFT JOIN RAM_Sizes rsize ON r.ram_size_id = rsize.id
@@ -1581,6 +1672,7 @@ pc.Mac_Address AS mac_address,
         governmental_number: r.governmental_number,
         model_name: r.model_name,
         mac_address: r.mac_address || "",
+        scanner_type: r.scanner_type || "",
 
         cpu_name: r.cpu_name,
         ram_type: r.ram_type,
@@ -1634,6 +1726,7 @@ it.issue_description,
   pr_type.printer_type,
   ink_type.ink_type,
   ink_serial.serial_number AS ink_serial_number,
+  st.scanner_type,
 
   gm.id AS general_id,
   gm.maintenance_date,
@@ -1665,6 +1758,7 @@ LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = p
 LEFT JOIN Printer_Model prm ON pr.Model_id = prm.id
 LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number
 LEFT JOIN Scanner_Model scm ON sc.model_id = scm.id
+LEFT JOIN Scanner_Types st ON sc.ScannerType_id = st.id
 LEFT JOIN Maintance_Device_Model mdm_fixed ON md.model_id = mdm_fixed.id
 LEFT JOIN (
   SELECT *
@@ -1741,6 +1835,8 @@ WHERE mr.id = ?
         printer_type: report.printer_type || "",
         ink_type: report.ink_type || "",
         ink_serial_number: report.ink_serial_number || "",
+        scanner_type: report.scanner_type || "",
+
         // General_Maintenance fields
         general_id: report.general_id,
         maintenance_date: report.maintenance_date,
@@ -1762,6 +1858,60 @@ WHERE mr.id = ?
     });
   }
 });
+
+
+// POST /add-options-device
+app.post("/add-options-add-device", (req, res) => {
+  const { target, value } = req.body;
+
+  if (!target || !value) {
+    return res.status(400).json({ error: "Target and value are required." });
+  }
+
+  const tableMap = {
+    "cpu-select": { table: "CPU_Types", column: "cpu_name" },
+    "ram-select": { table: "RAM_Types", column: "ram_type" },
+    "os-select": { table: "OS_Types", column: "os_name" },
+    "drive-select": { table: "Hard_Drive_Types", column: "drive_type" },
+    "ram-size-select": { table: "RAM_Sizes", column: "ram_size" },
+    "generation-select": { table: "Processor_Generations", column: "generation_number" },
+    "printer-type": { table: "Printer_Types", column: "printer_type" },
+    "ink-type": { table: "Ink_Types", column: "ink_type" },
+    "scanner-type": { table: "Scanner_Types", column: "scanner_type" },
+    "model": { table: "Device_Models", column: "model_name" },
+    "section": { table: "Departments", column: "name" },
+    "device-type": { table: "DeviceType", column: "DeviceType" }
+  };
+
+  const mapping = tableMap[target];
+  if (!mapping) return res.status(400).json({ error: "Invalid target provided." });
+
+  const checkQuery = `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ?`;
+  db.query(checkQuery, [value], (err, rows) => {
+    if (err) {
+      console.error("❌ DB Check Error:", err);
+      return res.status(500).json({ error: "Database check error" });
+    }
+
+    if (rows.length > 0) {
+      return res.status(400).json({ error: `⚠️ "${value}" already exists.` });
+    }
+
+    const insertQuery = `INSERT INTO ${mapping.table} (${mapping.column}) VALUES (?)`;
+    db.query(insertQuery, [value], (err2, result) => {
+      if (err2) {
+        console.error("❌ Insert Error:", err2);
+        return res.status(500).json({ error: "Insert failed" });
+      }
+
+      res.json({
+        message: `✅ ${value} added to ${mapping.table}`,
+        insertedId: result.insertId
+      });
+    });
+  });
+});
+
 
 
 
@@ -1939,27 +2089,48 @@ app.post('/AddDevice/:type', async (req, res) => {
       });
     }
     
-     else if (deviceType === 'scanner') {
-      const Model_id = await getId("Scanner_Model", "model_name", model);
-      if (!Model_id) {
-        return res.status(400).json({ error: "❌ لم يتم تحديد موديل الماسح" });
-      }
+else if (deviceType === 'scanner') {
+  const Model_id = await getId("Scanner_Model", "model_name", model);
+  const Scanner_Type = req.body["scanner-type"] || null;
+  let ScannerType_id = null;
 
-      const insertQuery = `
-        INSERT INTO Scanner_info 
-        (Serial_Number, Scanner_Name, Governmental_Number, Department, Model_id)
-        VALUES (?, ?, ?, ?, ?)
-      `;
-      const values = [Serial_Number, Device_Name, Governmental_Number, Department_id, Model_id];
+  if (Scanner_Type) {
+    ScannerType_id = await getId("Scanner_Types", "scanner_type", Scanner_Type);
+    if (!ScannerType_id) {
+      const [insertResult] = await db.promise().query(
+        "INSERT INTO Scanner_Types (scanner_type) VALUES (?)",
+        [Scanner_Type]
+      );
+      ScannerType_id = insertResult.insertId;
+    }
+  }
 
-      await new Promise((resolve, reject) => {
-        db.query(insertQuery, values, (err, result) => {
-          if (err) return reject(err);
-          resolve(result);
-        });
-      });
+  if (!Model_id) {
+    return res.status(400).json({ error: "❌ لم يتم تحديد موديل الماسح الضوئي" });
+  }
 
-    } else {
+  const insertQuery = `
+    INSERT INTO Scanner_info 
+    (Serial_Number, Scanner_Name, Governmental_Number, Department, Model_id, ScannerType_id)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `;
+  const values = [
+    Serial_Number,
+    Device_Name,
+    Governmental_Number,
+    Department_id,
+    Model_id,
+    ScannerType_id
+  ];
+
+  await new Promise((resolve, reject) => {
+    db.query(insertQuery, values, (err, result) => {
+      if (err) return reject(err);
+      resolve(result);
+    });
+  });
+}
+ else {
       console.log(`🔶 نوع جديد سيتم تخزينه فقط في Maintenance_Devices: ${deviceType}`);
     }
 
@@ -2297,6 +2468,7 @@ db.query(combinedSql, params, (err, results) => {
   res.json(results);
 });
 });
+
 app.post("/update-report-full", upload.single("attachment"), async (req, res) => {
   const updatedData = JSON.parse(req.body.data || "{}");
   const attachmentFile = req.file;
@@ -2312,7 +2484,7 @@ app.post("/update-report-full", upload.single("attachment"), async (req, res) =>
     device_id, device_name, serial_number, governmental_number,
     cpu_name, ram_type, ram_size, os_name, generation_number,
     model_name, drive_type, mac_address,
-    ink_type, ink_serial_number, printer_type
+    ink_type, ink_serial_number, printer_type,scanner_type
   } = updatedData;
 
   if (!source) {
@@ -2336,6 +2508,12 @@ app.post("/update-report-full", upload.single("attachment"), async (req, res) =>
     } else {
       modelId = await getModelId(device_type, model_name);
     }
+
+    let scanner_type_id = null;
+if (isScanner && scanner_type) {
+  scanner_type_id = await getId("Scanner_Types", "scanner_type", scanner_type);
+}
+
 
     // Get specification IDs
     let cpuId, ramId, osId, generationId, driveId, ramSizeId;
@@ -2363,6 +2541,7 @@ app.post("/update-report-full", upload.single("attachment"), async (req, res) =>
           department_id = ?, model_id = ?,
           ${isPC ? "cpu_id = ?, ram_id = ?, os_id = ?, generation_id = ?, drive_id = ?, ram_size_id = ?," : ""}
           ${isPrinter ? "ink_type = ?, ink_serial_number = ?, printer_type = ?," : ""}
+          ${isScanner ? "scanner_type_id = ?," : ""}
           ${attachmentFile ? "attachment_name = ?, attachment_path = ?," : ""}
           details = ?
         WHERE id = ?`;
@@ -2379,6 +2558,9 @@ app.post("/update-report-full", upload.single("attachment"), async (req, res) =>
       }
       if (isPrinter) {
         values.push(ink_type || null, ink_serial_number || null, printer_type || null);
+      }
+      if (isScanner) {
+        values.push(scanner_type_id || null);
       }
       if (attachmentFile) {
         values.push(attachmentFile.originalname, `uploads/${attachmentFile.filename}`);
@@ -2434,6 +2616,10 @@ app.post("/update-report-full", upload.single("attachment"), async (req, res) =>
         updates.push("ink_type = ?", "ink_serial_number = ?", "printer_type = ?");
         values.push(ink_type, ink_serial_number, printer_type);
       }
+      if (isScanner) {
+        updates.push("scanner_type_id = ?");
+        values.push(scanner_type_id);
+      }
 
       values.push(actualDeviceId);
       await db.promise().query(`UPDATE Maintenance_Devices SET ${updates.join(", ")} WHERE id = ?`, values);
@@ -2470,13 +2656,34 @@ app.post("/update-report-full", upload.single("attachment"), async (req, res) =>
     const sharedParams = [
       device_name, serial_number, governmental_number, department_name,
       model_name, cpu_name, ram_type, os_name, generation_number, drive_type,
-      ram_size, ink_type, ink_serial_number, printer_type, mac_address
+      ram_size, ink_type, ink_serial_number, printer_type, mac_address,scanner_type
     ];
 
     if (actualDeviceId) {
-      await db.promise().query(`UPDATE General_Maintenance SET device_name = ?, serial_number = ?, governmental_number = ?, department_name = ?, model_name = ?, cpu_name = ?, ram_type = ?, os_name = ?, generation_number = ?, drive_type = ?, ram_size = ?, ink_type = ?, ink_serial_number = ?, printer_type = ?, mac_address = ? WHERE device_id = ?`, [...sharedParams, actualDeviceId]);
-      await db.promise().query(`UPDATE Regular_Maintenance SET device_name = ?, serial_number = ?, governmental_number = ?, department_name = ?, model_name = ?, cpu_name = ?, ram_type = ?, ram_size = ?, os_name = ?, generation_number = ?, drive_type = ?, ink_type = ?, ink_serial_number = ?, printer_type = ?, mac_address = ? WHERE device_id = ?`, [...sharedParams, actualDeviceId]);
-      await db.promise().query(`UPDATE External_Maintenance SET device_name = ?, governmental_number = ?, department_name = ?, model_name = ?, cpu_name = ?, ram_type = ?, ram_size = ?, os_name = ?, generation_number = ?, drive_type = ?, ink_type = ?, ink_serial_number = ?, printer_type = ?, mac_address = ? WHERE serial_number = ?`, [...sharedParams.slice(0, -1), serial_number]);
+await db.promise().query(`
+  UPDATE General_Maintenance 
+  SET device_name = ?, serial_number = ?, governmental_number = ?, department_name = ?, 
+      model_name = ?, cpu_name = ?, ram_type = ?, os_name = ?, generation_number = ?, 
+      drive_type = ?, ram_size = ?, ink_type = ?, ink_serial_number = ?, printer_type = ?, 
+      mac_address = ?, scanner_type = ? 
+  WHERE device_id = ?
+`, [...sharedParams, actualDeviceId]);
+await db.promise().query(`
+  UPDATE Regular_Maintenance 
+  SET device_name = ?, serial_number = ?, governmental_number = ?, department_name = ?, 
+      model_name = ?, cpu_name = ?, ram_type = ?, ram_size = ?, os_name = ?, 
+      generation_number = ?, drive_type = ?, ink_type = ?, ink_serial_number = ?, 
+      printer_type = ?, mac_address = ?, scanner_type = ? 
+  WHERE device_id = ?
+`, [...sharedParams, actualDeviceId]);
+await db.promise().query(`
+  UPDATE External_Maintenance 
+  SET device_name = ?, governmental_number = ?, department_name = ?, 
+      model_name = ?, cpu_name = ?, ram_type = ?, ram_size = ?, os_name = ?, 
+      generation_number = ?, drive_type = ?, ink_type = ?, ink_serial_number = ?, 
+      printer_type = ?, mac_address = ?, scanner_type = ? 
+  WHERE serial_number = ?
+`, [...sharedParams.slice(0, -1), serial_number]); // لاحظ استخدام serial_number وليس device_id هنا
     }
 
     res.json({ message: "\u2705 تم تحديث التقرير والجهاز والمواصفات بنجاح." });
@@ -2534,6 +2741,34 @@ app.post("/add-os", (req, res) => {
     db.query("INSERT INTO OS_Types (os_name) VALUES (?)", [value], (err2) => {
       if (err2) return res.status(500).json({ error: "Insert error" });
       res.json({ message: "✅ OS added successfully" }); // رسالة نجاح
+    });
+  });
+});
+
+app.post("/add-scanner-type", (req, res) => {
+  const { value } = req.body;
+
+  if (!value) {
+    return res.status(400).json({ error: "❌ Missing scanner type value" });
+  }
+
+  const checkQuery = "SELECT * FROM Scanner_Types WHERE scanner_type = ?";
+  db.query(checkQuery, [value], (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: "❌ DB error during lookup" });
+    }
+
+    if (result.length > 0) {
+      return res.status(400).json({ error: "⚠️ Scanner type already exists" });
+    }
+
+    const insertQuery = "INSERT INTO Scanner_Types (scanner_type) VALUES (?)";
+    db.query(insertQuery, [value], (err2) => {
+      if (err2) {
+        return res.status(500).json({ error: "❌ Error inserting scanner type" });
+      }
+
+      res.json({ message: "✅ Scanner type added successfully" });
     });
   });
 });
@@ -3273,6 +3508,17 @@ app.post("/delete-option-complete", async (req, res) => {
     { table: "New_Maintenance_Report", column: "ink_type" }
   ]
 },
+"scanner-type": {
+  table: "Scanner_Types",
+  column: "scanner_type",
+  referencedTables: [
+    { table: "General_Maintenance", column: "scanner_type" },
+    { table: "Regular_Maintenance", column: "scanner_type" },
+    { table: "External_Maintenance", column: "scanner_type" },
+    { table: "New_Maintenance_Report", column: "scanner_type" }
+  ]
+}
+,
 "printer-type": {
   table: "Printer_Types",
   column: "printer_type",
@@ -3515,6 +3761,17 @@ app.post("/update-option-complete", async (req, res) => {
     { table: "New_Maintenance_Report", column: "printer_type" }
   ]
 },
+"scanner-type": {
+  table: "Scanner_Types",
+  column: "scanner_type",
+  propagate: [
+    { table: "General_Maintenance", column: "scanner_type" },
+    { table: "Regular_Maintenance", column: "scanner_type" },
+    { table: "External_Maintenance", column: "scanner_type" },
+    { table: "New_Maintenance_Report", column: "scanner_type" }
+  ]
+},
+
 
     "section": {
       table: "Departments",
@@ -3754,6 +4011,12 @@ app.post('/add-option-internal-ticket', async (req, res) => {
         query = "INSERT INTO Printer_Types (printer_type) VALUES (?)";
         values = [value];
         break;
+        case "scanner-type":
+        query = "INSERT INTO Scanner_Types (scanner_type) VALUES (?)";
+        values = [value];
+
+        break;
+
       default:
         return res.status(400).json({ error: "❌ Invalid target." });
     }
@@ -3824,7 +4087,13 @@ app.post('/add-option-external-ticket', async (req, res) => {
         query = "INSERT INTO Printer_Types (printer_type) VALUES (?)";
         values = [value];
         break;
+        case "scanner-type":
+        query = "INSERT INTO Scanner_Types (scanner_type) VALUES (?)";
+        values = [value];
+        break;
       default:
+
+        
         return res.status(400).json({ error: "❌ Invalid target." });
     }
 
