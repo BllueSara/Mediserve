@@ -186,7 +186,25 @@ function updatePopupHeadingAndFields(type) {
       <input type="text" name="ink-serial-number">
       `;
     }
-    
+        if (typeCleaned === "scanner") {
+      fieldsHtml += `
+  <label>Scanner Type:</label>
+  <div class="custom-dropdown-wrapper">
+    <div class="custom-dropdown">
+      <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+        <span id="selected-scanner-type">Select Scanner Type</span>
+        <span>▼</span>
+      </div>
+      <div class="dropdown-content">
+        <input type="text" class="dropdown-search" placeholder="Search scanner type..." oninput="filterDropdown(this, 'scanner-type-options')">
+        <div class="dropdown-options" id="scanner-type-options"></div>
+      </div>
+    </div>
+  </div>
+  <input type="hidden" id="scanner-type" name="scanner-type">
+`;
+
+    }
     if (typeCleaned === "pc") {
       fieldsHtml += `
             <label>MAC Address:</label>
@@ -326,6 +344,8 @@ function updatePopupHeadingAndFields(type) {
       fetchPrinterTypes();
       fetchInkTypes();
       
+    } if (typeCleaned === "scanner") {
+      fetchScannerTypes();
     }
   } else {
     popupHeading.textContent = "Enter Device Specifications";
@@ -396,7 +416,87 @@ function savePCSpec() {
       console.error("❌ خطأ أثناء الاتصال بالسيرفر:", err);
       alert("❌ حدث خطأ في الاتصال بالسيرفر. تأكد أن السيرفر يعمل");
     });
+}function fetchScannerTypes() {
+  fetch("http://localhost:5050/Scanner_Types")
+    .then(res => res.json())
+    .then(data => {
+      const optionsContainer = document.getElementById("scanner-type-options");
+      const displaySpan = document.getElementById("selected-scanner-type");
+      const hiddenInput = document.getElementById("scanner-type");
+
+      if (!optionsContainer || !displaySpan || !hiddenInput) return;
+
+      optionsContainer.innerHTML = "";
+
+      // + Add New Scanner Type
+      const addNewRow = document.createElement("div");
+      addNewRow.className = "dropdown-option-row add-new-option";
+      addNewRow.innerHTML = `<div class="dropdown-option-text">+ Add New Scanner Type</div>`;
+      addNewRow.onclick = () => {
+        sessionStorage.setItem("lastDropdownOpened", "scanner-type");
+        openAddOptionPopup("scanner-type");
+        closeAllDropdowns();
+      };
+      optionsContainer.appendChild(addNewRow);
+
+      data.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "dropdown-option-row";
+
+        const text = document.createElement("div");
+        text.className = "dropdown-option-text";
+        text.textContent = item.scanner_type;
+        text.onclick = () => {
+          displaySpan.textContent = item.scanner_type;
+          hiddenInput.value = item.scanner_type;
+          closeAllDropdowns();
+        };
+
+        const icons = document.createElement("div");
+        icons.className = "dropdown-actions-icons";
+
+        const editIcon = document.createElement("i");
+        editIcon.className = "fas fa-edit";
+        editIcon.title = "Edit";
+        editIcon.onclick = (e) => {
+          e.stopPropagation();
+          const newValue = prompt("Edit Scanner Type:", item.scanner_type);
+          if (newValue) {
+            editOption("scanner-type", item.scanner_type, newValue);
+          }
+        };
+
+        const deleteIcon = document.createElement("i");
+        deleteIcon.className = "fas fa-trash";
+        deleteIcon.title = "Delete";
+        deleteIcon.onclick = (e) => {
+          e.stopPropagation();
+          if (confirm(`Delete "${item.scanner_type}"?`)) {
+            deleteOption("scanner-type", item.scanner_type);
+          }
+        };
+
+        icons.appendChild(editIcon);
+        icons.appendChild(deleteIcon);
+        row.appendChild(text);
+        row.appendChild(icons);
+        optionsContainer.appendChild(row);
+      });
+
+      const saved = sessionStorage.getItem("scanner-type");
+      if (saved) {
+        displaySpan.textContent = saved;
+        hiddenInput.value = saved;
+        sessionStorage.removeItem("scanner-type");
+      }
+
+      attachEditDeleteHandlers("scanner-type-options", "Scanner Type");
+    })
+    .catch(err => {
+      console.error("❌ Error fetching scanner types:", err);
+    });
 }
+
 function fetchPrinterTypes() {
   fetch("http://localhost:5050/Printer_Types")
     .then(res => res.json())
@@ -1159,7 +1259,9 @@ function openAddOptionPopup(targetId) {
 
   else if (targetId === "generation-select") label = "Processor Generation";
   else if (targetId === "printer-type") label = "Printer Type";
-  else if (targetId === "ink-type") label = "Ink Type";
+  else if (targetId === "ink-type") label = "Ink Type";  
+  else if (targetId === "scanner-type") label = "Scanner Type";
+
   const popup = document.getElementById("generic-popup");
   popup.innerHTML = `
     <div class="popup-content">
@@ -1206,6 +1308,7 @@ function saveOptionForSelect() {
         else if (targetId === "ram-size-select") fetchRAMSize();
         else if (targetId === "printer-type") fetchPrinterTypes();
         else if (targetId === "ink-type") fetchInkTypes();
+        else if (targetId === "scanner-type") fetchScannerTypes();
 
         // ✅ نحفظ القيمة الجديدة عشان نرجع نحددها تلقائيًا
         sessionStorage.setItem(targetId, value);
@@ -1239,6 +1342,9 @@ function fetchDeviceTypes() {
       <div class="dropdown-option-text">+ Add New Device Type</div>
     `;
     addNewRow.onclick = () => {
+        sessionStorage.setItem("lastDropdownOpened", "device-type");
+  const el = document.getElementById("device-type");
+  if (el) sessionStorage.setItem("device-type", el.value);
       openGenericPopup("Device Type", "device-type");
       closeAllDropdowns();
     };
@@ -1305,6 +1411,12 @@ function fetchDeviceTypes() {
       };
       container.appendChild(allRow);
     }
+const savedDeviceType = sessionStorage.getItem("device-type");
+if (savedDeviceType) {
+  selectedDisplay.textContent = savedDeviceType;
+  hiddenInput.value = savedDeviceType;
+  sessionStorage.removeItem("device-type");
+}
 
     attachEditDeleteHandlers("device-type-options", "problem-type");
 })
@@ -1843,6 +1955,7 @@ function mapSelectIdToServerTarget(selectId) {
     "printer-type": "printer-type",
     "ink-type": "ink-type",
     "ram-size-select": "ram-size-select",
+    "scanner-type": "scanner-type",
 
     "os-select": "os-select",
     "generation-select": "generation-select",
@@ -1911,6 +2024,8 @@ function refreshDropdown(selectId) {
   }
   else if (selectId === "ink-type") {
     fetchInkTypes();
+  }   else if (selectId === "scanner-type") {
+    fetchScannerTypes();
   }
    else if (selectId === "generation-select") {
     fetchProcessorGen();
@@ -2616,87 +2731,11 @@ function saveGenericOption() {
     .then(result => {
       alert(result.message || "✅ Added successfully");
 
-      if (targetId === "device-type") {
-        // ✅ أعد تحميل القائمة ثم اختر القيمة المضافة
-        fetch("http://localhost:5050/TypeProplem")
-          .then(res => res.json())
-          .then(data => {
-            const container = document.getElementById("device-type-options");
-            const selectedDisplay = document.getElementById("selected-device-type");
-            const hiddenInput = document.getElementById("device-type");
-
-            container.innerHTML = "";
-
-            // + Add New
-            const addNewRow = document.createElement("div");
-            addNewRow.className = "dropdown-option-row add-new-option";
-            addNewRow.innerHTML = `<div class="dropdown-option-text">+ Add New Device Type</div>`;
-            addNewRow.onclick = () => {
-              openGenericPopup("Device Type", "device-type");
-              closeAllDropdowns();
-            };
-            container.appendChild(addNewRow);
-
-            // Render updated list
-            data.forEach((item, index) => {
-              const row = document.createElement("div");
-              row.className = "dropdown-option-row";
-
-              const text = document.createElement("div");
-              text.className = "dropdown-option-text";
-              text.textContent = item.DeviceType;
-              text.onclick = () => {
-                selectedDisplay.textContent = item.DeviceType;
-                hiddenInput.value = item.DeviceType;
-                closeAllDropdowns();
-                fetchDeviceSpecsByTypeAndDepartment();
-              };
-
-              const icons = document.createElement("div");
-              icons.className = "dropdown-actions-icons";
-
-              const editIcon = document.createElement("i");
-              editIcon.className = "fas fa-edit";
-              editIcon.title = "Edit";
-              editIcon.onclick = (e) => {
-                e.stopPropagation();
-                const newValue = prompt("Edit Device Type:", item.DeviceType);
-                if (newValue) {
-                  item.DeviceType = newValue;
-                  fetchDeviceTypes();
-                  selectedDisplay.textContent = newValue;
-                  hiddenInput.value = newValue;
-                }
-              };
-
-              const deleteIcon = document.createElement("i");
-              deleteIcon.className = "fas fa-trash";
-              deleteIcon.title = "Delete";
-              deleteIcon.onclick = (e) => {
-                e.stopPropagation();
-                if (confirm(`Delete "${item.DeviceType}"?`)) {
-                  data.splice(index, 1);
-                  fetchDeviceTypes();
-                  selectedDisplay.textContent = "Select device type";
-                  hiddenInput.value = "";
-                }
-              };
-
-              icons.appendChild(editIcon);
-              icons.appendChild(deleteIcon);
-              row.appendChild(text);
-              row.appendChild(icons);
-              container.appendChild(row);
-
-              // ✅ اختر المضاف تلقائيًا
-              if (item.DeviceType === value) {
-                selectedDisplay.textContent = value;
-                hiddenInput.value = value;
-                fetchDeviceSpecsByTypeAndDepartment();
-              }
-            });
-          });
-      }
+    
+if (targetId === "device-type") {
+  sessionStorage.setItem("device-type", value); // نحفظ القيمة الجديدة
+  fetchDeviceTypes(); // نستدعي الفنكشن الموحد
+}
       sessionStorage.removeItem("returnToPopup");
       closeGenericPopup();
       
