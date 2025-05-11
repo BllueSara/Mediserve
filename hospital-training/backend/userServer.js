@@ -35,88 +35,90 @@ app.post('/register', async (req, res) => {
   const isAdmin = name?.toLowerCase() === 'admin';
   const isEngineer = department?.toLowerCase().includes('technology') || department?.includes('تقنية');
 
-  // ✅ تحقق من الحقول المطلوبة
   if (!name || !email || !password || (!isAdmin && !employee_id)) {
     return res.status(400).json({ message: 'Missing required fields' });
   }
 
   if (isAdmin) {
-    const checkAdmin = await queryAsync(`SELECT * FROM users WHERE role = 'admin'`);
-    if (checkAdmin.length > 0) {
-      return res.status(400).json({ message: 'Admin already exists' });
-    }
-  }
-
-  // ✅ التحقق من القيم المكررة
-  db.query(
-    'SELECT * FROM users WHERE email = ? OR phone = ? OR employee_id = ?',
-    [email, phone || null, employee_id || null],
-    async (err, results) => {
-      if (err) return res.status(500).json({ message: 'Database Error' });
-
-      if (results.length > 0) {
-        const existing = results[0];
-        if (existing.email === email) {
-          return res.status(409).json({ message: 'Email already registered' });
-        }
-        if (!isAdmin && existing.phone === phone) {
-          return res.status(409).json({ message: 'Phone number already registered' });
-        }
-        if (!isAdmin && existing.employee_id === employee_id) {
-          return res.status(409).json({ message: 'Employee ID already registered' });
-        }
+    db.query(`SELECT * FROM users WHERE role = 'admin'`, (err, checkAdmin) => {
+      if (err) return res.status(500).json({ message: 'Database error' });
+      if (checkAdmin.length > 0) {
+        return res.status(400).json({ message: 'Admin already exists' });
       }
 
-      const hashedPassword = await bcrypt.hash(password, 12);
-      const role = isAdmin ? 'admin' : 'user';
+      checkForDuplicates(); // 🔁 تابع التنفيذ فقط إذا ما في Admin مسبق
+    });
+  } else {
+    checkForDuplicates();
+  }
 
-      const sql = `INSERT INTO users (name, email, password, phone, department, employee_id, role)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)`;
+  function checkForDuplicates() {
+    db.query(
+      'SELECT * FROM users WHERE email = ? OR phone = ? OR employee_id = ?',
+      [email, phone || null, employee_id || null],
+      async (err, results) => {
+        if (err) return res.status(500).json({ message: 'Database Error' });
 
-      const values = [
-        name,
-        email,
-        hashedPassword,
-        isAdmin ? null : phone,
-        department || '',
-        isAdmin ? null : employee_id,
-        role
-      ];
-
-      db.query(sql, values, async (err, result) => {
-        if (err) return res.status(500).json({ message: 'Error saving user' });
-
-        const userId = result.insertId;
-
-        // ✅ إذا المستخدم من قسم التقنية → نضيفه في جدول Engineers
-        if (isEngineer) {
-          db.query(
-            `INSERT INTO Engineers (name) VALUES (?)`,
-            [name],
-            (engErr) => {
-              if (engErr) console.warn("⚠️ Couldn't insert into Engineers:", engErr);
-            }
-          );
+        if (results.length > 0) {
+          const existing = results[0];
+          if (existing.email === email) {
+            return res.status(409).json({ message: 'Email already registered' });
+          }
+          if (!isAdmin && existing.phone === phone) {
+            return res.status(409).json({ message: 'Phone number already registered' });
+          }
+          if (!isAdmin && existing.employee_id === employee_id) {
+            return res.status(409).json({ message: 'Employee ID already registered' });
+          }
         }
 
-        const token = jwt.sign({ id: userId, role }, JWT_SECRET, { expiresIn: '1d' });
+        const hashedPassword = await bcrypt.hash(password, 12);
+        const role = isAdmin ? 'admin' : 'user';
 
-        logActivity(userId, name, 'Register', `User ${name} created an account using ${email}`);
+        const sql = `INSERT INTO users (name, email, password, phone, department, employee_id, role)
+                     VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
-        res.status(201).json({
-          message: 'User registered successfully',
-          token,
-          role,
-          user: {
-            id: userId,
-            name,
-            email
+        const values = [
+          name,
+          email,
+          hashedPassword,
+          isAdmin ? null : phone,
+          department || '',
+          isAdmin ? null : employee_id,
+          role
+        ];
+
+        db.query(sql, values, (err, result) => {
+          if (err) return res.status(500).json({ message: 'Error saving user' });
+
+          const userId = result.insertId;
+
+          if (isEngineer) {
+            db.query(`INSERT INTO Engineers (name) VALUES (?)`, [name], (engErr) => {
+              if (engErr) console.warn("⚠️ Couldn't insert into Engineers:", engErr);
+            });
           }
+
+          const token = jwt.sign({ id: userId, role }, JWT_SECRET, { expiresIn: '1d' });
+
+          logActivity(userId, name, 'Register', `User ${name} created an account using ${email}`);
+
+          res.status(201).json({
+            message: 'User registered successfully',
+            token,
+            role,
+            user: {
+              id: userId,
+              name,
+              email
+            }
+          });
         });
-      });
-    }
-  );
+      }
+    );
+  }
 });
+
 
 
 
