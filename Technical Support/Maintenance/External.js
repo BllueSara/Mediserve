@@ -28,10 +28,15 @@ function fetchAndRenderModels(deviceType, dropdownId) {
   }
 
   let endpoint = "";
-  if (cleanedType === "pc") endpoint = "/PC_Model";
-  else if (cleanedType === "printer") endpoint = "/Printer_Model";
-  else if (cleanedType === "scanner") endpoint = "/Scanner_Model";
-  else endpoint = `/models-by-type/${cleanedType}`;
+if (["pc", "laptop", "desktop", "كمبيوتر", "لابتوب"].includes(cleanedType)) {
+  endpoint = "/PC_Model";
+} else if (cleanedType === "printer") {
+  endpoint = "/Printer_Model";
+} else if (cleanedType === "scanner") {
+  endpoint = "/Scanner_Model";
+} else {
+  endpoint = `/models-by-type/${cleanedType}`;
+}
 
   fetch(`http://localhost:5050${endpoint}`)
     .then(res => res.json())
@@ -123,231 +128,278 @@ function updatePopupHeadingAndFields(type) {
   popupFieldsContainer.innerHTML = "";
   const typeCleaned = type.trim().toLowerCase();
 
-  if (["pc", "printer", "scanner"].includes(typeCleaned)) {
-    let fieldsHtml = `
-      <label>${typeCleaned.charAt(0).toUpperCase() + typeCleaned.slice(1)} Name:</label>
-      <input type="text" name="device-name" required>
+  if (["pc", "printer", "scanner","desktop", "laptop", "كمبيوتر", "لابتوب"].includes(typeCleaned)) {
+    let fieldsHtml = `<div class="form-grid">`;
 
-      <label>Serial Number:</label>
-      <input type="text" name="serial" required>
-
-      <label>Ministry Number:</label>
-      <input type="text" name="ministry-id" required>
-
-      <label>Department:</label>
-      <div class="custom-dropdown-wrapper">
-        <div class="custom-dropdown">
-          <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-            <span id="selected-department-${typeCleaned}">Select Department</span>
-            <span>▼</span>
-          </div>
-          <div class="dropdown-content">
-            <input type="text" class="dropdown-search" placeholder="Search department..." oninput="filterDropdown(this, 'department-${typeCleaned}-options')">
-            <div class="dropdown-options" id="department-${typeCleaned}-options"></div>
-          </div>
-        </div>
+    fieldsHtml += `
+      <div class="form-field">
+        <label>${typeCleaned.charAt(0).toUpperCase() + typeCleaned.slice(1)} Name:</label>
+        <input type="text" name="device-name" required>
       </div>
-      <input type="hidden" id="department-${typeCleaned}" name="department" required>
+
+      <div class="form-field">
+        <label>Serial Number:</label>
+        <input type="text" name="serial" required>
+      </div>
+
+      <div class="form-field">
+        <label>Ministry Number:</label>
+        <input type="text" name="ministry-id" required>
+      </div>
+
     `;
-    if (typeCleaned === "printer") {
+if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(typeCleaned)) {
       fieldsHtml += `
-      <label>Printer Type:</label>
-      <div class="custom-dropdown-wrapper">
-        <div class="custom-dropdown">
-          <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-            <span id="selected-printer-type">Select Printer Type</span>
-            <span>▼</span>
-          </div>
-          <div class="dropdown-content">
-            <input type="text" class="dropdown-search" placeholder="Search printer type..." oninput="filterDropdown(this, 'printer-type-options')">
-            <div class="dropdown-options" id="printer-type-options"></div>
-          </div>
+        <div class="form-field">
+          <label>MAC Address:</label>
+          <input type="text" name="mac-address" required>
         </div>
-      </div>
-      <input type="hidden" id="printer-type" name="printer-type">
-    
-      <label>Ink Type:</label>
-      <div class="custom-dropdown-wrapper">
-        <div class="custom-dropdown">
-          <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-            <span id="selected-ink-type">Select Ink Type</span>
-            <span>▼</span>
-          </div>
-          <div class="dropdown-content">
-            <input type="text" class="dropdown-search" placeholder="Search ink type..." oninput="filterDropdown(this, 'ink-type-options')">
-            <div class="dropdown-options" id="ink-type-options"></div>
-          </div>
-        </div>
-      </div>
-      <input type="hidden" id="ink-type" name="ink-type">
-    
-      <label>Ink Serial Number:</label>
-      <input type="text" name="ink-serial-number">
       `;
-    }if (typeCleaned === "scanner") {
+    }    if (typeCleaned === "printer") {
       fieldsHtml += `
-  <label>Scanner Type:</label>
-  <div class="custom-dropdown-wrapper">
-    <div class="custom-dropdown">
-      <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-        <span id="selected-scanner-type">Select Scanner Type</span>
-        <span>▼</span>
-      </div>
-      <div class="dropdown-content">
-        <input type="text" class="dropdown-search" placeholder="Search scanner type..." oninput="filterDropdown(this, 'scanner-type-options')">
-        <div class="dropdown-options" id="scanner-type-options"></div>
-      </div>
-    </div>
-  </div>
-  <input type="hidden" id="scanner-type" name="scanner-type">
-`;
+             <div class="form-field">
+          <label>Ink Serial Number:</label>
+          <input type="text" name="ink-serial-number">
+        </div>
 
+
+        <div class="form-field">
+          <label>Ink Type:</label>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-ink-type">Select Ink Type</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search ink type..." oninput="filterDropdown(this, 'ink-type-options')">
+                <div class="dropdown-options" id="ink-type-options"></div>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="ink-type" name="ink-type">
+        </div>
+        <div class="form-field">
+          <label>Printer Type:</label>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-printer-type">Select Printer Type</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search printer type..." oninput="filterDropdown(this, 'printer-type-options')">
+                <div class="dropdown-options" id="printer-type-options"></div>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="printer-type" name="printer-type">
+        </div>
+ 
+      `;
     }
-    if (typeCleaned === "pc") {
+        fieldsHtml += `
+      <div class="form-field">
+        <label>Department:</label>
+        <div class="custom-dropdown-wrapper">
+          <div class="custom-dropdown">
+            <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+              <span id="selected-department-${typeCleaned}">Select Department</span>
+              <span>▼</span>
+            </div>
+            <div class="dropdown-content">
+              <input type="text" class="dropdown-search" placeholder="Search department..." oninput="filterDropdown(this, 'department-${typeCleaned}-options')">
+              <div class="dropdown-options" id="department-${typeCleaned}-options"></div>
+            </div>
+          </div>
+        </div>
+        <input type="hidden" id="department-${typeCleaned}" name="department" required>
+      </div>
+    `;
+
+
+    if (typeCleaned === "scanner") {
       fieldsHtml += `
-            <label>MAC Address:</label>
-<input type="text" name="mac-address" required>
-        <label>Processor Generation:</label>
-        <div class="custom-dropdown-wrapper">
-          <div class="custom-dropdown">
-            <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-              <span id="selected-generation-select">Select generation</span>
-              <span>▼</span>
-            </div>
-            <div class="dropdown-content">
-              <input type="text" class="dropdown-search" placeholder="Search generation..." oninput="filterDropdown(this, 'generation-select-options')">
-              <div class="dropdown-options" id="generation-select-options"></div>
-            </div>
-          </div>
-        </div>
-        <input type="hidden" id="generation-select" name="generation">
-
-        <label>CPU:</label>
-        <div class="custom-dropdown-wrapper">
-          <div class="custom-dropdown">
-            <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-              <span id="selected-cpu-select">Select processor</span>
-              <span>▼</span>
-            </div>
-            <div class="dropdown-content">
-              <input type="text" class="dropdown-search" placeholder="Search CPU..." oninput="filterDropdown(this, 'cpu-select-options')">
-              <div class="dropdown-options" id="cpu-select-options"></div>
+        <div class="form-field">
+          <label>Scanner Type:</label>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-scanner-type">Select Scanner Type</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search scanner type..." oninput="filterDropdown(this, 'scanner-type-options')">
+                <div class="dropdown-options" id="scanner-type-options"></div>
+              </div>
             </div>
           </div>
+          <input type="hidden" id="scanner-type" name="scanner-type">
         </div>
-        <input type="hidden" id="cpu-select" name="processor">
+      `;
+    }
 
-        <label>RAM:</label>
-        <div class="custom-dropdown-wrapper">
-          <div class="custom-dropdown">
-            <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-              <span id="selected-ram-select">Select RAM</span>
-              <span>▼</span>
-            </div>
-            <div class="dropdown-content">
-              <input type="text" class="dropdown-search" placeholder="Search RAM..." oninput="filterDropdown(this, 'ram-select-options')">
-              <div class="dropdown-options" id="ram-select-options"></div>
+if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(typeCleaned)) {
+      fieldsHtml += `
+
+        <div class="form-field">
+          <label>Processor Generation:</label>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-generation-select">Select generation</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search generation..." oninput="filterDropdown(this, 'generation-select-options')">
+                <div class="dropdown-options" id="generation-select-options"></div>
+              </div>
             </div>
           </div>
+          <input type="hidden" id="generation-select" name="generation">
         </div>
-        <input type="hidden" id="ram-select" name="ram">
 
-        <label>Hard Drive Type:</label>
-<div class="custom-dropdown-wrapper">
-  <div class="custom-dropdown">
-    <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-      <span id="selected-drive-select">Select Hard Drive</span>
-      <span>▼</span>
-    </div>
-    <div class="dropdown-content">
-      <input type="text" class="dropdown-search" placeholder="Search Drive..." oninput="filterDropdown(this, 'drive-select-options')">
-      <div class="dropdown-options" id="drive-select-options"></div>
-    </div>
-  </div>
-</div>
-<input type="hidden" id="drive-select" name="drive">
+        <div class="form-field">
+          <label>CPU:</label>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-cpu-select">Select processor</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search CPU..." oninput="filterDropdown(this, 'cpu-select-options')">
+                <div class="dropdown-options" id="cpu-select-options"></div>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="cpu-select" name="processor">
+        </div>
 
+        <div class="form-field">
+          <label>RAM:</label>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-ram-select">Select RAM</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search RAM..." oninput="filterDropdown(this, 'ram-select-options')">
+                <div class="dropdown-options" id="ram-select-options"></div>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="ram-select" name="ram">
+        </div>
+
+        <div class="form-field">
+          <label>Hard Drive Type:</label>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-drive-select">Select Hard Drive</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search Drive..." oninput="filterDropdown(this, 'drive-select-options')">
+                <div class="dropdown-options" id="drive-select-options"></div>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="drive-select" name="drive">
+        </div>
       `;
     }
 
     fieldsHtml += `
-      <label>Model:</label>
-      <div class="custom-dropdown-wrapper">
-        <div class="custom-dropdown">
-          <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-            <span id="selected-model-${typeCleaned}">Select Model</span>
-            <span>▼</span>
-          </div>
-          <div class="dropdown-content">
-            <input type="text" class="dropdown-search" placeholder="Search model..." oninput="filterDropdown(this, 'model-${typeCleaned}-options')">
-            <div class="dropdown-options" id="model-${typeCleaned}-options"></div>
-          </div>
-        </div>
-      </div>
-      <input type="hidden" id="model-${typeCleaned}" name="model">
-    `;
-
-    if (typeCleaned === "pc") {
-      fieldsHtml += `
-        <label>Operating System:</label>
+      <div class="form-field">
+        <label>Model:</label>
         <div class="custom-dropdown-wrapper">
           <div class="custom-dropdown">
             <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-              <span id="selected-os-select">Select OS</span>
+              <span id="selected-model-${typeCleaned}">Select Model</span>
               <span>▼</span>
             </div>
             <div class="dropdown-content">
-              <input type="text" class="dropdown-search" placeholder="Search OS..." oninput="filterDropdown(this, 'os-select-options')">
-              <div class="dropdown-options" id="os-select-options"></div>
+              <input type="text" class="dropdown-search" placeholder="Search model..." oninput="filterDropdown(this, 'model-${typeCleaned}-options')">
+              <div class="dropdown-options" id="model-${typeCleaned}-options"></div>
             </div>
           </div>
         </div>
-        <input type="hidden" id="os-select" name="os">
-        
-      `;      fieldsHtml += `
-      <label>RAM Size:</label>
-      <div class="custom-dropdown-wrapper">
-        <div class="custom-dropdown">
-          <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-            <span id="selected-ram-size-select">Select RAM Size</span>
-            <span>▼</span>
-          </div>
-          <div class="dropdown-content">
-            <input type="text" class="dropdown-search" placeholder="Search RAM size..." oninput="filterDropdown(this, 'ram-size-select-options')">
-            <div class="dropdown-options" id="ram-size-select-options"></div>
-          </div>
-        </div>
+        <input type="hidden" id="model-${typeCleaned}" name="model">
       </div>
-      <input type="hidden" id="ram-size-select" name="ram_size">
     `;
+
+if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(typeCleaned)) {
+      fieldsHtml += `
+        <div class="form-field">
+          <label>Operating System:</label>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-os-select">Select OS</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search OS..." oninput="filterDropdown(this, 'os-select-options')">
+                <div class="dropdown-options" id="os-select-options"></div>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="os-select" name="os">
+        </div>
+
+        <div class="form-field">
+          <label>RAM Size:</label>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-ram-size-select">Select RAM Size</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search RAM size..." oninput="filterDropdown(this, 'ram-size-select-options')">
+                <div class="dropdown-options" id="ram-size-select-options"></div>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="ram-size-select" name="ram_size">
+        </div>
+      `;
     }
+
+    fieldsHtml += `</div>`; // Close .form-grid
 
     popupHeading.textContent = `Enter ${type.charAt(0).toUpperCase() + type.slice(1)} Specifications`;
     popupFieldsContainer.innerHTML = fieldsHtml;
 
-    // Load data
+    // Fetch dropdown data
     fetchDepartments(`department-${typeCleaned}`);
     fetchAndRenderModels(typeCleaned, `model-${typeCleaned}`);
-    if (typeCleaned === "pc") {
+if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(typeCleaned)) {
       fetchCPU();
       fetchRAM();
       fetchOS();
       fetchProcessorGen();
-      fetchDrives(); // ✅ أضفناها هنا
-      fetchRAMSize(); // ✅ أضفناها هنا
-
-    }   if(typeCleaned ==="printer"){
+      fetchDrives();
+      fetchRAMSize();
+    }
+    if (typeCleaned === "printer") {
       fetchPrinterTypes();
       fetchInkTypes();
-      
-    } if (typeCleaned === "scanner") {
+    }
+    if (typeCleaned === "scanner") {
       fetchScannerTypes();
     }
+
   } else {
     popupHeading.textContent = "Enter Device Specifications";
     popupFieldsContainer.innerHTML = "<p>No fields available for this device type.</p>";
   }
 }
+
+
 
 function closePopup() {
   popup.style.display = "none";
@@ -372,7 +424,7 @@ function savePCSpec() {
   const deviceType = document.getElementById("device-type").value.toLowerCase();
 
   // ✅ لو مو PC نحذف الماك من البيانات المرسلة
-  if (deviceType !== "pc") {
+  if (!["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(deviceType)) {
     delete deviceData["mac-address"];
   }
 
@@ -805,7 +857,7 @@ setTimeout(() => {
         const deviceType = document.getElementById("device-type")?.value?.toLowerCase();
         const isSpecContext = ["spec-department", "department-pc", "department-printer", "department-scanner"].includes(selectId);
   
-        if (isSpecContext && !["pc", "printer", "scanner"].includes(deviceType)) {
+        if (isSpecContext && !["pc", "printer", "scanner","desktop", "laptop", "كمبيوتر", "لابتوب"].includes(deviceType)) {
           const modelName = document.getElementById("spec-model")?.value;
           if (modelName) sessionStorage.setItem("spec-model", modelName);
         
@@ -1664,7 +1716,7 @@ function fetchDevicesBySection() {
       data.forEach(device => {
         const option = document.createElement("option");
         option.value = device.Serial_Number;
-        option.textContent = `${device.Serial_Number} | ${device[type === 'pc' ? 'Computer_Name' : type === 'printer' ? 'Printer_Name' : 'Scanner_Name']}`;
+        option.textContent = `${device.Serial_Number} | ${device[type === 'pc',"desktop", "laptop", "كمبيوتر", "لابتوب" ? 'Computer_Name' : type === 'printer' ? 'Printer_Name' : 'Scanner_Name']}`;
         dropdown.appendChild(option);
       });
     })
@@ -1719,7 +1771,7 @@ function fetchDeviceSpecsByTypeAndDepartment() {
   addNewRow.onclick = () => {
     sessionStorage.setItem("lastDropdownOpened", "device-spec");
   
-    if (["pc", "printer", "scanner"].includes(type)) {
+    if (["pc", "printer", "scanner","desktop", "laptop", "كمبيوتر", "لابتوب"].includes(type)) {
       updatePopupHeadingAndFields(type);
       popup.style.display = "flex";
     } else {
@@ -1817,7 +1869,7 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
         
-        if (["pc", "printer", "scanner"].includes(type)) {
+        if (["pc", "printer", "scanner","desktop", "laptop", "كمبيوتر", "لابتوب"].includes(type)) {
           console.log("✅ فتح بوب أب المواصفات لنوع:", type);
           updatePopupHeadingAndFields(type);
           document.getElementById("popup-modal").style.display = "flex";
@@ -2040,7 +2092,7 @@ function openGenericPopup(label, targetId) {
       .then(res => res.json())
       .then((departments) => {
         // ✅ تحقق إذا نوع الجهاز غير معروف
-        const isUnknownType = !["pc", "printer", "scanner"].includes(cleanedType);
+        const isUnknownType = !["pc", "printer", "scanner","desktop", "laptop", "كمبيوتر", "لابتوب"].includes(cleanedType);
 
         // ✅ بناء قائمة الأقسام بترتيب حسب نوع الجهاز
         const departmentsOptions = isUnknownType
@@ -2295,7 +2347,7 @@ function saveNewModel() {
       sessionStorage.removeItem("returnToPopup");
 
       // ✅ إذا الجهاز غير معروف → نرجع للمواصفات
-      if (!["pc", "printer", "scanner"].includes(deviceType)) {
+      if (!["pc", "printer", "scanner","desktop", "laptop", "كمبيوتر", "لابتوب"].includes(deviceType)) {
         setTimeout(() => {
           openGenericPopup("Device Specification", "device-spec");
         }, 150);
@@ -2448,7 +2500,7 @@ function closeGenericPopup(cancelled = false) {
     returnToSpec === "true" &&
     !cancelled &&
     (!deviceSpecValue || deviceSpecValue === "add-custom") &&
-    !["pc", "printer", "scanner"].includes(deviceType) &&
+    !["pc", "printer", "scanner", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(deviceType) &&
     lastDropdownId !== "section" &&
     !sessionStorage.getItem("spec-saved")
   ) {

@@ -29,11 +29,15 @@ function fetchAndRenderModels(deviceType, dropdownId) {
   }
 
   let endpoint = "";
-  if (cleanedType === "pc") endpoint = "/PC_Model";
-  else if (cleanedType === "printer") endpoint = "/Printer_Model";
-  else if (cleanedType === "scanner") endpoint = "/Scanner_Model";
-  else endpoint = `/models-by-type/${cleanedType}`;
-
+if (["pc", "laptop", "desktop", "كمبيوتر", "لابتوب"].includes(cleanedType)) {
+  endpoint = "/PC_Model";
+} else if (cleanedType === "printer") {
+  endpoint = "/Printer_Model";
+} else if (cleanedType === "scanner") {
+  endpoint = "/Scanner_Model";
+} else {
+  endpoint = `/models-by-type/${cleanedType}`;
+}
   fetch(`http://localhost:5050${endpoint}`)
     .then(res => res.json())
     .then(data => {
@@ -124,7 +128,7 @@ function updatePopupHeadingAndFields(type) {
   popupFieldsContainer.innerHTML = "";
   const typeCleaned = type.trim().toLowerCase();
 
-  if (["pc", "printer", "scanner"].includes(typeCleaned)) {
+  if (["pc", "printer", "scanner","desktop", "laptop", "كمبيوتر", "لابتوب"].includes(typeCleaned)) {
     let fieldsHtml = `<div class="form-grid">`;
 
     fieldsHtml += `
@@ -143,6 +147,58 @@ function updatePopupHeadingAndFields(type) {
         <input type="text" name="ministry-id" required>
       </div>
 
+    `;
+if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(typeCleaned)) {
+      fieldsHtml += `
+        <div class="form-field">
+          <label>MAC Address:</label>
+          <input type="text" name="mac-address" required>
+        </div>
+      `;
+    }    if (typeCleaned === "printer") {
+      fieldsHtml += `
+             <div class="form-field">
+          <label>Ink Serial Number:</label>
+          <input type="text" name="ink-serial-number">
+        </div>
+
+
+        <div class="form-field">
+          <label>Ink Type:</label>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-ink-type">Select Ink Type</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search ink type..." oninput="filterDropdown(this, 'ink-type-options')">
+                <div class="dropdown-options" id="ink-type-options"></div>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="ink-type" name="ink-type">
+        </div>
+        <div class="form-field">
+          <label>Printer Type:</label>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-printer-type">Select Printer Type</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search printer type..." oninput="filterDropdown(this, 'printer-type-options')">
+                <div class="dropdown-options" id="printer-type-options"></div>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="printer-type" name="printer-type">
+        </div>
+ 
+      `;
+    }
+        fieldsHtml += `
       <div class="form-field">
         <label>Department:</label>
         <div class="custom-dropdown-wrapper">
@@ -161,48 +217,6 @@ function updatePopupHeadingAndFields(type) {
       </div>
     `;
 
-    if (typeCleaned === "printer") {
-      fieldsHtml += `
-        <div class="form-field">
-          <label>Printer Type:</label>
-          <div class="custom-dropdown-wrapper">
-            <div class="custom-dropdown">
-              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-                <span id="selected-printer-type">Select Printer Type</span>
-                <span>▼</span>
-              </div>
-              <div class="dropdown-content">
-                <input type="text" class="dropdown-search" placeholder="Search printer type..." oninput="filterDropdown(this, 'printer-type-options')">
-                <div class="dropdown-options" id="printer-type-options"></div>
-              </div>
-            </div>
-          </div>
-          <input type="hidden" id="printer-type" name="printer-type">
-        </div>
-
-        <div class="form-field">
-          <label>Ink Type:</label>
-          <div class="custom-dropdown-wrapper">
-            <div class="custom-dropdown">
-              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-                <span id="selected-ink-type">Select Ink Type</span>
-                <span>▼</span>
-              </div>
-              <div class="dropdown-content">
-                <input type="text" class="dropdown-search" placeholder="Search ink type..." oninput="filterDropdown(this, 'ink-type-options')">
-                <div class="dropdown-options" id="ink-type-options"></div>
-              </div>
-            </div>
-          </div>
-          <input type="hidden" id="ink-type" name="ink-type">
-        </div>
-
-        <div class="form-field">
-          <label>Ink Serial Number:</label>
-          <input type="text" name="ink-serial-number">
-        </div>
-      `;
-    }
 
     if (typeCleaned === "scanner") {
       fieldsHtml += `
@@ -225,12 +239,8 @@ function updatePopupHeadingAndFields(type) {
       `;
     }
 
-    if (typeCleaned === "pc") {
+if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(typeCleaned)) {
       fieldsHtml += `
-        <div class="form-field">
-          <label>MAC Address:</label>
-          <input type="text" name="mac-address" required>
-        </div>
 
         <div class="form-field">
           <label>Processor Generation:</label>
@@ -321,7 +331,7 @@ function updatePopupHeadingAndFields(type) {
       </div>
     `;
 
-    if (typeCleaned === "pc") {
+if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(typeCleaned)) {
       fieldsHtml += `
         <div class="form-field">
           <label>Operating System:</label>
@@ -367,7 +377,7 @@ function updatePopupHeadingAndFields(type) {
     // Fetch dropdown data
     fetchDepartments(`department-${typeCleaned}`);
     fetchAndRenderModels(typeCleaned, `model-${typeCleaned}`);
-    if (typeCleaned === "pc") {
+if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(typeCleaned)) {
       fetchCPU();
       fetchRAM();
       fetchOS();
@@ -388,6 +398,7 @@ function updatePopupHeadingAndFields(type) {
     popupFieldsContainer.innerHTML = "<p>No fields available for this device type.</p>";
   }
 }
+
 
 
 
@@ -414,7 +425,7 @@ function savePCSpec() {
   const deviceType = document.getElementById("device-type").value.toLowerCase();
 
   // ✅ لو مو PC نحذف الماك من البيانات المرسلة
-  if (deviceType !== "pc") {
+  if (!["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(deviceType)) {
     delete deviceData["mac-address"];
   }
 
@@ -849,7 +860,7 @@ setTimeout(() => {
         const deviceType = document.getElementById("device-type")?.value?.toLowerCase();
         const isSpecContext = ["spec-department", "department-pc", "department-printer", "department-scanner"].includes(selectId);
   
-        if (isSpecContext && !["pc", "printer", "scanner"].includes(deviceType)) {
+        if (isSpecContext && !["pc", "printer", "scanner","desktop", "laptop", "كمبيوتر", "لابتوب"].includes(deviceType)) {
           const modelName = document.getElementById("spec-model")?.value;
           if (modelName) sessionStorage.setItem("spec-model", modelName);
         
@@ -1862,7 +1873,7 @@ function fetchDevicesBySection() {
       data.forEach(device => {
         const option = document.createElement("option");
         option.value = device.Serial_Number;
-        option.textContent = `${device.Serial_Number} | ${device[type === 'pc' ? 'Computer_Name' : type === 'printer' ? 'Printer_Name' : 'Scanner_Name']}`;
+        option.textContent = `${device.Serial_Number} | ${device[type === 'pc',"desktop", "laptop", "كمبيوتر", "لابتوب" ? 'Computer_Name' : type === 'printer' ? 'Printer_Name' : 'Scanner_Name']}`;
         dropdown.appendChild(option);
       });
     })
@@ -1916,7 +1927,7 @@ function fetchDeviceSpecsByTypeAndDepartment() {
   addNewRow.onclick = () => {
     sessionStorage.setItem("lastDropdownOpened", "device-spec");
   
-    if (["pc", "printer", "scanner"].includes(type)) {
+    if (["pc", "printer", "scanner","desktop", "laptop", "كمبيوتر", "لابتوب"].includes(type)) {
       updatePopupHeadingAndFields(type);
       popup.style.display = "flex";
     } else {
@@ -2013,7 +2024,7 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
         
-        if (["pc", "printer", "scanner"].includes(type)) {
+        if (["pc", "printer", "scanner","desktop", "laptop", "كمبيوتر", "لابتوب"].includes(type)) {
           console.log("✅ فتح بوب أب المواصفات لنوع:", type);
           updatePopupHeadingAndFields(type);
           document.getElementById("popup-modal").style.display = "flex";
@@ -2279,7 +2290,7 @@ function openGenericPopup(label, targetId) {
       .then(res => res.json())
       .then((departments) => {
         // ✅ تحقق إذا نوع الجهاز غير معروف
-        const isUnknownType = !["pc", "printer", "scanner"].includes(cleanedType);
+        const isUnknownType = !["pc", "printer", "scanner","desktop", "laptop", "كمبيوتر", "لابتوب"].includes(cleanedType);
 
         // ✅ بناء قائمة الأقسام بترتيب حسب نوع الجهاز
         const departmentsOptions = isUnknownType
@@ -2534,7 +2545,7 @@ function saveNewModel() {
       sessionStorage.removeItem("returnToPopup");
 
       // ✅ إذا الجهاز غير معروف → نرجع للمواصفات
-      if (!["pc", "printer", "scanner"].includes(deviceType)) {
+      if (!["pc", "printer", "scanner","desktop", "laptop", "كمبيوتر", "لابتوب"].includes(deviceType)) {
         setTimeout(() => {
           openGenericPopup("Device Specification", "device-spec");
         }, 150);
@@ -2640,7 +2651,7 @@ function closeGenericPopup(cancelled = false) {
     const deviceType = document.getElementById("device-type")?.value?.toLowerCase();
   
     // ✅ إذا كنا راجعين من بوب أب المواصفات لنوع جهاز غير معروف
-    if (returnToSpec === "true" && !["pc", "printer", "scanner"].includes(deviceType)) {
+    if (returnToSpec === "true" && !["pc", "printer", "scanner","desktop", "laptop", "كمبيوتر", "لابتوب"].includes(deviceType)) {
       sessionStorage.removeItem("returnToPopup");
       setTimeout(() => {
         openGenericPopup("Device Specification", "device-spec");
@@ -2687,7 +2698,7 @@ function closeGenericPopup(cancelled = false) {
     returnToSpec === "true" &&
     !cancelled &&
     (!deviceSpecValue || deviceSpecValue === "add-custom") &&
-    !["pc", "printer", "scanner"].includes(deviceType) &&
+    !["pc", "printer", "scanner", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(deviceType) &&
     lastDropdownId !== "section" &&
     !sessionStorage.getItem("spec-saved")
   ) {

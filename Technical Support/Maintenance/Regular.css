@@ -519,7 +519,7 @@ button:hover {
 .popup-content.wide-popup input,
 .popup-content.wide-popup select,
 .popup-content.wide-popup textarea {
-    width: 100%;
+    width: 90%;
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 5px;
