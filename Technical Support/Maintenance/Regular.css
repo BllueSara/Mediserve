@@ -414,13 +414,7 @@ button:hover {
     gap: 15px;                /* ✅ مسافة بين الزرين */
   }
 
-  .custom-dropdown-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 20px auto;
-  }
-  
+
   .dropdown-actions button {
     padding: 8px 14px;
     background-color: #3BAAE0;
@@ -492,4 +486,80 @@ button:hover {
     font-weight: bold;
     color: black; /* اختياري - يعطيها لون أزرق جميل */
   }
+
+  
+  .popup-content.wide-popup {
+    background: white;
+    padding: 30px;
+    width: 800px; /* أوسع عرض */
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: space-between;
+}
+
+.popup-content.wide-popup label {
+    display: block;
+    width: 100%;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+.popup-content.wide-popup .form-field {
+    flex: 0 0 48%; /* عنصرين في الصف */
+    display: flex;
+    flex-direction: column;
+}
+
+.popup-content.wide-popup input,
+.popup-content.wide-popup select,
+.popup-content.wide-popup textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-top: 5px;
+}
+
+.popup-buttons {
+    margin-top: 30px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+.form-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 30px;
+  justify-content: space-between;
+  width: 100%;
+  align-items: flex-start; /* ← يوحّد بداية العناصر عموديًا */
+}
+
+
+.form-field {
+  flex: 0 0 48%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 5px; /* ↓ مسافة بين label والعنصر */
+}
+  .custom-dropdown-wrapper {
+    display: flex;
+    align-items: center;
+ gap: 10px;
+    /* margin: 10px ; */
+  }
+  .custom-dropdown-wrapperr {
+    display: flex;
+    align-items: center;
+ gap: 10px;
+    margin: 20px auto;
+  };
   
