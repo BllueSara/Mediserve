@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Add New Device</title>
+  <link rel="stylesheet" href="add.css" />
+</head>
+
+<body>
+  <div class="nav-buttons">
+    <div class="back-button">
+      <a href="#" onclick="goBack()">
+        <img src="/icon/Back.png" alt="Back Icon" class="back-icon" /> Back
+      </a>
+    </div>
+    <div class="Home-button">
+      <a href="/Home/Home.html">
+        <img src="/icon/Home.png" alt="Home Icon" class="Home-icon" /> Home
+      </a>
+    </div>
+  </div>
+
+  <header>
+    <div class="ms-logo">
+      <img src="/icon/MS Logo.png" alt="MS Logo" />
+    </div>
+    <div class="hospital-logo">
+      <img src="/icon/hospital-logo.png" alt="Hospital Logo" />
+    </div>
+  </header>
+
+  <div class="form-container">
+    <h2 class="form-title">Add New Device</h2>
+
+    <form id="deviceForm">
+
+      <!-- Device Type -->
+      <label for="device-type">Device Type <span class="required">*</span></label>
+      <div class="custom-dropdown-wrapper">
+        <div class="custom-dropdown">
+          <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+            <span id="selected-device-type">Select device type</span>
+            <span>▼</span>
+          </div>
+          <div class="dropdown-content">
+            <input type="text" placeholder="Search device type..." class="dropdown-search"
+              oninput="filterDropdown(this, 'device-type-options')" />
+            <div class="dropdown-option add-option" onclick="promptAddDeviceType()">+ Add New Device Type</div>
+            <div class="dropdown-options" id="device-type-options">
+              <!-- Device type options will load here -->
+            </div>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" id="device-type" name="device-type" />
+
+      <!-- Section -->
+      <label for="section">Section <span class="required">*</span></label>
+      <div class="custom-dropdown-wrapper">
+        <div class="custom-dropdown">
+          <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+            <span id="selected-section">Select section</span>
+            <span>▼</span>
+          </div>
+          <div class="dropdown-content">
+            <input type="text" placeholder="Search section..." class="dropdown-search"
+              oninput="filterDropdown(this, 'section-options')" />
+            <div class="dropdown-option add-option" onclick="promptAddSection()">+ Add New Section</div>
+            <div class="dropdown-options" id="section-options">
+              <!-- Section options will load here -->
+            </div>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" id="section" name="section" />
+
+      <!-- Placeholder for dynamic specs -->
+      <div id="device-specifications" class="specs-container">
+        <!-- Loaded based on device type -->
+      </div>
+
+      <button type="submit">Submit</button>
+
+      <!-- Modal for adding new device type -->
+      <div class="popup-overlay" id="deviceTypeModal">
+        <div class="popup">
+          <h3>Add New Device Type</h3>
+          <input type="text" id="newDeviceTypeInput" placeholder="Enter device type..." />
+          <div class="popup-actions">
+            <button onclick="saveNewDeviceType()">Save</button>
+            <button class="cancel" onclick="closeModal('deviceTypeModal')">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal for adding new section -->
+      <div class="popup-overlay" id="sectionModal">
+        <div class="popup">
+          <h3>Add New Section</h3>
+          <input type="text" id="newSectionInput" placeholder="Enter section name..." />
+          <div class="popup-actions">
+            <button onclick="saveNewSection()">Save</button>
+            <button class="cancel" onclick="closeModal('sectionModal')">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+    </form>
+  </div>
+
+  <script src="add.js"></script>
+</body>
+
+</html>
