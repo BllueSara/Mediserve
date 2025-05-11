@@ -448,7 +448,7 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
     `, [
       ticket_number, deviceType, device_specifications, section,
       maintenance_manager, reporter_name,
-      initial_diagnosis, `Ticket (${ticket_number}) has been created by (${reporter_name})`,
+      initial_diagnosis, `Ticket (${ticket_number}) has been created by (${userName})`,
       deviceInfo.serial_number, deviceInfo.governmental_number, deviceInfo.device_name,
       deviceInfo.department_name, deviceInfo.cpu_name, deviceInfo.ram_type, deviceInfo.os_name,
       deviceInfo.generation_number, deviceInfo.model_name, deviceInfo.drive_type, deviceInfo.ram_size,
@@ -471,16 +471,16 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
       'external-ticket-report'
     ]);
 
-    // 🛎️ إشعار 3: للمدير (admin) إذا موجود
-    const adminRes = await queryAsync(`SELECT id FROM users WHERE name = ?`, [reporter_name]);
-    const adminId = adminRes[0]?.id;
-    if (adminId) {
-      await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-        adminId,
-        `New external maintenance task assigned on ${deviceInfo.device_name} (${displayDevice}) by ${userName}`,
-        'external-maintenance-assigned'
-      ]);
-    }
+const reporterRes = await queryAsync(`SELECT id FROM users WHERE name = ?`, [reporter_name]);
+const reporterId = reporterRes[0]?.id;
+
+if (reporterId) {
+  await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+    reporterId,
+    `New external maintenance task assigned on ${deviceInfo.device_name} (${displayDevice}) by ${userName}`,
+    'external-maintenance-assigned'
+  ]);
+}
 
     await queryAsync(`
       INSERT INTO Activity_Logs (user_id, user_name, action, details)
@@ -761,18 +761,19 @@ const displayDevice = isAllDevices
     const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE id = ?`, [technical_engineer_id]);
     const techEngineerName = techEngineerRes[0]?.name;
 
-    if (adminUser?.role === 'admin' && techEngineerName) {
-      const techUserRes = await queryAsync(`SELECT id FROM Users WHERE name = ?`, [techEngineerName]);
-      const techUserId = techUserRes[0]?.id;
-    
-      if (techUserId) {
-        await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-          techUserId,
-          `You have been assigned a new Regular maintenance task on ${displayDevice} by ${adminUser.name}`,
-          'technical-notification'
-        ]);
-      }
-    }
+if (techEngineerName) {
+  const techUserRes = await queryAsync(`SELECT id FROM Users WHERE name = ?`, [techEngineerName]);
+  const techUserId = techUserRes[0]?.id;
+
+  if (techUserId) {
+    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+      techUserId,
+      `You have been assigned a new Regular maintenance task on ${displayDevice} by ${userName}`,
+      'technical-notification'
+    ]);
+  }
+}
+
     
     await queryAsync(`
       INSERT INTO Activity_Logs (user_id, user_name, action, details)
@@ -1227,18 +1228,19 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
     const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE id = ?`, [technical]);
     const techEngineerName = techEngineerRes[0]?.name;
 
-    if (adminUser?.role === 'admin' && techEngineerName) {
-      const techUserRes = await queryAsync(`SELECT id FROM Users WHERE name = ?`, [techEngineerName]);
-      const techUserId = techUserRes[0]?.id;
+if (techEngineerName) {
+  const techUserRes = await queryAsync(`SELECT id FROM Users WHERE name = ?`, [techEngineerName]);
+  const techUserId = techUserRes[0]?.id;
 
-      if (techUserId) {
-        await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-          techUserId,
-          `You have been assigned a new General maintenance task on ${deviceInfo.device_name} (${displayDevice}) by ${adminUser.name}`,
-          'technical-notification'
-        ]);
-      }
-    }
+  if (techUserId) {
+    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+      techUserId,
+      `You have been assigned a new General maintenance task on ${deviceInfo.device_name} (${displayDevice}) by ${userName}`,
+      'technical-notification'
+    ]);
+  }
+}
+
 
     await queryAsync(`
       INSERT INTO Activity_Logs (user_id, user_name, action, details)
@@ -1270,9 +1272,10 @@ app.get("/device-types", (req, res) => {
   });
 });
 
-app.get("/get-external-reports", authenticateToken, (req, res) => {
+app.get("/get-external-reports", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const userRole = req.user.role;
+const userName = await getUserNameById(userId);
 
   let externalSql = `
 SELECT 
@@ -1347,11 +1350,17 @@ FROM External_Maintenance
   `;
 
   // لو ليس admin → فلتر بالتقارير المملوكة للمستخدم فقط
-  if (userRole !== 'admin') {
-    externalSql += ` WHERE user_id = ${db.escape(userId)} `;
-    newSql += ` WHERE user_id = ${db.escape(userId)} `;
-    externalReportsSQL += ` AND mr.user_id = ${db.escape(userId)} `;
-  }
+if (userRole !== 'admin') {
+  externalSql += ` WHERE user_id = ${db.escape(userId)} `;
+  newSql += ` WHERE user_id = ${db.escape(userId)} `;
+  externalReportsSQL += `
+    AND (
+      mr.user_id = ${db.escape(userId)}
+      OR LOWER(et.assigned_to) = LOWER(${db.escape(userName)})
+    )
+  `;
+}
+
 
   const combinedSql = `
     (${externalSql} GROUP BY id)
@@ -2394,80 +2403,81 @@ app.get('/regular-maintenance-summary-4months', authenticateToken, (req, res) =>
     res.json(result);
   });
 });
-
-app.get('/get-internal-reports', authenticateToken, (req, res) => {
+app.get('/get-internal-reports', authenticateToken,async (req, res) => {
   const userId = req.user.id;
   const userRole = req.user.role;
+  const userName = await getUserNameById(userId); // ✅ هذه هي
 
   let internalSql = `
-SELECT 
-  R.id,
-  MAX(R.created_at) AS created_at,
-  MAX(R.issue_summary) AS issue_summary,
-  MAX(R.full_description) AS full_description,
-  MAX(R.status) AS status,
-  MAX(R.device_id) AS device_id,
-  MAX(R.report_number) AS report_number,
-  MAX(R.ticket_id) AS ticket_id,
-  MAX(R.maintenance_type) AS maintenance_type,
-  MAX(
-    CASE 
-      WHEN R.maintenance_type = 'Internal' THEN R.report_number
-      WHEN R.maintenance_type = 'Regular' THEN NULL
-      ELSE T.ticket_number
-    END
-  ) AS ticket_number,
-  MAX(CASE WHEN R.maintenance_type = 'Regular' THEN NULL ELSE T.issue_description END) AS issue_description,
-  MAX(CASE WHEN R.maintenance_type = 'Regular' THEN RM.problem_status ELSE T.priority END) AS priority,
-  MAX(COALESCE(GM.department_name, D.name)) AS department_name,
-  MAX(COALESCE(GM.device_name, M.device_name)) AS device_name,
-  MAX(RM.frequency) AS frequency,
-  MAX(M.device_type) AS device_type,
-  'internal' AS source,
-  MAX(CASE WHEN R.maintenance_type = 'Regular' THEN NULL ELSE T.attachment_name END) AS attachment_name,
-  MAX(CASE WHEN R.maintenance_type = 'Regular' THEN NULL ELSE T.attachment_path END) AS attachment_path,
-  MAX(COALESCE(RM.problem_status, T.issue_description)) AS problem_status,
-  MAX(COALESCE(E.name, T.assigned_to)) AS technical_engineer
-FROM Maintenance_Reports R
-LEFT JOIN Maintenance_Devices M ON R.device_id = M.id
-LEFT JOIN Departments D ON M.department_id = D.id
-LEFT JOIN (SELECT * FROM Regular_Maintenance ORDER BY last_maintenance_date DESC) AS RM ON RM.device_id = R.device_id
-LEFT JOIN Engineers E ON RM.technical_engineer_id = E.id
-LEFT JOIN General_Maintenance GM ON GM.device_id = R.device_id
-LEFT JOIN Internal_Tickets T ON R.ticket_id = T.id
-WHERE R.maintenance_type IN ('Regular', 'General', 'Internal')
+    SELECT 
+      R.id,
+      MAX(R.created_at) AS created_at,
+      MAX(R.issue_summary) AS issue_summary,
+      MAX(R.full_description) AS full_description,
+      MAX(R.status) AS status,
+      MAX(R.device_id) AS device_id,
+      MAX(R.report_number) AS report_number,
+      MAX(R.ticket_id) AS ticket_id,
+      MAX(R.maintenance_type) AS maintenance_type,
+      MAX(CASE WHEN R.maintenance_type = 'Internal' THEN R.report_number ELSE T.ticket_number END) AS ticket_number,
+      MAX(CASE WHEN R.maintenance_type = 'Regular' THEN NULL ELSE T.issue_description END) AS issue_description,
+      MAX(CASE WHEN R.maintenance_type = 'Regular' THEN RM.problem_status ELSE T.priority END) AS priority,
+      MAX(COALESCE(GM.department_name, D.name)) AS department_name,
+      MAX(COALESCE(GM.device_name, M.device_name)) AS device_name,
+      MAX(RM.frequency) AS frequency,
+      MAX(M.device_type) AS device_type,
+      'internal' AS source,
+      MAX(CASE WHEN R.maintenance_type = 'Regular' THEN NULL ELSE T.attachment_name END) AS attachment_name,
+      MAX(CASE WHEN R.maintenance_type = 'Regular' THEN NULL ELSE T.attachment_path END) AS attachment_path,
+      MAX(COALESCE(RM.problem_status, T.issue_description)) AS problem_status,
+      MAX(COALESCE(E.name, T.assigned_to)) AS technical_engineer
+    FROM Maintenance_Reports R
+    LEFT JOIN Maintenance_Devices M ON R.device_id = M.id
+    LEFT JOIN Departments D ON M.department_id = D.id
+    LEFT JOIN (SELECT * FROM Regular_Maintenance ORDER BY last_maintenance_date DESC) AS RM ON RM.device_id = R.device_id
+    LEFT JOIN Engineers E ON RM.technical_engineer_id = E.id
+    LEFT JOIN General_Maintenance GM ON GM.device_id = R.device_id
+    LEFT JOIN Internal_Tickets T ON R.ticket_id = T.id
+    WHERE R.maintenance_type IN ('Regular', 'General', 'Internal')
+  `;
 
-`;
-if (userRole !== 'admin') {
-  internalSql += ` AND R.user_id = ? `;
-}
-
-internalSql += ` GROUP BY R.id `;
-
-let newSql = `
-SELECT 
-  id, created_at, issue_summary, NULL AS full_description, status, device_id,
-  NULL AS report_number, NULL AS ticket_id, 'New' AS maintenance_type, NULL AS ticket_number,
-  NULL AS issue_description, priority, NULL AS department_name, NULL AS device_name, NULL AS frequency,
-  device_type, 'new' AS source, attachment_name, attachment_path, NULL AS problem_status, NULL AS technical_engineer
-FROM New_Maintenance_Report
-`;
-
-if (userRole !== 'admin') {
-  newSql += ` WHERE user_id = ? `;
-}
-
-const combinedSql = `${internalSql} UNION ALL ${newSql} ORDER BY created_at DESC`;
-const params = userRole === 'admin' ? [] : [userId, userId];
-
-db.query(combinedSql, params, (err, results) => {
-  if (err) {
-    console.error("❌ Failed to fetch reports:", err);
-    return res.status(500).json({ error: "Error fetching reports" });
+  if (userRole !== 'admin') {
+    internalSql += `
+      AND (
+        R.user_id = ?
+        OR LOWER(COALESCE(E.name, T.assigned_to)) = LOWER(?)
+      )
+    `;
   }
-  res.json(results);
+
+  internalSql += ` GROUP BY R.id `;
+
+  let newSql = `
+    SELECT 
+      id, created_at, issue_summary, NULL AS full_description, status, device_id,
+      NULL AS report_number, NULL AS ticket_id, 'New' AS maintenance_type, NULL AS ticket_number,
+      NULL AS issue_description, priority, NULL AS department_name, NULL AS device_name, NULL AS frequency,
+      device_type, 'new' AS source, attachment_name, attachment_path, NULL AS problem_status, NULL AS technical_engineer
+    FROM New_Maintenance_Report
+  `;
+
+  if (userRole !== 'admin') {
+    newSql += ` WHERE user_id = ? `;
+  }
+
+  const combinedSql = `${internalSql} UNION ALL ${newSql} ORDER BY created_at DESC`;
+  const params = userRole === 'admin' ? [] : [userId, userName, userId];
+
+  db.query(combinedSql, params, (err, results) => {
+    if (err) {
+      console.error("❌ Failed to fetch reports:", err);
+      return res.status(500).json({ error: "Error fetching reports" });
+    }
+
+    res.json(results);
+  });
 });
-});
+
 
 app.post("/update-report-full", upload.single("attachment"), async (req, res) => {
   const updatedData = JSON.parse(req.body.data || "{}");
@@ -3286,18 +3296,25 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), authenticate
               'internal-ticket-report'
             ]);
 
-            if (adminUser?.role === 'admin' && assigned_to) {
-              const techUserRes = await queryAsync(`SELECT id FROM Users WHERE name = (SELECT name FROM Engineers WHERE id = ?)`, [assigned_to]);
-              const techUserId = techUserRes[0]?.id;
+if (assigned_to) {
+  const techUserRes = await queryAsync(`
+    SELECT u.id 
+    FROM Users u 
+    JOIN Engineers e ON u.name = e.name 
+    WHERE e.id = ?
+  `, [assigned_to]);
 
-              if (techUserId) {
-                await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-                  techUserId,
-                  `You have been assigned a new internal ticket ${newTicketNumber} by ${adminUser.name}`,
-                  'technical-notification'
-                ]);
-              }
-            }
+  const techUserId = techUserRes[0]?.id;
+
+  if (techUserId) {
+    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+      techUserId,
+      `You have been assigned a new internal ticket ${newTicketNumber} by ${userName}`,
+      'technical-notification'
+    ]);
+  }
+}
+
 
             // ✅ سجل في اللوق
             await queryAsync(`
