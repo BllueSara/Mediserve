@@ -125,212 +125,246 @@ function updatePopupHeadingAndFields(type) {
   const typeCleaned = type.trim().toLowerCase();
 
   if (["pc", "printer", "scanner"].includes(typeCleaned)) {
-    let fieldsHtml = `
-      <label>${typeCleaned.charAt(0).toUpperCase() + typeCleaned.slice(1)} Name:</label>
-      <input type="text" name="device-name" required>
+    let fieldsHtml = `<div class="form-grid">`;
 
-      <label>Serial Number:</label>
-      <input type="text" name="serial" required>
+    fieldsHtml += `
+      <div class="form-field">
+        <label>${typeCleaned.charAt(0).toUpperCase() + typeCleaned.slice(1)} Name:</label>
+        <input type="text" name="device-name" required>
+      </div>
 
-      <label>Ministry Number:</label>
-      <input type="text" name="ministry-id" required>
+      <div class="form-field">
+        <label>Serial Number:</label>
+        <input type="text" name="serial" required>
+      </div>
 
-      <label>Department:</label>
-      <div class="custom-dropdown-wrapper">
-        <div class="custom-dropdown">
-          <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-            <span id="selected-department-${typeCleaned}">Select Department</span>
-            <span>▼</span>
-          </div>
-          <div class="dropdown-content">
-            <input type="text" class="dropdown-search" placeholder="Search department..." oninput="filterDropdown(this, 'department-${typeCleaned}-options')">
-            <div class="dropdown-options" id="department-${typeCleaned}-options"></div>
+      <div class="form-field">
+        <label>Ministry Number:</label>
+        <input type="text" name="ministry-id" required>
+      </div>
+
+      <div class="form-field">
+        <label>Department:</label>
+        <div class="custom-dropdown-wrapper">
+          <div class="custom-dropdown">
+            <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+              <span id="selected-department-${typeCleaned}">Select Department</span>
+              <span>▼</span>
+            </div>
+            <div class="dropdown-content">
+              <input type="text" class="dropdown-search" placeholder="Search department..." oninput="filterDropdown(this, 'department-${typeCleaned}-options')">
+              <div class="dropdown-options" id="department-${typeCleaned}-options"></div>
+            </div>
           </div>
         </div>
+        <input type="hidden" id="department-${typeCleaned}" name="department" required>
       </div>
-      <input type="hidden" id="department-${typeCleaned}" name="department" required>
     `;
+
     if (typeCleaned === "printer") {
       fieldsHtml += `
-      <label>Printer Type:</label>
-      <div class="custom-dropdown-wrapper">
-        <div class="custom-dropdown">
-          <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-            <span id="selected-printer-type">Select Printer Type</span>
-            <span>▼</span>
+        <div class="form-field">
+          <label>Printer Type:</label>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-printer-type">Select Printer Type</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search printer type..." oninput="filterDropdown(this, 'printer-type-options')">
+                <div class="dropdown-options" id="printer-type-options"></div>
+              </div>
+            </div>
           </div>
-          <div class="dropdown-content">
-            <input type="text" class="dropdown-search" placeholder="Search printer type..." oninput="filterDropdown(this, 'printer-type-options')">
-            <div class="dropdown-options" id="printer-type-options"></div>
-          </div>
+          <input type="hidden" id="printer-type" name="printer-type">
         </div>
-      </div>
-      <input type="hidden" id="printer-type" name="printer-type">
-    
-      <label>Ink Type:</label>
-      <div class="custom-dropdown-wrapper">
-        <div class="custom-dropdown">
-          <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-            <span id="selected-ink-type">Select Ink Type</span>
-            <span>▼</span>
+
+        <div class="form-field">
+          <label>Ink Type:</label>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-ink-type">Select Ink Type</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search ink type..." oninput="filterDropdown(this, 'ink-type-options')">
+                <div class="dropdown-options" id="ink-type-options"></div>
+              </div>
+            </div>
           </div>
-          <div class="dropdown-content">
-            <input type="text" class="dropdown-search" placeholder="Search ink type..." oninput="filterDropdown(this, 'ink-type-options')">
-            <div class="dropdown-options" id="ink-type-options"></div>
-          </div>
+          <input type="hidden" id="ink-type" name="ink-type">
         </div>
-      </div>
-      <input type="hidden" id="ink-type" name="ink-type">
-    
-      <label>Ink Serial Number:</label>
-      <input type="text" name="ink-serial-number">
+
+        <div class="form-field">
+          <label>Ink Serial Number:</label>
+          <input type="text" name="ink-serial-number">
+        </div>
       `;
     }
+
     if (typeCleaned === "scanner") {
       fieldsHtml += `
-  <label>Scanner Type:</label>
-  <div class="custom-dropdown-wrapper">
-    <div class="custom-dropdown">
-      <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-        <span id="selected-scanner-type">Select Scanner Type</span>
-        <span>▼</span>
-      </div>
-      <div class="dropdown-content">
-        <input type="text" class="dropdown-search" placeholder="Search scanner type..." oninput="filterDropdown(this, 'scanner-type-options')">
-        <div class="dropdown-options" id="scanner-type-options"></div>
-      </div>
-    </div>
-  </div>
-  <input type="hidden" id="scanner-type" name="scanner-type">
-`;
-
+        <div class="form-field">
+          <label>Scanner Type:</label>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-scanner-type">Select Scanner Type</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search scanner type..." oninput="filterDropdown(this, 'scanner-type-options')">
+                <div class="dropdown-options" id="scanner-type-options"></div>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="scanner-type" name="scanner-type">
+        </div>
+      `;
     }
+
     if (typeCleaned === "pc") {
       fieldsHtml += `
-      <label>MAC Address:</label>
-<input type="text" name="mac-address" required>
+        <div class="form-field">
+          <label>MAC Address:</label>
+          <input type="text" name="mac-address" required>
+        </div>
 
-        <label>Processor Generation:</label>
-        <div class="custom-dropdown-wrapper">
-          <div class="custom-dropdown">
-            <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-              <span id="selected-generation-select">Select generation</span>
-              <span>▼</span>
-            </div>
-            <div class="dropdown-content">
-              <input type="text" class="dropdown-search" placeholder="Search generation..." oninput="filterDropdown(this, 'generation-select-options')">
-              <div class="dropdown-options" id="generation-select-options"></div>
+        <div class="form-field">
+          <label>Processor Generation:</label>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-generation-select">Select generation</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search generation..." oninput="filterDropdown(this, 'generation-select-options')">
+                <div class="dropdown-options" id="generation-select-options"></div>
+              </div>
             </div>
           </div>
+          <input type="hidden" id="generation-select" name="generation">
         </div>
-        <input type="hidden" id="generation-select" name="generation">
 
-        <label>CPU:</label>
-        <div class="custom-dropdown-wrapper">
-          <div class="custom-dropdown">
-            <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-              <span id="selected-cpu-select">Select processor</span>
-              <span>▼</span>
-            </div>
-            <div class="dropdown-content">
-              <input type="text" class="dropdown-search" placeholder="Search CPU..." oninput="filterDropdown(this, 'cpu-select-options')">
-              <div class="dropdown-options" id="cpu-select-options"></div>
+        <div class="form-field">
+          <label>CPU:</label>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-cpu-select">Select processor</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search CPU..." oninput="filterDropdown(this, 'cpu-select-options')">
+                <div class="dropdown-options" id="cpu-select-options"></div>
+              </div>
             </div>
           </div>
+          <input type="hidden" id="cpu-select" name="processor">
         </div>
-        <input type="hidden" id="cpu-select" name="processor">
 
-        <label>RAM:</label>
-        <div class="custom-dropdown-wrapper">
-          <div class="custom-dropdown">
-            <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-              <span id="selected-ram-select">Select RAM</span>
-              <span>▼</span>
-            </div>
-            <div class="dropdown-content">
-              <input type="text" class="dropdown-search" placeholder="Search RAM..." oninput="filterDropdown(this, 'ram-select-options')">
-              <div class="dropdown-options" id="ram-select-options"></div>
+        <div class="form-field">
+          <label>RAM:</label>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-ram-select">Select RAM</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search RAM..." oninput="filterDropdown(this, 'ram-select-options')">
+                <div class="dropdown-options" id="ram-select-options"></div>
+              </div>
             </div>
           </div>
+          <input type="hidden" id="ram-select" name="ram">
         </div>
-        <input type="hidden" id="ram-select" name="ram">
 
-        <label>Hard Drive Type:</label>
-<div class="custom-dropdown-wrapper">
-  <div class="custom-dropdown">
-    <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-      <span id="selected-drive-select">Select Hard Drive</span>
-      <span>▼</span>
-    </div>
-    <div class="dropdown-content">
-      <input type="text" class="dropdown-search" placeholder="Search Drive..." oninput="filterDropdown(this, 'drive-select-options')">
-      <div class="dropdown-options" id="drive-select-options"></div>
-    </div>
-  </div>
-</div>
-<input type="hidden" id="drive-select" name="drive">
-
-
+        <div class="form-field">
+          <label>Hard Drive Type:</label>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-drive-select">Select Hard Drive</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search Drive..." oninput="filterDropdown(this, 'drive-select-options')">
+                <div class="dropdown-options" id="drive-select-options"></div>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="drive-select" name="drive">
+        </div>
       `;
     }
 
     fieldsHtml += `
-      <label>Model:</label>
-      <div class="custom-dropdown-wrapper">
-        <div class="custom-dropdown">
-          <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-            <span id="selected-model-${typeCleaned}">Select Model</span>
-            <span>▼</span>
-          </div>
-          <div class="dropdown-content">
-            <input type="text" class="dropdown-search" placeholder="Search model..." oninput="filterDropdown(this, 'model-${typeCleaned}-options')">
-            <div class="dropdown-options" id="model-${typeCleaned}-options"></div>
+      <div class="form-field">
+        <label>Model:</label>
+        <div class="custom-dropdown-wrapper">
+          <div class="custom-dropdown">
+            <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+              <span id="selected-model-${typeCleaned}">Select Model</span>
+              <span>▼</span>
+            </div>
+            <div class="dropdown-content">
+              <input type="text" class="dropdown-search" placeholder="Search model..." oninput="filterDropdown(this, 'model-${typeCleaned}-options')">
+              <div class="dropdown-options" id="model-${typeCleaned}-options"></div>
+            </div>
           </div>
         </div>
+        <input type="hidden" id="model-${typeCleaned}" name="model">
       </div>
-      <input type="hidden" id="model-${typeCleaned}" name="model">
     `;
 
     if (typeCleaned === "pc") {
       fieldsHtml += `
-        <label>Operating System:</label>
-        <div class="custom-dropdown-wrapper">
-          <div class="custom-dropdown">
-            <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-              <span id="selected-os-select">Select OS</span>
-              <span>▼</span>
-            </div>
-            <div class="dropdown-content">
-              <input type="text" class="dropdown-search" placeholder="Search OS..." oninput="filterDropdown(this, 'os-select-options')">
-              <div class="dropdown-options" id="os-select-options"></div>
+        <div class="form-field">
+          <label>Operating System:</label>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-os-select">Select OS</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search OS..." oninput="filterDropdown(this, 'os-select-options')">
+                <div class="dropdown-options" id="os-select-options"></div>
+              </div>
             </div>
           </div>
+          <input type="hidden" id="os-select" name="os">
         </div>
-        <input type="hidden" id="os-select" name="os">
-      `;
-      fieldsHtml += `
-  <label>RAM Size:</label>
-  <div class="custom-dropdown-wrapper">
-    <div class="custom-dropdown">
-      <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-        <span id="selected-ram-size-select">Select RAM Size</span>
-        <span>▼</span>
-      </div>
-      <div class="dropdown-content">
-        <input type="text" class="dropdown-search" placeholder="Search RAM size..." oninput="filterDropdown(this, 'ram-size-select-options')">
-        <div class="dropdown-options" id="ram-size-select-options"></div>
-      </div>
-    </div>
-  </div>
-  <input type="hidden" id="ram-size-select" name="ram_size">
-`;
 
+        <div class="form-field">
+          <label>RAM Size:</label>
+          <div class="custom-dropdown-wrapper">
+            <div class="custom-dropdown">
+              <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+                <span id="selected-ram-size-select">Select RAM Size</span>
+                <span>▼</span>
+              </div>
+              <div class="dropdown-content">
+                <input type="text" class="dropdown-search" placeholder="Search RAM size..." oninput="filterDropdown(this, 'ram-size-select-options')">
+                <div class="dropdown-options" id="ram-size-select-options"></div>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="ram-size-select" name="ram_size">
+        </div>
+      `;
     }
+
+    fieldsHtml += `</div>`; // Close .form-grid
 
     popupHeading.textContent = `Enter ${type.charAt(0).toUpperCase() + type.slice(1)} Specifications`;
     popupFieldsContainer.innerHTML = fieldsHtml;
 
-    // Load data
+    // Fetch dropdown data
     fetchDepartments(`department-${typeCleaned}`);
     fetchAndRenderModels(typeCleaned, `model-${typeCleaned}`);
     if (typeCleaned === "pc") {
@@ -338,24 +372,24 @@ function updatePopupHeadingAndFields(type) {
       fetchRAM();
       fetchOS();
       fetchProcessorGen();
-      fetchDrives(); // ✅ أضفناها هنا
-      fetchRAMSize(); // ✅ أضفناها هنا
-
-
+      fetchDrives();
+      fetchRAMSize();
     }
-    if(typeCleaned ==="printer"){
+    if (typeCleaned === "printer") {
       fetchPrinterTypes();
       fetchInkTypes();
-      
     }
     if (typeCleaned === "scanner") {
       fetchScannerTypes();
     }
+
   } else {
     popupHeading.textContent = "Enter Device Specifications";
     popupFieldsContainer.innerHTML = "<p>No fields available for this device type.</p>";
   }
 }
+
+
 
 function closePopup() {
   popup.style.display = "none";
