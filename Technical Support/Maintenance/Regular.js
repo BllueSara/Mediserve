@@ -1586,7 +1586,6 @@ function saveOptionForSelect() {
       if (result.error) {
         alert(result.error); // ✅ إظهار رسالة الخطأ لو القيمة موجودة
       } else {
-        alert(result.message); // ✅ رسالة النجاح
 
         // ✅ تحديث القائمة من السيرفر حسب الـ target
         if (targetId === "os-select") fetchOS();
@@ -1608,7 +1607,6 @@ function saveOptionForSelect() {
     })
     .catch(err => {
       console.error("❌ Error saving new option:", err);
-      alert("❌ Failed to save new option");
     });
 }
 
@@ -1648,15 +1646,32 @@ function fetchDeviceTypes() {
         const text = document.createElement("div");
         text.className = "dropdown-option-text";
         text.textContent = item.DeviceType;
-text.onclick = () => {
+        text.onclick = () => {
+  // ✅ تعيين نوع الجهاز المختار
   selectedDisplay.textContent = item.DeviceType;
   hiddenInput.value = item.DeviceType;
 
-          cleanDropdownError(hiddenInput);
-
-
+  // ✅ إعادة تعيين device-spec
+  const specDisplay = document.getElementById("selected-device-spec");
+  const specInput = document.getElementById("device-spec");
+  if (specDisplay && specInput) {
+    specDisplay.textContent = "Select specification";
+    specInput.value = "";
+    cleanDropdownError(specInput);
+  }
+  const statusDisplay = document.getElementById("selected-problem-status");
+  const statusInput = document.getElementById("problem-status");
+  const statusOptions = document.getElementById("problem-status-options");
+  if (statusDisplay && statusInput && statusOptions) {
+    statusDisplay.textContent = "Select problem status";
+    statusInput.value = "";
+    statusOptions.innerHTML = ""; // نظف القائمة السابقة
+    cleanDropdownError(statusInput);
+  }
+  cleanDropdownError(hiddenInput);
   closeAllDropdowns();
   fetchDeviceSpecsByTypeAndDepartment();
+
 
   const type = item.DeviceType.trim().toLowerCase();
   if (type) fetchProblemStatus(type);
@@ -1814,7 +1829,6 @@ function saveNewTechnical() {
       if (result.error) {
         alert(result.error);
       } else {
-        alert(result.message || "✅ Engineer added successfully");
         fetchTechnicalStatus(() => {
           const displaySpan = document.getElementById("selected-technical-status");
           const hiddenInput = document.getElementById("technical-status");
@@ -1956,7 +1970,6 @@ function openAddProblemStatusPopup(deviceType) {
 function saveNewProblemStatus(deviceType) {
   const name = document.getElementById("new-problem-status-name").value.trim();
   if (!name) {
-    alert("❌ Please enter a problem status name");
     return;
   }
 
@@ -1985,7 +1998,6 @@ function saveNewProblemStatus(deviceType) {
     })
     .catch(err => {
       console.error("❌ Error saving problem status:", err);
-      alert("❌ Failed to save problem status");
     });
 }
 
@@ -2030,7 +2042,6 @@ function fetchDevicesBySection() {
   const department = document.getElementById("section").value;
 
   if (!type || !department) {
-    alert("❌ تأكد من اختيار نوع الجهاز والقسم");
     return;
   }
 
@@ -2195,7 +2206,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!type) {
           console.log("❌ نوع الجهاز غير محدد");
-          alert("❌ اختر نوع الجهاز أولاً");
           return;
         }
         
@@ -2352,7 +2362,6 @@ function mapSelectIdToServerTarget(selectId) {
 
 function deleteOption(selectId, value, type = null) {
   if (!value) {
-    alert("❌ Please select a valid option to delete.");
     return;
   }
 
@@ -2370,7 +2379,6 @@ function deleteOption(selectId, value, type = null) {
       if (result.error) {
         alert(result.error);
       } else {
-        alert(result.message);
 
         // ✅ بعد الحذف، نحدث القائمة بالكامل
         refreshDropdown(selectId);
@@ -2378,7 +2386,6 @@ function deleteOption(selectId, value, type = null) {
     })
     .catch(err => {
       console.error("❌ Error deleting option:", err);
-      alert("❌ Failed to delete option");
     });
 }
 function refreshDropdown(selectId) {
@@ -2444,7 +2451,6 @@ function editOption(selectId, oldValue, newValue, type = null) {
       if (result.error) {
         alert(result.error);
       } else {
-        alert(result.message);
 
         // ✅ بعد التعديل، نرجع نحمل البيانات من السيرفر من جديد
         refreshDropdown(selectId);
@@ -2452,7 +2458,6 @@ function editOption(selectId, oldValue, newValue, type = null) {
     })
     .catch(err => {
       console.error("❌ Error editing option:", err);
-      alert("❌ Failed to edit option");
     });
 }
 
