@@ -1656,14 +1656,26 @@ function fetchDeviceTypes() {
         const text = document.createElement("div");
         text.className = "dropdown-option-text";
         text.textContent = item.DeviceType;
-        text.onclick = () => {
-          selectedDisplay.textContent = item.DeviceType;
-          hiddenInput.value = item.DeviceType;
-                              cleanDropdownError(hiddenInput);
+text.onclick = () => {
+  // ✅ تعيين نوع الجهاز المختار
+  selectedDisplay.textContent = item.DeviceType;
+  hiddenInput.value = item.DeviceType;
 
-          closeAllDropdowns();
-          fetchDeviceSpecsByTypeAndDepartment();
-        };
+  // ✅ إعادة تعيين device-spec
+  const specDisplay = document.getElementById("selected-device-spec");
+  const specInput = document.getElementById("device-spec");
+  if (specDisplay && specInput) {
+    specDisplay.textContent = "Select specification";
+    specInput.value = "";
+    cleanDropdownError(specInput);
+  }
+
+  cleanDropdownError(hiddenInput);
+  closeAllDropdowns();
+  fetchDeviceSpecsByTypeAndDepartment();
+};
+
+
 
         const icons = document.createElement("div");
         icons.className = "dropdown-actions-icons";

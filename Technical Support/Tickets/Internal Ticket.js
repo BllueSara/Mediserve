@@ -1810,17 +1810,38 @@ function fetchDeviceTypes() {
         const text = document.createElement("div");
         text.className = "dropdown-option-text";
         text.textContent = item.DeviceType;
+
         text.onclick = () => {
-          selectedDisplay.textContent = item.DeviceType;
-          hiddenInput.value = item.DeviceType;
-                    cleanDropdownError(hiddenInput);
+  // ✅ تعيين نوع الجهاز المختار
+  selectedDisplay.textContent = item.DeviceType;
+  hiddenInput.value = item.DeviceType;
 
-          closeAllDropdowns();
-          fetchDeviceSpecsByTypeAndDepartment();
+  // ✅ إعادة تعيين device-spec
+  const specDisplay = document.getElementById("selected-device-spec");
+  const specInput = document.getElementById("device-spec");
+  if (specDisplay && specInput) {
+    specDisplay.textContent = "Select specification";
+    specInput.value = "";
+    cleanDropdownError(specInput);
+  }
+  const statusDisplay = document.getElementById("selected-problem-status");
+  const statusInput = document.getElementById("problem-status");
+  const statusOptions = document.getElementById("problem-status-options");
+  if (statusDisplay && statusInput && statusOptions) {
+    statusDisplay.textContent = "Select problem status";
+    statusInput.value = "";
+    statusOptions.innerHTML = ""; // نظف القائمة السابقة
+    cleanDropdownError(statusInput);
+  }
+  cleanDropdownError(hiddenInput);
+  closeAllDropdowns();
+  fetchDeviceSpecsByTypeAndDepartment();
 
-          const type = item.DeviceType.trim().toLowerCase();
-          if (type) fetchProblemStatus(type);
-        };
+
+  const type = item.DeviceType.trim().toLowerCase();
+  if (type) fetchProblemStatus(type);
+};
+
 
         const icons = document.createElement("div");
         icons.className = "dropdown-actions-icons";
@@ -2450,7 +2471,6 @@ function deleteOption(selectId, value, type = null) {
       if (result.error) {
         alert(result.error);
       } else {
-        alert(result.message);
 
         // ✅ بعد الحذف، نحدث القائمة بالكامل
         refreshDropdown(selectId);
@@ -2528,7 +2548,6 @@ function editOption(selectId, oldValue, newValue, type = null) {
       if (result.error) {
         alert(result.error);
       } else {
-        alert(result.message);
 
         // ✅ بعد التعديل، نرجع نحمل البيانات من السيرفر من جديد
         refreshDropdown(selectId);

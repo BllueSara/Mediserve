@@ -33,6 +33,30 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
     }
+     const notifCountSpan = document.getElementById("notif-count");
+
+  if (!notifCountSpan) return;
+
+  fetch("http://localhost:4000/notifications", {
+    headers: {
+      "Authorization": `Bearer ${localStorage.getItem("token")}`
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (!Array.isArray(data)) return;
+
+    const count = data.length;
+    if (count > 0) {
+      notifCountSpan.textContent = count;
+      notifCountSpan.classList.remove("hidden");
+    } else {
+      notifCountSpan.classList.add("hidden");
+    }
+  })
+  .catch(err => {
+    console.error("❌ Error fetching notification count:", err);
+  });
 });
 
 
