@@ -1569,17 +1569,25 @@ function fetchDeviceTypes() {
         const text = document.createElement("div");
         text.className = "dropdown-option-text";
         text.textContent = item.DeviceType;
-        text.onclick = () => {
-          selectedDisplay.textContent = item.DeviceType;
-          hiddenInput.value = item.DeviceType;
-                    cleanDropdownError(hiddenInput);
+text.onclick = () => {
+  // ✅ تعيين نوع الجهاز المختار
+  selectedDisplay.textContent = item.DeviceType;
+  hiddenInput.value = item.DeviceType;
 
-          closeAllDropdowns();
-          fetchDeviceSpecsByTypeAndDepartment();
+  // ✅ إعادة تعيين device-spec
+  const specDisplay = document.getElementById("selected-device-spec");
+  const specInput = document.getElementById("device-spec");
+  if (specDisplay && specInput) {
+    specDisplay.textContent = "Select specification";
+    specInput.value = "";
+    cleanDropdownError(specInput);
+  }
 
-          const type = item.DeviceType.trim().toLowerCase();
-          if (type) fetchProblemStatus(type);
-        };
+  cleanDropdownError(hiddenInput);
+  closeAllDropdowns();
+  fetchDeviceSpecsByTypeAndDepartment();
+};
+
 
         const icons = document.createElement("div");
         icons.className = "dropdown-actions-icons";
@@ -1822,7 +1830,6 @@ function fetchDeviceSpecsByTypeAndDepartment() {
 document.addEventListener("DOMContentLoaded", () => {
   fetchDeviceTypes();
   fetchDepartments("section");
-  fetchTechnicalStatus(); // ✅ جلب أسماء المهندسين مع بداية الصفحة
   const typeDropdown = document.getElementById("device-type");
   const sectionDropdown = document.getElementById("section");
 
@@ -2025,7 +2032,6 @@ function deleteOption(selectId, value, type = null) {
       if (result.error) {
         alert(result.error);
       } else {
-        alert(result.message);
 
         // ✅ بعد الحذف، نحدث القائمة بالكامل
         refreshDropdown(selectId);
@@ -2094,7 +2100,6 @@ function editOption(selectId, oldValue, newValue, type = null) {
       if (result.error) {
         alert(result.error);
       } else {
-        alert(result.message);
 
         // ✅ بعد التعديل، نرجع نحمل البيانات من السيرفر من جديد
         refreshDropdown(selectId);
