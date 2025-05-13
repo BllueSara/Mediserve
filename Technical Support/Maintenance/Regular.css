@@ -550,16 +550,22 @@ button:hover {
   justify-content: flex-start;
   gap: 5px; /* ↓ مسافة بين label والعنصر */
 }
-  .custom-dropdown-wrapper {
-    display: flex;
-    align-items: center;
- gap: 10px;
-    /* margin: 10px ; */
-  }
   .custom-dropdown-wrapperr {
-    display: flex;
     align-items: center;
  gap: 10px;
-    margin: 20px auto;
+    margin: 10px auto;
   };
   
+.input-error {
+  border: 1px solid red !important;
+  border-radius: 5px;
+}
+.required-star {
+  color: red;
+  margin-left: 4px;
+}
+.input-error-message {
+  color: red;
+  font-size: 13px;
+  margin-top: 4px;
+}

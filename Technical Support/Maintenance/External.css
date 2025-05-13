@@ -1,7 +1,7 @@
 /* Reset styles - Remove default margin and padding, set a common font */
 * {
     margin: 0;
-    padding: 0;
+    padding: 1px;
     box-sizing: border-box;
     font-family: Arial, sans-serif;
 }
@@ -24,7 +24,6 @@
 /* Page Background */
 body {
     background-color: #ffffff;
-    text-align: center;
     padding: 20px;
 }
 
@@ -145,10 +144,7 @@ label {
 }
 
 /* Bold text for "Device Information" & "Ticket Information" */
-.device-container,
-.ticket-container {
-    font-weight: bold;
-}
+
 
 /* Required Field Indicator - Red asterisk */
 .required {
@@ -427,7 +423,6 @@ textarea:focus {
     max-width: 500px;
     width: 90%;
     box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    text-align: center;
   }
   .popup-contentt {
     background: white;
@@ -436,7 +431,6 @@ textarea:focus {
     max-width: 900px;
     width: 90%;
     box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    text-align: center;
   }
   
   .popup-content label {
@@ -573,8 +567,6 @@ textarea:focus {
 
 /* تنسيق الأيقونات داخل الحاوية */
   .custom-dropdown-wrapper {
-    display: flex;
-    align-items: center;
     gap: 10px;
   }
   
@@ -649,4 +641,18 @@ textarea:focus {
   display: grid;
   grid-template-columns: repeat(2, 1fr); /* حقلين جنب بعض */
   gap: 20px; /* مسافة بينهم */
+}
+
+.input-error {
+  border: 1px solid red !important;
+  border-radius: 5px;
+}
+.required-star {
+  color: red;
+  margin-left: 4px;
+}
+.input-error-message {
+  color: red;
+  font-size: 13px;
+  margin-top: 4px;
 }

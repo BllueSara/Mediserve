@@ -510,3 +510,16 @@ button:hover {
     color: black; /* اختياري - يعطيها لون أزرق جميل */
   }
   
+  .input-error {
+  border: 1px solid red !important;
+  border-radius: 5px;
+}
+.required-star {
+  color: red;
+  margin-left: 4px;
+}
+.input-error-message {
+  color: red;
+  font-size: 13px;
+  margin-top: 4px;
+}
