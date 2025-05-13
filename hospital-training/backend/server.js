@@ -1979,7 +1979,6 @@ app.post('/AddDevice/:type', async (req, res) => {
   const Device_Name = req.body["device-name"] || req.body["pc-name"] || null;
   const Mac_Address = req.body["mac-address"] || null;
 
-  // ✅ إضافات للطابعة
   const Printer_Type = req.body["printer-type"] || null;
   const Ink_Type = req.body["ink-type"] || null;
   const Ink_Serial_Number = req.body["ink-serial-number"] || null;
@@ -2000,6 +1999,31 @@ app.post('/AddDevice/:type', async (req, res) => {
       return res.status(400).json({ error: "❌ تأكد من تعبئة جميع الحقول المطلوبة" });
     }
 
+    // ✅ تحقق من التكرار في Maintenance_Devices
+    const [existing] = await db.promise().query(
+      `SELECT * FROM Maintenance_Devices WHERE serial_number = ? OR governmental_number = ?`,
+      [Serial_Number, Governmental_Number]
+    );
+
+    if (existing.length > 0) {
+      const existingDevice = existing[0];
+
+      if (existingDevice.serial_number === Serial_Number) {
+        return res.status(400).json({
+          error: "already_exists",
+          field: "serial",
+          message: "❌ serial number already exists"
+        });
+      } else if (existingDevice.governmental_number === Governmental_Number) {
+        return res.status(400).json({
+          error: "already_exists",
+          field: "ministry-id",
+          message: "❌ governmental number already exists"
+        });
+      }
+    }
+
+    // 🧠 باقي الكود كما هو بدون تعديل
     if (deviceType === 'pc') {
       const OS_id = await getId('OS_Types', 'os_name', req.body.os);
       const Processor_id = await getId('CPU_Types', 'cpu_name', req.body.processor);
@@ -2034,16 +2058,12 @@ app.post('/AddDevice/:type', async (req, res) => {
         Mac_Address
       ];
 
-      await new Promise((resolve, reject) => {
-        db.query(insertQuery, values, (err, result) => {
-          if (err) return reject(err);
-          resolve(result);
-        });
-      });
+      await db.promise().query(insertQuery, values);
 
     } else if (deviceType === 'printer') {
       const Model_id = await getId("Printer_Model", "model_name", model);
       const PrinterType_id = Printer_Type ? await getId("Printer_Types", "printer_type", Printer_Type) : null;
+
       let InkType_id = null;
       if (Ink_Type) {
         InkType_id = await getId("Ink_Types", "ink_type", Ink_Type);
@@ -2055,11 +2075,11 @@ app.post('/AddDevice/:type', async (req, res) => {
           InkType_id = insertResult.insertId;
         }
       }
-            let InkSerial_id = null;
+
+      let InkSerial_id = null;
       if (Ink_Serial_Number) {
         InkSerial_id = await getId("Ink_Serials", "serial_number", Ink_Serial_Number);
         if (!InkSerial_id) {
-          // لازم تعرف ink_type_id، لنفترض InkType_id موجود
           const [insertResult] = await db.promise().query(
             "INSERT INTO Ink_Serials (serial_number, ink_type_id) VALUES (?, ?)",
             [Ink_Serial_Number, InkType_id]
@@ -2067,110 +2087,95 @@ app.post('/AddDevice/:type', async (req, res) => {
           InkSerial_id = insertResult.insertId;
         }
       }
-          
+
       if (!Model_id) {
         return res.status(400).json({ error: "❌ لم يتم تحديد موديل الطابعة" });
       }
-    
+
       const insertQuery = `
-      INSERT INTO Printer_info 
-      (Serial_Number, Printer_Name, Governmental_Number, Department, Model_id, PrinterType_id, InkType_id, InkSerial_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-    
-    const values = [
-      Serial_Number,
-      Device_Name,
-      Governmental_Number,
-      Department_id,
-      Model_id,
-      PrinterType_id,
-      InkType_id,
-      InkSerial_id
-    ];
-    
-    
-      await new Promise((resolve, reject) => {
-        db.query(insertQuery, values, (err, result) => {
-          if (err) return reject(err);
-          resolve(result);
-        });
-      });
-    }
-    
-else if (deviceType === 'scanner') {
-  const Model_id = await getId("Scanner_Model", "model_name", model);
-  const Scanner_Type = req.body["scanner-type"] || null;
-  let ScannerType_id = null;
+        INSERT INTO Printer_info 
+        (Serial_Number, Printer_Name, Governmental_Number, Department, Model_id, PrinterType_id, InkType_id, InkSerial_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `;
 
-  if (Scanner_Type) {
-    ScannerType_id = await getId("Scanner_Types", "scanner_type", Scanner_Type);
-    if (!ScannerType_id) {
-      const [insertResult] = await db.promise().query(
-        "INSERT INTO Scanner_Types (scanner_type) VALUES (?)",
-        [Scanner_Type]
-      );
-      ScannerType_id = insertResult.insertId;
-    }
-  }
+      const values = [
+        Serial_Number,
+        Device_Name,
+        Governmental_Number,
+        Department_id,
+        Model_id,
+        PrinterType_id,
+        InkType_id,
+        InkSerial_id
+      ];
 
-  if (!Model_id) {
-    return res.status(400).json({ error: "❌ لم يتم تحديد موديل الماسح الضوئي" });
-  }
+      await db.promise().query(insertQuery, values);
 
-  const insertQuery = `
-    INSERT INTO Scanner_info 
-    (Serial_Number, Scanner_Name, Governmental_Number, Department, Model_id, ScannerType_id)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `;
-  const values = [
-    Serial_Number,
-    Device_Name,
-    Governmental_Number,
-    Department_id,
-    Model_id,
-    ScannerType_id
-  ];
+    } else if (deviceType === 'scanner') {
+      const Model_id = await getId("Scanner_Model", "model_name", model);
+      const Scanner_Type = req.body["scanner-type"] || null;
+      let ScannerType_id = null;
 
-  await new Promise((resolve, reject) => {
-    db.query(insertQuery, values, (err, result) => {
-      if (err) return reject(err);
-      resolve(result);
-    });
-  });
-}
- else {
-      console.log(`🔶 نوع جديد سيتم تخزينه فقط في Maintenance_Devices: ${deviceType}`);
+      if (Scanner_Type) {
+        ScannerType_id = await getId("Scanner_Types", "scanner_type", Scanner_Type);
+        if (!ScannerType_id) {
+          const [insertResult] = await db.promise().query(
+            "INSERT INTO Scanner_Types (scanner_type) VALUES (?)",
+            [Scanner_Type]
+          );
+          ScannerType_id = insertResult.insertId;
+        }
+      }
+
+      if (!Model_id) {
+        return res.status(400).json({ error: "❌ لم يتم تحديد موديل الماسح الضوئي" });
+      }
+
+      const insertQuery = `
+        INSERT INTO Scanner_info 
+        (Serial_Number, Scanner_Name, Governmental_Number, Department, Model_id, ScannerType_id)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `;
+
+      const values = [
+        Serial_Number,
+        Device_Name,
+        Governmental_Number,
+        Department_id,
+        Model_id,
+        ScannerType_id
+      ];
+
+      await db.promise().query(insertQuery, values);
     }
 
+    // ✅ الإدخال النهائي في Maintenance_Devices
     const insertMaintenanceDevice = `
       INSERT INTO Maintenance_Devices (serial_number, governmental_number, device_type, device_name, department_id)
       VALUES (?, ?, ?, ?, ?)
     `;
 
-    db.query(
-      insertMaintenanceDevice,
-      [Serial_Number, Governmental_Number, deviceType, Device_Name, Department_id],
-      (err2, result2) => {
-        if (err2) {
-          console.error("⚠️ خطأ أثناء إدخال Maintenance_Devices:", err2);
-          return res.status(500).json({ error: "❌ خطأ في إضافة Maintenance_Devices" });
-        }
+    const [result2] = await db.promise().query(insertMaintenanceDevice, [
+      Serial_Number,
+      Governmental_Number,
+      deviceType,
+      Device_Name,
+      Department_id
+    ]);
 
-        console.log("✅ تم إدخال الجهاز في Maintenance_Devices بنجاح، ID:", result2.insertId);
+    console.log("✅ تم إدخال الجهاز في Maintenance_Devices بنجاح، ID:", result2.insertId);
 
-        res.json({
-          message: `✅ تم حفظ بيانات الجهاز (${deviceType}) بنجاح`,
-          insertedId: result2.insertId
-        });
-      }
-    );
+    res.json({
+      message: `✅ تم حفظ بيانات الجهاز (${deviceType}) بنجاح`,
+      insertedId: result2.insertId
+    });
 
   } catch (err) {
     console.error("❌ خطأ عام:", err);
     res.status(500).json({ error: "❌ حدث خطأ أثناء المعالجة" });
   }
 });
+
 
 
 
