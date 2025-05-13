@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Saved Devices</title>
+  <link rel="stylesheet" href="saved.css" />
+  <style>
+    .selected-row {
+      background-color: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="ms-logo">
+      <img src="/icon/Ms Logo.png" alt="MS Logo" />
+    </div>
+    <div class="back-button">
+      <a href="#">
+        <img src="/icon/Back.png" alt="Back" class="back-icon" />
+        Back
+      </a>
+    </div>
+    <div class="home-button">
+      <a href="index.html">
+        <img src="/icon/Home.png" alt="Home" class="home-icon" />
+        Home
+      </a>
+    </div>
+    <div class="hospital-logo">
+      <img src="/icon/hospital-logo.png" alt="Hospital Logo" />
+    </div>
+  </header>
+
+  <!-- Status Summary -->
+  <section class="status-summary">
+    <div class="status-box total">
+      <span class="dot gray"></span>
+      <span class="count" id="total-count">0</span>
+      <span class="label">Total Devices</span>
+    </div>
+    <div class="status-box active">
+      <span class="dot green"></span>
+      <span class="count" id="active-count">0</span>
+      <span class="label">Active</span>
+    </div>
+    <div class="status-box failed">
+      <span class="dot red"></span>
+      <span class="count" id="failed-count">0</span>
+      <span class="label">Failed</span>
+    </div>
+    <div class="status-box unstable">
+      <span class="dot yellow"></span>
+      <span class="count" id="unstable-count">0</span>
+      <span class="label">Unstable</span>
+    </div>
+  </section>
+
+  <!-- Command Buttons -->
+  <section class="command-buttons">
+    <button class="cmd-btn step1" id="pingall-btn">Ping All</button>
+    <button class="cmd-btn step2" id="ping-btn">Ping</button>
+    <button class="cmd-btn step3" id="pingt-btn">Ping -t</button>
+    <button class="cmd-btn step4" id="traceroute-btn">Traceroute</button>
+    <button class="cmd-btn step5" id="report-btn">Generate Report</button>
+    <button class="cmd-btn step6" id="saveBtn">Save All IPs</button>
+  </section>
+  
+
+  <!-- Terminal Output Box -->
+  <section class="terminal-section">
+    <div class="terminal-box" id="terminal-box">
+      <pre><code id="terminal-output">Loaded device summary.</code></pre>
+    </div>
+  </section>
+
+<!-- Device Table -->
+<!-- Device Table -->
+<section class="input-section">
+  <table style="width:100%; max-width:1000px; margin: auto; border-collapse: collapse; table-layout: fixed;">
+    <thead>
+      <tr style="border-bottom: 1px solid #ccc;">
+        <th style="width: 25%;">Department Name</th>
+        <th style="width: 25%;">ISP/Company</th>
+        <th style="width: 30%;">IP Address</th>
+        <th style="width: 20%;">Status</th>
+      </tr>
+    </thead>
+    <tbody id="device-table-body" style="text-align: center;">
+      <!-- Filled dynamically -->
+    </tbody>
+  </table>
+</section>
+
+
+
+  <script src="saved.js"></script>
+  
+</body>
+</html>

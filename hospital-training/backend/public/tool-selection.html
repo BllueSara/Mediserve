@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Network Tools</title>
+  <link rel="stylesheet" href="tool-selection.css" />
+</head>
+<body>
+
+  <!-- Header with back and home buttons -->
+  <header>
+    <div class="back-button">
+      <a href="#">
+        <img src="/icon/Back.png" alt="Back" class="back-icon" />
+        Back
+      </a>
+    </div>
+
+    <div class="home-button">
+      <a href="index.html">
+        <img src="/icon/Home.png" alt="Home" class="home-icon" />
+        Home
+      </a>
+    </div>
+
+    <div class="ms-logo">
+      <img src="/icon/Ms Logo.png" alt="MS Logo" />
+    </div>
+
+    <div class="hospital-logo">
+      <img src="/icon/hospital-logo.png" alt="Hospital Logo" />
+    </div>
+  </header>
+
+  <!-- Title -->
+  <h1 class="title">Network Tools</h1>
+  <p class="description">Select your preferred ping method</p>
+
+  <!-- Tool selection cards -->
+  <div class="ticket-container">
+    <div class="ticket-frame">
+      <div class="ticket-options">
+
+        <div class="option" onclick="handleSelection('existing')">
+          <div class="icon-container">
+            <img src="/icon/disk.png" alt="Existing" />
+          </div>
+          <h2>Ping from existing device</h2>
+          <p>Use one of your currently connected devices</p>
+        </div>
+
+        <div class="option" onclick="handleSelection('new')">
+          <div class="icon-container">
+            <img src="/icon/network.png" alt="New Device" />
+          </div>
+          <h2>Ping a new device</h2>
+          <p>Add and ping a new network device</p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
