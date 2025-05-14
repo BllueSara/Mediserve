@@ -2024,7 +2024,7 @@ function deleteOption(selectId, value, type = null) {
 
   fetch("http://localhost:5050/delete-option-complete", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
     body: JSON.stringify({ target: mapSelectIdToServerTarget(selectId), value, type })
   })
     .then(res => res.json())
@@ -2092,7 +2092,7 @@ function editOption(selectId, oldValue, newValue, type = null) {
 
   fetch("http://localhost:5050/update-option-complete", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
     body: JSON.stringify({ target: mapSelectIdToServerTarget(selectId), oldValue, newValue, type })
   })
     .then(res => res.json())

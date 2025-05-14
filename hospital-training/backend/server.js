@@ -3640,7 +3640,15 @@ const getId = async (table, column, value) => {
   return rows[0]?.id || null;
 };
 
-
+function logActivity(userId, userName, action, details) {
+  const query = `
+    INSERT INTO Activity_Logs (user_id, user_name, action, details)
+    VALUES (?, ?, ?, ?)
+  `;
+  db.query(query, [userId, userName, action, details], (err) => {
+    if (err) console.error("❌ Failed to log activity:", err);
+  });
+}
 
 
 app.get("/ticket-status", (req, res) => {
@@ -3656,7 +3664,7 @@ app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
 
-app.post("/delete-option-complete", async (req, res) => {
+app.post("/delete-option-complete", authenticateToken, async (req, res) => {
   const { target, value, type } = req.body;
 
   if (!target || !value) {
@@ -3883,6 +3891,11 @@ app.post("/delete-option-complete", async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: "❌ Value not found or already deleted." });
     }
+const userId = req.user?.id;
+const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
+const userName = userRow[0]?.name || 'Unknown';
+
+logActivity(userId, userName, "Deleted", `Deleted "${value}" from ${mapping.table}`);
 
     res.json({ message: `✅ "${value}" deleted successfully.` });
 
@@ -3893,7 +3906,7 @@ app.post("/delete-option-complete", async (req, res) => {
 });
 
 
-app.post("/update-option-complete", async (req, res) => {
+app.post("/update-option-complete", authenticateToken, async (req, res) => {
   const { target, oldValue, newValue, type } = req.body;
 
   if (!target || !oldValue || !newValue) {
@@ -4076,6 +4089,11 @@ app.post("/update-option-complete", async (req, res) => {
     }
 
     await connection.query('COMMIT');
+const userId = req.user?.id;
+const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
+const userName = userRow[0]?.name || 'Unknown';
+
+logActivity(userId, userName, "Edited", `Updated "${oldValue}" to "${newValue}" in ${mapping.table}`);
 
     res.json({ message: "✅ Option updated everywhere correctly!" });
 
