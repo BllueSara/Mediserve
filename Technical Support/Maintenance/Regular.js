@@ -485,7 +485,7 @@ function savePCSpec() {
 
   fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("token")}` },
     body: JSON.stringify(deviceData)
   })
     .then(res => res.json())
@@ -903,10 +903,11 @@ function saveNewSection() {
     alert("❌ Please enter a section name");
     return;
   }
+      const token = localStorage.getItem('token');  // احفظ التوكن بعد تسجيل الدخول
 
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
     body: JSON.stringify({ target: "section", value: sectionName })
   })
     .then(res => res.json())
@@ -1574,11 +1575,12 @@ function saveOptionForSelect() {
   const dropdown = document.getElementById(targetId);
 
   if (!value || !dropdown) return;
+      const token = localStorage.getItem('token');  // احفظ التوكن بعد تسجيل الدخول
 
   // ✅ نرسل targetId مباشرة لأنه هو اللي السيرفر يتعامل معه
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
     body: JSON.stringify({ target: targetId, value }) // لا تغير اسم الـ target
   })
     .then(res => res.json())
@@ -1818,7 +1820,7 @@ function saveNewTechnical() {
 
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
     body: JSON.stringify({
       target: "technical",
       value: name
@@ -1975,7 +1977,7 @@ function saveNewProblemStatus(deviceType) {
 
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
     body: JSON.stringify({
       target: "problem-status",
       value: name,
@@ -2753,10 +2755,12 @@ function saveNewModel() {
     alert("❌ Please enter a model name");
     return;
   }
+      const token = localStorage.getItem('token');  // احفظ التوكن بعد تسجيل الدخول
 
   fetch("http://localhost:5050/add-device-model", {
     method: "POST",
-    headers: { "Content-Type": "application/json" , },
+    headers: { "Content-Type": "application/json" ,           "Authorization": `Bearer ${token}`
+},
     body: JSON.stringify({ model_name: modelName, device_type_name: deviceType })
   })
     .then(res => res.json())
@@ -2900,7 +2904,7 @@ else {
   // ✅ إرسال الطلب
   fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json","Authorization": "Bearer " + localStorage.getItem("token" )},
     body: JSON.stringify(specData)
   })
     .then(res => {
@@ -3067,10 +3071,12 @@ function saveGenericOption() {
   const dropdown = document.getElementById(targetId);
 
   if (!value || !dropdown) return;
+      const token = localStorage.getItem('token');  // احفظ التوكن بعد تسجيل الدخول
 
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json",          "Authorization": `Bearer ${token}`
+ },
     body: JSON.stringify({ target: targetId, value })
   })
     .then(res => {
