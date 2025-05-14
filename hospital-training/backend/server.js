@@ -905,8 +905,9 @@ app.post("/submit-new-device", authenticateToken, async (req, res) => {
 
 
 
-app.post("/add-option-general", (req, res) => {
+app.post("/add-option-general", authenticateToken, (req, res) => {
   const { target, value, type } = req.body;
+  const userId = req.user?.id;
 
   const tableMap = {
     "device-type": { table: "DeviceType", column: "DeviceType" },
@@ -926,24 +927,19 @@ app.post("/add-option-general", (req, res) => {
     "cpu-select": { table: "CPU_Types", column: "cpu_name" },
     "generation-select": { table: "Processor_Generations", column: "generation_number" },
     "drive-select": { table: "Hard_Drive_Types", column: "drive_type" },
-    "printer-type": { table: "Printer_Types", column: "printer_type" }, // ✅ NEW
-    "ink-type": { table: "Ink_Types", column: "ink_type" }, 
-    "scanner-type": { table: "Scanner_Types", column: "scanner_type" },            // ✅ NEW
+    "printer-type": { table: "Printer_Types", column: "printer_type" },
+    "ink-type": { table: "Ink_Types", column: "ink_type" },
+    "scanner-type": { table: "Scanner_Types", column: "scanner_type" },
   };
 
   const mapping = tableMap[target];
   if (!mapping) return res.status(400).json({ error: "Invalid target field" });
 
-  let query = "";
-  let params = [];
+  const query = mapping.extra
+    ? `INSERT INTO ${mapping.table} (${mapping.column}, ${mapping.extra}) VALUES (?, ?)`
+    : `INSERT INTO ${mapping.table} (${mapping.column}) VALUES (?)`;
 
-  if (mapping.extra) {
-    query = `INSERT INTO ${mapping.table} (${mapping.column}, ${mapping.extra}) VALUES (?, ?)`;
-    params = [value, type];
-  } else {
-    query = `INSERT INTO ${mapping.table} (${mapping.column}) VALUES (?)`;
-    params = [value];
-  }
+  const params = mapping.extra ? [value, type] : [value];
 
   const checkQuery = mapping.extra
     ? `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ? AND ${mapping.extra} = ?`
@@ -960,6 +956,27 @@ app.post("/add-option-general", (req, res) => {
         console.error("❌ DB Insert Error:", err2);
         return res.status(500).json({ error: "Database error while inserting option" });
       }
+
+      // ✅ Log to Activity_Logs
+      db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
+        if (!errUser && resultUser.length > 0) {
+          const userName = resultUser[0].name;
+          const logQuery = `
+            INSERT INTO Activity_Logs (user_id, user_name, action, details)
+            VALUES (?, ?, ?, ?)
+          `;
+          const logValues = [
+            userId,
+            userName,
+            `Added '${mapping.table}'`,
+            `Added '${value}' to '${mapping.table}'`
+          ];
+          db.query(logQuery, logValues, (logErr) => {
+            if (logErr) console.error("❌ Logging failed:", logErr);
+          });
+        }
+      });
+
       res.json({ message: `✅ ${value} added to ${mapping.table}`, insertedId: result.insertId });
     });
   });
@@ -968,8 +985,11 @@ app.post("/add-option-general", (req, res) => {
 
 
 
-app.post("/add-options-external", (req, res) => {
+
+app.post("/add-options-external", authenticateToken, (req, res) => {
   const { target, value } = req.body;
+  const userId = req.user?.id;
+
   if (!target || !value) {
     return res.status(400).json({ error: "Missing target or value" });
   }
@@ -994,7 +1014,6 @@ app.post("/add-options-external", (req, res) => {
       return res.status(400).json({ error: "Unsupported dropdown" });
   }
 
-  // ✅ تحقق أولاً إذا كانت القيمة موجودة مسبقًا
   const checkQuery = `SELECT * FROM ${table} WHERE ${column} = ? LIMIT 1`;
   db.query(checkQuery, [value], (checkErr, checkResult) => {
     if (checkErr) {
@@ -1006,20 +1025,43 @@ app.post("/add-options-external", (req, res) => {
       return res.status(400).json({ error: `⚠️ "${value}" already exists!` });
     }
 
-    // ✅ إذا ما كانت موجودة، أضفها
     const insertQuery = `INSERT INTO ${table} (${column}) VALUES (?)`;
     db.query(insertQuery, [value], (insertErr, insertResult) => {
       if (insertErr) {
         console.error("❌ Error inserting option:", insertErr);
         return res.status(500).json({ error: "Database insert error" });
       }
+
+      // ✅ سجل اللوق بعد الإدخال
+      db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
+        if (!errUser && resultUser.length > 0) {
+          const userName = resultUser[0].name;
+
+          const logQuery = `
+            INSERT INTO Activity_Logs (user_id, user_name, action, details)
+            VALUES (?, ?, ?, ?)
+          `;
+          const logValues = [
+            userId,
+            userName,
+            `Added  '${table}'`
+            `Added '${value}' to '${table}'`
+          ];
+
+          db.query(logQuery, logValues, (logErr) => {
+            if (logErr) console.error("❌ Logging failed:", logErr);
+          });
+        }
+      });
+
       res.json({ message: `✅ ${value} added successfully` });
     });
   });
 });
 
-app.post("/add-options-regular", (req, res) => {
-  const { target, value, type } = req.body; // 🟢 استخراج البيانات من الجسم
+app.post("/add-options-regular", authenticateToken, (req, res) => {
+  const { target, value, type } = req.body;
+  const userId = req.user?.id;
 
   const tableMap = {
     "device-type": { table: "DeviceType", column: "DeviceType" },
@@ -1061,21 +1103,48 @@ app.post("/add-options-regular", (req, res) => {
     ? `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ? AND ${mapping.extra} = ?`
     : `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ?`;
 
-  db.query(checkQuery, params, (err, existing) => {
-    if (err) return res.status(500).json({ error: "DB check error" });
-    if (existing.length > 0) {
-      return res.status(400).json({ error: `⚠️ \"${value}\" already exists in ${mapping.table}` });
+  db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
+    if (errUser || resultUser.length === 0) {
+      return res.status(500).json({ error: "❌ Failed to get user name" });
     }
 
-    db.query(query, params, (err2, result) => {
-      if (err2) {
-        console.error("❌ DB Insert Error:", err2);
-        return res.status(500).json({ error: "Database error while inserting option" });
+    const userName = resultUser[0].name;
+
+    db.query(checkQuery, params, (err, existing) => {
+      if (err) return res.status(500).json({ error: "DB check error" });
+      if (existing.length > 0) {
+        return res.status(400).json({ error: `⚠️ \"${value}\" already exists in ${mapping.table}` });
       }
-      res.json({ message: `✅ ${value} added to ${mapping.table}` });
+
+      db.query(query, params, (err2, result) => {
+        if (err2) {
+          console.error("❌ DB Insert Error:", err2);
+          return res.status(500).json({ error: "Database error while inserting option" });
+        }
+
+        // 🟡 تسجيل اللوق في الجدول
+        const logQuery = `
+          INSERT INTO Activity_Logs (user_id, user_name, action, details)
+          VALUES (?, ?, ?, ?)
+        `;
+        const logValues = [
+          userId,
+          userName,
+          `Added '${mapping.table}'`
+          ,
+          `Added '${value}' to '${mapping.table}'`
+        ];
+
+        db.query(logQuery, logValues, (logErr) => {
+          if (logErr) console.error("❌ Failed to log activity:", logErr);
+        });
+
+        res.json({ message: `✅ ${value} added to ${mapping.table}` });
+      });
     });
   });
 });
+
 
 app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
   const userId = req.user.id;
@@ -1870,8 +1939,9 @@ WHERE mr.id = ?
 
 
 // POST /add-options-device
-app.post("/add-options-add-device", (req, res) => {
+app.post("/add-options-add-device", authenticateToken, (req, res) => {
   const { target, value } = req.body;
+  const userId = req.user?.id;
 
   if (!target || !value) {
     return res.status(400).json({ error: "Target and value are required." });
@@ -1913,6 +1983,28 @@ app.post("/add-options-add-device", (req, res) => {
         return res.status(500).json({ error: "Insert failed" });
       }
 
+      // ✅ سجل النشاط في Activity_Logs
+      db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, userResult) => {
+        if (!errUser && userResult.length > 0) {
+          const userName = userResult[0].name;
+
+          const logQuery = `
+            INSERT INTO Activity_Logs (user_id, user_name, action, details)
+            VALUES (?, ?, ?, ?)
+          `;
+          const logValues = [
+            userId,
+            userName,
+            `Added '${mapping.table}'`
+            `Added '${value}' to '${mapping.table}'`
+          ];
+
+          db.query(logQuery, logValues, (logErr) => {
+            if (logErr) console.error("❌ Logging failed:", logErr);
+          });
+        }
+      });
+
       res.json({
         message: `✅ ${value} added to ${mapping.table}`,
         insertedId: result.insertId
@@ -1920,7 +2012,6 @@ app.post("/add-options-add-device", (req, res) => {
     });
   });
 });
-
 
 
 
@@ -1970,7 +2061,7 @@ app.post("/add-device-specification", async (req, res) => {
   }
 });
 
-app.post('/AddDevice/:type', async (req, res) => {
+app.post('/AddDevice/:type', authenticateToken, async (req, res) => {
   const deviceType = req.params.type.toLowerCase();
   const Serial_Number = req.body.serial;
   const Governmental_Number = req.body["ministry-id"];
@@ -2164,6 +2255,31 @@ app.post('/AddDevice/:type', async (req, res) => {
     ]);
 
     console.log("✅ تم إدخال الجهاز في Maintenance_Devices بنجاح، ID:", result2.insertId);
+// ✅ إدخال لوق بعد نجاح إضافة الجهاز
+const userId = req.user?.id;
+
+if (userId) {
+  db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
+    if (!errUser && resultUser.length > 0) {
+      const userName = resultUser[0].name;
+
+      const logQuery = `
+        INSERT INTO Activity_Logs (user_id, user_name, action, details)
+        VALUES (?, ?, ?, ?)
+      `;
+      const logValues = [
+        userId,
+        userName,
+        "Add Device",
+        `Added a new '${deviceType}' with serial '${Serial_Number}' to Maintenance_Devices`
+      ];
+
+      db.query(logQuery, logValues, (logErr) => {
+        if (logErr) console.error("❌ Logging failed:", logErr);
+      });
+    }
+  });
+}
 
     res.json({
       message: `✅ تم حفظ بيانات الجهاز (${deviceType}) بنجاح`,
@@ -3974,10 +4090,10 @@ app.post("/update-option-complete", async (req, res) => {
 
 // ضروري تتأكد إن عندك body-parser أو express.json() مفعّل
 
-
-app.post('/add-option-internal-ticket', async (req, res) => {
+app.post('/add-option-internal-ticket', authenticateToken, async (req, res) => {
   try {
     const { target, value, type } = req.body;
+    const userId = req.user?.id;
 
     if (!target || !value) {
       return res.status(400).json({ error: "❌ Missing target or value." });
@@ -3987,92 +4103,58 @@ app.post('/add-option-internal-ticket', async (req, res) => {
     let values = [];
 
     switch (target) {
-      case "department":
-        query = "INSERT INTO Departments (name) VALUES (?)";
-        values = [value];
-        break;
-      case "technical":
-        query = "INSERT INTO Engineers (name) VALUES (?)";
-        values = [value];
-        break;
-      case "device-type":
-        query = "INSERT INTO DeviceType (DeviceType) VALUES (?)";
-        values = [value];
-        break;
+      case "department": query = "INSERT INTO Departments (name) VALUES (?)"; break;
+      case "technical": query = "INSERT INTO Engineers (name) VALUES (?)"; break;
+      case "device-type": query = "INSERT INTO DeviceType (DeviceType) VALUES (?)"; break;
       case "problem-status":
-        if (!type) {
-          return res.status(400).json({ error: "❌ Missing device type for problem status." });
-        }
-        if (type === "pc") {
-          query = "INSERT INTO problemstates_pc (problem_text) VALUES (?)";
-          values = [value];
-        } else if (type === "printer") {
-          query = "INSERT INTO problemstates_printer (problem_text) VALUES (?)";
-          values = [value];
-        } else if (type === "scanner") {
-          query = "INSERT INTO problemstates_scanner (problem_text) VALUES (?)";
-          values = [value];
-        } else {
+        if (!type) return res.status(400).json({ error: "❌ Missing device type for problem status." });
+        if (type === "pc") query = "INSERT INTO problemstates_pc (problem_text) VALUES (?)";
+        else if (type === "printer") query = "INSERT INTO problemstates_printer (problem_text) VALUES (?)";
+        else if (type === "scanner") query = "INSERT INTO problemstates_scanner (problem_text) VALUES (?)";
+        else {
           query = "INSERT INTO problemstates_maintance_device (problemStates_Maintance_device_name, device_type) VALUES (?, ?)";
           values = [value, type];
         }
         break;
-      case "ticket-type":
-        query = "INSERT INTO ticket_types (type_name) VALUES (?)";
-        values = [value];
-        break;
-      case "report-status":
-        query = "INSERT INTO report_statuses (status_name) VALUES (?)";
-        values = [value];
-        break;
-      case "generation":
-        query = "INSERT INTO processor_generations (generation_number) VALUES (?)";
-        values = [value];
-        break;
-      case "processor":
-        query = "INSERT INTO cpu_types (cpu_name) VALUES (?)";
-        values = [value];
-        break;
-      case "ram":
-        query = "INSERT INTO ram_types (ram_type) VALUES (?)";
-        values = [value];
-        break;
-      case "model":
-        query = "INSERT INTO pc_model (model_name) VALUES (?)";
-        values = [value];
-        break;
-      case "os":
-        query = "INSERT INTO os_types (os_name) VALUES (?)";
-        values = [value];
-        break;
-      case "drive":
-        query = "INSERT INTO Hard_Drive_Types (drive_type) VALUES (?)";
-        values = [value];
-        break;
-      case "ram-size":
-        query = "INSERT INTO RAM_Sizes (ram_size) VALUES (?)";
-        values = [value];
-        break;
-      case "ink-type":
-        query = "INSERT INTO Ink_Types (ink_type) VALUES (?)";
-        values = [value];
-        break;
-
-      case "printer-type":
-        query = "INSERT INTO Printer_Types (printer_type) VALUES (?)";
-        values = [value];
-        break;
-        case "scanner-type":
-        query = "INSERT INTO Scanner_Types (scanner_type) VALUES (?)";
-        values = [value];
-
-        break;
-
-      default:
-        return res.status(400).json({ error: "❌ Invalid target." });
+      case "ticket-type": query = "INSERT INTO ticket_types (type_name) VALUES (?)"; break;
+      case "report-status": query = "INSERT INTO report_statuses (status_name) VALUES (?)"; break;
+      case "generation": query = "INSERT INTO processor_generations (generation_number) VALUES (?)"; break;
+      case "processor": query = "INSERT INTO cpu_types (cpu_name) VALUES (?)"; break;
+      case "ram": query = "INSERT INTO ram_types (ram_type) VALUES (?)"; break;
+      case "model": query = "INSERT INTO pc_model (model_name) VALUES (?)"; break;
+      case "os": query = "INSERT INTO os_types (os_name) VALUES (?)"; break;
+      case "drive": query = "INSERT INTO Hard_Drive_Types (drive_type) VALUES (?)"; break;
+      case "ram-size": query = "INSERT INTO RAM_Sizes (ram_size) VALUES (?)"; break;
+      case "ink-type": query = "INSERT INTO Ink_Types (ink_type) VALUES (?)"; break;
+      case "printer-type": query = "INSERT INTO Printer_Types (printer_type) VALUES (?)"; break;
+      case "scanner-type": query = "INSERT INTO Scanner_Types (scanner_type) VALUES (?)"; break;
+      default: return res.status(400).json({ error: "❌ Invalid target." });
     }
 
+    if (values.length === 0) values = [value];
+
     await db.promise().query(query, values);
+
+    // 🔐 تسجيل اللوق
+    db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
+      if (!errUser && resultUser.length > 0) {
+        const userName = resultUser[0].name;
+        const logQuery = `
+          INSERT INTO Activity_Logs (user_id, user_name, action, details)
+          VALUES (?, ?, ?, ?)
+        `;
+        const logValues = [
+          userId,
+          userName,
+          `Added '${target}'`
+          `Added '${value}' to '${target}'`
+        ];
+        db.query(logQuery, logValues, (logErr) => {
+          if (logErr) console.error("❌ Logging failed:", logErr);
+        });
+      }
+    });
+
     return res.json({ message: `✅ Successfully added ${value} to ${target}` });
 
   } catch (err) {
@@ -4081,9 +4163,10 @@ app.post('/add-option-internal-ticket', async (req, res) => {
   }
 });
 
-app.post('/add-option-external-ticket', async (req, res) => {
+app.post('/add-option-external-ticket', authenticateToken, async (req, res) => {
   try {
     const { target, value } = req.body;
+    const userId = req.user?.id;
 
     if (!target || !value) {
       return res.status(400).json({ error: "❌ Missing target or value." });
@@ -4093,62 +4176,44 @@ app.post('/add-option-external-ticket', async (req, res) => {
     let values = [];
 
     switch (target) {
-      case "department":
-        query = "INSERT INTO Departments (name) VALUES (?)";
-        values = [value];
-        break;
-      case "device-type":
-        query = "INSERT INTO DeviceType (DeviceType) VALUES (?)";
-        values = [value];
-        break;
-      case "generation":
-        query = "INSERT INTO processor_generations (generation_number) VALUES (?)";
-        values = [value];
-        break;
-      case "processor":
-        query = "INSERT INTO cpu_types (cpu_name) VALUES (?)";
-        values = [value];
-        break;
-      case "ram":
-        query = "INSERT INTO ram_types (ram_type) VALUES (?)";
-        values = [value];
-        break;
-      case "model":
-        query = "INSERT INTO pc_model (model_name) VALUES (?)";
-        values = [value];
-        break;
-      case "os":
-        query = "INSERT INTO os_types (os_name) VALUES (?)";
-        values = [value];
-        break;
-      case "drive":
-        query = "INSERT INTO Hard_Drive_Types (drive_type) VALUES (?)";
-        values = [value];
-        break;
-      case "ram-size":
-        query = "INSERT INTO RAM_Sizes (ram_size) VALUES (?)";
-        values = [value];
-        break;
-      case "ink-type":
-        query = "INSERT INTO Ink_Types (ink_type) VALUES (?)";
-        values = [value];
-        break;
-
-      case "printer-type":
-        query = "INSERT INTO Printer_Types (printer_type) VALUES (?)";
-        values = [value];
-        break;
-        case "scanner-type":
-        query = "INSERT INTO Scanner_Types (scanner_type) VALUES (?)";
-        values = [value];
-        break;
-      default:
-
-        
-        return res.status(400).json({ error: "❌ Invalid target." });
+      case "department": query = "INSERT INTO Departments (name) VALUES (?)"; break;
+      case "device-type": query = "INSERT INTO DeviceType (DeviceType) VALUES (?)"; break;
+      case "generation": query = "INSERT INTO processor_generations (generation_number) VALUES (?)"; break;
+      case "processor": query = "INSERT INTO cpu_types (cpu_name) VALUES (?)"; break;
+      case "ram": query = "INSERT INTO ram_types (ram_type) VALUES (?)"; break;
+      case "model": query = "INSERT INTO pc_model (model_name) VALUES (?)"; break;
+      case "os": query = "INSERT INTO os_types (os_name) VALUES (?)"; break;
+      case "drive": query = "INSERT INTO Hard_Drive_Types (drive_type) VALUES (?)"; break;
+      case "ram-size": query = "INSERT INTO RAM_Sizes (ram_size) VALUES (?)"; break;
+      case "ink-type": query = "INSERT INTO Ink_Types (ink_type) VALUES (?)"; break;
+      case "printer-type": query = "INSERT INTO Printer_Types (printer_type) VALUES (?)"; break;
+      case "scanner-type": query = "INSERT INTO Scanner_Types (scanner_type) VALUES (?)"; break;
+      default: return res.status(400).json({ error: "❌ Invalid target." });
     }
 
+    values = [value];
     await db.promise().query(query, values);
+
+    // 🔐 تسجيل اللوق
+    db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
+      if (!errUser && resultUser.length > 0) {
+        const userName = resultUser[0].name;
+        const logQuery = `
+          INSERT INTO Activity_Logs (user_id, user_name, action, details)
+          VALUES (?, ?, ?, ?)
+        `;
+        const logValues = [
+          userId,
+          userName,
+          `Added '${target}'`,
+          `Added '${value}' to '${target}'`
+        ];
+        db.query(logQuery, logValues, (logErr) => {
+          if (logErr) console.error("❌ Logging failed:", logErr);
+        });
+      }
+    });
+
     return res.json({ message: `✅ Successfully added ${value} to ${target}` });
 
   } catch (err) {
@@ -4156,6 +4221,7 @@ app.post('/add-option-external-ticket', async (req, res) => {
     return res.status(500).json({ error: "❌ Server error while adding option." });
   }
 });
+
 
 
 

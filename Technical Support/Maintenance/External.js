@@ -486,7 +486,7 @@ function savePCSpec() {
 
   fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
     body: JSON.stringify(deviceData)
   })
     .then(res => res.json())
@@ -898,7 +898,7 @@ function saveNewSection() {
 
   fetch("http://localhost:5050/add-options-external", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
     body: JSON.stringify({ target: "section", value: sectionName })
   })
     .then(res => res.json())
@@ -1586,7 +1586,7 @@ function saveOptionForSelect() {
   // ✅ نرسل targetId مباشرة لأنه هو اللي السيرفر يتعامل معه
   fetch("http://localhost:5050/add-option-general", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
     body: JSON.stringify({ target: targetId, value }) // لا تغير اسم الـ target
   })
     .then(res => res.json())
@@ -1810,7 +1810,7 @@ function saveNewTechnical() {
 
   fetch("http://localhost:5050/add-options-external", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
     body: JSON.stringify({ target: "technical-status", value: name })
   })
     .then(res => res.json())
@@ -2500,7 +2500,7 @@ function saveNewModel() {
 
   fetch("http://localhost:5050/add-device-model", {
     method: "POST",
-    headers: { "Content-Type": "application/json",  },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
     body: JSON.stringify({ model_name: modelName, device_type_name: deviceType })
   })
     .then(res => res.json())
@@ -2643,7 +2643,7 @@ else {
   // ✅ إرسال الطلب
   fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
     body: JSON.stringify(specData)
   })
     .then(res => {
