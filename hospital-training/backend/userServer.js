@@ -5,12 +5,25 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors'); 
 
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
+const path = require('path');
+
+// تقديم ملفات HTML من مجلد AuthPage
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'medi.servee1@gmail.com',
+    pass: 'gfcf qtwc lucm rdfd' // App Password من Gmail
+  }
+});
 
 
 const app = express();
 app.use(cors()); 
 app.use(bodyParser.json());
 
+app.use('/', express.static(path.join(__dirname, '../../authintication/AuthPage')));
 
 
 // مفتاح التوكن (مهم تحفظه بمكان آمن)
@@ -125,43 +138,47 @@ app.post('/register', async (req, res) => {
 
 
 
-app.post('/login', (req, res) => {
-  const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ message: 'Missing email or password' });
+app.post('/login', (req, res) => {
+  const { email: identifier, password } = req.body;
+
+  if (!identifier || !password) {
+    return res.status(400).json({ message: 'Missing login or password' });
   }
 
-  db.query('SELECT * FROM users WHERE email = ?', [email], async (err, results) => {
-    if (err) return res.status(500).json({ message: 'Database error' });
+  db.query(
+    'SELECT * FROM users WHERE email = ? OR name = ? OR employee_id = ?',
+    [identifier, identifier, identifier],
+    async (err, results) => {
+      if (err) return res.status(500).json({ message: 'Database error' });
 
-    if (results.length === 0) {
-      return res.status(401).json({ message: 'Invalid email or password' });
+      if (results.length === 0) {
+        return res.status(401).json({ message: 'Invalid login or password' });
+      }
+
+      const user = results[0];
+      const isMatch = await bcrypt.compare(password, user.password);
+
+      if (!isMatch) {
+        return res.status(401).json({ message: 'Invalid login or password' });
+      }
+
+      const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
+
+      logActivity(user.id, user.name, 'Login', `User ${user.name} logged in successfully.`);
+
+      res.json({
+        message: 'LOGIN successful',
+        token,
+        role: user.role,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+        },
+      });
     }
-
-    const user = results[0];
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid email or password' });
-    }
-
-    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
-
-    // ✅ سجل النشاط
-    logActivity(user.id, user.name, 'Login', `User ${user.name} logged in successfully.`);
-
-    res.json({
-      message: 'LOGIN successful',
-      token,
-      role: user.role,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-      },
-    });
-  });
+  );
 });
 
 
@@ -224,7 +241,61 @@ app.get("/Departments", (req, res) => {
     });
   });
   
-  
+app.post('/reset-password/:token', async (req, res) => {
+  const token = req.params.token;
+  const { newPassword } = req.body;
 
+  db.query(
+    'SELECT * FROM users WHERE reset_token = ? AND reset_token_expires > NOW()',
+    [token],
+    async (err, users) => {
+      if (err || users.length === 0) return res.status(400).json({ message: 'Invalid or expired token' });
+
+      const hashed = await bcrypt.hash(newPassword, 12);
+      db.query(
+        'UPDATE users SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?',
+        [hashed, users[0].id],
+        (updateErr) => {
+          if (updateErr) return res.status(500).json({ message: 'Failed to reset password' });
+          res.json({ message: 'Password has been successfully reset' });
+        }
+      );
+    }
+  );
+});
+
+
+app.post('/forgot-password', (req, res) => {
+  const { email,  } = req.body;
+  if (!email) return res.status(400).json({ message: 'Please provide email' });
+
+  db.query('SELECT * FROM users WHERE email = ?', [email], (err, users) => {
+    if (err || users.length === 0) return res.status(404).json({ message: 'Email not found' });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 3600000);
+
+    db.query(
+      'UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE email = ?',
+      [token, expires, email],
+      (updateErr) => {
+        if (updateErr) return res.status(500).json({ message: 'Database error' });
+
+const resetLink = `http://localhost:4000/reset-password.html?token=${token}`;
+        const mailOptions = {
+          from: 'your_email@gmail.com',
+          to: email,
+          subject: 'Reset Your Password',
+          html: `<p>Click below to reset your password:</p><a href="${resetLink}">${resetLink}</a>`
+        };
+
+        transporter.sendMail(mailOptions, (error) => {
+          if (error) return res.status(500).json({ message: 'Failed to send email' });
+          res.json({ message: 'Password reset link sent to your email.' });
+        });
+      }
+    );
+  });
+});
   // تشغيل السيرفر
 app.listen(4000, () => console.log('🚀 userServer.js running on http://localhost:4000'));
