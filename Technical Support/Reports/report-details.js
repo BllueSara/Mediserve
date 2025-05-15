@@ -5,6 +5,9 @@ function goBack() {
 
 let reportData = null;
 
+const canvas = document.getElementById("signatureCanvas");
+const ctx = canvas.getContext("2d");
+let drawing = false;
 
 document.addEventListener("DOMContentLoaded", () => {
   const saveBtn = document.querySelector(".save-btn");
@@ -23,6 +26,26 @@ document.addEventListener("DOMContentLoaded", () => {
       
 
       reportData = report;
+              const attachmentSection = document.getElementById("attachment-section");
+
+        // ✅ عرض المرفق إذا موجود
+        if (report.attachment_name && report.attachment_path) {
+          const attachmentLink = document.createElement("a");
+          attachmentLink.href = `http://localhost:5050/uploads/${report.attachment_path}`;
+          attachmentLink.textContent = `📎 ${report.attachment_name}`;
+          attachmentLink.download = report.attachment_name;
+          attachmentLink.style = "display: block; margin-top: 10px; color: #007bff; text-decoration: underline;";
+          attachmentSection.appendChild(attachmentLink);
+        }
+        
+        // ✅ عرض التوقيع إذا موجود (نفس مكان المرفق)
+        if (report.signature_path) {
+          const sigImg = document.createElement("img");
+          sigImg.src = `http://localhost:5050/${report.signature_path}`;
+          sigImg.alt = "Signature";
+          sigImg.style = "margin-top: 10px; max-width: 200px; border: 1px solid #ccc; display: block;";
+          attachmentSection.appendChild(sigImg);
+        }
       const isExternal = report.source === "external";
 
       if (reportType === "new") {
@@ -58,6 +81,8 @@ document.addEventListener("DOMContentLoaded", () => {
             { label: "💽 Hard Drive:", value: report.drive_type, showForPC: true },
             { label: "📏 RAM Size:", value: report.ram_size, showForPC: true },
             { label: "🌐 MAC Address:", value: report.mac_address, showForPC: true },
+            { label: "🖧 IP Address:", value: report.ip_address, showForPC: true },
+
             { label: "🖨️ Printer Type:", value: report.printer_type, showForPrinter: true },
             { label: "🖋️ Ink Type:", value: report.ink_type, showForPrinter: true },
             { label: "🔖 Ink Serial Number:", value: report.ink_serial_number, showForPrinter: true },
@@ -66,7 +91,7 @@ document.addEventListener("DOMContentLoaded", () => {
           ];
           const isInternal = false;
 
-fields.forEach(({ label, value, showForPC, showForPrinter, showForScanner, alwaysShow }) => {
+ fields.forEach(({ label, value, showForPC, showForPrinter, showForScanner, alwaysShow }) => {
             const shouldShow =
               alwaysShow ||
               isInternal ||
@@ -87,26 +112,7 @@ fields.forEach(({ label, value, showForPC, showForPrinter, showForScanner, alway
           
           
         }
-        const attachmentSection = document.getElementById("attachment-section");
 
-        // ✅ عرض المرفق إذا موجود
-        if (report.attachment_name && report.attachment_path) {
-          const attachmentLink = document.createElement("a");
-          attachmentLink.href = `http://localhost:5050/uploads/${report.attachment_path}`;
-          attachmentLink.textContent = `📎 ${report.attachment_name}`;
-          attachmentLink.download = report.attachment_name;
-          attachmentLink.style = "display: block; margin-top: 10px; color: #007bff; text-decoration: underline;";
-          attachmentSection.appendChild(attachmentLink);
-        }
-        
-        // ✅ عرض التوقيع إذا موجود (نفس مكان المرفق)
-        if (report.signature_path) {
-          const sigImg = document.createElement("img");
-          sigImg.src = `http://localhost:5050/${report.signature_path}`;
-          sigImg.alt = "Signature";
-          sigImg.style = "margin-top: 10px; max-width: 200px; border: 1px solid #ccc; display: block;";
-          attachmentSection.appendChild(sigImg);
-        }
         
         
         
@@ -117,8 +123,8 @@ fields.forEach(({ label, value, showForPC, showForPrinter, showForScanner, alway
       const isInternalTicket = report.maintenance_type === "Internal";
       let ticketNumber = report.ticket_number?.trim();
 
-// محاولة استخراج رقم التذكرة من الوصف أو الملخص حتى لو بصيغة مختلفة
-if (!ticketNumber) {
+ // محاولة استخراج رقم التذكرة من الوصف أو الملخص حتى لو بصيغة مختلفة
+ if (!ticketNumber) {
   const fullText = `${report.full_description || ""} ${report.issue_summary || ""}`;
   const match = fullText.match(/(?:Ticket Number:|Ticket\s+\()? *(TIC-\d+|INT-\d{8}-\d{3})/i);
   if (match) {
@@ -127,7 +133,7 @@ if (!ticketNumber) {
   } else {
     console.warn("⚠️ No ticket number found in report");
   }
-}
+ }
 
       
       
@@ -282,7 +288,7 @@ if (!ticketNumber) {
       if (report.drive_type) specs.push(`💽 Hard Drive: ${report.drive_type}`);
       if (report.ram_size) specs.push(`📏 RAM Size: ${report.ram_size}`);
       if (report.mac_address) specs.push(`🌐 MAC Address: ${report.mac_address}`);
-      if (report.mac_address) specs.push(`🌐 MAC Address: ${report.mac_address}`);
+      if (report.ip_address) specs.push(`🖧 IP Address: ${report.ip_address}`);
       if (report.printer_type) specs.push(`🖨️ Printer Type: ${report.printer_type}`);
       if (report.ink_type) specs.push(`🖋️ Ink Type: ${report.ink_type}`);
       if (report.ink_serial_number) specs.push(`🔖 Ink Serial Number: ${report.ink_serial_number}`);
@@ -312,6 +318,7 @@ if (!ticketNumber) {
           { label: "💽 Hard Drive:", value: report.drive_type, showForPC: true },
           { label: "📏 RAM Size:", value: report.ram_size, showForPC: true },
           { label: "🌐 MAC Address:", value: report.mac_address, showForPC: true },
+          { label: "🖧 IP Address:", value: report.ip_address, showForPC: true },
           { label: "🖨️ Printer Type:", value: report.printer_type, showForPrinter: true },
           { label: "🖋️ Ink Type:", value: report.ink_type, showForPrinter: true },
           { label: "🔖 Ink Serial Number:", value: report.ink_serial_number, showForPrinter: true },
@@ -470,7 +477,7 @@ if (!ticketNumber) {
   const [typeOnly, ticketPart] = reportTitle.split("#").map(p => p.trim());
   const fileName = ticketPart ? `${typeOnly} - ${ticketPart}` : typeOnly;
   doc.save(`${fileName}.pdf`);
-});
+  });
 
   // تفعيل التعديل
   document.querySelector(".edit-btn")?.addEventListener("click", () => {
@@ -487,7 +494,8 @@ if (!ticketNumber) {
   
     // 👇 عرض مدخل رفع المرفق
     document.getElementById("attachment-input").style.display = "block";
-  
+  document.getElementById("signature-edit-wrapper").style.display = "block";
+
     saveBtn.style.display = "inline-block";
     document.querySelector(".edit-btn").style.display = "none";
     alert("📝 Edit mode is ON");
@@ -547,6 +555,7 @@ if (!ticketNumber) {
       case "harddrive": updatedData.drive_type = value; break;
       case "ramsize": updatedData.ram_size = value; break;
       case "macaddress": updatedData.mac_address = value; break;
+      case "ipaddress": updatedData.ip_address = value; break;
       case "printertype": updatedData.printer_type = value; break;
       case "inktype": updatedData.ink_type = value; break;
       case "inkserialnumber": updatedData.ink_serial_number = value; break;
@@ -564,6 +573,20 @@ if (!ticketNumber) {
     if (file) {
       formData.append("attachment", file);
     }
+    // ✅ التوقيع: إما من الصورة أو من الرسم
+if (signatureUpload.files.length > 0) {
+  formData.append("signature", signatureUpload.files[0]);
+} else {
+  await new Promise((resolve) => {
+    canvas.toBlob((blob) => {
+      if (blob && blob.size > 100) {
+        formData.append("signature", blob, "signature.png");
+      }
+      resolve();
+    });
+  });
+}
+
     
     try {
       console.log("🚀 Sending updated data:", updatedData);
@@ -604,4 +627,46 @@ if (!ticketNumber) {
       window.location.href = "Search Reports.html";
     }
   });
+  // ✅ توقيع بالقلم على Canvas
+
+
+canvas.addEventListener("mousedown", () => {
+  drawing = true;
+  ctx.beginPath();
+});
+canvas.addEventListener("mousemove", (e) => {
+  if (!drawing) return;
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "#000";
+  ctx.lineTo(e.offsetX, e.offsetY);
+  ctx.stroke();
+});
+canvas.addEventListener("mouseup", () => drawing = false);
+canvas.addEventListener("mouseleave", () => drawing = false);
+
+// ✅ رفع صورة توقيع
+const signatureUpload = document.getElementById("signatureUpload");
+const uploadedSignature = document.getElementById("uploadedSignature");
+
+signatureUpload.addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    uploadedSignature.src = event.target.result;
+    uploadedSignature.style.display = "block";
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // مسح التوقيع اليدوي
+  };
+  reader.readAsDataURL(file);
+});
+
+// ✅ تنظيف التوقيع
+document.getElementById("clearSignature").addEventListener("click", () => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  signatureUpload.value = "";
+  uploadedSignature.src = "";
+  uploadedSignature.style.display = "none";
+});
+
 });
