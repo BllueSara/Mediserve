@@ -158,6 +158,11 @@ if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(typeC
           <label>${labelWithStar("MAC Address", true)}</label>
           <input type="text" name="mac-address" required>
         </div>
+        <div class="form-field">
+          
+          <label>${labelWithStar("IP Address", true)}</label>
+          <input type="text" name="ip-address" required>
+        </div>
       `;
     }    if (typeCleaned === "printer") {
       fieldsHtml += `
@@ -482,6 +487,8 @@ function savePCSpec() {
 
   if (!["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(deviceType)) {
     delete deviceData["mac-address"];
+    delete deviceData["ip-address"];
+
   }
 
   fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
