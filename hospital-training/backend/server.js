@@ -2654,14 +2654,31 @@ app.get('/get-internal-reports', authenticateToken,async (req, res) => {
   });
 });
 
+const compareReadable = (label, oldVal, newVal, changes = []) => {
+  const oldStr = (oldVal ?? "").toString().trim();
+  const newStr = (newVal ?? "").toString().trim();
+  if (oldStr && newStr && oldStr !== newStr) {
+    changes.push(`🔧 ${label}: "${oldStr}" → "${newStr}"`);
+  }
+};
 
-app.post("/update-report-full", upload.fields([
+const compareRefNameIfChanged = async (label, table, column, id, newName, changes = []) => {
+  if (!id || !newName) return;
+  const [[row]] = await db.promise().query(`SELECT ${column} FROM ${table} WHERE id = ?`, [id]);
+  const currentName = row?.[column];
+  if (currentName && currentName.trim() !== newName.trim()) {
+    changes.push(`🔧 ${label}: "${currentName}" → "${newName}"`);
+  }
+};
+
+app.post("/update-report-full",authenticateToken, upload.fields([
   { name: "attachment", maxCount: 1 },
   { name: "signature", maxCount: 1 }
 ]), async (req, res) => {
 const updatedData = JSON.parse(req.body.data || "{}");
 const attachmentFile = req.files?.attachment?.[0] || null;
-const signatureFile = req.files?.signature?.[0] || null;
+const signatureRaw = req.files?.signature?.[0] || null;
+const signatureFile = signatureRaw && signatureRaw.size > 0 ? signatureRaw : null;
 
 console.log("📩 Received update data:", updatedData);
 if (attachmentFile) {
@@ -2679,33 +2696,201 @@ if (signatureFile) {
     model_name, drive_type, mac_address,ip_address,
     ink_type, ink_serial_number, printer_type,scanner_type
   } = updatedData;
-
-  if (!source) {
-    return res.status(400).json({ error: "Missing source type" });
-  }
-
-  try {
     const departmentId = await getId("Departments", "name", department_name);
     const lowerType = device_type?.toLowerCase();
     const isPC = lowerType === "pc";
     const isPrinter = lowerType === "printer";
     const isScanner = lowerType === "scanner";
 
-    let modelId = null;
-    if (["pc", "printer", "scanner"].includes(lowerType)) {
-      modelId = await getId(
-        isPC ? "PC_Model" : isPrinter ? "Printer_Model" : "Scanner_Model",
-        "model_name",
-        model_name
-      );
-    } else {
-      modelId = await getModelId(device_type, model_name);
-    }
+   // استخدم جدول Maintance_Device_Model في جميع الحالات
+    const modelId = await getModelId(device_type, model_name);
+
 
     let scanner_type_id = null;
 if (isScanner && scanner_type) {
   scanner_type_id = await getId("Scanner_Types", "scanner_type", scanner_type);
 }
+
+  if (!source) {
+    return res.status(400).json({ error: "Missing source type" });
+  }
+
+  try {// 🧠 سجل تغييرات شامل
+const changes = [];
+
+// 🕵️‍♂️ جلب البيانات القديمة
+const [oldReportRows] = await db.promise().query(
+  `SELECT * FROM ${source === 'new' ? 'New_Maintenance_Report' : 'Maintenance_Reports'} WHERE id = ?`,
+  [id]
+);
+const reportOld = oldReportRows[0] || {};
+// 🎯 استخراج أسماء الملفات السابقة
+const oldAttachmentName = reportOld.attachment_name || null;
+const oldSignaturePath = reportOld.signature_path || null;
+
+
+// جلب بيانات Maintenance_Devices
+let [oldDeviceRows] = await db.promise().query(
+  `SELECT * FROM Maintenance_Devices WHERE serial_number = ? LIMIT 1`,
+  [serial_number]
+);
+const oldDevice = oldDeviceRows[0] || {};
+
+// جلب بيانات PC_info / Printer_info / Scanner_info
+let oldSpec = {};
+if (isPC) {
+  [[oldSpec]] = await db.promise().query(`SELECT * FROM PC_info WHERE Serial_Number = ?`, [serial_number]);
+} else if (isPrinter) {
+  [[oldSpec]] = await db.promise().query(`SELECT * FROM Printer_info WHERE Serial_Number = ?`, [serial_number]);
+} else if (isScanner) {
+  [[oldSpec]] = await db.promise().query(`SELECT * FROM Scanner_info WHERE Serial_Number = ?`, [serial_number]);
+}
+oldSpec = oldSpec || {};
+
+// ✅ مقارنات عامة
+compareReadable("Issue Summary", reportOld.issue_summary, issue_summary, changes);
+compareReadable("Description", reportOld.full_description || reportOld.details, full_description, changes);
+compareReadable("Priority", reportOld.priority, priority, changes);
+compareReadable("Status", reportOld.status, status, changes);
+compareReadable("Assigned To", reportOld.assigned_to || technical, technical, changes);
+compareReadable("Category", reportOld.report_type || category, category, changes);
+
+// ✅ بيانات نصية مباشرة
+compareReadable("Device Name", oldDevice.device_name, device_name, changes);
+compareReadable("Serial Number", oldDevice.serial_number, serial_number, changes);
+compareReadable("Governmental Number", oldDevice.governmental_number, governmental_number, changes);
+compareReadable("IP Address", oldDevice.ip_address, ip_address, changes);
+compareReadable("MAC Address", oldDevice.mac_address, mac_address, changes);
+
+// ✅ المواصفات - جلب الأسماء مباشرة من الجداول المرجعية
+
+// Model
+let modelNameOld = null;
+if (oldDevice.model_id) {
+  const [[row]] = await db.promise().query(`SELECT model_name FROM Maintance_Device_Model WHERE id = ?`, [oldDevice.model_id]);
+  modelNameOld = row?.model_name;
+}
+compareReadable("Model", modelNameOld, model_name, changes);
+
+// CPU
+let cpuNameOld = null;
+const oldCpuId = reportOld.cpu_id || oldSpec?.Processor_id;
+if (oldCpuId) {
+  const [[row]] = await db.promise().query(`SELECT cpu_name FROM CPU_Types WHERE id = ?`, [oldCpuId]);
+  cpuNameOld = row?.cpu_name;
+}
+compareReadable("Processor", cpuNameOld, cpu_name, changes);
+
+// RAM
+let ramNameOld = null;
+const oldRamId = reportOld.ram_id || oldSpec?.RAM_id;
+if (oldRamId) {
+  const [[row]] = await db.promise().query(`SELECT ram_type FROM RAM_Types WHERE id = ?`, [oldRamId]);
+  ramNameOld = row?.ram_type;
+}
+compareReadable("RAM", ramNameOld, ram_type, changes);
+
+// RAM Size
+let ramSizeOld = null;
+const oldRamSizeId = reportOld.ram_size_id || oldSpec?.RamSize_id;
+if (oldRamSizeId) {
+  const [[row]] = await db.promise().query(`SELECT ram_size FROM RAM_Sizes WHERE id = ?`, [oldRamSizeId]);
+  ramSizeOld = row?.ram_size;
+}
+compareReadable("RAM Size", ramSizeOld, ram_size, changes);
+
+// OS
+let osNameOld = null;
+const oldOsId = reportOld.os_id || oldSpec?.OS_id;
+if (oldOsId) {
+  const [[row]] = await db.promise().query(`SELECT os_name FROM OS_Types WHERE id = ?`, [oldOsId]);
+  osNameOld = row?.os_name;
+}
+compareReadable("OS", osNameOld, os_name, changes);
+
+// Generation
+let genOld = null;
+const oldGenId = reportOld.generation_id || oldSpec?.Generation_id;
+if (oldGenId) {
+  const [[row]] = await db.promise().query(`SELECT generation_number FROM Processor_Generations WHERE id = ?`, [oldGenId]);
+  genOld = row?.generation_number;
+}
+compareReadable("Generation", genOld, generation_number, changes);
+
+// Drive Type
+let driveOld = null;
+const oldDriveId = reportOld.drive_id || oldSpec?.Drive_id;
+if (oldDriveId) {
+  const [[row]] = await db.promise().query(`SELECT drive_type FROM Hard_Drive_Types WHERE id = ?`, [oldDriveId]);
+  driveOld = row?.drive_type;
+}
+compareReadable("Drive Type", driveOld, drive_type, changes);
+
+// ✅ الطابعة
+let inkOld = null;
+if (oldDevice.ink_type) {
+  const [[row]] = await db.promise().query(`SELECT ink_type FROM Ink_Types WHERE id = ?`, [oldDevice.ink_type]);
+  inkOld = row?.ink_type;
+}
+compareReadable("Ink Type", inkOld, ink_type, changes);
+
+let inkSerialOld = null;
+if (oldDevice.ink_serial_number) {
+  const [[row]] = await db.promise().query(`SELECT serial_number FROM Ink_Serials WHERE id = ?`, [oldDevice.ink_serial_number]);
+  inkSerialOld = row?.serial_number;
+}
+compareReadable("Ink Serial", inkSerialOld, ink_serial_number, changes);
+
+let printerTypeOld = null;
+if (oldDevice.printer_type) {
+  const [[row]] = await db.promise().query(`SELECT printer_type FROM Printer_Types WHERE id = ?`, [oldDevice.printer_type]);
+  printerTypeOld = row?.printer_type;
+}
+compareReadable("Printer Type", printerTypeOld, printer_type, changes);
+
+// ✅ الماسح
+let scannerTypeOld = null;
+if (oldDevice.scanner_type_id) {
+  const [[row]] = await db.promise().query(`SELECT scanner_type FROM Scanner_Types WHERE id = ?`, [oldDevice.scanner_type_id]);
+  scannerTypeOld = row?.scanner_type;
+}
+compareReadable("Scanner Type", scannerTypeOld, scanner_type, changes);
+
+// ✅ القسم
+let deptOld = null;
+if (oldDevice.department_id) {
+  const [[row]] = await db.promise().query(`SELECT name FROM Departments WHERE id = ?`, [oldDevice.department_id]);
+  deptOld = row?.name;
+}
+compareReadable("Department", deptOld, department_name, changes);
+
+if (attachmentFile && attachmentFile.originalname !== oldAttachmentName) {
+  changes.push(`📎 New attachment uploaded: ${attachmentFile.originalname}`);
+}
+
+if (signatureFile) {
+  const newSigPath = `uploads/${signatureFile.filename}`;
+  if (newSigPath !== oldSignaturePath) {
+    changes.push(`✍️ New signature uploaded`);
+  }
+}
+
+
+
+// ✅ سجل إذا في تغييرات
+if (changes.length > 0) {
+  const userId = req.user?.id;
+  const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
+  const userName = userRow[0]?.name || 'Unknown';
+
+  logActivity(
+    userId,
+    userName,
+    "Edited",
+    `Updated report ID ${id}:\n${changes.join("\n")}`
+  );
+}
+
 
 
     // Get specification IDs
@@ -2763,24 +2948,44 @@ if (isScanner && scanner_type) {
       await db.promise().query(updateSql, values);
     }
     if (source === "internal") {
-    const updateReportSql = `
+// 👇 جلب التوقيع القديم قبل التحديث
+const [[reportRow]] = await db.promise().query(
+  `SELECT signature_path, attachment_name, attachment_path FROM Maintenance_Reports WHERE id = ?`,
+  [id]
+);
+
+if (!reportRow) {
+  return res.status(404).json({ error: "Report not found" });
+}
+
+const attachmentNameToUse = attachmentFile?.originalname || reportRow.attachment_name;
+const attachmentPathToUse = attachmentFile ? `uploads/${attachmentFile.filename}` : reportRow.attachment_path;
+
+const signaturePathToUse = signatureFile
+  ? `uploads/${signatureFile.filename}`
+  : reportRow.signature_path;
+
+const updateReportSql = `
   UPDATE Maintenance_Reports 
-  SET issue_summary = ?, full_description = ?, status = ?, report_type = ?
-  ${attachmentFile ? ", attachment_name = ?, attachment_path = ?" : ""}
-  ${req.files?.signature ? ", signature_path = ?" : ""}
+  SET issue_summary = ?, full_description = ?, status = ?, report_type = ?,
+      attachment_name = ?, attachment_path = ?, signature_path = ?
   WHERE id = ?`;
 
-const reportValues = [issue_summary, full_description, status, category];
+const reportValues = [
+  issue_summary,
+  full_description,
+  status,
+  category,
+  attachmentNameToUse,
+  attachmentPathToUse,
+  signaturePathToUse,
+  id
+];
 
-if (attachmentFile) {
-  reportValues.push(attachmentFile.originalname, `uploads/${attachmentFile.filename}`);
-}
+await db.promise().query(updateReportSql, reportValues);
 
-if (req.files?.signature?.[0]) {
-  reportValues.push(`uploads/${req.files.signature[0].filename}`);
-}
 
-reportValues.push(id);
+
 
 
       await db.promise().query(updateReportSql, reportValues);
@@ -2888,16 +3093,7 @@ await db.promise().query(`
   WHERE serial_number = ?
 `, [...sharedParams.slice(0, -1), serial_number]); // لاحظ استخدام serial_number وليس device_id هنا
     }
-// ✅ تسجيل لوق بعد التحديث
-const userId = req.user?.id;
-if (userId) {
-  const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
-  const userName = userRow[0]?.name || "Unknown";
 
-  const details = `Edited report ID: ${id} for device "${device_name}" of type "${device_type}"`;
-
-  logActivity(userId, userName, "Edit Report", details);
-}
 
     res.json({ message: "\u2705 تم تحديث التقرير والجهاز والمواصفات بنجاح." });
   } catch (err) {
@@ -2913,13 +3109,6 @@ if (userId) {
 const getModelId = async (type, modelName) => {
   if (!modelName || !type) return null;
 
-  const lower = type.toLowerCase();
-
-  if (lower === "pc") return getId("PC_Model", "model_name", modelName);
-  if (lower === "printer") return getId("Printer_Model", "model_name", modelName);
-  if (lower === "scanner") return getId("Scanner_Model", "model_name", modelName);
-
-  // ✅ تحقق إذا الموديل موجود في Maintance_Device_Model
   const [existing] = await db.promise().query(
     `SELECT id FROM Maintance_Device_Model WHERE model_name = ? AND device_type_name = ? LIMIT 1`,
     [modelName.trim(), type.trim()]
@@ -2936,6 +3125,7 @@ const getModelId = async (type, modelName) => {
   console.log("🆕 Inserted new model:", modelName, "for", type);
   return insert.insertId;
 };
+
 
 
 

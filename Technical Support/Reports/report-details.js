@@ -8,6 +8,7 @@ let reportData = null;
 const canvas = document.getElementById("signatureCanvas");
 const ctx = canvas.getContext("2d");
 let drawing = false;
+let userDrewOnCanvas = false;
 
 document.addEventListener("DOMContentLoaded", () => {
   const saveBtn = document.querySelector(".save-btn");
@@ -575,8 +576,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     // ✅ التوقيع: إما من الصورة أو من الرسم
 if (signatureUpload.files.length > 0) {
+  // ✅ المستخدم اختار توقيع صورة من الجهاز
   formData.append("signature", signatureUpload.files[0]);
-} else {
+} else if (userDrewOnCanvas) {
+  // ✅ المستخدم رسم على الـ canvas
   await new Promise((resolve) => {
     canvas.toBlob((blob) => {
       if (blob && blob.size > 100) {
@@ -585,7 +588,11 @@ if (signatureUpload.files.length > 0) {
       resolve();
     });
   });
+} else {
+  // 🟡 لا توقيع جديد مرسل – سيتم الاحتفاظ بالتوقيع القديم في السيرفر
+  console.log("ℹ️ No signature update – using existing one.");
 }
+
 
     
     try {
@@ -593,6 +600,9 @@ if (signatureUpload.files.length > 0) {
 
       const res = await fetch("http://localhost:5050/update-report-full", {
         method: "POST",
+        headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`
+                 },
         body: formData
       });
     
@@ -608,16 +618,23 @@ if (signatureUpload.files.length > 0) {
     }
     
     // تعطيل التحرير
-    const editableElements = document.querySelectorAll(".grid div, .description, .note, h2");
-    editableElements.forEach(el => {
-      el.removeAttribute("contenteditable");
-      el.style.border = "none";
-      el.style.backgroundColor = "transparent";
-      el.style.padding = "0";
-    });
-  
-    saveBtn.style.display = "none";
-    editBtn.style.display = "inline-block";
+// تعطيل التحرير بعد الحفظ
+const editableElements = document.querySelectorAll(
+  "#report-id, #priority, #device-type, #assigned-to, #department, #category, .description, .note, .spec-box"
+);
+editableElements.forEach(el => {
+  el.removeAttribute("contenteditable");
+  el.style.border = "none";
+  el.style.backgroundColor = "transparent";
+  el.style.padding = "0";
+});
+
+document.getElementById("attachment-input").style.display = "none";
+document.getElementById("signature-edit-wrapper").style.display = "none";
+
+saveBtn.style.display = "none";
+editBtn.style.display = "inline-block";
+
   });
   
 
@@ -632,6 +649,8 @@ if (signatureUpload.files.length > 0) {
 
 canvas.addEventListener("mousedown", () => {
   drawing = true;
+    userDrewOnCanvas = true; // ✅ تسجيل إن المستخدم رسم
+
   ctx.beginPath();
 });
 canvas.addEventListener("mousemove", (e) => {
