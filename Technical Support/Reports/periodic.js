@@ -78,7 +78,7 @@ function updateStatus(id, selectElement) {
 
   fetch(`http://localhost:5050/update-report-status/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { "Content-Type": "application/json","Authorization": "Bearer " + localStorage.getItem("token" )},
     body: JSON.stringify({ status: newStatus })
   })
     .then(res => res.json())
