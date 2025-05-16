@@ -1077,25 +1077,25 @@ app.post("/add-options-regular", authenticateToken, (req, res) => {
   const userId = req.user?.id;
 
   const tableMap = {
-    "device-type": { table: "DeviceType", column: "DeviceType" },
-    "section": { table: "Departments", column: "name" },
-    "os-select": { table: "OS_Types", column: "os_name" },
-    "ram-select": { table: "RAM_Types", column: "ram_type" },
-    "ram-size-select": { table: "RAM_Sizes", column: "ram_size" },
-    "cpu-select": { table: "CPU_Types", column: "cpu_name" },
-    "generation-select": { table: "Processor_Generations", column: "generation_number" },
-    "drive-select": { table: "Hard_Drive_Types", column: "drive_type" },
+    "device-type": { table: "DeviceType", column: "DeviceType", action: "Add Device Type" },
+    "section": { table: "Departments", column: "name", action: "Add Department" },
+    "os-select": { table: "OS_Types", column: "os_name", action: "Add OS" },
+    "ram-select": { table: "RAM_Types", column: "ram_type", action: "Add RAM" },
+    "ram-size-select": { table: "RAM_Sizes", column: "ram_size", action: "Add RAM Size" },
+    "cpu-select": { table: "CPU_Types", column: "cpu_name", action: "Add CPU" },
+    "generation-select": { table: "Processor_Generations", column: "generation_number", action: "Add CPU Generation" },
+    "drive-select": { table: "Hard_Drive_Types", column: "drive_type", action: "Add Drive Type" },
     "problem-status": type === "pc"
-      ? { table: "ProblemStates_Pc", column: "problem_text" }
+      ? { table: "ProblemStates_Pc", column: "problem_text", action: "Add PC Problem" }
       : type === "printer"
-        ? { table: "ProblemStates_Printer", column: "problem_text" }
+        ? { table: "ProblemStates_Printer", column: "problem_text", action: "Add Printer Problem" }
         : type === "scanner"
-          ? { table: "ProblemStates_Scanner", column: "problem_text" }
-          : { table: "problemStates_Maintance_device", column: "problemStates_Maintance_device_name", extra: "device_type_name" },
-    "technical": { table: "Engineers", column: "name" },
-    "printer-type": { table: "Printer_Types", column: "printer_type" },
-    "ink-type": { table: "Ink_Types", column: "ink_type" },
-    "scanner-type": { table: "Scanner_Types", column: "scanner_type" },
+          ? { table: "ProblemStates_Scanner", column: "problem_text", action: "Add Scanner Problem" }
+          : { table: "problemStates_Maintance_device", column: "problemStates_Maintance_device_name", extra: "device_type_name", action: "Add Generic Problem" },
+    "technical": { table: "Engineers", column: "name", action: "Add Engineer" },
+    "printer-type": { table: "Printer_Types", column: "printer_type", action: "Add Printer Type" },
+    "ink-type": { table: "Ink_Types", column: "ink_type", action: "Add Ink Type" },
+    "scanner-type": { table: "Scanner_Types", column: "scanner_type", action: "Add Scanner Type" },
   };
 
   const mapping = tableMap[target];
@@ -1129,31 +1129,12 @@ app.post("/add-options-regular", authenticateToken, (req, res) => {
         return res.status(400).json({ error: `⚠️ \"${value}\" already exists in ${mapping.table}` });
       }
 
-      db.query(query, params, (err2, result) => {
-        if (err2) {
-          console.error("❌ DB Insert Error:", err2);
-          return res.status(500).json({ error: "Database error while inserting option" });
-        }
-
-        // 🟡 تسجيل اللوق في الجدول
-        const logQuery = `
-          INSERT INTO Activity_Logs (user_id, user_name, action, details)
-          VALUES (?, ?, ?, ?)
-        `;
-        const logValues = [
-          userId,
-          userName,
-          `Added '${mapping.table}'`
-          ,
-          `Added '${value}' to '${mapping.table}'`
-        ];
-
-        db.query(logQuery, logValues, (logErr) => {
-          if (logErr) console.error("❌ Failed to log activity:", logErr);
-        });
-
-        res.json({ message: `✅ ${value} added to ${mapping.table}` });
-      });
+    db.query(query, params, (err2, result) => {
+      if (err2) {
+        console.error("❌ DB Insert Error:", err2);
+        return res.status(500).json({ error: "Database error while inserting option" });
+      }
+      res.json({ message: `✅ ${value} added to ${mapping.table}` });
     });
   });
 });
@@ -2000,12 +1981,11 @@ WHERE mr.id = ?
 
 
 // POST /add-options-device
-app.post("/add-options-add-device", authenticateToken, (req, res) => {
+app.post("/add-options-add-device", (req, res) => {
   const { target, value } = req.body;
-  const userId = req.user?.id;
 
   if (!target || !value) {
-    return res.status(400).json({ error: "Target and value are required." });
+    return res.status(400).json({ error: "❌ Missing target or value" });
   }
 
   const tableMap = {
@@ -2024,24 +2004,28 @@ app.post("/add-options-add-device", authenticateToken, (req, res) => {
   };
 
   const mapping = tableMap[target];
-  if (!mapping) return res.status(400).json({ error: "Invalid target provided." });
+  if (!mapping) return res.status(400).json({ error: "❌ Invalid target field" });
 
+  let query = "";
+  let params = [];
+
+  // بناء استعلام التحقق
   const checkQuery = `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ?`;
-  db.query(checkQuery, [value], (err, rows) => {
-    if (err) {
-      console.error("❌ DB Check Error:", err);
-      return res.status(500).json({ error: "Database check error" });
+  params = [value];
+
+  // تنفيذ التحقق
+  db.query(checkQuery, params, (err, existing) => {
+    if (err) return res.status(500).json({ error: "Database check error" });
+    if (existing.length > 0) {
+      return res.status(400).json({ error: `⚠️ "${value}" already exists in ${mapping.table}` });
     }
 
-    if (rows.length > 0) {
-      return res.status(400).json({ error: `⚠️ "${value}" already exists.` });
-    }
-
+    // تنفيذ الإضافة
     const insertQuery = `INSERT INTO ${mapping.table} (${mapping.column}) VALUES (?)`;
     db.query(insertQuery, [value], (err2, result) => {
       if (err2) {
-        console.error("❌ Insert Error:", err2);
-        return res.status(500).json({ error: "Insert failed" });
+        console.error("❌ DB Insert Error:", err2);
+        return res.status(500).json({ error: "Database insert failed" });
       }
 
       // ✅ سجل النشاط في Activity_Logs
@@ -2066,13 +2050,36 @@ app.post("/add-options-add-device", authenticateToken, (req, res) => {
         }
       });
 
-      res.json({
-        message: `✅ ${value} added to ${mapping.table}`,
-        insertedId: result.insertId
+      // استخراج اسم المستخدم لتسجيل اللوغ
+      db.query("SELECT name FROM users WHERE id = ?", [userId], (userErr, userRes) => {
+        if (userErr || userRes.length === 0) {
+          console.error("❌ Failed to get user name:", userErr);
+          return res.json({ message: `✅ ${value} added successfully`, insertedId: result.insertId });
+        }
+
+        const userName = userRes[0].name;
+
+        const logQuery = `
+          INSERT INTO Activity_Logs (user_id, user_name, action, details)
+          VALUES (?, ?, ?, ?)
+        `;
+        const logValues = [
+          userId,
+          userName,
+          "Add Device Option",
+          `Added '${value}' to '${mapping.table}' via '${target}'`
+        ];
+
+        db.query(logQuery, logValues, (logErr) => {
+          if (logErr) console.error("❌ Failed to log activity:", logErr);
+        });
+
+        res.json({ message: `✅ ${value} added successfully`, insertedId: result.insertId });
       });
     });
   });
 });
+
 
 
 
@@ -2432,11 +2439,12 @@ app.post("/add-device-model", authenticateToken, (req, res) => {
       const insertQuery = table === "Maintance_Device_Model"
         ? `INSERT INTO ${table} (model_name, device_type_name) VALUES (?, ?)`
         : `INSERT INTO ${table} (model_name) VALUES (?)`;
+
       const insertValues = table === "Maintance_Device_Model"
         ? [model_name, device_type_name]
         : [model_name];
 
-      db.query(insertQuery, insertValues, (err2, result) => {
+      db.query(insertQuery, insertValues, (err2, result2) => {
         if (err2) return res.status(500).json({ error: "Database insert failed" });
 
         const logQuery = `
@@ -2449,16 +2457,17 @@ app.post("/add-device-model", authenticateToken, (req, res) => {
           "Add Device Model",
           `Added new model '${model_name}' for device type '${device_type_name}'`
         ];
-        
+
         db.query(logQuery, logValues, (logErr) => {
           if (logErr) console.error("❌ Failed to log activity:", logErr);
         });
 
-        res.json({ message: `✅ Model '${model_name}' added successfully` });
+        res.json({ message: `✅ Model '${model_name}'` });
       });
     });
   });
 });
+
 
 
 
