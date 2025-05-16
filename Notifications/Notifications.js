@@ -42,15 +42,22 @@ function renderNotifications() {
 
   notificationsToShow.forEach(n => {
     const div = document.createElement('div');
-    div.className = `p-3 border-b ${getColor(n.type)}`;
-    div.innerHTML = `
+div.className = `notification-item p-3 border-b ${getColor(n.type)}`;
+    div.dataset.id = n.id; // 👈 هذا السطر ضروري
+
+div.innerHTML = `
+  <div class="notification-content">
     <div class="font-semibold">${getTypeLabel(n.type)}</div>
     <div class="text-sm text-gray-600">${n.message}</div>
     <div class="text-xs text-gray-400">${new Date(n.created_at).toLocaleString()}</div>
-  `;
+  </div>
+`;
+
   
   
     notifList.appendChild(div);
+        setupSwipeToDelete(div); // ⬅️ أضف السطر هذا
+
   });
 
   if (notificationsToShow.length === 0) {
@@ -58,10 +65,116 @@ function renderNotifications() {
   }
 }
 
-function clearNotifications() {
-  allNotifications = [];
-  renderNotifications();
+function setupSwipeToDelete(elem) {
+  let startX = 0;
+  let currentX = 0;
+  let dragging = false;
+  let isTouch = false;
+
+  // Start
+  const start = (clientX) => {
+    startX = clientX;
+    currentX = startX;
+    dragging = true;
+    elem.classList.add('swiping');
+  };
+
+  // Move
+  const move = (clientX) => {
+    if (!dragging) return;
+    currentX = clientX;
+    const translateX = Math.max(0, currentX - startX);
+    elem.style.transform = `translateX(${translateX}px)`;
+
+    if (translateX > 100) {
+      elem.classList.add('delete-ready');
+    } else {
+      elem.classList.remove('delete-ready');
+    }
+  };
+
+  // End
+  const end = async () => {
+    if (!dragging) return;
+    dragging = false;
+    const translateX = currentX - startX;
+
+    elem.classList.remove('swiping');
+
+    if (translateX > 100) {
+      elem.style.transform = `translateX(100%)`;
+      await deleteNotification(elem);
+    } else {
+      // Reset
+      elem.style.transform = `translateX(0)`;
+      elem.classList.remove('delete-ready');
+    }
+  };
+
+  // Touch events
+  elem.addEventListener('touchstart', (e) => {
+    isTouch = true;
+    start(e.touches[0].clientX);
+  });
+
+  elem.addEventListener('touchmove', (e) => {
+    if (isTouch) move(e.touches[0].clientX);
+  });
+
+  elem.addEventListener('touchend', () => {
+    if (isTouch) end();
+  });
+
+  // Mouse events
+  elem.addEventListener('mousedown', (e) => {
+    isTouch = false;
+    start(e.clientX);
+  });
+
+  elem.addEventListener('mousemove', (e) => {
+    if (!isTouch && dragging) move(e.clientX);
+  });
+
+  elem.addEventListener('mouseup', () => {
+    if (!isTouch) end();
+  });
+
+  // Safety: Cancel drag if mouse leaves element
+  elem.addEventListener('mouseleave', () => {
+    if (dragging && !isTouch) end();
+  });
 }
+
+async function deleteNotification(elem) {
+  const notifId = elem.dataset.id;
+  try {
+    const token = localStorage.getItem('token');
+    await fetch(`http://localhost:4000/notifications/${notifId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    allNotifications = allNotifications.filter(n => n.id != notifId);
+    renderNotifications();
+  } catch (err) {
+    console.error('❌ Failed to delete notification:', err);
+  }
+}
+
+
+async function clearNotifications() {
+  const token = localStorage.getItem('token');
+  try {
+    await fetch('http://localhost:4000/notifications/clear', {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    allNotifications = [];
+    renderNotifications();
+  } catch (err) {
+    console.error('❌ Failed to clear notifications:', err);
+  }
+}
+
 
 function viewAll() {
   showingAll = true;
@@ -88,6 +201,8 @@ function getTypeLabel(type) {
     case 'external-report': return ' External Report';
     case 'internal-ticket-report': return ' Internal Ticket Report';
     case 'external-ticket-report': return ' External Ticket Report';
+    case 'status-update': return ' Status Update';
+    case 'external-status-update': return ' External Report Status Update';
     default: return ' Notification';
   }
 }
