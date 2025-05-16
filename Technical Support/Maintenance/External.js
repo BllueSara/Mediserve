@@ -2490,9 +2490,8 @@ function openAddSectionPopup(contextId = "section") {
 function saveNewModel() {
   const deviceType = document.getElementById("device-type").value.trim().toLowerCase();
   const modelName = document.getElementById("new-model-name").value.trim();
-  
+  const token = localStorage.getItem("token"); // ✅ استرجاع التوكن
 
-  
   if (!modelName) {
     alert("❌ Please enter a model name");
     return;
@@ -2500,7 +2499,10 @@ function saveNewModel() {
 
   fetch("http://localhost:5050/add-device-model", {
     method: "POST",
-    headers: { "Content-Type": "application/json",  },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + token // ✅ مهم جدًا
+    },
     body: JSON.stringify({ model_name: modelName, device_type_name: deviceType })
   })
     .then(res => res.json())
@@ -2510,19 +2512,14 @@ function saveNewModel() {
         return;
       }
 
-
-      // ✅ نحفظ الموديل مؤقتاً
+      alert(result.message);
       sessionStorage.setItem("lastAddedModel", modelName);
-
-      // ✅ نحدث القائمة
       fetchAndRenderModels(deviceType, `model-${deviceType}`);
 
-      // ✅ لو سياق popup المواصفات → نحدث أيضًا قائمة spec-model
       const isSpecContext = sessionStorage.getItem("returnToPopup") === "true";
       if (isSpecContext) {
         fetchAndRenderModels(deviceType, "spec-model");
 
-        // بعد التحديث نحط القيمة يدويًا
         setTimeout(() => {
           const displaySpan = document.getElementById(`selected-spec-model`);
           const hiddenInput = document.getElementById(`spec-model`);
@@ -2533,13 +2530,10 @@ function saveNewModel() {
         }, 300);
       }
 
-
-      // ✅ إغلاق البوب أب
       document.getElementById("generic-popup").style.display = "none";
       sessionStorage.removeItem("returnToPopup");
 
-      // ✅ إذا الجهاز غير معروف → نرجع للمواصفات
-      if (!["pc", "printer", "scanner","desktop", "laptop", "كمبيوتر", "لابتوب"].includes(deviceType)) {
+      if (!["pc", "printer", "scanner"].includes(deviceType)) {
         setTimeout(() => {
           openGenericPopup("Device Specification", "device-spec");
         }, 150);
@@ -2550,6 +2544,7 @@ function saveNewModel() {
       alert("❌ Failed to save the new model");
     });
 }
+
 
 
 
