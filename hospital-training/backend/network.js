@@ -11,6 +11,26 @@ const execAsync = promisify(exec);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const JWT_SECRET = 'super_secret_key_123';
+const jwt = require('jsonwebtoken');
+
+
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) return res.status(401).json({ message: 'No token provided' });
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ message: 'Invalid token' });
+    req.user = user;
+    next();
+  });
+}
+
+module.exports = authenticateToken;
+
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
@@ -86,36 +106,22 @@ app.post('/api/traceroute', async (req, res) => {
 });
 
 // 4. Save IP data to DB
-app.post('/api/save', (req, res) => {
-  const { devices } = req.body;
-  if (!Array.isArray(devices) || devices.length === 0) {
-    return res.status(400).json({ error: 'No valid devices provided' });
-  }
 
-  let completed = 0;
-  let hasError = false;
+app.post('/api/add-entry', authenticateToken, (req, res) => {
+  const userId = req.user.id; // هذا من التوكن
+  const {
+    circuit, isp, location, ip, speed, start_date, end_date
+  } = req.body;
 
-  devices.forEach(device => {
-    const { department, company, ip } = device;
-    db.query(
-      'INSERT INTO entries (department, company, ip) VALUES (?, ?, ?)',
-      [department, company, ip],
-      (err) => {
-        if (err) {
-          console.error('Insert error:', err);
-          hasError = true;
-        }
-        completed++;
-        if (completed === devices.length) {
-          if (hasError) {
-            return res.status(500).json({ error: 'One or more inserts failed' });
-          }
-          res.json({ success: true, message: 'Devices saved to database' });
-        }
-      }
-    );
+  db.query(`
+    INSERT INTO entries (circuit_name, isp, location, ip, speed, contract_start, contract_end, user_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `, [circuit, isp, location, ip, speed, start_date, end_date, userId], (err) => {
+    if (err) return res.status(500).json({ error: 'Insert failed' });
+    res.json({ success: true });
   });
 });
+
 
 // 5. Get entries from DB
 app.get('/api/entries', (req, res) => {
@@ -128,24 +134,63 @@ app.get('/api/entries', (req, res) => {
   });
 });
 
+
 // 6. Generate report
-app.post('/api/report', async (req, res) => {
+app.post('/api/report', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
   try {
     const { devices } = req.body;
+
     if (!Array.isArray(devices) || devices.length === 0) {
-      return res.status(400).json({ error: 'No devices provided' });
+      return res.status(400).json({ error: '❌ No devices provided' });
     }
 
+    const validDevices = devices.filter(d =>
+      d.circuit && d.isp && d.location && d.ip && d.speed && d.start_date && d.end_date
+    );
+
+    if (validDevices.length === 0) {
+      return res.status(400).json({ error: '❌ All rows are missing required fields' });
+    }
+
+    // Safe formatter
+    const formatDate = (dateStr) => {
+      try {
+        const d = new Date(dateStr);
+        if (isNaN(d)) return '';
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      } catch {
+        return '';
+      }
+    };
+
+    const rows = validDevices.map(device => ({
+      circuit: String(device.circuit || '').trim(),
+      isp: String(device.isp || '').trim(),
+      location: String(device.location || '').trim(),
+      ip: String(device.ip || '').trim(),
+      speed: String(device.speed || '').trim(),
+      start_date: device.start_date ? formatDate(device.start_date) : '',
+      end_date: device.end_date ? formatDate(device.end_date) : ''
+    }));
+
+    console.log('✅ Cleaned rows:', rows); // هنا تشوف القيم الفعلية المرسلة
+
+    const ExcelJS = require('exceljs');
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Network Report');
 
     worksheet.columns = [
-      { header: 'Department', key: 'department', width: 20 },
-      { header: 'Company', key: 'company', width: 20 },
-      { header: 'IP Address', key: 'ip', width: 18 }
+      { header: 'Circuit Name', key: 'circuit', width: 20 },
+      { header: 'ISP', key: 'isp', width: 15 },
+      { header: 'Location', key: 'location', width: 20 },
+      { header: 'IP Address', key: 'ip', width: 18 },
+      { header: 'Speed', key: 'speed', width: 15 },
+      { header: 'Contract Start', key: 'start_date', width: 18 },
+      { header: 'Contract End', key: 'end_date', width: 18 }
     ];
 
-    worksheet.addRows(devices);
+    worksheet.addRows(rows); 
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename=network_report.xlsx');
@@ -153,9 +198,68 @@ app.post('/api/report', async (req, res) => {
     await workbook.xlsx.write(res);
     res.end();
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ ExcelJS Error:', error);
+    res.status(500).json({ error: `❌ Report error: ${error.message}` });
   }
 });
+
+app.post('/api/share-entry', authenticateToken, async (req, res) => {
+  const senderId = req.user.id;
+  const { devices, receiver_ids } = req.body;
+
+  if (!Array.isArray(devices) || !Array.isArray(receiver_ids) || !receiver_ids.length) {
+    return res.status(400).json({ error: 'Missing devices or receivers' });
+  }
+
+  try {
+    for (let device of devices) {
+      const [result] = await db.promise().query(`
+        INSERT INTO entries (circuit_name, isp, location, ip, speed, start_date, end_date, user_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `, [device.circuit, device.isp, device.location, device.ip, device.speed, device.start_date, device.end_date, senderId]);
+
+      const entryId = result.insertId;
+
+      for (let receiverId of receiver_ids) {
+        await db.promise().query(`
+          INSERT INTO shared_entries (sender_id, receiver_id, entry_id)
+          VALUES (?, ?, ?)
+        `, [senderId, receiverId, entryId]);
+      }
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+app.get('/api/users', authenticateToken, (req, res) => {
+  if (!req.user?.id) {
+    return res.status(400).json({ error: 'Missing user ID in token' });
+  }
+
+  db.query('SELECT id, name FROM users WHERE id != ?', [req.user.id], (err, rows) => {
+    if (err) {
+      console.error('DB error:', err);
+      return res.status(500).json({ error: 'DB error' });
+    }
+    res.json(rows);
+  });
+});
+
+
+
+
+
+
+
+
+
+
+
 
 // Start server
 //const os = require('os');

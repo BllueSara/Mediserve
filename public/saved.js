@@ -253,3 +253,101 @@ async function loadSavedDevices() {
     appendToTerminal(`Failed to load devices: ${err.message}`, true);
   }
 }
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadSavedDevices();
+
+  document.getElementById('search-input').addEventListener('input', filterDevices);
+  document.getElementById('filter-key').addEventListener('change', populateFilterValues);
+  document.getElementById('filter-value').addEventListener('change', filterDevices);
+});
+
+let allDevices = [];
+
+async function loadSavedDevices() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/entries`);
+    allDevices = await res.json();
+    renderDeviceTable(allDevices);
+  } catch (err) {
+    console.error('Failed to load devices:', err);
+  }
+}
+
+function renderDeviceTable(devices) {
+  const tbody = document.getElementById('device-table-body');
+  tbody.innerHTML = '';
+
+  devices.forEach(device => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${device.circle}</td>
+      <td>${device.isp}</td>
+      <td>${device.company}</td>
+      <td>${device.location}</td>
+      <td>${device.ip}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+function filterDevices() {
+  const search = document.getElementById('search-input').value.toLowerCase();
+  const key = document.getElementById('filter-key').value;
+  const value = document.getElementById('filter-value').value;
+
+  let filtered = allDevices;
+
+  if (search) {
+    filtered = filtered.filter(d =>
+      Object.values(d).some(v => v?.toString().toLowerCase().includes(search))
+    );
+  }
+
+  if (key && value) {
+    filtered = filtered.filter(d => d[key]?.toLowerCase() === value.toLowerCase());
+  }
+
+  renderDeviceTable(filtered);
+}
+
+function populateFilterValues() {
+  const key = document.getElementById('filter-key').value;
+  const valueSelect = document.getElementById('filter-value');
+  valueSelect.innerHTML = '<option value="">Select value</option>';
+
+  if (!key) return;
+
+  const values = [...new Set(allDevices.map(d => d[key]).filter(Boolean))];
+
+  values.forEach(val => {
+    const opt = document.createElement('option');
+    opt.value = val;
+    opt.textContent = val;
+    valueSelect.appendChild(opt);
+  });
+}
+
+
+function handleGroupSelect(selectElement) {
+  const value = selectElement.value;
+  const input = document.getElementById('custom-group-count');
+
+  if (value === 'other') {
+    input.classList.remove('hidden'); // يظهر الحقل
+    input.focus();                    // يوجه المؤشر فيه
+  } else {
+    input.classList.add('hidden');   // يخفي الحقل
+    runPingGroup(parseInt(value));   // يشغل البنق حسب القيمة
+  }
+}
+
+function handleEnterKey(event) {
+  if (event.key === 'Enter') {
+    const val = parseInt(event.target.value, 10);
+    if (!isNaN(val) && val > 0) {
+      runPingGroup(val); // يشغل البنق بعد ما يكتب ويضغط Enter
+    }
+  }
+}
