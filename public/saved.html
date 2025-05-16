@@ -96,13 +96,19 @@
         placeholder="Enter number..."
         onkeydown="handleEnterKey(event)"
       />
-  
+      <select id="ownership-filter">
+        <option value="all">All</option>
+        <option value="mine">Mine</option>
+        <option value="shared">Shared With Me</option>
+      </select>
       <select id="filter-key">
         <option value="">Filter by</option>
       </select>
       <select id="filter-value">
         <option value="">Select value</option>
       </select>
+    
+      
     </div>
   
     <table style="width:100%; max-width:1000px; margin: auto; border-collapse: collapse; table-layout: fixed;">
@@ -124,7 +130,7 @@
         <th>ISP</th>
         <th>Location</th>
         <th>IP Address</th>
-        <th>Circle Speed</th>
+        <th>Circuit Speed</th>
         <th>Start Date</th>
         <th>End Date</th>
       </tr>

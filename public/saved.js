@@ -6,8 +6,8 @@ let continuousPingInterval = null;
 
 document.addEventListener('DOMContentLoaded', () => {
 
-  loadMyDevices();
-  loadSharedDevices();
+  loadDevicesByOwnership();
+
   populateFilterKeyOptions();
 
   const tableBody = document.getElementById('device-table-body');
@@ -23,6 +23,12 @@ document.addEventListener('DOMContentLoaded', () => {
     selectedRow = row;
     selectedRow.classList.add('selected-row');
   });
+
+  document.getElementById('ownership-filter')?.addEventListener('change', async () => {
+    await loadDevicesByOwnership();
+    filterDevices();
+  });
+
 
   document.getElementById('ping-btn')?.addEventListener('click', pingSelectedDevice);
   document.getElementById('pingall-btn')?.addEventListener('click', pingAllDevices);
@@ -309,20 +315,26 @@ function renderDeviceTable(devices) {
   });
 }
 
-
 function filterDevices() {
   const search = document.getElementById('search-input').value.toLowerCase();
   const key = document.getElementById('filter-key').value;
   const value = document.getElementById('filter-value').value;
+  const ownership = document.getElementById('ownership-filter').value;
 
   let filtered = allDevices;
 
+  if (ownership === 'mine') {
+    filtered = filtered.filter(device => device.ownership === 'mine');
+  } else if (ownership === 'shared') {
+    filtered = filtered.filter(device => device.ownership === 'shared');
+  }
+
   if (search) {
-    filtered = filtered.filter(device => {
-      return Object.values(device).some(v =>
+    filtered = filtered.filter(device =>
+      Object.values(device).some(v =>
         (v || '').toString().toLowerCase().includes(search)
-      );
-    });
+      )
+    );
   }
 
   if (key && value) {
@@ -333,6 +345,10 @@ function filterDevices() {
 
   renderDeviceTable(filtered);
 }
+
+
+
+
 
 
 async function populateFilterValues() {
@@ -369,11 +385,11 @@ function populateFilterKeyOptions() {
 
   // الأعمدة المسموحة فقط (نفس أسماء الأعمدة في قاعدة البيانات)
   const fields = [
-    { key: 'circuit_name', label: 'Circle Name' },
+    { key: 'circuit_name', label: 'Circuit Name' },
     { key: 'isp', label: 'ISP' },
     { key: 'location', label: 'Location' },
     { key: 'ip', label: 'IP Address' },
-    { key: 'speed', label: 'Circle Speed' },
+    { key: 'speed', label: 'Circuit Speed' },
     { key: 'start_date', label: 'Start Date' },
     { key: 'end_date', label: 'End Date' }
   ];
@@ -418,37 +434,8 @@ function handleEnterKey(event) {
 
 
 
-async function loadMyDevices() {
-  try {
-    const res = await fetch(`${API_BASE_URL}/entries/mine`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem("token")}`
-      }
-    });
 
-    const data = await res.json();
-    allDevices = [...allDevices, ...data]; // اجمع ولا تعوض
-    updateCombinedDeviceView();
-  } catch (err) {
-    appendToTerminal(`❌ Failed to load your devices: ${err.message}`, true);
-  }
-}
 
-async function loadSharedDevices() {
-  try {
-    const res = await fetch(`${API_BASE_URL}/entries/shared-with-me`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem("token")}`
-      }
-    });
-
-    const data = await res.json();
-    allDevices = [...allDevices, ...data]; // اجمع ولا تعوض
-    updateCombinedDeviceView();
-  } catch (err) {
-    appendToTerminal(`❌ Failed to load shared devices: ${err.message}`, true);
-  }
-}
 
 function updateCombinedDeviceView() {
   // إزالة التكرارات (لو بنفس IP مثلاً)
@@ -611,6 +598,44 @@ async function runPingForIPs(ips, rowMap = {}) {
   } catch (err) {
     appendToTerminal(`❌ Ping error: ${err.message}`, true);
   }
+}
+
+
+
+
+async function loadDevicesByOwnership() {
+  const ownership = document.getElementById('ownership-filter')?.value || 'all';
+  allDevices = [];
+
+  if (ownership === 'mine' || ownership === 'all') {
+    try {
+      const res = await fetch(`${API_BASE_URL}/entries/mine`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem("token")}` }
+      });
+      const data = await res.json();
+      // إضافة خاصية ownership لكل جهاز
+      const mineDevices = data.map(device => ({ ...device, ownership: 'mine' }));
+      allDevices = [...allDevices, ...mineDevices];
+    } catch (err) {
+      appendToTerminal(`❌ Failed to load your devices: ${err.message}`, true);
+    }
+  }
+
+  if (ownership === 'shared' || ownership === 'all') {
+    try {
+      const res = await fetch(`${API_BASE_URL}/entries/shared-with-me`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem("token")}` }
+      });
+      const data = await res.json();
+      // إضافة خاصية ownership لكل جهاز
+      const sharedDevices = data.map(device => ({ ...device, ownership: 'shared' }));
+      allDevices = [...allDevices, ...sharedDevices];
+    } catch (err) {
+      appendToTerminal(`❌ Failed to load shared devices: ${err.message}`, true);
+    }
+  }
+
+  filterDevices(); // ✅ يعرض حسب الفلتر المختار
 }
 
 
