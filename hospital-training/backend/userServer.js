@@ -213,6 +213,31 @@ app.get("/Departments", (req, res) => {
     });
   });
   
+app.delete('/notifications/clear', authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  db.query(`DELETE FROM Notifications WHERE user_id = ?`, [userId], (err) => {
+    if (err) {
+      console.error('❌ Error clearing notifications:', err);
+      return res.status(500).json({ error: 'Failed to clear notifications' });
+    }
+    res.json({ message: '✅ All notifications cleared.' });
+  });
+});
+
+
+app.delete('/notifications/:id', authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  const notifId = req.params.id;
+
+  db.query(`DELETE FROM Notifications WHERE id = ? AND user_id = ?`, [notifId, userId], (err) => {
+    if (err) {
+      console.error('❌ Error deleting notification:', err);
+      return res.status(500).json({ error: 'Failed to delete notification' });
+    }
+    res.json({ message: '✅ Notification deleted.' });
+  });
+});
+
 
   function logActivity(userId, userName, action, details) {
     const sql = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
