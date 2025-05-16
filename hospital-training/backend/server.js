@@ -583,6 +583,13 @@ app.post("/submit-regular-maintenance", authenticateToken, async (req, res) => {
     problem_status = "",
     technical_engineer_id = null
   } = req.body;
+// تنسيق عرض المشاكل للإشعارات
+let formattedProblemStatus = "No issues reported";
+if (Array.isArray(problem_status)) {
+  formattedProblemStatus = problem_status.length ? problem_status.join(", ") : formattedProblemStatus;
+} else if (typeof problem_status === "string" && problem_status.trim() !== "") {
+  formattedProblemStatus = problem_status;
+}
 
   const adminUser = await getUserById(userId);
   const userName = await getUserNameById(userId);
@@ -688,7 +695,7 @@ const displayDevice = isAllDevices
 
     await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
       userId,
-      `Regular maintenance created for ${displayDevice} by engineer ${engineerName || 'N/A'} {${problem_status}}`,
+      `Regular maintenance created for ${displayDevice} by engineer ${engineerName || 'N/A'} {${formattedProblemStatus}}`,
       'regular-maintenance'
     ]);
     
@@ -732,7 +739,7 @@ const displayDevice = isAllDevices
       VALUES (?, ?, ?)
     `, [
       userId,
-      `Report created ${ticketNumber} for ${displayDevice} by engineer ${engineerName || 'N/A'} (${problem_status})`,
+      `Report created ${ticketNumber} for ${displayDevice} by engineer ${engineerName || 'N/A'} (${formattedProblemStatus})`,
       'internal-ticket-report'
     ]);
     
@@ -1170,6 +1177,13 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
     IDNumber: idNumber,
     Notes: notes = ""
   } = req.body;
+// تنسيق عرض المشاكل للإشعارات
+let formattedProblemStatus = "No issues reported";
+if (Array.isArray(problem_status)) {
+  formattedProblemStatus = problem_status.length ? problem_status.join(", ") : formattedProblemStatus;
+} else if (typeof problem_status === "string" && problem_status.trim() !== "") {
+  formattedProblemStatus = problem_status;
+}
 
   const adminUser = await getUserById(userId);
   const userName = await getUserNameById(userId);
@@ -1285,7 +1299,7 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
 
     await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
       userId,
-      `General maintenance created for ${deviceInfo.device_name} (${displayDevice}) by engineer ${engineerName || 'N/A'} (${problemStatus})`,
+      `General maintenance created for ${deviceInfo.device_name} (${displayDevice}) by engineer ${engineerName || 'N/A'} (${formattedProblemStatus})`,
       'general-maintenance'
     ]);
 
@@ -1460,66 +1474,93 @@ if (userRole !== 'admin') {
 });
 
 
-
-app.put("/update-external-report-status/:id", async (req, res) => {
+app.put("/update-external-report-status/:id", authenticateToken, async (req, res) => {
   const reportId = req.params.id;
   const { status } = req.body;
+  const userId = req.user.id;
 
   try {
-    // ✅ 1. جلب التقرير من Maintenance_Reports
-    const report = await new Promise((resolve, reject) => {
-      db.query("SELECT * FROM Maintenance_Reports WHERE id = ?", [reportId], (err, result) => {
-        if (err) return reject(err);
-        resolve(result[0]);
-      });
-    });
+    const userNameRes = await queryAsync(`SELECT name FROM Users WHERE id = ?`, [userId]);
+    const userName = userNameRes[0]?.name || "Unknown";
 
-    if (!report) return res.status(404).json({ error: "Report not found" });
+    // 1. Get the report
+    const reportRes = await queryAsync("SELECT * FROM Maintenance_Reports WHERE id = ?", [reportId]);
+    if (!reportRes[0]) return res.status(404).json({ error: "Report not found" });
+    const report = reportRes[0];
 
-    // ✅ 2. تحديث الحالة في Maintenance_Reports
-    await new Promise((resolve, reject) => {
-      db.query("UPDATE Maintenance_Reports SET status = ? WHERE id = ?", [status, reportId], (err) => {
-        if (err) return reject(err);
-        resolve();
-      });
-    });
+    // 2. Get device info
+    const deviceRes = await queryAsync(`
+      SELECT device_name, device_type 
+      FROM Maintenance_Devices 
+      WHERE id = ?
+    `, [report.device_id]);
+    const deviceName = deviceRes[0]?.device_name || "Unknown Device";
+    const deviceType = deviceRes[0]?.device_type || "Unknown Type";
+    const readableDevice = `${deviceName} (${deviceType})`;
 
-    // ✅ 3. تحديث التذكرة الخارجية المرتبطة (External_Tickets)
+    // 3. Get engineer from External_Maintenance
+    const extMaintRes = await queryAsync(`
+      SELECT technical_engineer_id 
+      FROM External_Maintenance 
+      WHERE id = ?
+    `, [reportId]);
+
+    const technicalEngineerId = extMaintRes[0]?.technical_engineer_id || null;
+    let engineerName = null;
+    let engineerUserId = null;
+
+    if (technicalEngineerId) {
+      const engineerRes = await queryAsync(`SELECT name FROM Engineers WHERE id = ?`, [technicalEngineerId]);
+      engineerName = engineerRes[0]?.name || null;
+
+      if (engineerName) {
+        const techUserRes = await queryAsync(`SELECT id FROM Users WHERE name = ?`, [engineerName]);
+        engineerUserId = techUserRes[0]?.id || null;
+      }
+    }
+
+    // 4. Update main report
+    await queryAsync("UPDATE Maintenance_Reports SET status = ? WHERE id = ?", [status, reportId]);
+
+    // 5. Update external ticket if available
     if (report.ticket_id) {
-      await new Promise((resolve, reject) => {
-        db.query("UPDATE External_Tickets SET status = ? WHERE id = ?", [status, report.ticket_id], (err) => {
-          if (err) return reject(err);
-          resolve();
-        });
-      });
-
-      // ✅ 4. تحديث باقي التقارير المرتبطة بنفس التذكرة الخارجية
-      await new Promise((resolve, reject) => {
-        db.query("UPDATE Maintenance_Reports SET status = ? WHERE ticket_id = ?", [status, report.ticket_id], (err) => {
-          if (err) return reject(err);
-          resolve();
-        });
-      });
+      await queryAsync("UPDATE External_Tickets SET status = ? WHERE id = ?", [status, report.ticket_id]);
+      await queryAsync("UPDATE Maintenance_Reports SET status = ? WHERE ticket_id = ?", [status, report.ticket_id]);
     }
 
-    // ✅ 5. إذا كان نوع الصيانة من النوع القديم (External_Maintenance)، نحدثه أيضًا
-    const legacy = await new Promise((resolve, reject) => {
-      db.query("SELECT * FROM External_Maintenance WHERE id = ?", [reportId], (err, result) => {
-        if (err) return reject(err);
-        resolve(result[0]);
-      });
-    });
-
-    if (legacy) {
-      await new Promise((resolve, reject) => {
-        db.query("UPDATE External_Maintenance SET status = ? WHERE id = ?", [status, reportId], (err) => {
-          if (err) return reject(err);
-          resolve();
-        });
-      });
+    // 6. Update External_Maintenance if exists
+    if (extMaintRes[0]) {
+      await queryAsync("UPDATE External_Maintenance SET status = ? WHERE id = ?", [status, reportId]);
     }
 
-    res.json({ message: "✅ External report, ticket, and related entries updated successfully" });
+    // 7. Notify user who did the update
+    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+      userId,
+      `You updated external report status to '${status}' for ${readableDevice}`,
+      'external-status-update'
+    ]);
+
+    // 8. Notify engineer
+    if (engineerUserId && engineerUserId !== userId) {
+      await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+        engineerUserId,
+        `External report status updated to '${status}' for ${readableDevice}`,
+        'external-status-update'
+      ]);
+    }
+
+    // 9. Log the action
+    await queryAsync(`
+      INSERT INTO Activity_Logs (user_id, user_name, action, details)
+      VALUES (?, ?, ?, ?)
+    `, [
+      userId,
+      userName,
+      'Updated External Report Status',
+      `Updated external report #${reportId} to '${status}' | Device: ${readableDevice}`
+    ]);
+
+    res.json({ message: "✅ External report, ticket, and related entries updated with notifications." });
 
   } catch (err) {
     console.error("❌ Failed to update external report status:", err);
@@ -2454,66 +2495,101 @@ app.get('/regular-maintenance-summary', authenticateToken, (req, res) => {
 
 
 
-
-app.put("/update-report-status/:id", async (req, res) => {
+app.put("/update-report-status/:id", authenticateToken, async (req, res) => {
   const reportId = req.params.id;
   const { status } = req.body;
+  const userId = req.user.id;
 
   try {
-    // Get report with linked ticket_id, device_id and type
-    const report = await new Promise((resolve, reject) => {
-      db.query("SELECT * FROM Maintenance_Reports WHERE id = ?", [reportId], (err, result) => {
-        if (err) return reject(err);
-        resolve(result[0]);
-      });
-    });
+    const userNameRes = await queryAsync(`SELECT name FROM Users WHERE id = ?`, [userId]);
+    const userName = userNameRes[0]?.name || "Unknown";
 
-    if (!report) return res.status(404).json({ error: "Report not found" });
+    // Get the report
+    const report = await queryAsync("SELECT * FROM Maintenance_Reports WHERE id = ?", [reportId]);
+    if (!report[0]) return res.status(404).json({ error: "Report not found" });
+    const reportData = report[0];
 
-    // Update this specific report
-    await new Promise((resolve, reject) => {
-      db.query("UPDATE Maintenance_Reports SET status = ? WHERE id = ?", [status, reportId], (err) => {
-        if (err) return reject(err);
-        resolve();
-      });
-    });
-
-    // Update the linked ticket
-    await new Promise((resolve, reject) => {
-      db.query("UPDATE Internal_Tickets SET status = ? WHERE id = ?", [status, report.ticket_id], (err) => {
-        if (err) return reject(err);
-        resolve();
-      });
-    });
-
-    // ✅ NEW: Update all other reports under same ticket to match the status
-    await new Promise((resolve, reject) => {
-      db.query("UPDATE Maintenance_Reports SET status = ? WHERE ticket_id = ?", [status, report.ticket_id], (err) => {
-        if (err) return reject(err);
-        resolve();
-      });
-    });
-
-    // If regular maintenance, update Regular_Maintenance table
-    if (report.maintenance_type === "Regular") {
-      await new Promise((resolve, reject) => {
-        db.query(
-          `UPDATE Regular_Maintenance 
-           SET status = ? 
-           WHERE device_id = ?
-           ORDER BY last_maintenance_date DESC
-           LIMIT 1`,
-          [status, report.device_id],
-          (err) => {
-            if (err) return reject(err);
-            resolve();
-          }
-        );
-      });
-    }
+    // Get device info (name + type)
+    const deviceRes = await queryAsync(`
+      SELECT device_name, device_type 
+      FROM Maintenance_Devices 
+      WHERE id = ?
+    `, [reportData.device_id]);
     
+    const deviceName = deviceRes[0]?.device_name || "Unknown Device";
+    const deviceType = deviceRes[0]?.device_type || "Unknown Type";
+    const readableDevice = `${deviceName} (${deviceType})`;
 
-    res.json({ message: "✅ Status updated across report, ticket, and all linked reports" });
+    // Get engineer from Regular_Maintenance
+    const maintenanceRes = await queryAsync(`
+      SELECT technical_engineer_id 
+      FROM Regular_Maintenance 
+      WHERE device_id = ?
+      ORDER BY last_maintenance_date DESC
+      LIMIT 1
+    `, [reportData.device_id]);
+
+    const technicalEngineerId = maintenanceRes[0]?.technical_engineer_id;
+
+    // Get engineer name (if available)
+    let engineerName = null;
+    let engineerUserId = null;
+
+    if (technicalEngineerId) {
+      const engineerRes = await queryAsync(`SELECT name FROM Engineers WHERE id = ?`, [technicalEngineerId]);
+      engineerName = engineerRes[0]?.name || null;
+
+      if (engineerName) {
+        const userRes = await queryAsync(`SELECT id FROM Users WHERE name = ?`, [engineerName]);
+        engineerUserId = userRes[0]?.id || null;
+      }
+    }
+
+    // === Update operations ===
+
+    await queryAsync("UPDATE Maintenance_Reports SET status = ? WHERE id = ?", [status, reportId]);
+    await queryAsync("UPDATE Internal_Tickets SET status = ? WHERE id = ?", [status, reportData.ticket_id]);
+    await queryAsync("UPDATE Maintenance_Reports SET status = ? WHERE ticket_id = ?", [status, reportData.ticket_id]);
+
+    if (reportData.maintenance_type === "Regular") {
+      await queryAsync(`
+        UPDATE Regular_Maintenance 
+        SET status = ? 
+        WHERE device_id = ?
+        ORDER BY last_maintenance_date DESC
+        LIMIT 1
+      `, [status, reportData.device_id]);
+    }
+
+    // === Notifications ===
+
+    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+      userId,
+      `You updated report status to '${status}' for ${readableDevice}`,
+      'status-update'
+    ]);
+
+    if (engineerUserId && engineerUserId !== userId) {
+      await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+        engineerUserId,
+        `Report status updated to '${status}' for ${readableDevice}`,
+        'status-update'
+      ]);
+    }
+
+    // === Logs ===
+
+    await queryAsync(`
+      INSERT INTO Activity_Logs (user_id, user_name, action, details)
+      VALUES (?, ?, ?, ?)
+    `, [
+      userId,
+      userName,
+      'Updated Report Status',
+      `Updated report status to '${status}' for ${readableDevice} (Report ID: ${reportId})`
+    ]);
+
+    res.json({ message: "✅ Status updated and notifications sent." });
 
   } catch (err) {
     console.error("❌ Failed to update status:", err);
