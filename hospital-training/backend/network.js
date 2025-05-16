@@ -140,15 +140,7 @@ app.post('/api/add-entry', authenticateToken, (req, res) => {
 
 
 // 5. Get entries from DB
-app.get('/api/entries', (req, res) => {
-  db.query('SELECT * FROM entries ORDER BY created_at DESC', (err, rows) => {
-    if (err) {
-      console.error('DB error:', err);
-      return res.status(500).json({ error: 'Failed to retrieve devices' });
-    }
-    res.json(rows);
-  });
-});
+
 
 
 // 6. Generate report
@@ -356,23 +348,26 @@ app.get('/api/entries/mine', authenticateToken, async (req, res) => {
   }
 });
 
-
 app.get('/api/entries/shared-with-me', authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
   try {
     const [entries] = await db.promise().query(`
-      SELECT e.* FROM entries e
+      SELECT e.*, se.receiver_id
+      FROM entries e
       JOIN shared_entries se ON e.id = se.entry_id
       WHERE se.receiver_id = ?
     `, [userId]);
 
-    res.json(entries);
+    // نرجعها مع تحديد أن user_id = null لتفرقها عن mine
+    res.json(entries.map(e => ({ ...e, user_id: null })));
+
   } catch (err) {
     console.error('❌ Error fetching shared entries:', err.message);
     res.status(500).json({ error: 'Failed to load shared entries' });
   }
 });
+
 
 
 app.get('/api/distinct-values/:key', authenticateToken, async (req, res) => {
