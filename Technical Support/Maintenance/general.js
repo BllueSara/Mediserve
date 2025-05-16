@@ -2637,7 +2637,6 @@ function saveNewSection() {
 function saveNewModel() {
   const deviceType = document.getElementById("device-type").value.trim().toLowerCase();
   const modelName = document.getElementById("new-model-name").value.trim();
-  const token = localStorage.getItem("token"); // ✅ استرجاع التوكن
 
   if (!modelName) {
     alert("❌ Please enter a model name");
@@ -2648,15 +2647,10 @@ function saveNewModel() {
 
   fetch("http://localhost:5050/add-device-model", {
     method: "POST",
-<<<<<<< HEAD
     headers: {
       "Content-Type": "application/json",
       "Authorization": "Bearer " + token // ✅ مهم جدًا
     },
-=======
-    headers: { "Content-Type": "application/json" ,           "Authorization": `Bearer ${token}`
-},
->>>>>>> d8897406f4b8e6f7a91e8c6ddcadc8806763fff0
     body: JSON.stringify({ model_name: modelName, device_type_name: deviceType })
   })
     .then(res => res.json())
@@ -2702,7 +2696,6 @@ function saveNewModel() {
 
 
 
-<<<<<<< HEAD
 
 function saveDeviceSpecification() {
   const requiredFields = [
@@ -2830,8 +2823,6 @@ else {
       alert("❌ Error saving device specification");
     });
 }
-=======
->>>>>>> d8897406f4b8e6f7a91e8c6ddcadc8806763fff0
 
 
 function closeGenericPopup(cancelled = false) {

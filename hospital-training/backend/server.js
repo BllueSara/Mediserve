@@ -1137,6 +1137,8 @@ app.post("/add-options-regular", authenticateToken, (req, res) => {
       res.json({ message: `✅ ${value} added to ${mapping.table}` });
     });
   });
+
+});
 });
 
 
