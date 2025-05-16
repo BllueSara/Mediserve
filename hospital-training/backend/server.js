@@ -1071,7 +1071,6 @@ app.post("/add-options-external", authenticateToken, (req, res) => {
     });
   });
 });
-
 app.post("/add-options-regular", authenticateToken, (req, res) => {
   const { target, value, type } = req.body;
   const userId = req.user?.id;
@@ -1126,18 +1125,20 @@ app.post("/add-options-regular", authenticateToken, (req, res) => {
     db.query(checkQuery, params, (err, existing) => {
       if (err) return res.status(500).json({ error: "DB check error" });
       if (existing.length > 0) {
-        return res.status(400).json({ error: `⚠️ \"${value}\" already exists in ${mapping.table}` });
+        return res.status(400).json({ error: `⚠️ "${value}" already exists in ${mapping.table}` });
       }
 
-    db.query(query, params, (err2, result) => {
-      if (err2) {
-        console.error("❌ DB Insert Error:", err2);
-        return res.status(500).json({ error: "Database error while inserting option" });
-      }
-      res.json({ message: `✅ ${value} added to ${mapping.table}` });
+      db.query(query, params, (err2, result) => {
+        if (err2) {
+          console.error("❌ DB Insert Error:", err2);
+          return res.status(500).json({ error: "Database error while inserting option" });
+        }
+        res.json({ message: `✅ ${value} added to ${mapping.table}` });
+      });
     });
   });
-});
+}); 
+
 
 
 app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
