@@ -390,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('traceroute-btn')?.addEventListener('click', tracerouteSelectedIP);
   document.getElementById('saveBtn')?.addEventListener('click', saveAllIPs);
   document.getElementById('shareBtn')?.addEventListener('click', openSharePopup);
-  document.getElementById('confirmShare')?.addEventListener('click', handleShareConfirm);
+
 });
 
 
