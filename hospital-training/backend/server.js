@@ -367,6 +367,7 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
         COALESCE(pm.model_name, prm.model_name, scm.model_name, '') AS model_name,
         COALESCE(hdt.drive_type, '') AS drive_type,
         COALESCE(pc.Mac_Address, '') AS mac_address,
+        COALESCE(pc.Ip_Address, '') AS ip_address,
         COALESCE(pt.printer_type, '') AS printer_type,
         COALESCE(it.ink_type, '') AS ink_type,
         COALESCE(iser.serial_number, '') AS ink_serial_number,
@@ -416,7 +417,7 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
       deviceInfo.serial_number, deviceInfo.governmental_number, deviceInfo.device_name,
       deviceInfo.department_name, deviceInfo.cpu_name, deviceInfo.ram_type, deviceInfo.os_name,
       deviceInfo.generation_number, deviceInfo.model_name, deviceInfo.drive_type, deviceInfo.ram_size,
-      deviceInfo.mac_address, deviceInfo.printer_type, deviceInfo.ink_type, deviceInfo.ink_serial_number,
+      deviceInfo.mac_address,deviceInfo.ip_address, deviceInfo.printer_type, deviceInfo.ink_type, deviceInfo.ink_serial_number,
       deviceInfo.scanner_type,
       userId
     ];
@@ -429,9 +430,9 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
         initial_diagnosis, final_diagnosis,
         serial_number, governmental_number, device_name,
         department_name, cpu_name, ram_type, os_name,
-        generation_number, model_name, drive_type, ram_size, mac_address,
+        generation_number, model_name, drive_type, ram_size, mac_address,ip_address,
         printer_type, ink_type, ink_serial_number,scanner_type, user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?,?)
     `, commonValues);
 
     // 2️⃣ إدخال تلخيص التذكرة
@@ -442,9 +443,9 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
         initial_diagnosis, final_diagnosis,
         serial_number, governmental_number, device_name,
         department_name, cpu_name, ram_type, os_name,
-        generation_number, model_name, drive_type, ram_size, mac_address,
+        generation_number, model_name, drive_type, ram_size, mac_address,ip_address,
         printer_type, ink_type, ink_serial_number,scanner_type, user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?)
     `, [
       ticket_number, deviceType, device_specifications, section,
       maintenance_manager, reporter_name,
@@ -452,7 +453,7 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
       deviceInfo.serial_number, deviceInfo.governmental_number, deviceInfo.device_name,
       deviceInfo.department_name, deviceInfo.cpu_name, deviceInfo.ram_type, deviceInfo.os_name,
       deviceInfo.generation_number, deviceInfo.model_name, deviceInfo.drive_type, deviceInfo.ram_size,
-      deviceInfo.mac_address, deviceInfo.printer_type, deviceInfo.ink_type, deviceInfo.ink_serial_number,
+      deviceInfo.mac_address,deviceInfo.ip_address, deviceInfo.printer_type, deviceInfo.ink_type, deviceInfo.ink_serial_number,
       deviceInfo.scanner_type,
       userId
     ]);
@@ -582,6 +583,13 @@ app.post("/submit-regular-maintenance", authenticateToken, async (req, res) => {
     problem_status = "",
     technical_engineer_id = null
   } = req.body;
+// تنسيق عرض المشاكل للإشعارات
+let formattedProblemStatus = "No issues reported";
+if (Array.isArray(problem_status)) {
+  formattedProblemStatus = problem_status.length ? problem_status.join(", ") : formattedProblemStatus;
+} else if (typeof problem_status === "string" && problem_status.trim() !== "") {
+  formattedProblemStatus = problem_status;
+}
 
   const adminUser = await getUserById(userId);
   const userName = await getUserNameById(userId);
@@ -613,6 +621,7 @@ const deviceRes = await queryAsync(`
          COALESCE(pm.model_name, prm.model_name, scm.model_name, '') AS model_name,
          COALESCE(hdt.drive_type, '') AS drive_type,
          COALESCE(pc.Mac_Address, '') AS mac_address,
+         COALESCE(pc.Ip_Address, '') AS ip_address,
          COALESCE(pt.printer_type, '') AS printer_type,
          COALESCE(it.ink_type, '') AS ink_type,
          COALESCE(iser.serial_number, '') AS ink_serial_number,
@@ -651,9 +660,9 @@ const displayDevice = isAllDevices
     device_id, device_type, last_maintenance_date, frequency, checklist, notes,
     serial_number, governmental_number, device_name, department_name,
     cpu_name, ram_type, ram_size, os_name, generation_number, model_name, drive_type, status,
-    problem_status, technical_engineer_id, mac_address, printer_type, ink_type, ink_serial_number,
+    problem_status, technical_engineer_id, mac_address,ip_address, printer_type, ink_type, ink_serial_number,
     scanner_type, user_id
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?)
 `, [
   deviceSpec,
   rawDeviceType || deviceInfo.device_type,
@@ -676,6 +685,7 @@ const displayDevice = isAllDevices
   problem_status || "",
   technical_engineer_id,
   deviceInfo.mac_address,
+  deviceInfo.ip_address,
   deviceInfo.printer_type,
   deviceInfo.ink_type,
   deviceInfo.ink_serial_number,
@@ -685,7 +695,7 @@ const displayDevice = isAllDevices
 
     await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
       userId,
-      `Regular maintenance created for ${displayDevice} by engineer ${engineerName || 'N/A'} {${problem_status}}`,
+      `Regular maintenance created for ${displayDevice} by engineer ${engineerName || 'N/A'} {${formattedProblemStatus}}`,
       'regular-maintenance'
     ]);
     
@@ -693,8 +703,8 @@ const displayDevice = isAllDevices
     const ticketNumber = `TIC-${Date.now()}`;
     const ticketRes = await queryAsync(`
       INSERT INTO Internal_Tickets (
-        ticket_number, priority, department_id, issue_description, assigned_to, mac_address, user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        ticket_number, priority, department_id, issue_description, assigned_to, mac_address,ip_address, user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?,?)
     `, [
       ticketNumber,
       "Medium",
@@ -702,6 +712,7 @@ const displayDevice = isAllDevices
       problem_status || "Regular Maintenance",
       technical_engineer_id,
       deviceInfo.mac_address,
+      deviceInfo.ip_address,
       userId
     ]);
     const ticketId = ticketRes.insertId;
@@ -709,8 +720,8 @@ const displayDevice = isAllDevices
     await queryAsync(`
       INSERT INTO Maintenance_Reports (
         report_number, ticket_id, device_id,
-        issue_summary, full_description, status, maintenance_type, mac_address, user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        issue_summary, full_description, status, maintenance_type, mac_address,ip_address, user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?,?)
     `, [
       reportNumberTicket,
       ticketId,
@@ -720,6 +731,7 @@ const displayDevice = isAllDevices
       "Open",
       "Regular",
       deviceInfo.mac_address,
+      deviceInfo.ip_address,
       userId
     ]);
     await queryAsync(`
@@ -727,7 +739,7 @@ const displayDevice = isAllDevices
       VALUES (?, ?, ?)
     `, [
       userId,
-      `Report created ${ticketNumber} for ${displayDevice} by engineer ${engineerName || 'N/A'} (${problem_status})`,
+      `Report created ${ticketNumber} for ${displayDevice} by engineer ${engineerName || 'N/A'} (${formattedProblemStatus})`,
       'internal-ticket-report'
     ]);
     
@@ -735,8 +747,8 @@ const displayDevice = isAllDevices
     await queryAsync(`
       INSERT INTO Maintenance_Reports (
         report_number, ticket_id, device_id,
-        issue_summary, full_description, status, maintenance_type, mac_address, user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        issue_summary, full_description, status, maintenance_type, mac_address,ip_address, user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)
     `, [
       reportNumberMain,
       ticketId,
@@ -746,6 +758,7 @@ const displayDevice = isAllDevices
       "Open",
       "Regular",
       deviceInfo.mac_address,
+      deviceInfo.ip_address,
       userId
     ]);
 
@@ -905,8 +918,9 @@ app.post("/submit-new-device", authenticateToken, async (req, res) => {
 
 
 
-app.post("/add-option-general", (req, res) => {
+app.post("/add-option-general", authenticateToken, (req, res) => {
   const { target, value, type } = req.body;
+  const userId = req.user?.id;
 
   const tableMap = {
     "device-type": { table: "DeviceType", column: "DeviceType" },
@@ -926,24 +940,19 @@ app.post("/add-option-general", (req, res) => {
     "cpu-select": { table: "CPU_Types", column: "cpu_name" },
     "generation-select": { table: "Processor_Generations", column: "generation_number" },
     "drive-select": { table: "Hard_Drive_Types", column: "drive_type" },
-    "printer-type": { table: "Printer_Types", column: "printer_type" }, // ✅ NEW
-    "ink-type": { table: "Ink_Types", column: "ink_type" }, 
-    "scanner-type": { table: "Scanner_Types", column: "scanner_type" },            // ✅ NEW
+    "printer-type": { table: "Printer_Types", column: "printer_type" },
+    "ink-type": { table: "Ink_Types", column: "ink_type" },
+    "scanner-type": { table: "Scanner_Types", column: "scanner_type" },
   };
 
   const mapping = tableMap[target];
   if (!mapping) return res.status(400).json({ error: "Invalid target field" });
 
-  let query = "";
-  let params = [];
+  const query = mapping.extra
+    ? `INSERT INTO ${mapping.table} (${mapping.column}, ${mapping.extra}) VALUES (?, ?)`
+    : `INSERT INTO ${mapping.table} (${mapping.column}) VALUES (?)`;
 
-  if (mapping.extra) {
-    query = `INSERT INTO ${mapping.table} (${mapping.column}, ${mapping.extra}) VALUES (?, ?)`;
-    params = [value, type];
-  } else {
-    query = `INSERT INTO ${mapping.table} (${mapping.column}) VALUES (?)`;
-    params = [value];
-  }
+  const params = mapping.extra ? [value, type] : [value];
 
   const checkQuery = mapping.extra
     ? `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ? AND ${mapping.extra} = ?`
@@ -960,6 +969,27 @@ app.post("/add-option-general", (req, res) => {
         console.error("❌ DB Insert Error:", err2);
         return res.status(500).json({ error: "Database error while inserting option" });
       }
+
+      // ✅ Log to Activity_Logs
+      db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
+        if (!errUser && resultUser.length > 0) {
+          const userName = resultUser[0].name;
+          const logQuery = `
+            INSERT INTO Activity_Logs (user_id, user_name, action, details)
+            VALUES (?, ?, ?, ?)
+          `;
+          const logValues = [
+            userId,
+            userName,
+            `Added '${mapping.table}'`,
+            `Added '${value}' to '${mapping.table}'`
+          ];
+          db.query(logQuery, logValues, (logErr) => {
+            if (logErr) console.error("❌ Logging failed:", logErr);
+          });
+        }
+      });
+
       res.json({ message: `✅ ${value} added to ${mapping.table}`, insertedId: result.insertId });
     });
   });
@@ -968,8 +998,11 @@ app.post("/add-option-general", (req, res) => {
 
 
 
-app.post("/add-options-external", (req, res) => {
+
+app.post("/add-options-external", authenticateToken, (req, res) => {
   const { target, value } = req.body;
+  const userId = req.user?.id;
+
   if (!target || !value) {
     return res.status(400).json({ error: "Missing target or value" });
   }
@@ -994,7 +1027,6 @@ app.post("/add-options-external", (req, res) => {
       return res.status(400).json({ error: "Unsupported dropdown" });
   }
 
-  // ✅ تحقق أولاً إذا كانت القيمة موجودة مسبقًا
   const checkQuery = `SELECT * FROM ${table} WHERE ${column} = ? LIMIT 1`;
   db.query(checkQuery, [value], (checkErr, checkResult) => {
     if (checkErr) {
@@ -1006,13 +1038,35 @@ app.post("/add-options-external", (req, res) => {
       return res.status(400).json({ error: `⚠️ "${value}" already exists!` });
     }
 
-    // ✅ إذا ما كانت موجودة، أضفها
     const insertQuery = `INSERT INTO ${table} (${column}) VALUES (?)`;
     db.query(insertQuery, [value], (insertErr, insertResult) => {
       if (insertErr) {
         console.error("❌ Error inserting option:", insertErr);
         return res.status(500).json({ error: "Database insert error" });
       }
+
+      // ✅ سجل اللوق بعد الإدخال
+      db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
+        if (!errUser && resultUser.length > 0) {
+          const userName = resultUser[0].name;
+
+          const logQuery = `
+            INSERT INTO Activity_Logs (user_id, user_name, action, details)
+            VALUES (?, ?, ?, ?)
+          `;
+          const logValues = [
+            userId,
+            userName,
+            `Added  '${table}'`
+            `Added '${value}' to '${table}'`
+          ];
+
+          db.query(logQuery, logValues, (logErr) => {
+            if (logErr) console.error("❌ Logging failed:", logErr);
+          });
+        }
+      });
+
       res.json({ message: `✅ ${value} added successfully` });
     });
   });
@@ -1062,39 +1116,25 @@ app.post("/add-options-regular", authenticateToken, (req, res) => {
     ? `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ? AND ${mapping.extra} = ?`
     : `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ?`;
 
-  db.query(checkQuery, params, (err, existing) => {
-    if (err) return res.status(500).json({ error: "DB check error" });
-    if (existing.length > 0) {
-      return res.status(400).json({ error: `⚠️ \"${value}\" already exists in ${mapping.table}` });
+  db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
+    if (errUser || resultUser.length === 0) {
+      return res.status(500).json({ error: "❌ Failed to get user name" });
     }
+
+    const userName = resultUser[0].name;
+
+    db.query(checkQuery, params, (err, existing) => {
+      if (err) return res.status(500).json({ error: "DB check error" });
+      if (existing.length > 0) {
+        return res.status(400).json({ error: `⚠️ \"${value}\" already exists in ${mapping.table}` });
+      }
 
     db.query(query, params, (err2, result) => {
       if (err2) {
         console.error("❌ DB Insert Error:", err2);
         return res.status(500).json({ error: "Database error while inserting option" });
       }
-
-      // ✅ بعد الإضافة – نجيب اسم المستخدم ونسجل اللوق
-      db.query("SELECT name FROM users WHERE id = ?", [userId], (err3, userRes) => {
-        const userName = (!err3 && userRes.length > 0) ? userRes[0].name : "Unknown";
-
-        const logQuery = `
-          INSERT INTO Activity_Logs (user_id, user_name, action, details)
-          VALUES (?, ?, ?, ?)
-        `;
-        const logValues = [
-          userId,
-          userName,
-          mapping.action,
-          `Added new ${mapping.action.replace("Add ", "")} '${value}'`
-        ];
-
-        db.query(logQuery, logValues, (logErr) => {
-          if (logErr) console.warn("⚠️ Failed to log activity:", logErr);
-        });
-
-        res.status(204).end();
-      });
+      res.json({ message: `✅ ${value} added to ${mapping.table}` });
     });
   });
 });
@@ -1118,6 +1158,13 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
     IDNumber: idNumber,
     Notes: notes = ""
   } = req.body;
+// تنسيق عرض المشاكل للإشعارات
+let formattedProblemStatus = "No issues reported";
+if (Array.isArray(problem_status)) {
+  formattedProblemStatus = problem_status.length ? problem_status.join(", ") : formattedProblemStatus;
+} else if (typeof problem_status === "string" && problem_status.trim() !== "") {
+  formattedProblemStatus = problem_status;
+}
 
   const adminUser = await getUserById(userId);
   const userName = await getUserNameById(userId);
@@ -1146,6 +1193,7 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
              COALESCE(pm.model_name, prm.model_name, scm.model_name, '') AS model_name,
              COALESCE(hdt.drive_type, '') AS drive_type,
              COALESCE(pc.Mac_Address, '') AS mac_address,
+             COALESCE(pc.Ip_Address, '') AS ip_address,
              COALESCE(pt.printer_type, '') AS printer_type,
              COALESCE(it.ink_type, '') AS ink_type,
              COALESCE(iser.serial_number, '') AS ink_serial_number,
@@ -1189,50 +1237,50 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
         technician_name, floor, extension, problem_status, notes,
         serial_number, governmental_number, device_name, department_name,
         cpu_name, ram_type, os_name, generation_number, model_name,
-        drive_type, ram_size, mac_address, printer_type, ink_type, ink_serial_number,scanner_type, created_at, user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,CURRENT_TIMESTAMP, ?)
+        drive_type, ram_size, mac_address,ip_address, printer_type, ink_type, ink_serial_number,scanner_type, created_at, user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?,CURRENT_TIMESTAMP, ?)
     `, [
       customerName, idNumber, maintenanceDate,
       "General Maintenance", initialDiagnosis || "", finalDiagnosis || "", deviceSpec,
       technical, floor || "", extension || "", problemStatus || "", notes,
       deviceInfo.serial_number, deviceInfo.governmental_number, deviceInfo.device_name, deviceInfo.department_name,
       deviceInfo.cpu_name, deviceInfo.ram_type, deviceInfo.os_name, deviceInfo.generation_number, deviceInfo.model_name,
-      deviceInfo.drive_type, deviceInfo.ram_size, deviceInfo.mac_address, deviceInfo.printer_type, deviceInfo.ink_type,
+      deviceInfo.drive_type, deviceInfo.ram_size, deviceInfo.mac_address,deviceInfo.ip_address, deviceInfo.printer_type, deviceInfo.ink_type,
       deviceInfo.ink_serial_number,deviceInfo.scanner_type, userId
     ]);
 
     const ticketNumber = `TIC-${Date.now()}`;
     const ticketRes = await queryAsync(
-      "INSERT INTO Internal_Tickets (ticket_number, priority, department_id, issue_description, assigned_to, mac_address, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [ticketNumber, "Medium", departmentId, problemStatus, technical, deviceInfo.mac_address, userId]
+      "INSERT INTO Internal_Tickets (ticket_number, priority, department_id, issue_description, assigned_to, mac_address,ip_address, user_id) VALUES (?, ?, ?, ?, ?, ?, ?,?)",
+      [ticketNumber, "Medium", departmentId, problemStatus, technical, deviceInfo.mac_address,deviceInfo.ip_address, userId]
     );
     const ticketId = ticketRes.insertId;
 
     const reportNumberMain = `REP-${Date.now()}-MAIN`;
     await queryAsync(`
-      INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address, user_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address,ip_address, user_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)
     `, [
       reportNumberMain, ticketId, deviceSpec,
       `Selected Issue: ${problemStatus}`,
       `Initial Diagnosis: ${initialDiagnosis}`,
-      "Open", "General", deviceInfo.mac_address, userId
+      "Open", "General", deviceInfo.mac_address,deviceInfo.ip_address, userId
     ]);
 
     const reportNumberTicket = `REP-${Date.now()}-TICKET`;
     await queryAsync(`
-      INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address, user_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address,ip_address, user_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)
     `, [
       reportNumberTicket, ticketId, deviceSpec,
       "Ticket Created",
       `Ticket (${ticketNumber}) for device: ${deviceInfo.device_name} - Department: ${deviceInfo.department_name}`,
-      "Open", "General", deviceInfo.mac_address, userId
+      "Open", "General", deviceInfo.mac_address,deviceInfo.ip_address, userId
     ]);
 
     await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
       userId,
-      `General maintenance created for ${deviceInfo.device_name} (${displayDevice}) by engineer ${engineerName || 'N/A'} (${problemStatus})`,
+      `General maintenance created for ${deviceInfo.device_name} (${displayDevice}) by engineer ${engineerName || 'N/A'} (${formattedProblemStatus})`,
       'general-maintenance'
     ]);
 
@@ -1317,6 +1365,7 @@ SELECT
   NULL AS attachment_name,
   NULL AS attachment_path,
   MAX(mac_address) AS mac_address,
+  MAX(ip_address) AS ip_address,
   MAX(user_id) AS user_id   -- 👈 أضفه هنا
 FROM External_Maintenance
 
@@ -1339,6 +1388,7 @@ FROM External_Maintenance
       MAX(attachment_name) AS attachment_name,
       MAX(attachment_path) AS attachment_path,
       NULL AS mac_address,
+      NULL AS ip_address,
       MAX(user_id) AS user_id
 
     FROM New_Maintenance_Report
@@ -1361,6 +1411,7 @@ FROM External_Maintenance
       MAX(et.attachment_name) AS attachment_name,
       MAX(et.attachment_path) AS attachment_path,
       MAX(md.mac_address) AS mac_address,
+      MAX(md.ip_address) AS ip_address,
       MAX(mr.user_id) AS user_id
     FROM Maintenance_Reports mr
     LEFT JOIN External_Tickets et ON mr.ticket_id = et.id
@@ -1404,66 +1455,93 @@ if (userRole !== 'admin') {
 });
 
 
-
-app.put("/update-external-report-status/:id", async (req, res) => {
+app.put("/update-external-report-status/:id", authenticateToken, async (req, res) => {
   const reportId = req.params.id;
   const { status } = req.body;
+  const userId = req.user.id;
 
   try {
-    // ✅ 1. جلب التقرير من Maintenance_Reports
-    const report = await new Promise((resolve, reject) => {
-      db.query("SELECT * FROM Maintenance_Reports WHERE id = ?", [reportId], (err, result) => {
-        if (err) return reject(err);
-        resolve(result[0]);
-      });
-    });
+    const userNameRes = await queryAsync(`SELECT name FROM Users WHERE id = ?`, [userId]);
+    const userName = userNameRes[0]?.name || "Unknown";
 
-    if (!report) return res.status(404).json({ error: "Report not found" });
+    // 1. Get the report
+    const reportRes = await queryAsync("SELECT * FROM Maintenance_Reports WHERE id = ?", [reportId]);
+    if (!reportRes[0]) return res.status(404).json({ error: "Report not found" });
+    const report = reportRes[0];
 
-    // ✅ 2. تحديث الحالة في Maintenance_Reports
-    await new Promise((resolve, reject) => {
-      db.query("UPDATE Maintenance_Reports SET status = ? WHERE id = ?", [status, reportId], (err) => {
-        if (err) return reject(err);
-        resolve();
-      });
-    });
+    // 2. Get device info
+    const deviceRes = await queryAsync(`
+      SELECT device_name, device_type 
+      FROM Maintenance_Devices 
+      WHERE id = ?
+    `, [report.device_id]);
+    const deviceName = deviceRes[0]?.device_name || "Unknown Device";
+    const deviceType = deviceRes[0]?.device_type || "Unknown Type";
+    const readableDevice = `${deviceName} (${deviceType})`;
 
-    // ✅ 3. تحديث التذكرة الخارجية المرتبطة (External_Tickets)
+    // 3. Get engineer from External_Maintenance
+    const extMaintRes = await queryAsync(`
+      SELECT technical_engineer_id 
+      FROM External_Maintenance 
+      WHERE id = ?
+    `, [reportId]);
+
+    const technicalEngineerId = extMaintRes[0]?.technical_engineer_id || null;
+    let engineerName = null;
+    let engineerUserId = null;
+
+    if (technicalEngineerId) {
+      const engineerRes = await queryAsync(`SELECT name FROM Engineers WHERE id = ?`, [technicalEngineerId]);
+      engineerName = engineerRes[0]?.name || null;
+
+      if (engineerName) {
+        const techUserRes = await queryAsync(`SELECT id FROM Users WHERE name = ?`, [engineerName]);
+        engineerUserId = techUserRes[0]?.id || null;
+      }
+    }
+
+    // 4. Update main report
+    await queryAsync("UPDATE Maintenance_Reports SET status = ? WHERE id = ?", [status, reportId]);
+
+    // 5. Update external ticket if available
     if (report.ticket_id) {
-      await new Promise((resolve, reject) => {
-        db.query("UPDATE External_Tickets SET status = ? WHERE id = ?", [status, report.ticket_id], (err) => {
-          if (err) return reject(err);
-          resolve();
-        });
-      });
-
-      // ✅ 4. تحديث باقي التقارير المرتبطة بنفس التذكرة الخارجية
-      await new Promise((resolve, reject) => {
-        db.query("UPDATE Maintenance_Reports SET status = ? WHERE ticket_id = ?", [status, report.ticket_id], (err) => {
-          if (err) return reject(err);
-          resolve();
-        });
-      });
+      await queryAsync("UPDATE External_Tickets SET status = ? WHERE id = ?", [status, report.ticket_id]);
+      await queryAsync("UPDATE Maintenance_Reports SET status = ? WHERE ticket_id = ?", [status, report.ticket_id]);
     }
 
-    // ✅ 5. إذا كان نوع الصيانة من النوع القديم (External_Maintenance)، نحدثه أيضًا
-    const legacy = await new Promise((resolve, reject) => {
-      db.query("SELECT * FROM External_Maintenance WHERE id = ?", [reportId], (err, result) => {
-        if (err) return reject(err);
-        resolve(result[0]);
-      });
-    });
-
-    if (legacy) {
-      await new Promise((resolve, reject) => {
-        db.query("UPDATE External_Maintenance SET status = ? WHERE id = ?", [status, reportId], (err) => {
-          if (err) return reject(err);
-          resolve();
-        });
-      });
+    // 6. Update External_Maintenance if exists
+    if (extMaintRes[0]) {
+      await queryAsync("UPDATE External_Maintenance SET status = ? WHERE id = ?", [status, reportId]);
     }
 
-    res.json({ message: "✅ External report, ticket, and related entries updated successfully" });
+    // 7. Notify user who did the update
+    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+      userId,
+      `You updated external report status to '${status}' for ${readableDevice}`,
+      'external-status-update'
+    ]);
+
+    // 8. Notify engineer
+    if (engineerUserId && engineerUserId !== userId) {
+      await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+        engineerUserId,
+        `External report status updated to '${status}' for ${readableDevice}`,
+        'external-status-update'
+      ]);
+    }
+
+    // 9. Log the action
+    await queryAsync(`
+      INSERT INTO Activity_Logs (user_id, user_name, action, details)
+      VALUES (?, ?, ?, ?)
+    `, [
+      userId,
+      userName,
+      'Updated External Report Status',
+      `Updated external report #${reportId} to '${status}' | Device: ${readableDevice}`
+    ]);
+
+    res.json({ message: "✅ External report, ticket, and related entries updated with notifications." });
 
   } catch (err) {
     console.error("❌ Failed to update external report status:", err);
@@ -1507,6 +1585,7 @@ app.get("/report/:id", (req, res) => {
         md.governmental_number,
         COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
 pc.Mac_Address AS mac_address,
+pc.Ip_Address AS ip_address,
 
         cpu.cpu_name,
         ram.ram_type,
@@ -1567,6 +1646,7 @@ pc.Mac_Address AS mac_address,
           report_type: "Incident",
           priority: r.priority || "Medium",
           mac_address: r.mac_address || "",
+          ip_address: r.ip_address || "",
           scanner_type: r.scanner_type || "",
 
           maintenance_manager: "",
@@ -1612,6 +1692,7 @@ pc.Mac_Address AS mac_address,
             report_type: "External",
             priority: r.priority || "Medium",
             mac_address: r.mac_address || "",
+            ip_address: r.ip_address || "",
 
             maintenance_manager: r.maintenance_manager,
             device_name: r.device_name,
@@ -1655,7 +1736,7 @@ pc.Mac_Address AS mac_address,
         pr_type.printer_type,
         ink_type.ink_type,
         ink_serial.serial_number AS ink_serial_number,
-        st.scanner_type,
+        st.scanner_type
       FROM New_Maintenance_Report r
       LEFT JOIN Departments d ON r.department_id = d.id
       LEFT JOIN PC_Model pc ON r.device_type = 'PC' AND r.model_id = pc.id
@@ -1704,6 +1785,7 @@ pc.Mac_Address AS mac_address,
         governmental_number: r.governmental_number,
         model_name: r.model_name,
         mac_address: r.mac_address || "",
+        ip_address: r.ip_address || "",
         scanner_type: r.scanner_type || "",
 
         cpu_name: r.cpu_name,
@@ -1730,12 +1812,15 @@ pc.Mac_Address AS mac_address,
   mr.issue_summary,
   mr.full_description,
   mr.maintenance_type,
-
+  mr.signature_path,
+  mr.attachment_name,
+  mr.attachment_path,
   md.device_type,
   md.serial_number,
   md.governmental_number,
   COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
   pc.Mac_Address AS mac_address,
+  pc.IP_Address AS ip_address,
 
   d.name AS department_name,
   it.ticket_number,
@@ -1844,6 +1929,7 @@ WHERE mr.id = ?
         device_type: report.device_type,
         serial_number: report.serial_number,
         mac_address: report.mac_address,
+        ip_address: report.ip_address,
         governmental_number: report.governmental_number,
         device_name: report.device_name,
         department_name: report.department_name,
@@ -1853,7 +1939,9 @@ WHERE mr.id = ?
         issue_summary: report.issue_summary,
         full_description: report.full_description,
         issue_description: report.issue_description || "",
-
+        attachment_name: report.attachment_name || [],
+        attachment_path: report.attachment_path || [],
+        signature_path: report.signature_path || "",
         created_at: report.created_at,
         report_type: report.report_type,
         cpu_name: report.cpu_name || "",
@@ -1893,11 +1981,8 @@ WHERE mr.id = ?
 
 
 // POST /add-options-device
-
-
-app.post("/add-options-add-device", authenticateToken, (req, res) => {
-  const { target, value, type } = req.body;
-  const userId = req.user?.id;
+app.post("/add-options-add-device", (req, res) => {
+  const { target, value } = req.body;
 
   if (!target || !value) {
     return res.status(400).json({ error: "❌ Missing target or value" });
@@ -1943,6 +2028,28 @@ app.post("/add-options-add-device", authenticateToken, (req, res) => {
         return res.status(500).json({ error: "Database insert failed" });
       }
 
+      // ✅ سجل النشاط في Activity_Logs
+      db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, userResult) => {
+        if (!errUser && userResult.length > 0) {
+          const userName = userResult[0].name;
+
+          const logQuery = `
+            INSERT INTO Activity_Logs (user_id, user_name, action, details)
+            VALUES (?, ?, ?, ?)
+          `;
+          const logValues = [
+            userId,
+            userName,
+            `Added '${mapping.table}'`
+            `Added '${value}' to '${mapping.table}'`
+          ];
+
+          db.query(logQuery, logValues, (logErr) => {
+            if (logErr) console.error("❌ Logging failed:", logErr);
+          });
+        }
+      });
+
       // استخراج اسم المستخدم لتسجيل اللوغ
       db.query("SELECT name FROM users WHERE id = ?", [userId], (userErr, userRes) => {
         if (userErr || userRes.length === 0) {
@@ -1972,7 +2079,6 @@ app.post("/add-options-add-device", authenticateToken, (req, res) => {
     });
   });
 });
-
 
 
 
@@ -2023,7 +2129,8 @@ app.post("/add-device-specification", async (req, res) => {
   }
 });
 
-app.post('/AddDevice/:type', async (req, res) => {
+
+app.post('/AddDevice/:type', authenticateToken, async (req, res) => {
   const deviceType = req.params.type.toLowerCase();
   const Serial_Number = req.body.serial;
   const Governmental_Number = req.body["ministry-id"];
@@ -2031,6 +2138,7 @@ app.post('/AddDevice/:type', async (req, res) => {
   const model = req.body.model;
   const Device_Name = req.body["device-name"] || req.body["pc-name"] || null;
   const Mac_Address = req.body["mac-address"] || null;
+  const Ip_Address = req.body["ip-address"] || null;
 
   const Printer_Type = req.body["printer-type"] || null;
   const Ink_Type = req.body["ink-type"] || null;
@@ -2092,8 +2200,8 @@ app.post('/AddDevice/:type', async (req, res) => {
 
       const insertQuery = `
         INSERT INTO PC_info 
-        (Serial_Number, Computer_Name, Governmental_Number, Department, OS_id, Processor_id, Generation_id, RAM_id, RamSize_id, Drive_id, Model_id, Mac_Address)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (Serial_Number, Computer_Name, Governmental_Number, Department, OS_id, Processor_id, Generation_id, RAM_id, RamSize_id, Drive_id, Model_id, Mac_Address, Ip_Address)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       const values = [
@@ -2108,7 +2216,8 @@ app.post('/AddDevice/:type', async (req, res) => {
         RamSize_id,
         Drive_id,
         Model_id,
-        Mac_Address
+        Mac_Address,
+        Ip_Address
       ];
 
       await db.promise().query(insertQuery, values);
@@ -2217,6 +2326,31 @@ app.post('/AddDevice/:type', async (req, res) => {
     ]);
 
     console.log("✅ تم إدخال الجهاز في Maintenance_Devices بنجاح، ID:", result2.insertId);
+// ✅ إدخال لوق بعد نجاح إضافة الجهاز
+const userId = req.user?.id;
+
+if (userId) {
+  db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
+    if (!errUser && resultUser.length > 0) {
+      const userName = resultUser[0].name;
+
+      const logQuery = `
+        INSERT INTO Activity_Logs (user_id, user_name, action, details)
+        VALUES (?, ?, ?, ?)
+      `;
+      const logValues = [
+        userId,
+        userName,
+        "Add Device",
+        `Added a new '${deviceType}' with serial '${Serial_Number}' to Maintenance_Devices`
+      ];
+
+      db.query(logQuery, logValues, (logErr) => {
+        if (logErr) console.error("❌ Logging failed:", logErr);
+      });
+    }
+  });
+}
 
     res.json({
       message: `✅ تم حفظ بيانات الجهاز (${deviceType}) بنجاح`,
@@ -2228,6 +2362,8 @@ app.post('/AddDevice/:type', async (req, res) => {
     res.status(500).json({ error: "❌ حدث خطأ أثناء المعالجة" });
   }
 });
+
+
 
 
 
@@ -2368,66 +2504,101 @@ app.get('/regular-maintenance-summary', authenticateToken, (req, res) => {
 
 
 
-
-app.put("/update-report-status/:id", async (req, res) => {
+app.put("/update-report-status/:id", authenticateToken, async (req, res) => {
   const reportId = req.params.id;
   const { status } = req.body;
+  const userId = req.user.id;
 
   try {
-    // Get report with linked ticket_id, device_id and type
-    const report = await new Promise((resolve, reject) => {
-      db.query("SELECT * FROM Maintenance_Reports WHERE id = ?", [reportId], (err, result) => {
-        if (err) return reject(err);
-        resolve(result[0]);
-      });
-    });
+    const userNameRes = await queryAsync(`SELECT name FROM Users WHERE id = ?`, [userId]);
+    const userName = userNameRes[0]?.name || "Unknown";
 
-    if (!report) return res.status(404).json({ error: "Report not found" });
+    // Get the report
+    const report = await queryAsync("SELECT * FROM Maintenance_Reports WHERE id = ?", [reportId]);
+    if (!report[0]) return res.status(404).json({ error: "Report not found" });
+    const reportData = report[0];
 
-    // Update this specific report
-    await new Promise((resolve, reject) => {
-      db.query("UPDATE Maintenance_Reports SET status = ? WHERE id = ?", [status, reportId], (err) => {
-        if (err) return reject(err);
-        resolve();
-      });
-    });
-
-    // Update the linked ticket
-    await new Promise((resolve, reject) => {
-      db.query("UPDATE Internal_Tickets SET status = ? WHERE id = ?", [status, report.ticket_id], (err) => {
-        if (err) return reject(err);
-        resolve();
-      });
-    });
-
-    // ✅ NEW: Update all other reports under same ticket to match the status
-    await new Promise((resolve, reject) => {
-      db.query("UPDATE Maintenance_Reports SET status = ? WHERE ticket_id = ?", [status, report.ticket_id], (err) => {
-        if (err) return reject(err);
-        resolve();
-      });
-    });
-
-    // If regular maintenance, update Regular_Maintenance table
-    if (report.maintenance_type === "Regular") {
-      await new Promise((resolve, reject) => {
-        db.query(
-          `UPDATE Regular_Maintenance 
-           SET status = ? 
-           WHERE device_id = ?
-           ORDER BY last_maintenance_date DESC
-           LIMIT 1`,
-          [status, report.device_id],
-          (err) => {
-            if (err) return reject(err);
-            resolve();
-          }
-        );
-      });
-    }
+    // Get device info (name + type)
+    const deviceRes = await queryAsync(`
+      SELECT device_name, device_type 
+      FROM Maintenance_Devices 
+      WHERE id = ?
+    `, [reportData.device_id]);
     
+    const deviceName = deviceRes[0]?.device_name || "Unknown Device";
+    const deviceType = deviceRes[0]?.device_type || "Unknown Type";
+    const readableDevice = `${deviceName} (${deviceType})`;
 
-    res.json({ message: "✅ Status updated across report, ticket, and all linked reports" });
+    // Get engineer from Regular_Maintenance
+    const maintenanceRes = await queryAsync(`
+      SELECT technical_engineer_id 
+      FROM Regular_Maintenance 
+      WHERE device_id = ?
+      ORDER BY last_maintenance_date DESC
+      LIMIT 1
+    `, [reportData.device_id]);
+
+    const technicalEngineerId = maintenanceRes[0]?.technical_engineer_id;
+
+    // Get engineer name (if available)
+    let engineerName = null;
+    let engineerUserId = null;
+
+    if (technicalEngineerId) {
+      const engineerRes = await queryAsync(`SELECT name FROM Engineers WHERE id = ?`, [technicalEngineerId]);
+      engineerName = engineerRes[0]?.name || null;
+
+      if (engineerName) {
+        const userRes = await queryAsync(`SELECT id FROM Users WHERE name = ?`, [engineerName]);
+        engineerUserId = userRes[0]?.id || null;
+      }
+    }
+
+    // === Update operations ===
+
+    await queryAsync("UPDATE Maintenance_Reports SET status = ? WHERE id = ?", [status, reportId]);
+    await queryAsync("UPDATE Internal_Tickets SET status = ? WHERE id = ?", [status, reportData.ticket_id]);
+    await queryAsync("UPDATE Maintenance_Reports SET status = ? WHERE ticket_id = ?", [status, reportData.ticket_id]);
+
+    if (reportData.maintenance_type === "Regular") {
+      await queryAsync(`
+        UPDATE Regular_Maintenance 
+        SET status = ? 
+        WHERE device_id = ?
+        ORDER BY last_maintenance_date DESC
+        LIMIT 1
+      `, [status, reportData.device_id]);
+    }
+
+    // === Notifications ===
+
+    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+      userId,
+      `You updated report status to '${status}' for ${readableDevice}`,
+      'status-update'
+    ]);
+
+    if (engineerUserId && engineerUserId !== userId) {
+      await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+        engineerUserId,
+        `Report status updated to '${status}' for ${readableDevice}`,
+        'status-update'
+      ]);
+    }
+
+    // === Logs ===
+
+    await queryAsync(`
+      INSERT INTO Activity_Logs (user_id, user_name, action, details)
+      VALUES (?, ?, ?, ?)
+    `, [
+      userId,
+      userName,
+      'Updated Report Status',
+      `Updated report status to '${status}' for ${readableDevice} (Report ID: ${reportId})`
+    ]);
+
+    res.json({ message: "✅ Status updated and notifications sent." });
 
   } catch (err) {
     console.error("❌ Failed to update status:", err);
@@ -2492,6 +2663,7 @@ app.get('/regular-maintenance-summary-4months', authenticateToken, (req, res) =>
     res.json(result);
   });
 });
+
 app.get('/get-internal-reports', authenticateToken,async (req, res) => {
   const userId = req.user.id;
   const userRole = req.user.role;
@@ -2567,51 +2739,243 @@ app.get('/get-internal-reports', authenticateToken,async (req, res) => {
   });
 });
 
-
-app.post("/update-report-full", upload.single("attachment"), async (req, res) => {
-  const updatedData = JSON.parse(req.body.data || "{}");
-  const attachmentFile = req.file;
-
-  console.log("\ud83d\udce9 Received update data:", updatedData);
-  if (attachmentFile) {
-    console.log("\ud83d\udccc Received file:", attachmentFile.originalname);
+const compareReadable = (label, oldVal, newVal, changes = []) => {
+  const oldStr = (oldVal ?? "").toString().trim();
+  const newStr = (newVal ?? "").toString().trim();
+  if (oldStr && newStr && oldStr !== newStr) {
+    changes.push(`🔧 ${label}: "${oldStr}" → "${newStr}"`);
   }
+};
+
+const compareRefNameIfChanged = async (label, table, column, id, newName, changes = []) => {
+  if (!id || !newName) return;
+  const [[row]] = await db.promise().query(`SELECT ${column} FROM ${table} WHERE id = ?`, [id]);
+  const currentName = row?.[column];
+  if (currentName && currentName.trim() !== newName.trim()) {
+    changes.push(`🔧 ${label}: "${currentName}" → "${newName}"`);
+  }
+};
+
+app.post("/update-report-full",authenticateToken, upload.fields([
+  { name: "attachment", maxCount: 1 },
+  { name: "signature", maxCount: 1 }
+]), async (req, res) => {
+const updatedData = JSON.parse(req.body.data || "{}");
+const attachmentFile = req.files?.attachment?.[0] || null;
+const signatureRaw = req.files?.signature?.[0] || null;
+const signatureFile = signatureRaw && signatureRaw.size > 0 ? signatureRaw : null;
+
+console.log("📩 Received update data:", updatedData);
+if (attachmentFile) {
+  console.log("📎 Received attachment file:", attachmentFile.originalname);
+}
+if (signatureFile) {
+  console.log("✍️ Received signature file:", signatureFile.originalname);
+}
 
   const {
     id, issue_summary, full_description, priority, status, device_type,
     technical, department_name, category, source,
     device_id, device_name, serial_number, governmental_number,
     cpu_name, ram_type, ram_size, os_name, generation_number,
-    model_name, drive_type, mac_address,
+    model_name, drive_type, mac_address,ip_address,
     ink_type, ink_serial_number, printer_type,scanner_type
   } = updatedData;
-
-  if (!source) {
-    return res.status(400).json({ error: "Missing source type" });
-  }
-
-  try {
     const departmentId = await getId("Departments", "name", department_name);
     const lowerType = device_type?.toLowerCase();
     const isPC = lowerType === "pc";
     const isPrinter = lowerType === "printer";
     const isScanner = lowerType === "scanner";
 
-    let modelId = null;
-    if (["pc", "printer", "scanner"].includes(lowerType)) {
-      modelId = await getId(
-        isPC ? "PC_Model" : isPrinter ? "Printer_Model" : "Scanner_Model",
-        "model_name",
-        model_name
-      );
-    } else {
-      modelId = await getModelId(device_type, model_name);
-    }
+   // استخدم جدول Maintance_Device_Model في جميع الحالات
+    const modelId = await getModelId(device_type, model_name);
+
 
     let scanner_type_id = null;
 if (isScanner && scanner_type) {
   scanner_type_id = await getId("Scanner_Types", "scanner_type", scanner_type);
 }
+
+  if (!source) {
+    return res.status(400).json({ error: "Missing source type" });
+  }
+
+  try {// 🧠 سجل تغييرات شامل
+const changes = [];
+
+// 🕵️‍♂️ جلب البيانات القديمة
+const [oldReportRows] = await db.promise().query(
+  `SELECT * FROM ${source === 'new' ? 'New_Maintenance_Report' : 'Maintenance_Reports'} WHERE id = ?`,
+  [id]
+);
+const reportOld = oldReportRows[0] || {};
+// 🎯 استخراج أسماء الملفات السابقة
+const oldAttachmentName = reportOld.attachment_name || null;
+const oldSignaturePath = reportOld.signature_path || null;
+
+
+// جلب بيانات Maintenance_Devices
+let [oldDeviceRows] = await db.promise().query(
+  `SELECT * FROM Maintenance_Devices WHERE serial_number = ? LIMIT 1`,
+  [serial_number]
+);
+const oldDevice = oldDeviceRows[0] || {};
+
+// جلب بيانات PC_info / Printer_info / Scanner_info
+let oldSpec = {};
+if (isPC) {
+  [[oldSpec]] = await db.promise().query(`SELECT * FROM PC_info WHERE Serial_Number = ?`, [serial_number]);
+} else if (isPrinter) {
+  [[oldSpec]] = await db.promise().query(`SELECT * FROM Printer_info WHERE Serial_Number = ?`, [serial_number]);
+} else if (isScanner) {
+  [[oldSpec]] = await db.promise().query(`SELECT * FROM Scanner_info WHERE Serial_Number = ?`, [serial_number]);
+}
+oldSpec = oldSpec || {};
+
+// ✅ مقارنات عامة
+compareReadable("Issue Summary", reportOld.issue_summary, issue_summary, changes);
+compareReadable("Description", reportOld.full_description || reportOld.details, full_description, changes);
+compareReadable("Priority", reportOld.priority, priority, changes);
+compareReadable("Status", reportOld.status, status, changes);
+compareReadable("Assigned To", reportOld.assigned_to || technical, technical, changes);
+compareReadable("Category", reportOld.report_type || category, category, changes);
+
+// ✅ بيانات نصية مباشرة
+compareReadable("Device Name", oldDevice.device_name, device_name, changes);
+compareReadable("Serial Number", oldDevice.serial_number, serial_number, changes);
+compareReadable("Governmental Number", oldDevice.governmental_number, governmental_number, changes);
+compareReadable("IP Address", oldDevice.ip_address, ip_address, changes);
+compareReadable("MAC Address", oldDevice.mac_address, mac_address, changes);
+
+// ✅ المواصفات - جلب الأسماء مباشرة من الجداول المرجعية
+
+// Model
+let modelNameOld = null;
+if (oldDevice.model_id) {
+  const [[row]] = await db.promise().query(`SELECT model_name FROM Maintance_Device_Model WHERE id = ?`, [oldDevice.model_id]);
+  modelNameOld = row?.model_name;
+}
+compareReadable("Model", modelNameOld, model_name, changes);
+
+// CPU
+let cpuNameOld = null;
+const oldCpuId = reportOld.cpu_id || oldSpec?.Processor_id;
+if (oldCpuId) {
+  const [[row]] = await db.promise().query(`SELECT cpu_name FROM CPU_Types WHERE id = ?`, [oldCpuId]);
+  cpuNameOld = row?.cpu_name;
+}
+compareReadable("Processor", cpuNameOld, cpu_name, changes);
+
+// RAM
+let ramNameOld = null;
+const oldRamId = reportOld.ram_id || oldSpec?.RAM_id;
+if (oldRamId) {
+  const [[row]] = await db.promise().query(`SELECT ram_type FROM RAM_Types WHERE id = ?`, [oldRamId]);
+  ramNameOld = row?.ram_type;
+}
+compareReadable("RAM", ramNameOld, ram_type, changes);
+
+// RAM Size
+let ramSizeOld = null;
+const oldRamSizeId = reportOld.ram_size_id || oldSpec?.RamSize_id;
+if (oldRamSizeId) {
+  const [[row]] = await db.promise().query(`SELECT ram_size FROM RAM_Sizes WHERE id = ?`, [oldRamSizeId]);
+  ramSizeOld = row?.ram_size;
+}
+compareReadable("RAM Size", ramSizeOld, ram_size, changes);
+
+// OS
+let osNameOld = null;
+const oldOsId = reportOld.os_id || oldSpec?.OS_id;
+if (oldOsId) {
+  const [[row]] = await db.promise().query(`SELECT os_name FROM OS_Types WHERE id = ?`, [oldOsId]);
+  osNameOld = row?.os_name;
+}
+compareReadable("OS", osNameOld, os_name, changes);
+
+// Generation
+let genOld = null;
+const oldGenId = reportOld.generation_id || oldSpec?.Generation_id;
+if (oldGenId) {
+  const [[row]] = await db.promise().query(`SELECT generation_number FROM Processor_Generations WHERE id = ?`, [oldGenId]);
+  genOld = row?.generation_number;
+}
+compareReadable("Generation", genOld, generation_number, changes);
+
+// Drive Type
+let driveOld = null;
+const oldDriveId = reportOld.drive_id || oldSpec?.Drive_id;
+if (oldDriveId) {
+  const [[row]] = await db.promise().query(`SELECT drive_type FROM Hard_Drive_Types WHERE id = ?`, [oldDriveId]);
+  driveOld = row?.drive_type;
+}
+compareReadable("Drive Type", driveOld, drive_type, changes);
+
+// ✅ الطابعة
+let inkOld = null;
+if (oldDevice.ink_type) {
+  const [[row]] = await db.promise().query(`SELECT ink_type FROM Ink_Types WHERE id = ?`, [oldDevice.ink_type]);
+  inkOld = row?.ink_type;
+}
+compareReadable("Ink Type", inkOld, ink_type, changes);
+
+let inkSerialOld = null;
+if (oldDevice.ink_serial_number) {
+  const [[row]] = await db.promise().query(`SELECT serial_number FROM Ink_Serials WHERE id = ?`, [oldDevice.ink_serial_number]);
+  inkSerialOld = row?.serial_number;
+}
+compareReadable("Ink Serial", inkSerialOld, ink_serial_number, changes);
+
+let printerTypeOld = null;
+if (oldDevice.printer_type) {
+  const [[row]] = await db.promise().query(`SELECT printer_type FROM Printer_Types WHERE id = ?`, [oldDevice.printer_type]);
+  printerTypeOld = row?.printer_type;
+}
+compareReadable("Printer Type", printerTypeOld, printer_type, changes);
+
+// ✅ الماسح
+let scannerTypeOld = null;
+if (oldDevice.scanner_type_id) {
+  const [[row]] = await db.promise().query(`SELECT scanner_type FROM Scanner_Types WHERE id = ?`, [oldDevice.scanner_type_id]);
+  scannerTypeOld = row?.scanner_type;
+}
+compareReadable("Scanner Type", scannerTypeOld, scanner_type, changes);
+
+// ✅ القسم
+let deptOld = null;
+if (oldDevice.department_id) {
+  const [[row]] = await db.promise().query(`SELECT name FROM Departments WHERE id = ?`, [oldDevice.department_id]);
+  deptOld = row?.name;
+}
+compareReadable("Department", deptOld, department_name, changes);
+
+if (attachmentFile && attachmentFile.originalname !== oldAttachmentName) {
+  changes.push(`📎 New attachment uploaded: ${attachmentFile.originalname}`);
+}
+
+if (signatureFile) {
+  const newSigPath = `uploads/${signatureFile.filename}`;
+  if (newSigPath !== oldSignaturePath) {
+    changes.push(`✍️ New signature uploaded`);
+  }
+}
+
+
+
+// ✅ سجل إذا في تغييرات
+if (changes.length > 0) {
+  const userId = req.user?.id;
+  const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
+  const userName = userRow[0]?.name || 'Unknown';
+
+  logActivity(
+    userId,
+    userName,
+    "Edited",
+    `Updated report ID ${id}:\n${changes.join("\n")}`
+  );
+}
+
 
 
     // Get specification IDs
@@ -2669,15 +3033,45 @@ if (isScanner && scanner_type) {
       await db.promise().query(updateSql, values);
     }
     if (source === "internal") {
-      const updateReportSql = `
-        UPDATE Maintenance_Reports 
-        SET issue_summary = ?, full_description = ?, status = ?, report_type = ?
-        ${attachmentFile ? ", attachment_name = ?, attachment_path = ?" : ""}
-        WHERE id = ?`;
+// 👇 جلب التوقيع القديم قبل التحديث
+const [[reportRow]] = await db.promise().query(
+  `SELECT signature_path, attachment_name, attachment_path FROM Maintenance_Reports WHERE id = ?`,
+  [id]
+);
 
-      const reportValues = attachmentFile
-        ? [issue_summary, full_description, status, category, attachmentFile.originalname, `uploads/${attachmentFile.filename}`, id]
-        : [issue_summary, full_description, status, category, id];
+if (!reportRow) {
+  return res.status(404).json({ error: "Report not found" });
+}
+
+const attachmentNameToUse = attachmentFile?.originalname || reportRow.attachment_name;
+const attachmentPathToUse = attachmentFile ? `uploads/${attachmentFile.filename}` : reportRow.attachment_path;
+
+const signaturePathToUse = signatureFile
+  ? `uploads/${signatureFile.filename}`
+  : reportRow.signature_path;
+
+const updateReportSql = `
+  UPDATE Maintenance_Reports 
+  SET issue_summary = ?, full_description = ?, status = ?, report_type = ?,
+      attachment_name = ?, attachment_path = ?, signature_path = ?
+  WHERE id = ?`;
+
+const reportValues = [
+  issue_summary,
+  full_description,
+  status,
+  category,
+  attachmentNameToUse,
+  attachmentPathToUse,
+  signaturePathToUse,
+  id
+];
+
+await db.promise().query(updateReportSql, reportValues);
+
+
+
+
 
       await db.promise().query(updateReportSql, reportValues);
 
@@ -2708,8 +3102,8 @@ if (isScanner && scanner_type) {
         values.push(modelId);
       }
       if (isPC) {
-        updates.push("cpu_id = ?", "ram_id = ?", "os_id = ?", "generation_id = ?", "drive_id = ?", "ram_size_id = ?", "mac_address = ?");
-        values.push(cpuId, ramId, osId, generationId, driveId, ramSizeId, mac_address);
+        updates.push("cpu_id = ?", "ram_id = ?", "os_id = ?", "generation_id = ?", "drive_id = ?", "ram_size_id = ?", "mac_address = ?","ip_address = ?");
+        values.push(cpuId, ramId, osId, generationId, driveId, ramSizeId, mac_address, ip_address);
       }
       if (isPrinter) {
         updates.push("ink_type = ?", "ink_serial_number = ?", "printer_type = ?");
@@ -2728,9 +3122,9 @@ if (isScanner && scanner_type) {
     if (isPC && serial_number) {
       await db.promise().query(`
         UPDATE PC_info
-        SET Processor_id = ?, RAM_id = ?, RamSize_id = ?, OS_id = ?, Generation_id = ?, Drive_id = ?, Mac_Address = ?
+        SET Processor_id = ?, RAM_id = ?, RamSize_id = ?, OS_id = ?, Generation_id = ?, Drive_id = ?, Mac_Address = ? ,Ip_Address = ?
         WHERE Serial_Number = ?
-      `, [cpuId, ramId, ramSizeId, osId, generationId, driveId, mac_address, serial_number]);
+      `, [cpuId, ramId, ramSizeId, osId, generationId, driveId, mac_address,ip_address, serial_number]);
     }
 
     // تحديث Printer_info
@@ -2755,7 +3149,7 @@ if (isScanner && scanner_type) {
     const sharedParams = [
       device_name, serial_number, governmental_number, department_name,
       model_name, cpu_name, ram_type, os_name, generation_number, drive_type,
-      ram_size, ink_type, ink_serial_number, printer_type, mac_address,scanner_type
+      ram_size, ink_type, ink_serial_number, printer_type, mac_address,ip_address,scanner_type
     ];
 
     if (actualDeviceId) {
@@ -2764,7 +3158,7 @@ await db.promise().query(`
   SET device_name = ?, serial_number = ?, governmental_number = ?, department_name = ?, 
       model_name = ?, cpu_name = ?, ram_type = ?, os_name = ?, generation_number = ?, 
       drive_type = ?, ram_size = ?, ink_type = ?, ink_serial_number = ?, printer_type = ?, 
-      mac_address = ?, scanner_type = ? 
+      mac_address = ?,ip_address = ?, scanner_type = ? 
   WHERE device_id = ?
 `, [...sharedParams, actualDeviceId]);
 await db.promise().query(`
@@ -2772,7 +3166,7 @@ await db.promise().query(`
   SET device_name = ?, serial_number = ?, governmental_number = ?, department_name = ?, 
       model_name = ?, cpu_name = ?, ram_type = ?, ram_size = ?, os_name = ?, 
       generation_number = ?, drive_type = ?, ink_type = ?, ink_serial_number = ?, 
-      printer_type = ?, mac_address = ?, scanner_type = ? 
+      printer_type = ?, mac_address = ?,ip_address = ?, scanner_type = ? 
   WHERE device_id = ?
 `, [...sharedParams, actualDeviceId]);
 await db.promise().query(`
@@ -2780,10 +3174,11 @@ await db.promise().query(`
   SET device_name = ?, governmental_number = ?, department_name = ?, 
       model_name = ?, cpu_name = ?, ram_type = ?, ram_size = ?, os_name = ?, 
       generation_number = ?, drive_type = ?, ink_type = ?, ink_serial_number = ?, 
-      printer_type = ?, mac_address = ?, scanner_type = ? 
+      printer_type = ?, mac_address = ?,ip_address = ?, scanner_type = ? 
   WHERE serial_number = ?
 `, [...sharedParams.slice(0, -1), serial_number]); // لاحظ استخدام serial_number وليس device_id هنا
     }
+
 
     res.json({ message: "\u2705 تم تحديث التقرير والجهاز والمواصفات بنجاح." });
   } catch (err) {
@@ -2799,13 +3194,6 @@ await db.promise().query(`
 const getModelId = async (type, modelName) => {
   if (!modelName || !type) return null;
 
-  const lower = type.toLowerCase();
-
-  if (lower === "pc") return getId("PC_Model", "model_name", modelName);
-  if (lower === "printer") return getId("Printer_Model", "model_name", modelName);
-  if (lower === "scanner") return getId("Scanner_Model", "model_name", modelName);
-
-  // ✅ تحقق إذا الموديل موجود في Maintance_Device_Model
   const [existing] = await db.promise().query(
     `SELECT id FROM Maintance_Device_Model WHERE model_name = ? AND device_type_name = ? LIMIT 1`,
     [modelName.trim(), type.trim()]
@@ -2822,6 +3210,7 @@ const getModelId = async (type, modelName) => {
   console.log("🆕 Inserted new model:", modelName, "for", type);
   return insert.insertId;
 };
+
 
 
 
@@ -3486,7 +3875,8 @@ app.post("/submit-new-report",authenticateToken, upload.fields([
     generation_number,
     model_name,
     drive_type,
-    mac_address,   
+    mac_address,
+    ip_address,   
     printer_type,   
     ink_type        
   } = req.body;
@@ -3506,12 +3896,12 @@ app.post("/submit-new-report",authenticateToken, upload.fields([
         report_type, device_type, priority, status,
         attachment_name, attachment_path, signature_path,
         details, device_id, department_id, model_id,
-        ${isPC ? "cpu_id, ram_id, os_id, generation_id, drive_id, ram_size, mac_address," : ""}
+        ${isPC ? "cpu_id, ram_id, os_id, generation_id, drive_id, ram_size, mac_address,ip_address," : ""}
         printer_type, ink_type, 
         device_name, serial_number, governmental_number, user_id
       )
       VALUES (?, ?, ?, 'Open', ?, ?, ?, ?, NULL, ?, ?,
-        ${isPC ? "?, ?, ?, ?, ?, ?, ?," : ""}
+        ${isPC ? "?, ?, ?, ?, ?, ?, ?,?," : ""}
         ?, ?, ?, ?, ?, ?
       )
     `;
@@ -3536,7 +3926,8 @@ app.post("/submit-new-report",authenticateToken, upload.fields([
         await getId("Processor_Generations", "generation_number", generation_number),
         await getId("Hard_Drive_Types", "drive_type", drive_type),
         ram_size || null,
-        mac_address || null
+        mac_address || null,
+        ip_address || null
       );
     }
 
@@ -3579,7 +3970,15 @@ const getId = async (table, column, value) => {
   return rows[0]?.id || null;
 };
 
-
+function logActivity(userId, userName, action, details) {
+  const query = `
+    INSERT INTO Activity_Logs (user_id, user_name, action, details)
+    VALUES (?, ?, ?, ?)
+  `;
+  db.query(query, [userId, userName, action, details], (err) => {
+    if (err) console.error("❌ Failed to log activity:", err);
+  });
+}
 
 
 app.get("/ticket-status", (req, res) => {
@@ -3595,7 +3994,7 @@ app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
 
-app.post("/delete-option-complete", async (req, res) => {
+app.post("/delete-option-complete", authenticateToken, async (req, res) => {
   const { target, value, type } = req.body;
 
   if (!target || !value) {
@@ -3822,6 +4221,11 @@ app.post("/delete-option-complete", async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: "❌ Value not found or already deleted." });
     }
+const userId = req.user?.id;
+const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
+const userName = userRow[0]?.name || 'Unknown';
+
+logActivity(userId, userName, "Deleted", `Deleted "${value}" from ${mapping.table}`);
 
     res.json({ message: `✅ "${value}" deleted successfully.` });
 
@@ -3832,7 +4236,7 @@ app.post("/delete-option-complete", async (req, res) => {
 });
 
 
-app.post("/update-option-complete", async (req, res) => {
+app.post("/update-option-complete", authenticateToken, async (req, res) => {
   const { target, oldValue, newValue, type } = req.body;
 
   if (!target || !oldValue || !newValue) {
@@ -4015,6 +4419,11 @@ app.post("/update-option-complete", async (req, res) => {
     }
 
     await connection.query('COMMIT');
+const userId = req.user?.id;
+const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
+const userName = userRow[0]?.name || 'Unknown';
+
+logActivity(userId, userName, "Edited", `Updated "${oldValue}" to "${newValue}" in ${mapping.table}`);
 
     res.json({ message: "✅ Option updated everywhere correctly!" });
 
@@ -4029,10 +4438,10 @@ app.post("/update-option-complete", async (req, res) => {
 
 // ضروري تتأكد إن عندك body-parser أو express.json() مفعّل
 
-
-app.post('/add-option-internal-ticket', async (req, res) => {
+app.post('/add-option-internal-ticket', authenticateToken, async (req, res) => {
   try {
     const { target, value, type } = req.body;
+    const userId = req.user?.id;
 
     if (!target || !value) {
       return res.status(400).json({ error: "❌ Missing target or value." });
@@ -4042,92 +4451,58 @@ app.post('/add-option-internal-ticket', async (req, res) => {
     let values = [];
 
     switch (target) {
-      case "department":
-        query = "INSERT INTO Departments (name) VALUES (?)";
-        values = [value];
-        break;
-      case "technical":
-        query = "INSERT INTO Engineers (name) VALUES (?)";
-        values = [value];
-        break;
-      case "device-type":
-        query = "INSERT INTO DeviceType (DeviceType) VALUES (?)";
-        values = [value];
-        break;
+      case "department": query = "INSERT INTO Departments (name) VALUES (?)"; break;
+      case "technical": query = "INSERT INTO Engineers (name) VALUES (?)"; break;
+      case "device-type": query = "INSERT INTO DeviceType (DeviceType) VALUES (?)"; break;
       case "problem-status":
-        if (!type) {
-          return res.status(400).json({ error: "❌ Missing device type for problem status." });
-        }
-        if (type === "pc") {
-          query = "INSERT INTO problemstates_pc (problem_text) VALUES (?)";
-          values = [value];
-        } else if (type === "printer") {
-          query = "INSERT INTO problemstates_printer (problem_text) VALUES (?)";
-          values = [value];
-        } else if (type === "scanner") {
-          query = "INSERT INTO problemstates_scanner (problem_text) VALUES (?)";
-          values = [value];
-        } else {
+        if (!type) return res.status(400).json({ error: "❌ Missing device type for problem status." });
+        if (type === "pc") query = "INSERT INTO problemstates_pc (problem_text) VALUES (?)";
+        else if (type === "printer") query = "INSERT INTO problemstates_printer (problem_text) VALUES (?)";
+        else if (type === "scanner") query = "INSERT INTO problemstates_scanner (problem_text) VALUES (?)";
+        else {
           query = "INSERT INTO problemstates_maintance_device (problemStates_Maintance_device_name, device_type) VALUES (?, ?)";
           values = [value, type];
         }
         break;
-      case "ticket-type":
-        query = "INSERT INTO ticket_types (type_name) VALUES (?)";
-        values = [value];
-        break;
-      case "report-status":
-        query = "INSERT INTO report_statuses (status_name) VALUES (?)";
-        values = [value];
-        break;
-      case "generation":
-        query = "INSERT INTO processor_generations (generation_number) VALUES (?)";
-        values = [value];
-        break;
-      case "processor":
-        query = "INSERT INTO cpu_types (cpu_name) VALUES (?)";
-        values = [value];
-        break;
-      case "ram":
-        query = "INSERT INTO ram_types (ram_type) VALUES (?)";
-        values = [value];
-        break;
-      case "model":
-        query = "INSERT INTO pc_model (model_name) VALUES (?)";
-        values = [value];
-        break;
-      case "os":
-        query = "INSERT INTO os_types (os_name) VALUES (?)";
-        values = [value];
-        break;
-      case "drive":
-        query = "INSERT INTO Hard_Drive_Types (drive_type) VALUES (?)";
-        values = [value];
-        break;
-      case "ram-size":
-        query = "INSERT INTO RAM_Sizes (ram_size) VALUES (?)";
-        values = [value];
-        break;
-      case "ink-type":
-        query = "INSERT INTO Ink_Types (ink_type) VALUES (?)";
-        values = [value];
-        break;
-
-      case "printer-type":
-        query = "INSERT INTO Printer_Types (printer_type) VALUES (?)";
-        values = [value];
-        break;
-        case "scanner-type":
-        query = "INSERT INTO Scanner_Types (scanner_type) VALUES (?)";
-        values = [value];
-
-        break;
-
-      default:
-        return res.status(400).json({ error: "❌ Invalid target." });
+      case "ticket-type": query = "INSERT INTO ticket_types (type_name) VALUES (?)"; break;
+      case "report-status": query = "INSERT INTO report_statuses (status_name) VALUES (?)"; break;
+      case "generation": query = "INSERT INTO processor_generations (generation_number) VALUES (?)"; break;
+      case "processor": query = "INSERT INTO cpu_types (cpu_name) VALUES (?)"; break;
+      case "ram": query = "INSERT INTO ram_types (ram_type) VALUES (?)"; break;
+      case "model": query = "INSERT INTO pc_model (model_name) VALUES (?)"; break;
+      case "os": query = "INSERT INTO os_types (os_name) VALUES (?)"; break;
+      case "drive": query = "INSERT INTO Hard_Drive_Types (drive_type) VALUES (?)"; break;
+      case "ram-size": query = "INSERT INTO RAM_Sizes (ram_size) VALUES (?)"; break;
+      case "ink-type": query = "INSERT INTO Ink_Types (ink_type) VALUES (?)"; break;
+      case "printer-type": query = "INSERT INTO Printer_Types (printer_type) VALUES (?)"; break;
+      case "scanner-type": query = "INSERT INTO Scanner_Types (scanner_type) VALUES (?)"; break;
+      default: return res.status(400).json({ error: "❌ Invalid target." });
     }
 
+    if (values.length === 0) values = [value];
+
     await db.promise().query(query, values);
+
+    // 🔐 تسجيل اللوق
+    db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
+      if (!errUser && resultUser.length > 0) {
+        const userName = resultUser[0].name;
+        const logQuery = `
+          INSERT INTO Activity_Logs (user_id, user_name, action, details)
+          VALUES (?, ?, ?, ?)
+        `;
+        const logValues = [
+          userId,
+          userName,
+          `Added '${target}'`
+          `Added '${value}' to '${target}'`
+        ];
+        db.query(logQuery, logValues, (logErr) => {
+          if (logErr) console.error("❌ Logging failed:", logErr);
+        });
+      }
+    });
+
     return res.json({ message: `✅ Successfully added ${value} to ${target}` });
 
   } catch (err) {
@@ -4136,9 +4511,10 @@ app.post('/add-option-internal-ticket', async (req, res) => {
   }
 });
 
-app.post('/add-option-external-ticket', async (req, res) => {
+app.post('/add-option-external-ticket', authenticateToken, async (req, res) => {
   try {
     const { target, value } = req.body;
+    const userId = req.user?.id;
 
     if (!target || !value) {
       return res.status(400).json({ error: "❌ Missing target or value." });
@@ -4148,62 +4524,44 @@ app.post('/add-option-external-ticket', async (req, res) => {
     let values = [];
 
     switch (target) {
-      case "department":
-        query = "INSERT INTO Departments (name) VALUES (?)";
-        values = [value];
-        break;
-      case "device-type":
-        query = "INSERT INTO DeviceType (DeviceType) VALUES (?)";
-        values = [value];
-        break;
-      case "generation":
-        query = "INSERT INTO processor_generations (generation_number) VALUES (?)";
-        values = [value];
-        break;
-      case "processor":
-        query = "INSERT INTO cpu_types (cpu_name) VALUES (?)";
-        values = [value];
-        break;
-      case "ram":
-        query = "INSERT INTO ram_types (ram_type) VALUES (?)";
-        values = [value];
-        break;
-      case "model":
-        query = "INSERT INTO pc_model (model_name) VALUES (?)";
-        values = [value];
-        break;
-      case "os":
-        query = "INSERT INTO os_types (os_name) VALUES (?)";
-        values = [value];
-        break;
-      case "drive":
-        query = "INSERT INTO Hard_Drive_Types (drive_type) VALUES (?)";
-        values = [value];
-        break;
-      case "ram-size":
-        query = "INSERT INTO RAM_Sizes (ram_size) VALUES (?)";
-        values = [value];
-        break;
-      case "ink-type":
-        query = "INSERT INTO Ink_Types (ink_type) VALUES (?)";
-        values = [value];
-        break;
-
-      case "printer-type":
-        query = "INSERT INTO Printer_Types (printer_type) VALUES (?)";
-        values = [value];
-        break;
-        case "scanner-type":
-        query = "INSERT INTO Scanner_Types (scanner_type) VALUES (?)";
-        values = [value];
-        break;
-      default:
-
-        
-        return res.status(400).json({ error: "❌ Invalid target." });
+      case "department": query = "INSERT INTO Departments (name) VALUES (?)"; break;
+      case "device-type": query = "INSERT INTO DeviceType (DeviceType) VALUES (?)"; break;
+      case "generation": query = "INSERT INTO processor_generations (generation_number) VALUES (?)"; break;
+      case "processor": query = "INSERT INTO cpu_types (cpu_name) VALUES (?)"; break;
+      case "ram": query = "INSERT INTO ram_types (ram_type) VALUES (?)"; break;
+      case "model": query = "INSERT INTO pc_model (model_name) VALUES (?)"; break;
+      case "os": query = "INSERT INTO os_types (os_name) VALUES (?)"; break;
+      case "drive": query = "INSERT INTO Hard_Drive_Types (drive_type) VALUES (?)"; break;
+      case "ram-size": query = "INSERT INTO RAM_Sizes (ram_size) VALUES (?)"; break;
+      case "ink-type": query = "INSERT INTO Ink_Types (ink_type) VALUES (?)"; break;
+      case "printer-type": query = "INSERT INTO Printer_Types (printer_type) VALUES (?)"; break;
+      case "scanner-type": query = "INSERT INTO Scanner_Types (scanner_type) VALUES (?)"; break;
+      default: return res.status(400).json({ error: "❌ Invalid target." });
     }
 
+    values = [value];
     await db.promise().query(query, values);
+
+    // 🔐 تسجيل اللوق
+    db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
+      if (!errUser && resultUser.length > 0) {
+        const userName = resultUser[0].name;
+        const logQuery = `
+          INSERT INTO Activity_Logs (user_id, user_name, action, details)
+          VALUES (?, ?, ?, ?)
+        `;
+        const logValues = [
+          userId,
+          userName,
+          `Added '${target}'`,
+          `Added '${value}' to '${target}'`
+        ];
+        db.query(logQuery, logValues, (logErr) => {
+          if (logErr) console.error("❌ Logging failed:", logErr);
+        });
+      }
+    });
+
     return res.json({ message: `✅ Successfully added ${value} to ${target}` });
 
   } catch (err) {
@@ -4211,6 +4569,7 @@ app.post('/add-option-external-ticket', async (req, res) => {
     return res.status(500).json({ error: "❌ Server error while adding option." });
   }
 });
+
 
 
 

@@ -48,16 +48,21 @@
       <h1 class="text-2xl font-semibold mb-4">Activity Log</h1>
 
       <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div class="filter-btns flex flex-wrap gap-2">
-          <button class="active">All Activities</button>
-          <button>Added</button>
-          <button>Deleted</button>
-          <button>Edited</button>
-          <button>Submitted</button>
-          <button>Uploaded</button>
-        </div>
-        <input type="text" placeholder="Search activities..."
-          class="border border-gray-300 rounded px-4 py-2 text-sm w-full sm:w-72" />
+<div class="filter-btns flex flex-wrap gap-2">
+  <button class="filter-btn active" data-filter="All">All Activities</button>
+  <button class="filter-btn" data-filter="Added">Added</button>
+  <button class="filter-btn" data-filter="Deleted">Deleted</button>
+  <button class="filter-btn" data-filter="Edited">Edited</button>
+  <button class="filter-btn" data-filter="Submitted">Submitted</button>
+  <button class="filter-btn" data-filter="Uploaded">Uploaded</button>
+</div>
+<input
+  type="text"
+  id="search-input"
+  placeholder="Search activities..."
+  class="border border-gray-300 rounded px-4 py-2 text-sm w-full sm:w-72"
+/>
+
       </div>
     </div>
 
