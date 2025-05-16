@@ -9,15 +9,49 @@ notifButton.addEventListener('click', (e) => {
   e.preventDefault();
   toggleNotifications();
 });
+async function fetchUnseenCount() {
+  const token = localStorage.getItem('token');
+  const notifCount = document.getElementById('notif-count');
+
+  try {
+    const res = await fetch('http://localhost:4000/notifications/unseen-count', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+
+    const { count } = await res.json();
+    if (count > 0) {
+      notifCount.textContent = count;
+      notifCount.style.display = 'inline-block';
+    } else {
+      notifCount.style.display = 'none';
+    }
+  } catch (err) {
+    console.error('❌ Failed to fetch unseen count:', err);
+  }
+}
 
 async function toggleNotifications() {
+  const notifCount = document.getElementById('notif-count');
+
   if (notifPopup.classList.contains('hidden')) {
     await loadNotifications();
     notifPopup.classList.remove('hidden');
+
+    // ✅ خفِ الرقم من الواجهة
+    if (notifCount) notifCount.style.display = 'none';
+
+    // ✅ أعلِم السيرفر إنه تم المشاهدة
+    await fetch('http://localhost:4000/notifications/mark-as-seen', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+    });
+
   } else {
     notifPopup.classList.add('hidden');
   }
 }
+
+
 
 async function loadNotifications() {
     try {
@@ -206,3 +240,5 @@ function getTypeLabel(type) {
     default: return ' Notification';
   }
 }
+
+window.addEventListener('DOMContentLoaded', fetchUnseenCount);
