@@ -2506,14 +2506,10 @@ function saveNewModel() {
 
   fetch("http://localhost:5050/add-device-model", {
     method: "POST",
-<<<<<<< HEAD
     headers: {
       "Content-Type": "application/json",
       "Authorization": "Bearer " + token // ✅ مهم جدًا
     },
-=======
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
->>>>>>> d8897406f4b8e6f7a91e8c6ddcadc8806763fff0
     body: JSON.stringify({ model_name: modelName, device_type_name: deviceType })
   })
     .then(res => res.json())
