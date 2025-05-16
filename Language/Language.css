@@ -1,0 +1,242 @@
+/* Import Arabic Font */
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+
+/* RTL Support */
+[dir="rtl"] {
+    text-align: right;
+    font-family: 'Tajawal', sans-serif;
+}
+
+[dir="ltr"] {
+    font-family: Arial, sans-serif;
+}
+
+[dir="rtl"] .align-left {
+    text-align: right;
+}
+
+/* RTL Navigation */
+[dir="rtl"] .nav-buttons {
+    flex-direction: row-reverse;
+}
+
+[dir="rtl"] .back-button {
+    margin-left: 0;
+    margin-right: 10px;
+}
+
+/* RTL Form Elements */
+[dir="rtl"] input,
+[dir="rtl"] select,
+[dir="rtl"] textarea {
+    text-align: right;
+    font-family: 'Tajawal', sans-serif;
+}
+
+[dir="rtl"] .custom-dropdown {
+    text-align: right;
+    font-family: 'Tajawal', sans-serif;
+}
+
+[dir="rtl"] .dropdown-arrow {
+    margin-left: 0;
+    margin-right: 8px;
+}
+
+/* RTL Layout Adjustments */
+[dir="rtl"] .container {
+    flex-direction: row-reverse;
+}
+
+[dir="rtl"] .overlay-panel {
+    transform: translateX(100%);
+}
+
+[dir="rtl"] .overlay-panel.overlay-left {
+    transform: translateX(0);
+}
+
+[dir="rtl"] .overlay-panel.overlay-right {
+    transform: translateX(20%);
+}
+
+/* Language Switch Button */
+.lang-switch-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #ffffff;
+    color: #333;
+    border: none;
+    padding: 8px 16px;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s ease;
+    z-index: 1000;
+}
+
+[dir="rtl"] .lang-switch-btn {
+    right: auto;
+    left: 20px;
+}
+
+.lang-switch-btn:hover {
+    background-color: #f0f0f0;
+}
+
+/* RTL Header Adjustments */
+[dir="rtl"] header {
+    flex-direction: row-reverse;
+}
+
+[dir="rtl"] .ms-logo {
+    margin-right: 0;
+    margin-left: 20px;
+}
+
+[dir="rtl"] .hospital-logo {
+    margin-left: 0;
+    margin-right: 20px;
+}
+
+/* RTL Dropdown Menus */
+[dir="rtl"] .dropdown-content {
+    text-align: right;
+    font-family: 'Tajawal', sans-serif;
+}
+
+[dir="rtl"] .dropdown-search {
+    text-align: right;
+    font-family: 'Tajawal', sans-serif;
+}
+
+/* RTL Form Labels */
+[dir="rtl"] label {
+    text-align: right;
+    font-family: 'Tajawal', sans-serif;
+}
+
+/* RTL Buttons */
+[dir="rtl"] button {
+    text-align: right;
+    font-family: 'Tajawal', sans-serif;
+}
+
+/* RTL Icons */
+[dir="rtl"] .icon {
+    margin-right: 0;
+    margin-left: 8px;
+}
+
+/* RTL Lists */
+[dir="rtl"] ul,
+[dir="rtl"] ol {
+    padding-right: 20px;
+    padding-left: 0;
+}
+
+/* RTL Margins and Paddings */
+[dir="rtl"] .margin-left {
+    margin-left: 0;
+    margin-right: 10px;
+}
+
+[dir="rtl"] .margin-right {
+    margin-right: 0;
+    margin-left: 10px;
+}
+
+[dir="rtl"] .padding-left {
+    padding-left: 0;
+    padding-right: 10px;
+}
+
+[dir="rtl"] .padding-right {
+    padding-right: 0;
+    padding-left: 10px;
+}
+
+/* RTL Service Boxes */
+[dir="rtl"] .service-box {
+    text-align: right;
+}
+
+[dir="rtl"] .service-box h2 {
+    font-family: 'Tajawal', sans-serif;
+}
+
+[dir="rtl"] .service-box p {
+    font-family: 'Tajawal', sans-serif;
+}
+
+/* RTL Main Content */
+[dir="rtl"] .main-text {
+    text-align: right;
+}
+
+[dir="rtl"] .main-text h1 {
+    font-family: 'Tajawal', sans-serif;
+}
+
+[dir="rtl"] .main-text p {
+    font-family: 'Tajawal', sans-serif;
+}
+
+/* RTL Navigation Links */
+[dir="rtl"] nav a {
+    font-family: 'Tajawal', sans-serif;
+}
+
+/* RTL Notifications */
+[dir="rtl"] #notifications-popup {
+    text-align: right;
+}
+
+[dir="rtl"] #notifications-popup h3 {
+    font-family: 'Tajawal', sans-serif;
+}
+
+[dir="rtl"] #notifications-list {
+    font-family: 'Tajawal', sans-serif;
+}
+
+/* Maintain Layout Consistency */
+[dir="rtl"] .grid {
+    direction: rtl;
+}
+
+[dir="rtl"] .flex {
+    direction: rtl;
+}
+
+/* RTL Form Groups */
+[dir="rtl"] .form-group {
+    text-align: right;
+}
+
+/* RTL Tables */
+[dir="rtl"] table {
+    direction: rtl;
+}
+
+[dir="rtl"] th,
+[dir="rtl"] td {
+    text-align: right;
+    font-family: 'Tajawal', sans-serif;
+}
+
+/* RTL Modal/Dialog */
+[dir="rtl"] .modal-content {
+    text-align: right;
+}
+
+[dir="rtl"] .modal-header h2 {
+    font-family: 'Tajawal', sans-serif;
+}
+
+[dir="rtl"] .modal-body {
+    font-family: 'Tajawal', sans-serif;
+}
