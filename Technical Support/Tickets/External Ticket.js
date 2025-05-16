@@ -227,6 +227,11 @@ if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(typeC
           <label>${labelWithStar("MAC Address", true)}</label>
           <input type="text" name="mac-address" required>
         </div>
+        <div class="form-field">
+          
+          <label>${labelWithStar("IP Address", true)}</label>
+          <input type="text" name="ip-address" required>
+        </div>
       `;
     }    if (typeCleaned === "printer") {
       fieldsHtml += `
@@ -550,11 +555,13 @@ function savePCSpec() {
 
   if (!["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(deviceType)) {
     delete deviceData["mac-address"];
+        delete deviceData["ip-address"];
+
   }
 
   fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
     body: JSON.stringify(deviceData)
   })
     .then(res => res.json())
@@ -1501,7 +1508,7 @@ function saveOptionForSelect() {
   // ✅ نرسل targetId مباشرة لأنه هو اللي السيرفر يتعامل معه
   fetch("http://localhost:5050/add-option-external-ticket", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
     body: JSON.stringify({ target: targetId, value }) // لا تغير اسم الـ target
   })
     .then(res => res.json())
@@ -2024,7 +2031,7 @@ function deleteOption(selectId, value, type = null) {
 
   fetch("http://localhost:5050/delete-option-complete", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
     body: JSON.stringify({ target: mapSelectIdToServerTarget(selectId), value, type })
   })
     .then(res => res.json())
@@ -2092,7 +2099,7 @@ function editOption(selectId, oldValue, newValue, type = null) {
 
   fetch("http://localhost:5050/update-option-complete", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
     body: JSON.stringify({ target: mapSelectIdToServerTarget(selectId), oldValue, newValue, type })
   })
     .then(res => res.json())
@@ -2397,7 +2404,7 @@ function saveNewSection() {
 
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
     body: JSON.stringify({ target: "section", value: sectionName })
   })
     .then(res => res.json())
@@ -2489,10 +2496,8 @@ function saveNewModel() {
 
   fetch("http://localhost:5050/add-device-model", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-     
-    },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
+
     body: JSON.stringify({ model_name: modelName, device_type_name: deviceType })
   })
     .then(res => res.json())
@@ -2636,7 +2641,7 @@ else {
   // ✅ إرسال الطلب
   fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
     body: JSON.stringify(specData)
   })
     .then(res => {
@@ -2796,133 +2801,6 @@ function prependAddNewOption(selectElement, value = "add-new", text = "+ Add New
   if (!hasAddNew) {
     selectElement.insertBefore(addNewOption, selectElement.firstChild);
   }
-}
-
-function saveDeviceSpecification() {
-  const requiredFields = [
-  { id: "spec-ministry", label: "Ministry Number" },
-  { id: "spec-name", label: "Device Name" },
-  { id: "spec-model", label: "Model" },
-  { id: "spec-serial", label: "Serial Number" },
-  { id: "spec-department", label: "Department" }
-];
-
-let hasError = false;
-
-// 🧼 نظف الأخطاء
-requiredFields.forEach(({ id }) => {
-  const input = document.getElementById(id);
-  if (!input) return;
-  input.classList.remove("input-error");
-
-  const next = input.nextElementSibling;
-  if (next?.classList.contains("input-error-message")) {
-    next.remove();
-  }
-
-  // ✅ تنظيف الحدود للعنصر المرئي (لو input مخفي)
-  if (input.type === "hidden") {
-    const visible = input.closest(".form-field")?.querySelector(".dropdown-toggle");
-    if (visible) {
-      visible.style.border = "";
-      visible.style.borderRadius = "";
-    }
-  }
-});
-
-// ✅ تحقق من القيم الفارغة
-requiredFields.forEach(({ id, label }) => {
-  const input = document.getElementById(id);
-  if (!input) return;
-
-  if (!input.value.trim()) {
-    hasError = true;
-
-if (input.type === "hidden") {
-  const visible = document.querySelector(`#${id}-dropdown-wrapper .dropdown-toggle`);
-  if (visible) {
-    visible.style.border = "1px solid red";
-    visible.style.borderRadius = "4px";
-  }
-
-  const msg = document.createElement("div");
-  msg.className = "input-error-message";
-  msg.textContent = ` ${label} is required`;
-
-  const wrapper = document.getElementById(`${id}-dropdown-wrapper`);
-  if (wrapper && !wrapper.nextElementSibling?.classList.contains("input-error-message")) {
-    wrapper.insertAdjacentElement("afterend", msg);
-  }
-}
-else {
-      input.classList.add("input-error");
-
-      const msg = document.createElement("div");
-      msg.className = "input-error-message";
-      msg.textContent = ` ${label} is required`;
-      input.insertAdjacentElement("afterend", msg);
-    }
-  }
-});
-
-
-  const deviceType = document.getElementById("device-type").value.toLowerCase();
-  const dropdown = document.getElementById("device-spec");
-
-  if (!deviceType) {
-    alert("❌ Device type not selected.");
-    return;
-  }
-
-  if (hasError) return;
-
-  // ✅ جمع البيانات
-  const specData = {
-    "ministry-id": document.getElementById("spec-ministry").value.trim(),
-    "device-name": document.getElementById("spec-name").value.trim(),
-    model: document.getElementById("spec-model").value.trim(),
-    serial: document.getElementById("spec-serial").value.trim(),
-    department: document.getElementById("spec-department").value.trim()
-  };
-
-  // ✅ إرسال الطلب
-  fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(specData)
-  })
-    .then(res => {
-      if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-      return res.json();
-    })
-    .then(result => {
-      if (result.message) {
-        sessionStorage.setItem("spec-saved", "true");
-
-        const option = document.createElement("option");
-        option.value = result.insertedId;
-        option.textContent = `${specData["device-name"]} | ${specData.serial} | ${specData["ministry-id"]}`;
-        dropdown.appendChild(option);
-        dropdown.value = result.insertedId;
-
-        const displaySpan = document.getElementById("selected-device-spec");
-        if (displaySpan) displaySpan.textContent = option.textContent;
-
-        sessionStorage.removeItem("returnToPopup");
-        fetchDeviceSpecsByTypeAndDepartment();
-
-        // ✅ تنظيف الحقول
-        requiredFields.forEach(({ id }) => document.getElementById(id).value = "");
-
-        document.getElementById("generic-popup").style.display = "none";
-      } else {
-        alert("❌ فشل في الحفظ: " + result.error);
-      }
-    })
-    .catch(err => {
-      console.error("❌ Error saving device specification:", err);
-      alert("❌ Error saving device specification");
-    });
 }
 
 

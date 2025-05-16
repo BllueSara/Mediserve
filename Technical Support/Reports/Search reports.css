@@ -56,7 +56,7 @@ header {
 
 /* Position of the home button (centered) */
 .Home-button {
-  left: 635px;
+  left: 50%;  
   transform: translateX(-50%);
 }
 

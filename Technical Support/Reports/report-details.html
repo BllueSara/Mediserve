@@ -24,7 +24,7 @@
       </a>
     </div>
     <div class="Home-button">
-      <a href="Home.html">
+            <a href="../../Home/Home.html">
         <img src="/icon/Home.png" alt="Home Icon" class="Home-icon"> Home
       </a>
     </div>
@@ -73,6 +73,26 @@
     <div class="section-title">Attachment</div>
     <div id="attachment-section" style="margin-bottom: 20px;"></div>
     <input type="file" id="attachment-input" style="display: none;" />
+    <!-- ✅ توقيع (Edit Mode فقط) -->
+<div id="signature-edit-wrapper" style="margin-top: 20px; display: none;">
+  <label class="signature-box">Signature</label>
+  <p>✍️ Choose how to provide your signature</p>
+  <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+    <!-- Draw Signature -->
+    <div style="flex: 1;">
+      <p>Draw Signature</p>
+      <canvas id="signatureCanvas" width="300" height="150" style="border: 1px solid #ccc;"></canvas>
+    </div>
+    <!-- Upload Signature -->
+    <div style="flex: 1;">
+      <p>Or Upload Signature Image</p>
+      <input type="file" id="signatureUpload" accept="image/*" />
+      <img id="uploadedSignature" src="" alt="Uploaded Signature" style="max-width: 100%; margin-top: 10px; display: none;" />
+    </div>
+  </div>
+  <p id="clearSignature" style="margin-top: 8px; font-size: 14px; color: #007bff; cursor: pointer;">Clear Signature</p>
+</div>
+
 
     <div class="section-title">Additional Notes</div>
     <div class="note" id="note"></div>
