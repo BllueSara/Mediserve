@@ -65,7 +65,7 @@
     <button class="cmd-btn step3" id="pingt-btn">Ping -t</button>
     <button class="cmd-btn step4" id="traceroute-btn">Traceroute</button>
     <button class="cmd-btn step5" id="report-btn">Generate Report</button>
-    <button class="cmd-btn step6" id="saveBtn">Save All IPs</button>
+    <button class="cmd-btn step6" id="shareBtn">Share</button>
   </section>
   
 
@@ -76,10 +76,10 @@
     </div>
   </section>
 
-<div class="filter-bar">
-  <div class="filter-group">
-    <input type="text" id="search-input" placeholder="Search..." />
-    <div class="group-dropdown">
+  <section class="input-section">
+    <div class="filter-bar">
+      <input type="text" id="search-input" placeholder="Search..." />
+      
       <select id="group-select" onchange="handleGroupSelect(this)">
         <option disabled selected>Ping as Group</option>
         <option value="10">10 Devices</option>
@@ -96,47 +96,60 @@
         placeholder="Enter number..."
         onkeydown="handleEnterKey(event)"
       />
-    </div>
-    
-    <select id="filter-type">
-      <option disabled selected hidden>Filter by</option>
-      <option value="circle">Circle Name</option>
-      <option value="isp">ISP</option>
-      <option value="company">Company</option>
-      <option value="location">Location</option>
-      <option value="ip">IP Address</option>
-    </select>
-
-    <select id="filter-value">
-      <option disabled selected hidden>Select value</option>
-      <!-- Dynamic values go here -->
-    </select>
-  </div>
-
   
-</div>
+      <select id="filter-key">
+        <option value="">Filter by</option>
+      </select>
+      <select id="filter-value">
+        <option value="">Select value</option>
+      </select>
+    </div>
+  
+    <table style="width:100%; max-width:1000px; margin: auto; border-collapse: collapse; table-layout: fixed;">
+    
+    </table>
+  </section>
+  
+
+
+
 
 
 <!-- Device Table -->
 <section class="input-section">
   <table style="width:100%; max-width:1000px; margin: auto; border-collapse: collapse; table-layout: fixed;">
     <thead>
-      <tr style="border-bottom: 1px solid #ccc;">
-        <th style="width: 20%;">Circle Name</th>
-        <th style="width: 20%;">ISP</th>
-        <th style="width: 20%;">Company</th>
-        <th style="width: 20%;">Location</th>
-        <th style="width: 20%;">IP Address</th>
-        <th style="width: 20%;">Circle Speed</th>
-        <th style="width: 20%;">Contract Duration</th>
+      <tr>
+        <th>Circuit Name</th>
+        <th>ISP</th>
+        <th>Location</th>
+        <th>IP Address</th>
+        <th>Circle Speed</th>
+        <th>Start Date</th>
+        <th>End Date</th>
       </tr>
     </thead>
+    
     
     <tbody id="device-table-body" style="text-align: center;">
       <!-- Filled dynamically -->
     </tbody>
   </table>
 </section>
+
+
+  <!-- ✅ Share Popup -->
+  <div id="sharePopup" class="popup hidden">
+    <div class="popup-content">
+      <h3>Select User(s) to Share With</h3>
+      <div id="userCheckboxContainer" class="checkbox-group"></div>
+      <div class="popup-buttons">
+        <button type="button" id="confirmShare">Confirm</button>
+
+        <button onclick="closeSharePopup()">Cancel</button>
+      </div>
+    </div>
+  </div>
 
 
 

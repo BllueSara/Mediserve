@@ -1,186 +1,369 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mediserve Dashboard</title>
-  <link rel="stylesheet" href="Dashboard.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Maintenance Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="DashBoard.css" />
 </head>
+
 <body>
-  <!-- Navigation Buttons -->
-  <div class="nav-buttons"> <!-- Container for navigation buttons -->
-    <div class="back-button"> <!-- Back button container -->
-        <a href="#" onclick="goBack()"> <!-- Back button with a click event -->
-            <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> Back <!-- Back button icon and text -->
-        </a>
+  <!-- Header section with logos -->
+  <header>
+    <div class="ms-logo">
+      <img src="/icon/MS Logo.png" alt="MS Logo" />
     </div>
-</div>
+    <div class="hospital-logo">
+      <img src="/icon/hospital-logo.png" alt="King Abdulaziz Hospital" />
+    </div>
+  </header>
 
-<div class="Home-button"> <!-- Home button container -->
-    <a href="../Home/Home.html">
-        <img src="/icon/Home.png" alt="Home Icon"> Home
+  <!-- Navigation buttons -->
+  <div class="nav-buttons">
+    <div class="back-button">
+      <a href="#" onclick="goBack()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+        Back
       </a>
-              
-</div>
-</div>
-
-<!-- Header (Logos) -->
-<header> <!-- Header section -->
-    <div class="ms-logo"> <!-- MS Logo container -->
-        <img src="/icon/MS Logo.png" alt="MS Logo"> <!-- MS logo -->
     </div>
-    <div class="hospital-logo"> <!-- Hospital logo container -->
-        <img src="/icon/hospital-logo.png" alt="King Abdulaziz Hospital"> <!-- Hospital logo -->
-    </div>
-<!-- Row: Server Status + Reports Overview -->
-<div class="grid-two-cols">
-  <!-- Server Status Grouped Inside One Card -->
-  <div class="card">
-    <h3>Server Status</h3>
-    <div class="server-status" style="justify-content: center;">
-      <div style="text-align: center;">
-        <canvas id="activeChart"></canvas>
-        <p class="label">Active Servers</p>
-        <p class="value blue">85%</p>
-      </div>
-      <div style="text-align: center;">
-        <canvas id="inactiveChart"></canvas>
-        <p class="label">Inactive Servers</p>
-        <p class="value gray">15%</p>
-      </div>
+    <div class="Home-button">
+      <a href="#" onclick="goToHome()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
+            stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M9 22V12H15V22" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Home
+      </a>
     </div>
   </div>
 
-
-  <!-- Reports Overview -->
-  <div class="card">
-    <h3>Reports Overview</h3>
-    <canvas id="reportChart"></canvas>
-  </div>
-
-  <script src="Dashboard.js"></script>
-
-  
-  <!-- Critical Devices -->
-  <div class="card">
-    <h3>Critical Devices</h3>
-    <div class="device-grid">
-      <div class="device">
-        <img src="https://img.icons8.com/ios-filled/50/server.png" />
-        <span>Main Server</span>
-        <span class="badge green">NORMAL</span>
-      </div>
-      <div class="device">
-        <img src="https://img.icons8.com/ios-filled/50/database.png" />
-        <span>Backup Storage</span>
-        <span class="badge yellow">WARNING</span>
-      </div>
-      <div class="device">
-        <img src="https://img.icons8.com/ios-filled/50/network.png" />
-        <span>Network Switch</span>
-        <span class="badge red">CRITICAL</span>
-      </div>
-      <div class="device">
-        <img src="https://img.icons8.com/ios-filled/50/data-in-both-directions.png" />
-        <span>Database Server</span>
-        <span class="badge green">NORMAL</span>
-      </div>
+  <!-- Dashboard Title -->
+  <div class="dashboard-title">
+    Maintenance Dashboard
+    <div style="font-size: 0.875rem; font-weight: 400; color: #6B7280; margin-top: 0.25rem;">
+      Last updated: <span id="current-date"></span>
     </div>
   </div>
-</div>
 
-<!-- Faulty Devices -->
-<div class="card" style="margin-top: 30px;">
-  <h3>Faulty Devices</h3>
-  <table class="device-table">
-    <thead>
-      <tr>
-        <th>TYPE</th>
-        <th>SPECS</th>
-        <th>STATUS</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>PC</td>
-        <td>Intel i7, 16GB RAM</td>
-        <td><span class="badge red">CRITICAL</span></td>
-      </tr>
-      <tr>
-        <td>Printer</td>
-        <td>HP LaserJet Pro</td>
-        <td><span class="badge yellow">WARNING</span></td>
-      </tr>
-      <tr>
-        <td>Scanner</td>
-        <td>Epson V39</td>
-        <td><span class="badge yellow">WARNING</span></td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-<!-- Support Tickets -->
-<div class="card" style="margin-top: 30px;">
-  <h3>Support Tickets</h3>
-  <div class="ticket-status">
-    <div class="ticket">
-      <span>Open</span>
-      <div class="bar-container">
-        <div class="bar yellow" style="width: 60%;"></div>
+  <!-- Dashboard Grid -->
+  <section class="dashboard">
+    <!-- Completion Rates -->
+    <div class="card1">
+      <div class="label">Completion Rates</div>
+      <div class="circle-group">
+        <div class="circle-item">
+          <div class="chart-container">
+            <canvas id="routineStatusChart"></canvas>
+            <div class="chart-hover-info">
+              <div class="hover-percentage">85%</div>
+              <div class="hover-label">Regular</div>
+              <div class="hover-detail">42/50 tasks</div>
+            </div>
+          </div>
+          <div class="status-label">Regular</div>
+        </div>
+        <div class="circle-item">
+          <div class="chart-container">
+            <canvas id="internalStatusChart"></canvas>
+            <div class="chart-hover-info">
+              <div class="hover-percentage">60%</div>
+              <div class="hover-label">Internal</div>
+              <div class="hover-detail">30/50 tasks</div>
+            </div>
+          </div>
+          <div class="status-label">Internal</div>
+        </div>
+        <div class="circle-item">
+          <div class="chart-container">
+            <canvas id="externalStatusChart"></canvas>
+            <div class="chart-hover-info">
+              <div class="hover-percentage">45%</div>
+              <div class="hover-label">External</div>
+              <div class="hover-detail">18/40 tasks</div>
+            </div>
+          </div>
+          <div class="status-label">External</div>
+        </div>
       </div>
-      <span class="ticket-count">12</span>
+      <div class="chart-footer">Hover over charts for details</div>
     </div>
-    <div class="ticket">
-      <span>In Progress</span>
-      <div class="bar-container">
-        <div class="bar blue" style="width: 40%;"></div>
-      </div>
-      <span class="ticket-count">8</span>
-    </div>
-    <div class="ticket">
-      <span>Resolved</span>
-      <div class="bar-container">
-        <div class="bar green" style="width: 80%;"></div>
-      </div>
-      <span class="ticket-count">24</span>
-    </div>
+
+    <!-- Reports Overview -->
+    <!-- Reports Overview -->
+<div class="card2">
+  <div class="label">Reports Overview</div>
+  <div class="chart-wrapper wavy-chart-container">
+    <canvas id="reportLineChart"></canvas>
+    <div class="wavy-overlay"></div>
   </div>
 </div>
+<br><br><br>
+    <!-- Internal Maintenance - Critical Devices -->
+    <div class="card3">
+      <div class="label">Internal Maintenance - Critical Devices</div>
+      <div class="device-grid">
+        <div class="device-box normal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+            style="margin-right: 8px;">
+            <path d="M4 6.00001H20M4 12H20M4 18H20" stroke="#10B981" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+          Main Server
+          <span>NORMAL</span>
+        </div>
+        <div class="device-box warning">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+            style="margin-right: 8px;">
+            <path
+              d="M21 12C21 13.1819 20.7672 14.3522 20.3149 15.4442C19.8626 16.5361 19.1997 17.5282 18.364 18.364C17.5282 19.1997 16.5361 19.8626 15.4442 20.3149C14.3522 20.7672 13.1819 21 12 21C10.8181 21 9.64778 20.7672 8.55585 20.3149C7.46392 19.8626 6.47177 19.1997 5.63604 18.364C4.80031 17.5282 4.13738 16.5361 3.68508 15.4442C3.23279 14.3522 3 13.1819 3 12C3 9.61305 3.94821 7.32387 5.63604 5.63604C7.32387 3.94821 9.61305 3 12 3C14.3869 3 16.6761 3.94821 18.364 5.63604C20.0518 7.32387 21 9.61305 21 12Z"
+              stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M12 8V12" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M12 16H12.01" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          Backup Storage
+          <span>WARNING</span>
+        </div>
+        <div class="device-box critical">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+            style="margin-right: 8px;">
+            <path
+              d="M7 20L3 16M3 16L7 12M3 16H11C13.1217 16 15.1566 15.1571 16.6569 13.6569C18.1571 12.1566 19 10.1217 19 8C19 5.87827 18.1571 3.84344 16.6569 2.34315C15.1566 0.842855 13.1217 0 11 0H7M17 4L21 8M21 8L17 12M21 8H13C11.9391 8 10.9217 8.42143 10.1716 9.17157C9.42143 9.92172 9 10.9391 9 12C9 13.0609 9.42143 14.0783 10.1716 14.8284C10.9217 15.5786 11.9391 16 13 16H17"
+              stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          Network Switch
+          <span>CRITICAL</span>
+        </div>
+        <div class="device-box normal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+            style="margin-right: 8px;">
+            <path
+              d="M4 6C4 4.89543 4.89543 4 6 4H8C9.10457 4 10 4.89543 10 6V8C10 9.10457 9.10457 10 8 10H6C4.89543 10 4 9.10457 4 8V6Z"
+              stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <path
+              d="M14 6C14 4.89543 14.8954 4 16 4H18C19.1046 4 20 4.89543 20 6V8C20 9.10457 19.1046 10 18 10H16C14.8954 10 14 9.10457 14 8V6Z"
+              stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <path
+              d="M4 16C4 14.8954 4.89543 14 6 14H8C9.10457 14 10 14.8954 10 16V18C10 19.1046 9.10457 20 8 20H6C4.89543 20 4 19.1046 4 18V16Z"
+              stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <path
+              d="M14 16C14 14.8954 14.8954 14 16 14H18C19.1046 14 20 14.8954 20 16V18C20 19.1046 19.1046 20 18 20H16C14.8954 20 14 19.1046 14 18V16Z"
+              stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          Database Server
+          <span>NORMAL</span>
+        </div>
+      </div>
+    </div>
 
-<!-- Row: Maintenance Overview + Upcoming Maintenance -->
-<div class="grid-two-cols" style="margin-top: 30px;">
-  <!-- Maintenance Chart -->
-  <div class="card">
-    <h3>Maintenance Overview</h3>
-    <canvas id="maintenanceChart"></canvas>
-  </div>
+    <!-- External Maintenance - Faulty Devices -->
+    <div class="card4">
+      <div class="label">External Maintenance - Faulty Devices</div>
+      <table class="device-table">
+        <thead>
+          <tr>
+            <th>TYPE</th>
+            <th>SPECS</th>
+            <th>STATUS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                style="vertical-align: middle; margin-right: 8px;">
+                <path
+                  d="M4 6C4 4.89543 4.89543 4 6 4H8C9.10457 4 10 4.89543 10 6V8C10 9.10457 9.10457 10 8 10H6C4.89543 10 4 9.10457 4 8V6Z"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <path
+                  d="M14 6C14 4.89543 14.8954 4 16 4H18C19.1046 4 20 4.89543 20 6V8C20 9.10457 19.1046 10 18 10H16C14.8954 10 14 9.10457 14 8V6Z"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <path
+                  d="M4 16C4 14.8954 4.89543 14 6 14H8C9.10457 14 10 14.8954 10 16V18C10 19.1046 9.10457 20 8 20H6C4.89543 20 4 19.1046 4 18V16Z"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <path
+                  d="M14 16C14 14.8954 14.8954 14 16 14H18C19.1046 14 20 14.8954 20 16V18C20 19.1046 19.1046 20 18 20H16C14.8954 20 14 19.1046 14 18V16Z"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              PC
+            </td>
+            <td>Intel i7, 16GB RAM</td>
+            <td class="critical">CRITICAL</td>
+          </tr>
+          <tr>
+            <td>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                style="vertical-align: middle; margin-right: 8px;">
+                <path d="M6 9V3H18V9M6 9H18M6 9L3 12V18H21V12L18 9M18 9V3M18 15H15M9 15H6" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              Printer
+            </td>
+            <td>HP LaserJet Pro</td>
+            <td class="warning">WARNING</td>
+          </tr>
+          <tr>
+            <td>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                style="vertical-align: middle; margin-right: 8px;">
+                <path d="M7 7H17V15H7V7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path
+                  d="M17 7V5C17 4.46957 16.7893 3.96086 16.4142 3.58579C16.0391 3.21071 15.5304 3 15 3H9C8.46957 3 7.96086 3.21071 7.58579 3.58579C7.21071 3.96086 7 4.46957 7 5V7"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <path
+                  d="M7 17V19C7 19.5304 7.21071 20.0391 7.58579 20.4142C7.96086 20.7893 8.46957 21 9 21H15C15.5304 21 16.0391 20.7893 16.4142 20.4142C16.7893 20.0391 17 19.5304 17 19V17"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M12 15V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
+              Scanner
+            </td>
+            <td>Epson V39</td>
+            <td class="warning">WARNING</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
-  <!-- Upcoming Maintenance -->
-  <div class="card">
-    <h3>Upcoming Maintenance</h3>
-    <div class="maintenance-item">
-      <div>
-        <strong>Server Backup</strong>
-        <p>2024-02-15</p>
+    <!-- Support Tickets -->
+    <div class="card full-width">
+      <div class="label">Support Tickets</div>
+      <div class="support-tickets-container">
+        <!-- Open Tickets -->
+        <div class="support-ticket open-ticket">
+          <div>
+            <span>Open</span>
+            <span>12</span>
+          </div>
+          <div class="progress-bar">
+            <div style="width: 35%"></div>
+          </div>
+          <div style="font-size: 0.75rem; color: #6B7280; margin-top: 0.5rem;">
+            +2 from last week
+          </div>
+        </div>
+
+        <!-- In Progress Tickets -->
+        <div class="support-ticket progress-ticket">
+          <div>
+            <span>In Progress</span>
+            <span>8</span>
+          </div>
+          <div class="progress-bar">
+            <div style="width: 25%"></div>
+          </div>
+          <div style="font-size: 0.75rem; color: #6B7280; margin-top: 0.5rem;">
+            -3 from last week
+          </div>
+        </div>
+
+        <!-- Resolved Tickets -->
+        <div class="support-ticket resolved-ticket">
+          <div>
+            <span>Resolved</span>
+            <span>24</span>
+          </div>
+          <div class="progress-bar">
+            <div style="width: 80%"></div>
+          </div>
+          <div style="font-size: 0.75rem; color: #6B7280; margin-top: 0.5rem;">
+            +5 from last week
+          </div>
+        </div>
       </div>
-      <span class="badge red">HIGH</span>
     </div>
-    <div class="maintenance-item">
-      <div>
-        <strong>System Updates</strong>
-        <p>2024-02-16</p>
+
+    <!-- Maintenance Overview (Internal vs External) -->
+    <div class="card5">
+      <div class="label">Maintenance Overview (Internal vs External)</div>
+      <div class="chart-wrapper">
+        <canvas id="maintenanceOverviewChart"></canvas>
       </div>
-      <span class="badge yellow">MEDIUM</span>
     </div>
-    <div class="maintenance-item">
-      <div>
-        <strong>Network Maintenance</strong>
-        <p>2024-02-17</p>
-      </div>
-      <span class="badge green">LOW</span>
+
+    <!-- Upcoming Maintenance -->
+    <div class="card6">
+      <div class="label">Upcoming Maintenance</div>
+      <table class="upcoming-table">
+        <thead>
+          <tr>
+            <th>Task</th>
+            <th>Date</th>
+            <th>Priority</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                style="vertical-align: middle; margin-right: 8px;">
+                <path
+                  d="M19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21Z"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M16 3V7" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M8 3V7" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M3 11H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <path d="M8 15H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
+              Server Backup - Internal
+            </td>
+            <td>2024-02-15</td>
+            <td class="high">HIGH</td>
+          </tr>
+          <tr>
+            <td>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                style="vertical-align: middle; margin-right: 8px;">
+                <path
+                  d="M12 15V17M18 11L19 10M21 6L20 5M3 6L4 5M5 10L6 11M12 7L13 6M8 16.9999C6.87439 17.6278 5.63167 18 4.33301 18C3.95417 18 3.57938 17.971 3.21115 17.9141M15.9999 8C16.6278 9.12561 17 10.3683 17 11.667C17 12.0458 16.971 12.4206 16.9141 12.7888M6 11.9999C6 13.6568 7.34315 14.9999 9 14.9999C10.6569 14.9999 12 13.6568 12 11.9999C12 10.343 10.6569 8.99988 9 8.99988C7.34315 8.99988 6 10.343 6 11.9999Z"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              System Updates - Regular
+            </td>
+            <td>2024-02-16</td>
+            <td class="medium">MEDIUM</td>
+          </tr>
+          <tr>
+            <td>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                style="vertical-align: middle; margin-right: 8px;">
+                <path
+                  d="M7 20L3 16M3 16L7 12M3 16H11C13.1217 16 15.1566 15.1571 16.6569 13.6569C18.1571 12.1566 19 10.1217 19 8C19 5.87827 18.1571 3.84344 16.6569 2.34315C15.1566 0.842855 13.1217 0 11 0H7M17 4L21 8M21 8L17 12M21 8H13C11.9391 8 10.9217 8.42143 10.1716 9.17157C9.42143 9.92172 9 10.9391 9 12C9 13.0609 9.42143 14.0783 10.1716 14.8284C10.9217 15.5786 11.9391 16 13 16H17"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              Network Maintenance - External
+            </td>
+            <td>2024-02-17</td>
+            <td class="low">LOW</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-  </div>
-</div>
+  </section>
+
+  <script src="DashBoard.js"></script>
+  <script>
+    // Set current date
+    document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  </script>
+</body>
 
 </html>
