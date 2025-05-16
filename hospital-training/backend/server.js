@@ -1137,8 +1137,7 @@ app.post("/add-options-regular", authenticateToken, (req, res) => {
       });
     });
   });
-}); 
-
+});
 
 
 app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
