@@ -238,6 +238,34 @@ app.delete('/notifications/:id', authenticateToken, (req, res) => {
   });
 });
 
+// ✅ تحديث الإشعارات إلى "مقروءة"
+app.post('/notifications/mark-as-seen', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    await db.promise().query(
+      `UPDATE Notifications SET is_seen = TRUE WHERE user_id = ? AND is_seen = FALSE`,
+      [userId]
+    );
+    res.json({ message: 'All notifications marked as seen' });
+  } catch (err) {
+    console.error('❌ Error marking notifications:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/notifications/unseen-count', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const [[{ count }]] = await db.promise().query(
+      `SELECT COUNT(*) AS count FROM Notifications WHERE user_id = ? AND is_seen = FALSE`,
+      [userId]
+    );
+    res.json({ count });
+  } catch (err) {
+    console.error('❌ Error fetching unseen count:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
   function logActivity(userId, userName, action, details) {
     const sql = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
