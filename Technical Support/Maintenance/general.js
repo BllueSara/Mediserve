@@ -2637,7 +2637,8 @@ function saveNewSection() {
 function saveNewModel() {
   const deviceType = document.getElementById("device-type").value.trim().toLowerCase();
   const modelName = document.getElementById("new-model-name").value.trim();
- 
+  const token = localStorage.getItem("token"); // ✅ استرجاع التوكن
+
   if (!modelName) {
     alert("❌ Please enter a model name");
     return;
@@ -2647,8 +2648,15 @@ function saveNewModel() {
 
   fetch("http://localhost:5050/add-device-model", {
     method: "POST",
+<<<<<<< HEAD
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + token // ✅ مهم جدًا
+    },
+=======
     headers: { "Content-Type": "application/json" ,           "Authorization": `Bearer ${token}`
 },
+>>>>>>> d8897406f4b8e6f7a91e8c6ddcadc8806763fff0
     body: JSON.stringify({ model_name: modelName, device_type_name: deviceType })
   })
     .then(res => res.json())
@@ -2658,19 +2666,14 @@ function saveNewModel() {
         return;
       }
 
-
-      // ✅ نحفظ الموديل مؤقتاً
+      alert(result.message);
       sessionStorage.setItem("lastAddedModel", modelName);
-
-      // ✅ نحدث القائمة
       fetchAndRenderModels(deviceType, `model-${deviceType}`);
 
-      // ✅ لو سياق popup المواصفات → نحدث أيضًا قائمة spec-model
       const isSpecContext = sessionStorage.getItem("returnToPopup") === "true";
       if (isSpecContext) {
         fetchAndRenderModels(deviceType, "spec-model");
 
-        // بعد التحديث نحط القيمة يدويًا
         setTimeout(() => {
           const displaySpan = document.getElementById(`selected-spec-model`);
           const hiddenInput = document.getElementById(`spec-model`);
@@ -2681,13 +2684,10 @@ function saveNewModel() {
         }, 300);
       }
 
-
-      // ✅ إغلاق البوب أب
       document.getElementById("generic-popup").style.display = "none";
       sessionStorage.removeItem("returnToPopup");
 
-      // ✅ إذا الجهاز غير معروف → نرجع للمواصفات
-      if (!["pc", "printer", "scanner","desktop", "laptop", "كمبيوتر", "لابتوب"].includes(deviceType)) {
+      if (!["pc", "printer", "scanner"].includes(deviceType)) {
         setTimeout(() => {
           openGenericPopup("Device Specification", "device-spec");
         }, 150);
@@ -2702,6 +2702,136 @@ function saveNewModel() {
 
 
 
+<<<<<<< HEAD
+
+function saveDeviceSpecification() {
+  const requiredFields = [
+  { id: "spec-ministry", label: "Ministry Number" },
+  { id: "spec-name", label: "Device Name" },
+  { id: "spec-model", label: "Model" },
+  { id: "spec-serial", label: "Serial Number" },
+  { id: "spec-department", label: "Department" }
+];
+
+let hasError = false;
+
+// 🧼 نظف الأخطاء
+requiredFields.forEach(({ id }) => {
+  const input = document.getElementById(id);
+  if (!input) return;
+  input.classList.remove("input-error");
+
+  const next = input.nextElementSibling;
+  if (next?.classList.contains("input-error-message")) {
+    next.remove();
+  }
+
+  // ✅ تنظيف الحدود للعنصر المرئي (لو input مخفي)
+  if (input.type === "hidden") {
+    const visible = input.closest(".form-field")?.querySelector(".dropdown-toggle");
+    if (visible) {
+      visible.style.border = "";
+      visible.style.borderRadius = "";
+    }
+  }
+});
+
+// ✅ تحقق من القيم الفارغة
+requiredFields.forEach(({ id, label }) => {
+  const input = document.getElementById(id);
+  if (!input) return;
+
+  if (!input.value.trim()) {
+    hasError = true;
+
+if (input.type === "hidden") {
+  const visible = document.querySelector(`#${id}-dropdown-wrapper .dropdown-toggle`);
+  if (visible) {
+    visible.style.border = "1px solid red";
+    visible.style.borderRadius = "4px";
+  }
+
+  const msg = document.createElement("div");
+  msg.className = "input-error-message";
+  msg.textContent = ` ${label} is required`;
+
+  const wrapper = document.getElementById(`${id}-dropdown-wrapper`);
+  if (wrapper && !wrapper.nextElementSibling?.classList.contains("input-error-message")) {
+    wrapper.insertAdjacentElement("afterend", msg);
+  }
+}
+else {
+      input.classList.add("input-error");
+
+      const msg = document.createElement("div");
+      msg.className = "input-error-message";
+      msg.textContent = ` ${label} is required`;
+      input.insertAdjacentElement("afterend", msg);
+    }
+  }
+});
+
+
+  const deviceType = document.getElementById("device-type").value.toLowerCase();
+  const dropdown = document.getElementById("device-spec");
+
+  if (!deviceType) {
+    alert("❌ Device type not selected.");
+    return;
+  }
+
+  if (hasError) return;
+
+  // ✅ جمع البيانات
+  const specData = {
+    "ministry-id": document.getElementById("spec-ministry").value.trim(),
+    "device-name": document.getElementById("spec-name").value.trim(),
+    model: document.getElementById("spec-model").value.trim(),
+    serial: document.getElementById("spec-serial").value.trim(),
+    department: document.getElementById("spec-department").value.trim()
+  };
+
+  // ✅ إرسال الطلب
+  fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(specData)
+  })
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+      return res.json();
+    })
+    .then(result => {
+      if (result.message) {
+        sessionStorage.setItem("spec-saved", "true");
+
+        const option = document.createElement("option");
+        option.value = result.insertedId;
+        option.textContent = `${specData["device-name"]} | ${specData.serial} | ${specData["ministry-id"]}`;
+        dropdown.appendChild(option);
+        dropdown.value = result.insertedId;
+
+        const displaySpan = document.getElementById("selected-device-spec");
+        if (displaySpan) displaySpan.textContent = option.textContent;
+
+        sessionStorage.removeItem("returnToPopup");
+        fetchDeviceSpecsByTypeAndDepartment();
+
+        // ✅ تنظيف الحقول
+        requiredFields.forEach(({ id }) => document.getElementById(id).value = "");
+
+        document.getElementById("generic-popup").style.display = "none";
+      } else {
+        alert("❌ فشل في الحفظ: " + result.error);
+      }
+    })
+    .catch(err => {
+      console.error("❌ Error saving device specification:", err);
+      alert("❌ Error saving device specification");
+    });
+}
+=======
+>>>>>>> d8897406f4b8e6f7a91e8c6ddcadc8806763fff0
 
 
 function closeGenericPopup(cancelled = false) {
