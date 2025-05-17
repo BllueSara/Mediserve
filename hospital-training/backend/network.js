@@ -139,8 +139,6 @@ app.post('/api/add-entry', authenticateToken, (req, res) => {
 });
 
 
-// 5. Get entries from DB
-
 
 
 // 6. Generate report
