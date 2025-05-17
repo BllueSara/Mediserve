@@ -7,7 +7,7 @@
 
 /* Base styles for the body */
 body {
-    font-family: Arial, sans-serif; /* Set default font */
+    font-family: 'Tajawal', Arial, sans-serif; /* Set default font */
     display: flex; /* Use flex layout */
     justify-content: center; /* Center content horizontally */
     align-items: center; /* Center content vertically */

@@ -70,32 +70,28 @@ document.addEventListener("DOMContentLoaded", () => {
           
           const deviceType = report.device_type?.trim()?.toLowerCase() || "";
           const fields = [
-            { label: "🔘 Device Name:", value: report.device_name, alwaysShow: true },
-            { label: "🔑 Serial Number:", value: report.serial_number, alwaysShow: true },
-            { label: "🏛️ Ministry Number:", value: report.governmental_number, alwaysShow: true },
-            { label: "🧠 CPU:", value: report.cpu_name, showForPC: true },
-            { label: "💾 RAM:", value: report.ram_type, showForPC: true },
-            { label: "🖥️ OS:", value: report.os_name, showForPC: true },
-            { label: "📶 Generation:", value: report.generation_number, showForPC: true },
-            { label: "🔧 Model:", value: report.model_name, alwaysShow: true },
-            { label: "📟 Device Type:", value: report.device_type },
-            { label: "💽 Hard Drive:", value: report.drive_type, showForPC: true },
-            { label: "📏 RAM Size:", value: report.ram_size, showForPC: true },
-            { label: "🌐 MAC Address:", value: report.mac_address, showForPC: true },
-            { label: "🖧 IP Address:", value: report.ip_address, showForPC: true },
-
-            { label: "🖨️ Printer Type:", value: report.printer_type, showForPrinter: true },
-            { label: "🖋️ Ink Type:", value: report.ink_type, showForPrinter: true },
-            { label: "🔖 Ink Serial Number:", value: report.ink_serial_number, showForPrinter: true },
-            { label: "📠 Scanner Type:", value: report.scanner_type, showForScanner: true },
-
+            { icon: "🔘", label: "Device Name:", value: report.device_name, alwaysShow: true, i18n: "device_name" },
+            { icon: "🔑", label: "Serial Number:", value: report.serial_number, alwaysShow: true, i18n: "serial_number" },
+            { icon: "🏛️", label: "Ministry Number:", value: report.governmental_number, alwaysShow: true, i18n: "ministry_number" },
+            { icon: "🧠", label: "CPU:", value: report.cpu_name, showForPC: true, i18n: "cpu" },
+            { icon: "💾", label: "RAM:", value: report.ram_type, showForPC: true, i18n: "ram" },
+            { icon: "🖥️", label: "OS:", value: report.os_name, showForPC: true, i18n: "os" },
+            { icon: "📶", label: "Generation:", value: report.generation_number, showForPC: true, i18n: "generation" },
+            { icon: "🔧", label: "Model:", value: report.model_name, alwaysShow: true, i18n: "model" },
+            { icon: "📟", label: "Device Type:", value: report.device_type, i18n: "device_type" },
+            { icon: "💽", label: "Hard Drive:", value: report.drive_type, showForPC: true, i18n: "hard_drive" },
+            { icon: "📏", label: "RAM Size:", value: report.ram_size, showForPC: true, i18n: "ram_size" },
+            { icon: "🌐", label: "MAC Address:", value: report.mac_address, showForPC: true, i18n: "mac_address" },
+            { icon: "🖧", label: "IP Address:", value: report.ip_address, showForPC: true, i18n: "ip_address" },
+            { icon: "🖨️", label: "Printer Type:", value: report.printer_type, showForPrinter: true, i18n: "printer_type" },
+            { icon: "🖋️", label: "Ink Type:", value: report.ink_type, showForPrinter: true, i18n: "ink_type" },
+            { icon: "🔖", label: "Ink Serial Number:", value: report.ink_serial_number, showForPrinter: true, i18n: "ink_serial" },
+            { icon: "📠", label: "Scanner Type:", value: report.scanner_type, showForScanner: true, i18n: "scanner_type" },
           ];
-          const isInternal = false;
-
- fields.forEach(({ label, value, showForPC, showForPrinter, showForScanner, alwaysShow }) => {
+          
+          fields.forEach(({ icon, label, value, showForPC, showForPrinter, showForScanner, alwaysShow, i18n }) => {
             const shouldShow =
               alwaysShow ||
-              isInternal ||
               (showForPC && deviceType === "pc") ||
               (showForPrinter && deviceType === "printer") ||
               (showForScanner && deviceType === "scanner") ||
@@ -104,8 +100,36 @@ document.addEventListener("DOMContentLoaded", () => {
             if (shouldShow) {
               const div = document.createElement("div");
               div.className = "spec-box";
-              div.textContent = `${label} ${value || ""}`;
+              
+              // إنشاء عنصر span للأيقونة
+              const iconSpan = document.createElement("span");
+              iconSpan.textContent = icon;
+              iconSpan.style.marginRight = "5px";
+              
+              // إنشاء عنصر span للتسمية
+              const labelSpan = document.createElement("span");
+              labelSpan.setAttribute("data-i18n", i18n);
+              labelSpan.textContent = label;
+              
+              // إنشاء عنصر span للقيمة
+              const valueSpan = document.createElement("span");
+              valueSpan.textContent = value || "";
+              
+              // إضافة العناصر إلى div
+              div.appendChild(iconSpan);
+              div.appendChild(labelSpan);
+              div.appendChild(document.createTextNode(" "));
+              div.appendChild(valueSpan);
+              
               specsContainer.appendChild(div);
+              
+              // تطبيق الترجمة مباشرة
+              if (languageManager.currentLang === 'ar') {
+                const translation = languageManager.translations.ar[i18n];
+                if (translation) {
+                  labelSpan.textContent = translation;
+                }
+              }
             }
           });
           
@@ -307,26 +331,26 @@ document.addEventListener("DOMContentLoaded", () => {
         const deviceType = (report.device_type || "").trim().toLowerCase();
         
         const fields = [
-          { label: "🔘 Device Name:", value: report.device_name, alwaysShow: true },
-          { label: "🔑 Serial Number:", value: report.serial_number, alwaysShow: true },
-          { label: "🏛️ Ministry Number:", value: report.governmental_number, alwaysShow: true },
-          { label: "🧠 CPU:", value: report.cpu_name, showForPC: true },
-          { label: "💾 RAM:", value: report.ram_type, showForPC: true },
-          { label: "🖥️ OS:", value: report.os_name, showForPC: true },
-          { label: "📶 Generation:", value: report.generation_number, showForPC: true },
-          { label: "🔧 Model:", value: report.model_name, alwaysShow: true },
-          { label: "📟 Device Type:", value: report.device_type },
-          { label: "💽 Hard Drive:", value: report.drive_type, showForPC: true },
-          { label: "📏 RAM Size:", value: report.ram_size, showForPC: true },
-          { label: "🌐 MAC Address:", value: report.mac_address, showForPC: true },
-          { label: "🖧 IP Address:", value: report.ip_address, showForPC: true },
-          { label: "🖨️ Printer Type:", value: report.printer_type, showForPrinter: true },
-          { label: "🖋️ Ink Type:", value: report.ink_type, showForPrinter: true },
-          { label: "🔖 Ink Serial Number:", value: report.ink_serial_number, showForPrinter: true },
-          { label: "📠 Scanner Type:", value: report.scanner_type, showForScanner: true },
+          { icon: "🔘", label: "Device Name:", value: report.device_name, alwaysShow: true, i18n: "device_name" },
+          { icon: "🔑", label: "Serial Number:", value: report.serial_number, alwaysShow: true, i18n: "serial_number" },
+          { icon: "🏛️", label: "Ministry Number:", value: report.governmental_number, alwaysShow: true, i18n: "ministry_number" },
+          { icon: "🧠", label: "CPU:", value: report.cpu_name, showForPC: true, i18n: "cpu" },
+          { icon: "💾", label: "RAM:", value: report.ram_type, showForPC: true, i18n: "ram" },
+          { icon: "🖥️", label: "OS:", value: report.os_name, showForPC: true, i18n: "os" },
+          { icon: "📶", label: "Generation:", value: report.generation_number, showForPC: true, i18n: "generation" },
+          { icon: "🔧", label: "Model:", value: report.model_name, alwaysShow: true, i18n: "model" },
+          { icon: "📟", label: "Device Type:", value: report.device_type, i18n: "device_type" },
+          { icon: "💽", label: "Hard Drive:", value: report.drive_type, showForPC: true, i18n: "hard_drive" },
+          { icon: "📏", label: "RAM Size:", value: report.ram_size, showForPC: true, i18n: "ram_size" },
+          { icon: "🌐", label: "MAC Address:", value: report.mac_address, showForPC: true, i18n: "mac_address" },
+          { icon: "🖧", label: "IP Address:", value: report.ip_address, showForPC: true, i18n: "ip_address" },
+          { icon: "🖨️", label: "Printer Type:", value: report.printer_type, showForPrinter: true, i18n: "printer_type" },
+          { icon: "🖋️", label: "Ink Type:", value: report.ink_type, showForPrinter: true, i18n: "ink_type" },
+          { icon: "🔖", label: "Ink Serial Number:", value: report.ink_serial_number, showForPrinter: true, i18n: "ink_serial" },
+          { icon: "📠", label: "Scanner Type:", value: report.scanner_type, showForScanner: true, i18n: "scanner_type" },
         ];
         
-        fields.forEach(({ label, value, showForPC, showForPrinter, alwaysShow , showForScanner}) => {
+        fields.forEach(({ icon, label, value, showForPC, showForPrinter, showForScanner, alwaysShow, i18n }) => {
           const shouldShow =
             alwaysShow ||
             (showForPC && deviceType === "pc") ||
@@ -337,8 +361,36 @@ document.addEventListener("DOMContentLoaded", () => {
           if (shouldShow) {
             const div = document.createElement("div");
             div.className = "spec-box";
-            div.textContent = `${label} ${value || ""}`;
+            
+            // إنشاء عنصر span للأيقونة
+            const iconSpan = document.createElement("span");
+            iconSpan.textContent = icon;
+            iconSpan.style.marginRight = "5px";
+            
+            // إنشاء عنصر span للتسمية
+            const labelSpan = document.createElement("span");
+            labelSpan.setAttribute("data-i18n", i18n);
+            labelSpan.textContent = label;
+            
+            // إنشاء عنصر span للقيمة
+            const valueSpan = document.createElement("span");
+            valueSpan.textContent = value || "";
+            
+            // إضافة العناصر إلى div
+            div.appendChild(iconSpan);
+            div.appendChild(labelSpan);
+            div.appendChild(document.createTextNode(" "));
+            div.appendChild(valueSpan);
+            
             specsContainer.appendChild(div);
+            
+            // تطبيق الترجمة مباشرة
+            if (languageManager.currentLang === 'ar') {
+              const translation = languageManager.translations.ar[i18n];
+              if (translation) {
+                labelSpan.textContent = translation;
+              }
+            }
           }
         });
         

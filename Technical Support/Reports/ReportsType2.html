@@ -1,82 +1,87 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Choose Reports Type</title>
+  <title>Reports Type 2</title>
   
   <!-- Link to external stylesheet -->
   <link rel="stylesheet" href="ReportsType2.css">
+  <link rel="stylesheet" href="/Language/Language.css">
+  <style>
+    body {
+      font-family: var(--font-family);
+    }
+    h1, h2, h3, p, span, button, select, input, label, a {
+      font-family: var(--font-family);
+    }
+  </style>
 </head>
 
 <body>
   <!-- Page header with logos and navigation buttons -->
-  <header>
-    <!-- MS logo on the left -->
-    <div class="ms-logo">
-      <img src="/icon/Ms Logo.png" alt="MS Logo">
-    </div>
-
-    <!-- Back button (linked via JS) -->
+    <div class="nav-buttons">
     <div class="back-button">
-      <a href="#">
-        <img src="/icon/Back.png" alt="Back Icon" class="back-icon">
-        Back
+      <a href="#" onclick="goBack()">
+        <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> <span data-i18n="back">Back</span>
       </a>
     </div>
-
-    <!-- Home button that redirects to Home.html -->
     <div class="Home-button">
             <a href="../../Home/Home.html">
-        <img src="/icon/Home.png" alt="Home Icon" class="Home-icon">
-        Home
+        <img src="/icon/Home.png" alt="Home Icon" class="Home-icon"> <span data-i18n="home">Home</span>
       </a>
     </div>
+  </div>
 
-    <!-- Hospital logo on the right -->
-    <div class="hospital-logo">
-      <img src="/icon/hospital-logo.png" alt="Hospital Logo">
+  <!-- Header (Logos) -->
+  <header>
+    <div class="ms-logo">
+      <img src="/icon/MS Logo.png" alt="MS Logo">
     </div>
+    <div class="hospital-logo">
+      <img src="/icon/hospital-logo.png" alt="King Abdulaziz Hospital">
+    </div>
+
+    <!-- Language Switcher -->
+
   </header>
 
   <!-- Main container for report selection -->
   <div class="reports-container">
-    <h1 class="title">Choose Reports Type</h1>
-    <p>Select the appropriate reports type for your request</p>
+    <h1 class="title" data-i18n="choose_reports_type">Choose Reports Type</h1>
+    <p data-i18n="select_reports_type">Select the appropriate reports type for your request</p>
 
     <!-- Report options: Internal and External -->
     <div class="reports-options">
       <!-- Internal Report Option -->
-      <!-- Internal Report Option -->
 <div class="option" onclick="selectReportType('internal')">
-  <div class="icon-container">
-    <img src="/icon/GeneralReports.png" alt="Internal Report">
-  </div>
-  <h3>Internal Report</h3>
-  <p>For internal team members and employees</p>
-</div>
+        <div class="icon-container">
+          <img src="/icon/GeneralReports.png" alt="Internal Reports">
+        </div>
+        <h3 data-i18n="internal_report">Internal Report</h3>
+        <p data-i18n="for_internal_team">For internal team members and employees</p>
+      </div>
 
-<!-- External Report Option -->
+      <!-- External Report Option -->
 <div class="option" onclick="selectReportType('external')">
-  <div class="icon-container">
-    <img src="/icon/GeneralReports.png" alt="External Report">
+        <div class="icon-container">
+          <img src="/icon/GeneralReports.png" alt="External Reports">
+        </div>
+        <h3 data-i18n="external_report">External Report</h3>
+        <p data-i18n="for_external_partners">For clients and external partners</p>
+      </div>
+    </div>
   </div>
-  <h3>External Report</h3>
-  <p>For clients and external partners</p>
-</div>
-
 <script>
   function selectReportType(type) {
     localStorage.setItem("reportType", type);
     window.location.href = "Report Type3.html"; // صفحة الفلاتر
   }
 </script>
-
-  </div>
-
   <!-- External JavaScript file to handle interactions -->
   <script src="Reports.js"></script>
+  <script src="/Language/Language.js"></script>
 </body>
 
 </html>

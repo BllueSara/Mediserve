@@ -1,90 +1,103 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mediserve Dashboard</title>
   <link rel="stylesheet" href="Dashboard.css" />
+  <link rel="stylesheet" href="/Language/Language.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: var(--font-family);
+    }
+    h1, h2, h3, p, span, button, select, input {
+      font-family: var(--font-family);
+    }
+  </style>
 </head>
 <body>
   <!-- Navigation Buttons -->
-  <div class="nav-buttons"> <!-- Container for navigation buttons -->
-    <div class="back-button"> <!-- Back button container -->
-        <a href="#" onclick="goBack()"> <!-- Back button with a click event -->
-            <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> Back <!-- Back button icon and text -->
+  <div class="nav-buttons">
+    <div class="back-button">
+        <a href="#" onclick="goBack()">
+            <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> <span data-i18n="back">Back</span>
         </a>
     </div>
 </div>
 
-<div class="Home-button"> <!-- Home button container -->
+<div class="Home-button">
     <a href="../Home/Home.html">
-        <img src="/icon/Home.png" alt="Home Icon"> Home
+        <img src="/icon/Home.png" alt="Home Icon"> <span data-i18n="home">Home</span>
       </a>
-              
-</div>
 </div>
 
 <!-- Header (Logos) -->
-<header> <!-- Header section -->
-    <div class="ms-logo"> <!-- MS Logo container -->
-        <img src="/icon/MS Logo.png" alt="MS Logo"> <!-- MS logo -->
+<header>
+    <div class="ms-logo">
+        <img src="/icon/MS Logo.png" alt="MS Logo">
     </div>
-    <div class="hospital-logo"> <!-- Hospital logo container -->
-        <img src="/icon/hospital-logo.png" alt="King Abdulaziz Hospital"> <!-- Hospital logo -->
+    <div class="hospital-logo">
+        <img src="/icon/hospital-logo.png" alt="King Abdulaziz Hospital">
     </div>
+</header>
+
+<!-- Language Switcher -->
+<div class="language-switcher">
+    <select id="language-select" onchange="languageManager.switchLanguage()">
+        <option value="en" data-i18n="english">English</option>
+        <option value="ar" data-i18n="arabic">عربي</option>
+    </select>
+</div>
+
 <!-- Row: Server Status + Reports Overview -->
 <div class="grid-two-cols">
   <!-- Server Status Grouped Inside One Card -->
   <div class="card">
-    <h3>Server Status</h3>
+    <h3 data-i18n="server_status">Server Status</h3>
     <div class="server-status" style="justify-content: center;">
       <div style="text-align: center;">
         <canvas id="activeChart"></canvas>
-        <p class="label">Active Servers</p>
+        <p class="label" data-i18n="active_servers">Active Servers</p>
         <p class="value blue">85%</p>
       </div>
       <div style="text-align: center;">
         <canvas id="inactiveChart"></canvas>
-        <p class="label">Inactive Servers</p>
+        <p class="label" data-i18n="inactive_servers">Inactive Servers</p>
         <p class="value gray">15%</p>
       </div>
     </div>
   </div>
 
-
   <!-- Reports Overview -->
   <div class="card">
-    <h3>Reports Overview</h3>
+    <h3 data-i18n="reports_overview">Reports Overview</h3>
     <canvas id="reportChart"></canvas>
   </div>
 
-  <script src="Dashboard.js"></script>
-
-  
   <!-- Critical Devices -->
   <div class="card">
-    <h3>Critical Devices</h3>
+    <h3 data-i18n="critical_devices">Critical Devices</h3>
     <div class="device-grid">
       <div class="device">
         <img src="https://img.icons8.com/ios-filled/50/server.png" />
-        <span>Main Server</span>
-        <span class="badge green">NORMAL</span>
+        <span data-i18n="main_server">Main Server</span>
+        <span class="badge green" data-i18n="normal">NORMAL</span>
       </div>
       <div class="device">
         <img src="https://img.icons8.com/ios-filled/50/database.png" />
-        <span>Backup Storage</span>
-        <span class="badge yellow">WARNING</span>
+        <span data-i18n="backup_storage">Backup Storage</span>
+        <span class="badge yellow" data-i18n="warning">WARNING</span>
       </div>
       <div class="device">
         <img src="https://img.icons8.com/ios-filled/50/network.png" />
-        <span>Network Switch</span>
-        <span class="badge red">CRITICAL</span>
+        <span data-i18n="network_switch">Network Switch</span>
+        <span class="badge red" data-i18n="critical">CRITICAL</span>
       </div>
       <div class="device">
         <img src="https://img.icons8.com/ios-filled/50/data-in-both-directions.png" />
-        <span>Database Server</span>
-        <span class="badge green">NORMAL</span>
+        <span data-i18n="database_server">Database Server</span>
+        <span class="badge green" data-i18n="normal">NORMAL</span>
       </div>
     </div>
   </div>
@@ -92,54 +105,55 @@
 
 <!-- Faulty Devices -->
 <div class="card" style="margin-top: 30px;">
-  <h3>Faulty Devices</h3>
+  <h3 data-i18n="faulty_devices">Faulty Devices</h3>
   <table class="device-table">
     <thead>
       <tr>
-        <th>TYPE</th>
-        <th>SPECS</th>
-        <th>STATUS</th>
+        <th data-i18n="type">TYPE</th>
+        <th data-i18n="specs">SPECS</th>
+        <th data-i18n="status">STATUS</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td>PC</td>
+        <td data-i18n="pc">PC</td>
         <td>Intel i7, 16GB RAM</td>
-        <td><span class="badge red">CRITICAL</span></td>
+        <td><span class="badge red" data-i18n="critical">CRITICAL</span></td>
       </tr>
       <tr>
-        <td>Printer</td>
+        <td data-i18n="printer">Printer</td>
         <td>HP LaserJet Pro</td>
-        <td><span class="badge yellow">WARNING</span></td>
+        <td><span class="badge yellow" data-i18n="warning">WARNING</span></td>
       </tr>
       <tr>
-        <td>Scanner</td>
+        <td data-i18n="scanner">Scanner</td>
         <td>Epson V39</td>
-        <td><span class="badge yellow">WARNING</span></td>
+        <td><span class="badge yellow" data-i18n="warning">WARNING</span></td>
       </tr>
     </tbody>
   </table>
 </div>
+
 <!-- Support Tickets -->
 <div class="card" style="margin-top: 30px;">
-  <h3>Support Tickets</h3>
+  <h3 data-i18n="support_tickets">Support Tickets</h3>
   <div class="ticket-status">
     <div class="ticket">
-      <span>Open</span>
+      <span data-i18n="open">Open</span>
       <div class="bar-container">
         <div class="bar yellow" style="width: 60%;"></div>
       </div>
       <span class="ticket-count">12</span>
     </div>
     <div class="ticket">
-      <span>In Progress</span>
+      <span data-i18n="in_progress">In Progress</span>
       <div class="bar-container">
         <div class="bar blue" style="width: 40%;"></div>
       </div>
       <span class="ticket-count">8</span>
     </div>
     <div class="ticket">
-      <span>Resolved</span>
+      <span data-i18n="resolved">Resolved</span>
       <div class="bar-container">
         <div class="bar green" style="width: 80%;"></div>
       </div>
@@ -152,35 +166,38 @@
 <div class="grid-two-cols" style="margin-top: 30px;">
   <!-- Maintenance Chart -->
   <div class="card">
-    <h3>Maintenance Overview</h3>
+    <h3 data-i18n="maintenance_overview">Maintenance Overview</h3>
     <canvas id="maintenanceChart"></canvas>
   </div>
 
   <!-- Upcoming Maintenance -->
   <div class="card">
-    <h3>Upcoming Maintenance</h3>
+    <h3 data-i18n="upcoming_maintenance">Upcoming Maintenance</h3>
     <div class="maintenance-item">
       <div>
-        <strong>Server Backup</strong>
+        <strong data-i18n="server_backup">Server Backup</strong>
         <p>2024-02-15</p>
       </div>
-      <span class="badge red">HIGH</span>
+      <span class="badge red" data-i18n="high">HIGH</span>
     </div>
     <div class="maintenance-item">
       <div>
-        <strong>System Updates</strong>
+        <strong data-i18n="system_updates">System Updates</strong>
         <p>2024-02-16</p>
       </div>
-      <span class="badge yellow">MEDIUM</span>
+      <span class="badge yellow" data-i18n="medium">MEDIUM</span>
     </div>
     <div class="maintenance-item">
       <div>
-        <strong>Network Maintenance</strong>
+        <strong data-i18n="network_maintenance">Network Maintenance</strong>
         <p>2024-02-17</p>
       </div>
-      <span class="badge green">LOW</span>
+      <span class="badge green" data-i18n="low">LOW</span>
     </div>
   </div>
 </div>
 
+<script src="Dashboard.js"></script>
+<script src="/Language/Language.js"></script>
+</body>
 </html>

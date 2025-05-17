@@ -1,10 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Maintenance Dashboard</title>
+  <title data-i18n="maintenance_dashboard">Maintenance Dashboard</title>
   <link rel="stylesheet" href="periodic.css" />
+  <link rel="stylesheet" href="/Language/Language.css">
+  <style>
+    body {
+      font-family: var(--font-family);
+    }
+    h1, h2, h3, p, span, button, select, input, label {
+      font-family: var(--font-family);
+    }
+  </style>
 </head>
 <body>
   <!-- Header -->
@@ -20,14 +29,14 @@
     <div class="back-button">
       <a href="#">
         <img src="/icon/Back.png" class="back-icon" alt="back" />
-        Back
+        <span data-i18n="back">Back</span>
       </a>
     </div>
 
     <div class="home-button">
-            <a href="../../Home/Home.html">
+      <a href="../../Home/Home.html">
         <img src="/icon/Home.png" class="home-icon" alt="Home" />
-        Home
+        <span data-i18n="home">Home</span>
       </a>
     </div>
   </header>
@@ -39,7 +48,7 @@
       <!-- 3-Month Maintenance -->
       <div class="progress-box">
         <div class="progress-header">
-          <h3>3-Month Maintenance</h3>
+          <h3 data-i18n="month_maintenance">3-Month Maintenance</h3>
           <span class="progress-count progress-count-3months">0/0</span>
         </div>
         <div class="progress-bar">
@@ -50,7 +59,7 @@
       <!-- 4-Month Maintenance -->
       <div class="progress-box">
         <div class="progress-header">
-          <h3>4-Month Maintenance</h3>
+          <h3 data-i18n="month_maintenance_4">4-Month Maintenance</h3>
           <span class="progress-count progress-count-4months">0/0</span>
         </div>
         <div class="progress-bar">
@@ -61,19 +70,19 @@
 
     <!-- Schedule Tabs -->
     <div class="schedule-tabs">
-      <button class="active" id="btn-3months">3-Month Schedule</button>
-      <button id="btn-4months">4-Month Schedule</button>
+      <button class="active" id="btn-3months" data-i18n="month_schedule">3-Month Schedule</button>
+      <button id="btn-4months" data-i18n="month_schedule_4">4-Month Schedule</button>
     </div>
 
     <!-- Maintenance Table -->
     <table>
       <thead>
         <tr>
-          <th>Device Name</th>
-          <th>Category</th>
-          <th>Last Maintenance</th>
-          <th>Next Due Date</th>
-          <th>Status</th>
+          <th data-i18n="device_name">Device Name</th>
+          <th data-i18n="category">Category</th>
+          <th data-i18n="last_maintenance">Last Maintenance</th>
+          <th data-i18n="next_due_date">Next Due Date</th>
+          <th data-i18n="status">Status</th>
         </tr>
       </thead>
       <tbody id="maintenance-table-body">
@@ -85,5 +94,6 @@
   <!-- Scripts -->
   <script src="Reports.js"></script>
   <script src="periodic.js"></script>
+  <script src="/Language/Language.js"></script>
 </body>
 </html>
