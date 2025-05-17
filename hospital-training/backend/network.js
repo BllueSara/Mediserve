@@ -55,11 +55,17 @@ app.post('/api/ping', async (req, res) => {
     const command = isMac ? `ping -c 4 ${ip}` : `ping -n 4 ${ip}`;
     const { stdout, stderr } = await execAsync(command);
 
-    res.json({ output: stdout || stderr || 'No response from ping' });
+    res.json({ output: stdout || stderr || 'No response from ping', status: 'success' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.json({
+      output: error.stdout || error.stderr || error.message,
+      error: 'Ping failed',
+      status: 'error'
+    });
   }
 });
+
+
 
 // 2. Ping multiple IPs
 app.post('/api/ping-all', async (req, res) => {
@@ -73,13 +79,22 @@ app.post('/api/ping-all', async (req, res) => {
     }
 
     const isWindows = process.platform === 'win32';
+
     const results = await Promise.all(ips.map(async (ip) => {
       try {
         const command = isWindows ? `ping -n 4 ${ip}` : `ping -c 4 ${ip}`;
         const { stdout } = await execAsync(command);
         return { ip, status: 'success', output: stdout };
       } catch (error) {
-        return { ip, status: 'error', output: error.message };
+        const stderr = error.stderr?.trim();
+        const stdout = error.stdout?.trim();
+        const fallback = error.message;
+
+        return {
+          ip,
+          status: 'error',
+          output: stderr || stdout || fallback || 'Unknown ping failure'
+        };
       }
     }));
 
@@ -88,6 +103,7 @@ app.post('/api/ping-all', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 // 3. Traceroute
 app.post('/api/traceroute', async (req, res) => {
@@ -124,15 +140,7 @@ app.post('/api/add-entry', authenticateToken, (req, res) => {
 
 
 // 5. Get entries from DB
-app.get('/api/entries', (req, res) => {
-  db.query('SELECT * FROM entries ORDER BY created_at DESC', (err, rows) => {
-    if (err) {
-      console.error('DB error:', err);
-      return res.status(500).json({ error: 'Failed to retrieve devices' });
-    }
-    res.json(rows);
-  });
-});
+
 
 
 // 6. Generate report
@@ -203,26 +211,57 @@ app.post('/api/report', authenticateToken, async (req, res) => {
   }
 });
 
+
+
 app.post('/api/share-entry', authenticateToken, async (req, res) => {
   const senderId = req.user.id;
   const { devices, receiver_ids } = req.body;
 
-  if (!Array.isArray(devices) || !Array.isArray(receiver_ids) || !receiver_ids.length) {
-    return res.status(400).json({ error: 'Missing devices or receivers' });
+  if (!Array.isArray(devices) || devices.length === 0 || !Array.isArray(receiver_ids) || receiver_ids.length === 0) {
+    return res.status(400).json({ error: '❌ Missing devices or receivers' });
   }
 
   try {
     for (let device of devices) {
-      const [result] = await db.promise().query(`
-        INSERT INTO entries (circuit_name, isp, location, ip, speed, start_date, end_date, user_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `, [device.circuit, device.isp, device.location, device.ip, device.speed, device.start_date, device.end_date, senderId]);
+      // نتحقق إن السطر ما تم إنشاؤه سابقًا بنفس البيانات
+      const [existing] = await db.promise().query(`
+        SELECT id FROM entries
+        WHERE circuit_name = ? AND isp = ? AND location = ? AND ip = ? AND speed = ? AND start_date = ? AND end_date = ? AND user_id IS NULL
+        LIMIT 1
+      `, [
+        device.circuit,
+        device.isp,
+        device.location,
+        device.ip,
+        device.speed,
+        device.start_date,
+        device.end_date
+      ]);
 
-      const entryId = result.insertId;
+      let entryId;
 
+      if (existing.length > 0) {
+        entryId = existing[0].id;
+      } else {
+        const insertResult = await db.promise().query(`
+          INSERT INTO entries (circuit_name, isp, location, ip, speed, start_date, end_date, user_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
+        `, [
+          device.circuit,
+          device.isp,
+          device.location,
+          device.ip,
+          device.speed,
+          device.start_date,
+          device.end_date
+        ]);
+        entryId = insertResult[0].insertId;
+      }
+
+      // تجنب التكرار في shared_entries
       for (let receiverId of receiver_ids) {
         await db.promise().query(`
-          INSERT INTO shared_entries (sender_id, receiver_id, entry_id)
+          INSERT IGNORE INTO shared_entries (sender_id, receiver_id, entry_id)
           VALUES (?, ?, ?)
         `, [senderId, receiverId, entryId]);
       }
@@ -230,9 +269,14 @@ app.post('/api/share-entry', authenticateToken, async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('❌ Share Error:', err);
+    res.status(500).json({ error: '❌ Failed to share entries' });
   }
 });
+
+
+
+
 
 
 
@@ -259,6 +303,94 @@ app.get('/api/users', authenticateToken, (req, res) => {
 
 
 
+app.post('/api/save', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const { devices } = req.body;
+
+  if (!Array.isArray(devices) || devices.length === 0) {
+    return res.status(400).json({ error: 'No devices provided' });
+  }
+
+  try {
+    const insertPromises = devices.map(device => {
+      return db.promise().query(`
+      INSERT INTO entries (circuit_name, isp, location, ip, speed, start_date, end_date, user_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        device.circuit, device.isp, device.location, device.ip,
+        device.speed, device.start_date, device.end_date, userId
+      ]);
+    });
+
+    await Promise.all(insertPromises);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ Save error:', err);
+    res.status(500).json({ error: 'Failed to save entries' });
+  }
+});
+
+
+
+
+app.get('/api/entries/mine', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const [entries] = await db.promise().query(`
+      SELECT * FROM entries WHERE user_id = ?
+    `, [userId]);
+
+    res.json(entries);
+  } catch (err) {
+    console.error('❌ Error fetching my entries:', err.message);
+    res.status(500).json({ error: 'Failed to load your entries' });
+  }
+});
+
+app.get('/api/entries/shared-with-me', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const [entries] = await db.promise().query(`
+      SELECT e.*, se.receiver_id
+      FROM entries e
+      JOIN shared_entries se ON e.id = se.entry_id
+      WHERE se.receiver_id = ?
+    `, [userId]);
+
+    // نرجعها مع تحديد أن user_id = null لتفرقها عن mine
+    res.json(entries.map(e => ({ ...e, user_id: null })));
+
+  } catch (err) {
+    console.error('❌ Error fetching shared entries:', err.message);
+    res.status(500).json({ error: 'Failed to load shared entries' });
+  }
+});
+
+
+
+app.get('/api/distinct-values/:key', authenticateToken, async (req, res) => {
+  const { key } = req.params;
+
+  // قائمة الأعمدة المسموح بها (للحماية من SQL injection)
+  const allowedKeys = [
+    'circuit_name', 'isp', 'location', 'ip', 'speed', 'start_date', 'end_date'
+  ];
+
+  if (!allowedKeys.includes(key)) {
+    return res.status(400).json({ error: '❌ Invalid filter key' });
+  }
+
+  try {
+    const [rows] = await db.promise().query(`SELECT DISTINCT ?? AS value FROM entries`, [key]);
+    const values = rows.map(r => r.value).filter(Boolean);
+    res.json(values);
+  } catch (err) {
+    console.error('❌ Error in /distinct-values:', err.message);
+    res.status(500).json({ error: 'DB query failed' });
+  }
+});
 
 
 // Start server
