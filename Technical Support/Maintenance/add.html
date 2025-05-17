@@ -12,7 +12,16 @@
     body {
       font-family: var(--font-family);
     }
-    h1, h2, h3, p, span, button, select, input, label {
+
+    h1,
+    h2,
+    h3,
+    p,
+    span,
+    button,
+    select,
+    input,
+    label {
       font-family: var(--font-family);
     }
   </style>
@@ -48,7 +57,10 @@
     <form id="deviceForm">
 
       <!-- Device Type -->
-      <label for="device-type" data-i18n="device_type">Device Type</label> <span class="required">*</span>
+      <label for="device-type">
+        <span data-i18n="device_type">Device Type</span>
+        <span class="required-star">*</span>
+      </label>
       <div class="custom-dropdown-wrapper" id="device-type-dropdown-wrapper">
         <div class="custom-dropdown">
           <div class="dropdown-toggle" onclick="toggleDropdown(this)">
@@ -56,13 +68,8 @@
             <span>▼</span>
           </div>
           <div class="dropdown-content">
-            <input
-              type="text"
-              data-i18n-placeholder="search_device_type"
-              placeholder="Search device type..."
-              class="dropdown-search"
-              oninput="filterDropdown(this, 'device-type-options')"
-            />
+            <input type="text" data-i18n-placeholder="search_device_type" placeholder="Search device type..."
+              class="dropdown-search" oninput="filterDropdown(this, 'device-type-options')" />
             <div class="dropdown-options" id="device-type-options">
               <!-- سيتم تعبئة الخيارات عبر JavaScript -->
             </div>
@@ -72,7 +79,10 @@
       <input type="hidden" id="device-type" name="device-type" required />
 
       <!-- Section -->
-      <label for="section" data-i18n="section">Section</label> <span class="required">*</span>
+      <label for="section">
+        <span data-i18n="section">Section</span>
+        <span class="required-star">*</span>
+      </label>
       <div class="custom-dropdown-wrapper" id="section-dropdown-wrapper">
         <div class="custom-dropdown">
           <div class="dropdown-toggle" onclick="toggleDropdown(this)">
@@ -80,13 +90,8 @@
             <span>▼</span>
           </div>
           <div class="dropdown-content">
-            <input
-              type="text"
-              data-i18n-placeholder="search_section"
-              placeholder="Search section..."
-              class="dropdown-search"
-              oninput="filterDropdown(this, 'section-options')"
-            />
+            <input type="text" data-i18n-placeholder="search_section" placeholder="Search section..."
+              class="dropdown-search" oninput="filterDropdown(this, 'section-options')" />
             <div class="dropdown-options" id="section-options">
               <!-- يتم تعبئتها عبر JavaScript -->
             </div>
@@ -94,8 +99,11 @@
         </div>
       </div>
       <input type="hidden" id="section" name="section" required />
-      
-      <label data-i18n="device_specifications">Device Specifications</label> <span class="required">*</span>
+
+      <label for="device-spec">
+        <span data-i18n="device_specifications">Device Specifications</span>
+        <span class="required-star">*</span>
+      </label>
       <div class="custom-dropdown-wrapper">
         <div class="custom-dropdown">
           <div class="dropdown-toggle" onclick="toggleDropdown(this)">
@@ -103,7 +111,8 @@
             <span>▼</span>
           </div>
           <div class="dropdown-content">
-            <input type="text" class="dropdown-search" data-i18n-placeholder="search_specification" placeholder="Search specification..." oninput="filterDropdown(this, 'device-spec-options')">
+            <input type="text" class="dropdown-search" data-i18n-placeholder="search_specification"
+              placeholder="Search specification..." oninput="filterDropdown(this, 'device-spec-options')">
             <div class="dropdown-options" id="device-spec-options"></div>
           </div>
         </div>
@@ -115,7 +124,8 @@
       </div>
 
       <label for="notes" data-i18n="notes">Notes</label>
-      <textarea id="notes" name="notes" data-i18n-placeholder="add_notes" placeholder="Add any additional notes here..."></textarea>
+      <textarea id="notes" name="notes" data-i18n-placeholder="add_notes"
+        placeholder="Add any additional notes here..."></textarea>
 
       <button type="submit" data-i18n="add_device">Add Device</button>
     </form>
@@ -125,7 +135,7 @@
     <div class="popup-content wide-popup">
       <h3 id="popup-title" data-i18n="enter_device_specifications">Enter Device Specifications</h3>
       <form id="pc-spec-form">
-        <div id="popup-fields"></div> 
+        <div id="popup-fields"></div>
         <div class="popup-buttons">
           <button type="button" class="save-btn" data-i18n="save">Save</button>
           <button type="button" class="cancel-btn" data-i18n="cancel">Cancel</button>
@@ -138,7 +148,8 @@
     <div class="popup-content">
       <h3 id="generic-popup-title" data-i18n="add_new">Add New</h3>
       <label for="generic-popup-input" id="generic-label" data-i18n="new_value">New Value</label>
-      <input type="text" id="generic-popup-input" data-i18n-placeholder="enter_new_value" placeholder="Enter new value..." required />
+      <input type="text" id="generic-popup-input" data-i18n-placeholder="enter_new_value"
+        placeholder="Enter new value..." required />
       <input type="hidden" id="generic-popup-target-id" />
       <div class="popup-buttons">
         <button type="button" class="save-btn" data-i18n="save">Save</button>

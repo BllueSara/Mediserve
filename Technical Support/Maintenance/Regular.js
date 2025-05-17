@@ -913,15 +913,11 @@ function saveNewSection() {
 
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
-<<<<<<< HEAD
     headers: {
       "Content-Type": "application/json",
       "Authorization": "Bearer " + localStorage.getItem("token")
     },
 
-=======
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
->>>>>>> d8897406f4b8e6f7a91e8c6ddcadc8806763fff0
     body: JSON.stringify({ target: "section", value: sectionName })
   })
     .then(res => {
@@ -1598,15 +1594,11 @@ function saveOptionForSelect() {
   // ✅ نرسل targetId مباشرة لأنه هو اللي السيرفر يتعامل معه
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
-<<<<<<< HEAD
     headers: {
       "Content-Type": "application/json",
       "Authorization": "Bearer " + localStorage.getItem("token")
     },
 
-=======
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
->>>>>>> d8897406f4b8e6f7a91e8c6ddcadc8806763fff0
     body: JSON.stringify({ target: targetId, value }) // لا تغير اسم الـ target
   })
     .then(res => {
@@ -1850,15 +1842,11 @@ function saveNewTechnical() {
 
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
-<<<<<<< HEAD
     headers: {
       "Content-Type": "application/json",
       "Authorization": "Bearer " + localStorage.getItem("token")
     },
 
-=======
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
->>>>>>> d8897406f4b8e6f7a91e8c6ddcadc8806763fff0
     body: JSON.stringify({
       target: "technical",
       value: name
@@ -2019,15 +2007,11 @@ function saveNewProblemStatus(deviceType) {
 
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
-<<<<<<< HEAD
     headers: {
       "Content-Type": "application/json",
       "Authorization": "Bearer " + localStorage.getItem("token")
     },
 
-=======
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
->>>>>>> d8897406f4b8e6f7a91e8c6ddcadc8806763fff0
     body: JSON.stringify({
       target: "problem-status",
       value: name,
@@ -2808,19 +2792,13 @@ function saveNewModel() {
     alert("❌ Please enter a model name");
     return;
   }
-      const token = localStorage.getItem('token');  // احفظ التوكن بعد تسجيل الدخول
 
   fetch("http://localhost:5050/add-device-model", {
     method: "POST",
-<<<<<<< HEAD
     headers: {
       "Content-Type": "application/json",
       "Authorization": "Bearer " + token // ✅ مهم جدًا
     },
-=======
-    headers: { "Content-Type": "application/json" ,           "Authorization": `Bearer ${token}`
-},
->>>>>>> d8897406f4b8e6f7a91e8c6ddcadc8806763fff0
     body: JSON.stringify({ model_name: modelName, device_type_name: deviceType })
   })
     .then(res => res.json())
@@ -3128,15 +3106,10 @@ function saveGenericOption() {
 
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
-<<<<<<< HEAD
     headers: {
       "Content-Type": "application/json",
       "Authorization": "Bearer " + localStorage.getItem("token")
     },
-=======
-    headers: { "Content-Type": "application/json",          "Authorization": `Bearer ${token}`
- },
->>>>>>> d8897406f4b8e6f7a91e8c6ddcadc8806763fff0
     body: JSON.stringify({ target: targetId, value })
   })
     .then(res => {
