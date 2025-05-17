@@ -483,7 +483,20 @@ const languageManager = {
             'technical_notes': 'Technical Notes',
             'generate_pdf': 'Generate PDF',
             'cancel': 'Cancel',
-            
+            'technical_status': "Technical Status",
+            'technical_status_name': "Technical Status Name",
+            'enter_technical_status': "Enter technical status...",
+            'please_enter_technical_status': "Please enter technical status",
+            'error_fetching_technical_status': "Error fetching technical status",
+            'error_saving_technical_status': "Error saving technical status",
+            'failed_to_save_technical_status': "Failed to save technical status",
+            'problem_status': "Problem Status",
+            'problem_status_name': "Problem Status Name",
+            'enter_problem_status': "Enter problem status...",
+            'please_enter_problem_status': "Please enter problem status",
+            'error_fetching_problem_status': "Error fetching problem status",
+            'error_saving_problem_status': "Error saving problem status",
+            'failed_to_save_problem_status': "Failed to save problem status",
             // Device Specifications
             'device_name': 'Device Name',
             'serial_number': 'Serial Number',
@@ -501,8 +514,138 @@ const languageManager = {
             'ink_type': 'Ink Type',
             'ink_serial': 'Ink Serial Number',
             'scanner_type': 'Scanner Type',
+            
+            // Dropdowns
+            'select_specification': "Select specification",
+            'select_department': "Select Department",
+            'select_model': "Select Model",
+            'select_processor': "Select processor",
+            'select_ram': "Select RAM",
+            'select_hard_drive': "Select Hard Drive",
+            'select_os': "Select OS",
+            'select_ram_size': "Select RAM Size",
+            'select_generation': "Select generation",
+            'select_printer_type': "Select Printer Type",
+            'select_ink_type': "Select Ink Type",
+            'select_scanner_type': "Select Scanner Type",
+            'select_ink_serial': "Select Ink Serial Number",
+            'select_processor_generation': "Select Processor Generation",
+            
+            // Add New Options
+            'add_new_processor': "Add New Processor",
+            'add_new_ram': "Add New RAM",
+            'add_new_hard_drive': "Add New Hard Drive",
+            'add_new_os': "Add New OS",
+            'add_new_ram_size': "Add New RAM Size",
+            'add_new_generation': "Add New Generation",
+            'add_new_printer_type': "Add New Printer Type",
+            'add_new_ink_type': "Add New Ink Type",
+            'add_new_scanner_type': "Add New Scanner Type",
+            'add_new_department': "Add New Department",
+            'add_new_model': "Add New Model",
+            
+            // Placeholders
+            'search_processor': "Search processor...",
+            'search_ram': "Search RAM...",
+            'search_drive': "Search Drive...",
+            'search_os': "Search OS...",
+            'search_ram_size': "Search RAM size...",
+            'search_generation': "Search generation...",
+            'search_printer_type': "Search printer type...",
+            'search_ink_type': "Search ink type...",
+            'search_scanner_type': "Search scanner type...",
+            'search_department': "Search department...",
+            'search_model': "Search model...",
+            
+            // Error Messages
+            'please_select_valid_option': "Please select a valid option",
+            'please_enter_valid_value': "Please enter a valid value",
+            'please_enter_model_name': "Please enter a model name",
+            'please_enter_section_name': "Please enter a section name",
+            'please_enter_processor': "Please enter processor name",
+            'please_enter_ram': "Please enter RAM type",
+            'please_enter_hard_drive': "Please enter hard drive type",
+            'please_enter_os': "Please enter OS name",
+            'please_enter_ram_size': "Please enter RAM size",
+            'please_enter_generation': "Please enter generation number",
+            'please_enter_printer_type': "Please enter printer type",
+            'please_enter_ink_type': "Please enter ink type",
+            'please_enter_scanner_type': "Please enter scanner type",
+            
+            // Success Messages
+            'saved_successfully': "Saved successfully",
+            'updated_successfully': "Updated successfully",
+            'deleted_successfully': "Deleted successfully",
+            
+            // Error Messages
+            'failed_to_save': "Failed to save",
+            'failed_to_update': "Failed to update",
+            'failed_to_delete': "Failed to delete",
+            'failed_to_load': "Failed to load data",
+            
+            // Confirmations
+            'confirm_delete': "Are you sure you want to delete",
+            'confirm_update': "Are you sure you want to update",
+            
+            // Device Types
+            'pc': "PC",
+            'laptop': "Laptop",
+            'desktop': "Desktop",
+            'printer': "Printer",
+            'scanner': "Scanner",
+            
+            // Device Specifications
+            'device_name': "Device Name",
+            'serial_number': "Serial Number",
+            'ministry_number': "Ministry Number",
+            'mac_address': "MAC Address",
+            'ip_address': "IP Address",
+            'processor': "Processor",
+            'ram': "RAM",
+            'hard_drive': "Hard Drive",
+            'operating_system': "Operating System",
+            'ram_size': "RAM Size",
+            'processor_generation': "Processor Generation",
+            'printer_type': "Printer Type",
+            'ink_type': "Ink Type",
+            'scanner_type': "Scanner Type",
+            'ink_serial_number': "Ink Serial Number",
+            
+            // Sections
+            'department': "Department",
+            'model': "Model",
+            'section': "Section",
+            
+            
+            // Actions
+            'edit': "Edit",
+            'delete': "Delete",
+            'save': "Save",
+            'cancel': "Cancel",
+            'add': "Add",
+            'update': "Update",
+            'remove': "Remove",
+            'enter': "Enter",
+            
+            // Status
+            'is_required': "is required",
+            'all_devices': "All Devices",
+            'no_specifications_found': "No specifications found",
+            
+            // Popup Titles
+            'add_device': "Add Device",
+            'edit_device': "Edit Device",
+            'add_specification': "Add Specification",
+            'edit_specification': "Edit Specification",
+            'add_model': "Add Model",
+            'edit_model': "Edit Model",
+            'add_section': "Add Section",
+            'edit_section': "Edit Section"
         },
         ar: {
+            'department': 'الاقسام',
+            'model': 'الموديلات',
+            'section': 'القسم',
             // Navigation
             'home': 'الرئيسية',
             'profile': 'الملف الشخصي',
@@ -513,7 +656,21 @@ const languageManager = {
             'english': 'English',
             'arabic': 'عربي',
             'back': 'رجوع',
-            
+            'enter': 'ادخل',
+            'technical_status': "الحالة الفنية",
+            'technical_status_name': "اسم الحالة الفنية",
+            'enter_technical_status': "أدخل الحالة الفنية...",
+            'please_enter_technical_status': "الرجاء إدخال الحالة الفنية",
+            'error_fetching_technical_status': "خطأ في جلب الحالة الفنية",
+            'error_saving_technical_status': "خطأ في حفظ الحالة الفنية",
+            'failed_to_save_technical_status': "فشل في حفظ الحالة الفنية",
+            'problem_status': "حالة المشكلة",
+            'problem_status_name': "اسم حالة المشكلة",
+            'enter_problem_status': "أدخل حالة المشكلة...",
+            'please_enter_problem_status': "الرجاء إدخال حالة المشكلة",
+            'error_fetching_problem_status': "خطأ في جلب حالة المشكلة",
+            'error_saving_problem_status': "خطأ في حفظ حالة المشكلة",
+            'failed_to_save_problem_status': "فشل في حفظ حالة المشكلة",
             // Common
             'welcome': 'مرحباً',
             'please_enter_info': 'الرجاء إدخال معلوماتك',
@@ -668,7 +825,7 @@ const languageManager = {
             'enter_device_specifications': 'أدخل مواصفات الجهاز',
             'save': 'حفظ',
             'cancel': 'إلغاء',
-            'add_new': 'إضافة جديد',
+            'add_new': 'إضافة ',
             'new_value': 'قيمة جديدة',
             'enter_new_value': 'أدخل قيمة جديدة...',
             
@@ -834,7 +991,7 @@ const languageManager = {
             'phone_number': 'رقم الهاتف',
             
             // General Maintenance
-            'fill_required_fields': 'يرجى ملء جميع الحقول المطلوبة',
+            'fill_required_fields': 'يرجى ملء جميع الحقون المطلوبة',
             'customer_name': 'اسم العميل',
             'enter_customer_name': 'أدخل اسم العميل',
             'id_number': 'رقم الهوية',
@@ -939,7 +1096,7 @@ const languageManager = {
             'in_progress': 'قيد التنفيذ',
             'closed': 'مغلق',
             'all_devices': 'جميع الأجهزة',
-            'pc': 'حاسوب',
+            'pc': 'كمبيوتر',
             'printer': 'طابعة',
             'scanner': 'ماسح ضوئي',
             'new_report_btn': 'تقرير جديد',
@@ -988,19 +1145,138 @@ const languageManager = {
             'device_name': 'اسم الجهاز',
             'serial_number': 'الرقم التسلسلي',
             'ministry_number': 'الرقم الوزاري',
-            'cpu': 'المعالج',
-            'ram': 'الذاكرة العشوائية',
-            'os': 'نظام التشغيل',
-            'generation': 'الجيل',
-            'model': 'الموديل',
-            'hard_drive': 'القرص الصلب',
-            'ram_size': 'حجم الذاكرة',
             'mac_address': 'عنوان MAC',
             'ip_address': 'عنوان IP',
+            'processor': 'المعالج',
+            'ram': 'الذاكرة',
+            'hard_drive': 'القرص الصلب',
+            'operating_system': 'نظام التشغيل',
+            'ram_size': 'حجم الذاكرة',
+            'processor_generation': 'جيل المعالج',
             'printer_type': 'نوع الطابعة',
             'ink_type': 'نوع الحبر',
-            'ink_serial': 'الرقم التسلسلي للحبر',
-            'scanner_type': 'نوع الماسح الضوئي',
+            'scanner_type': 'نوع الماسح',
+            'ink_serial_number': 'الرقم التسلسلي للحبر',
+            
+            // Dropdowns
+            'select_specification': "اختر المواصفات",
+            'select_department': "اختر القسم",
+            'select_model': "اختر الموديل",
+            'select_processor': "اختر المعالج",
+            'select_ram': "اختر الذاكرة",
+            'select_hard_drive': "اختر القرص الصلب",
+            'select_os': "اختر نظام التشغيل",
+            'select_ram_size': "اختر حجم الذاكرة",
+            'select_generation': "اختر الجيل",
+            'select_printer_type': "اختر نوع الطابعة",
+            'select_ink_type': "اختر نوع الحبر",
+            'select_scanner_type': "اختر نوع الماسح",
+            'select_ink_serial': "اختر الرقم التسلسلي للحبر",
+            'select_processor_generation': "اختر جيل المعالج",
+            
+            // Add New Options
+            'add_new_processor': "إضافة معالج جديد",
+            'add_new_ram': "إضافة ذاكرة جديدة",
+            'add_new_hard_drive': "إضافة قرص صلب جديد",
+            'add_new_os': "إضافة نظام تشغيل جديد",
+            'add_new_ram_size': "إضافة حجم ذاكرة جديد",
+            'add_new_generation': "إضافة جيل جديد",
+            'add_new_printer_type': "إضافة نوع طابعة جديد",
+            'add_new_ink_type': "إضافة نوع حبر جديد",
+            'add_new_scanner_type': "إضافة نوع ماسح جديد",
+            'add_new_department': "إضافة قسم جديد",
+            'add_new_model': "إضافة موديل جديد",
+            
+            // Placeholders
+            'search_processor': "ابحث عن معالج...",
+            'search_ram': "ابحث عن ذاكرة...",
+            'search_drive': "ابحث عن قرص صلب...",
+            'search_os': "ابحث عن نظام تشغيل...",
+            'search_ram_size': "ابحث عن حجم ذاكرة...",
+            'search_generation': "ابحث عن جيل...",
+            'search_printer_type': "ابحث عن نوع طابعة...",
+            'search_ink_type': "ابحث عن نوع حبر...",
+            'search_scanner_type': "ابحث عن نوع ماسح...",
+            'search_department': "ابحث عن قسم...",
+            'search_model': "ابحث عن موديل...",
+            
+            // Error Messages
+            'please_select_valid_option': "الرجاء اختيار خيار صحيح",
+            'please_enter_valid_value': "الرجاء إدخال قيمة صحيحة",
+            'please_enter_model_name': "الرجاء إدخال اسم الموديل",
+            'please_enter_section_name': "الرجاء إدخال اسم القسم",
+            'please_enter_processor': "الرجاء إدخال اسم المعالج",
+            'please_enter_ram': "الرجاء إدخال نوع الذاكرة",
+            'please_enter_hard_drive': "الرجاء إدخال نوع القرص الصلب",
+            'please_enter_os': "الرجاء إدخال اسم نظام التشغيل",
+            'please_enter_ram_size': "الرجاء إدخال حجم الذاكرة",
+            'please_enter_generation': "الرجاء إدخال رقم الجيل",
+            'please_enter_printer_type': "الرجاء إدخال نوع الطابعة",
+            'please_enter_ink_type': "الرجاء إدخال نوع الحبر",
+            'please_enter_scanner_type': "الرجاء إدخال نوع الماسح",
+            
+            // Success Messages
+            'saved_successfully': "تم الحفظ بنجاح",
+            'updated_successfully': "تم التحديث بنجاح",
+            'deleted_successfully': "تم الحذف بنجاح",
+            
+            // Error Messages
+            'failed_to_save': "فشل في الحفظ",
+            'failed_to_update': "فشل في التحديث",
+            'failed_to_delete': "فشل في الحذف",
+            'failed_to_load': "فشل في تحميل البيانات",
+            
+            // Confirmations
+            'confirm_delete': "هل أنت متأكد من حذف",
+            'confirm_update': "هل أنت متأكد من تحديث",
+            
+            // Device Types
+            'pc': "كمبيوتر",
+            'laptop': "لابتوب",
+            'desktop': "كمبيوتر مكتبي",
+            'printer': "طابعة",
+            'scanner': "ماسح ضوئي",
+            
+            // Device Specifications
+            'device_name': "اسم الجهاز",
+            'serial_number': "الرقم التسلسلي",
+            'ministry_number': "الرقم الوزاري",
+            'mac_address': "عنوان MAC",
+            'ip_address': "عنوان IP",
+            'processor': "المعالج",
+            'ram': "الذاكرة",
+            'hard_drive': "القرص الصلب",
+            'operating_system': "نظام التشغيل",
+            'ram_size': "حجم الذاكرة",
+            'processor_generation': "جيل المعالج",
+            'printer_type': "نوع الطابعة",
+            'ink_type': "نوع الحبر",
+            'scanner_type': "نوع الماسح",
+            'ink_serial_number': "الرقم التسلسلي للحبر",
+            
+            // Actions
+            'edit': "تعديل",
+            'delete': "حذف",
+            'save': "حفظ",
+            'cancel': "إلغاء",
+            'add': "إضافة",
+            'update': "تحديث",
+            'remove': "إزالة",
+            
+            // Status
+            'is_required': "مطلوب",
+            'all_devices': "جميع الأجهزة",
+            'no_specifications_found': "لم يتم العثور على مواصفات",
+            
+            // Popup Titles
+            'add_device': "إضافة جهاز",
+            'edit_device': "تعديل جهاز",
+            'add_specification': "إضافة مواصفات",
+            'edit_specification': "تعديل مواصفات",
+            'add_model': "إضافة موديل",
+            'edit_model': "تعديل موديل",
+            'add_section': "إضافة قسم",
+            'edit_section': "تعديل قسم"
         }
     },
 

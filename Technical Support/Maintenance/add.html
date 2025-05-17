@@ -130,30 +130,29 @@
       <button type="submit" data-i18n="add_device">Add Device</button>
     </form>
   </div>
-
   <div id="popup-modal" class="popup-overlay" style="display: none;">
     <div class="popup-content wide-popup">
       <h3 id="popup-title" data-i18n="enter_device_specifications">Enter Device Specifications</h3>
       <form id="pc-spec-form">
         <div id="popup-fields"></div>
         <div class="popup-buttons">
-          <button type="button" class="save-btn" data-i18n="save">Save</button>
-          <button type="button" class="cancel-btn" data-i18n="cancel">Cancel</button>
+          <button type="button" class="save-btn" onclick="savePCSpec()"  data-i18n="save">Save</button>
+          <button type="button" class="cancel-btn" onclick="closePopup()" data-i18n="cancel">Cancel</button>
         </div>
       </form>
     </div>
   </div>
   <!-- ✅ Popup for Adding Generic Options -->
   <div id="generic-popup" class="popup-overlay" style="display: none;">
-    <div class="popup-content">
+    <div class="popup-contentt">
       <h3 id="generic-popup-title" data-i18n="add_new">Add New</h3>
       <label for="generic-popup-input" id="generic-label" data-i18n="new_value">New Value</label>
       <input type="text" id="generic-popup-input" data-i18n-placeholder="enter_new_value"
         placeholder="Enter new value..." required />
       <input type="hidden" id="generic-popup-target-id" />
       <div class="popup-buttons">
-        <button type="button" class="save-btn" data-i18n="save">Save</button>
-        <button type="button" class="cancel-btn" data-i18n="cancel">Cancel</button>
+        <button type="button" class="save-btn" onclick="saveGenericOption()"  data-i18n="save">Save</button>
+        <button type="button" class="cancel-btn" onclick="closeGenericPopup()" data-i18n="cancel">Cancel</button>
       </div>
     </div>
   </div>
