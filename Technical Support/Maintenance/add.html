@@ -1,25 +1,33 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Add New Device</title>
+  <title>Add Devices</title>
   <link rel="stylesheet" href="add.css" />
+  <link rel="stylesheet" href="/Language/Language.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
+  <style>
+    body {
+      font-family: var(--font-family);
+    }
+    h1, h2, h3, p, span, button, select, input, label {
+      font-family: var(--font-family);
+    }
+  </style>
 </head>
 
 <body>
   <div class="nav-buttons">
     <div class="back-button">
       <a href="#" onclick="goBack()">
-        <img src="/icon/Back.png" alt="Back Icon" class="back-icon" /> Back
+        <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> <span data-i18n="back">Back</span>
       </a>
     </div>
     <div class="Home-button">
-            <a href="../../Home/Home.html">
-        <img src="/icon/Home.png" alt="Home Icon" class="Home-icon" /> Home
+      <a href="../../Home/Home.html">
+        <img src="/icon/Home.png" alt="Home Icon" class="Home-icon"> <span data-i18n="home">Home</span>
       </a>
     </div>
   </div>
@@ -29,112 +37,119 @@
       <img src="/icon/MS Logo.png" alt="MS Logo" />
     </div>
     <div class="hospital-logo">
-      <img src="/icon/hospital-logo.png" alt="Hospital Logo" />
+      <img src="/icon/hospital-logo.png" alt="King Abdulaziz Hospital" />
     </div>
   </header>
 
   <div class="form-container">
-    <h2 class="form-title">Add New Device</h2>
+    <h1 class="title" data-i18n="add_devices">Add Devices</h1>
+    <p class="subtitle" data-i18n="add_new_device">Add a new device to the system</p>
 
     <form id="deviceForm">
 
       <!-- Device Type -->
-            <label for="device-type">Device Type <span class="required">*</span></label>
-            <div class="custom-dropdown-wrapper" id="device-type-dropdown-wrapper">
-              <div class="custom-dropdown">
-                <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-                  <span id="selected-device-type">Select device type</span>
-                  <span>▼</span>
-                </div>
-                <div class="dropdown-content">
-                  <input
-                    type="text"
-                    placeholder="Search device type..."
-                    class="dropdown-search"
-                    oninput="filterDropdown(this, 'device-type-options')"
-                  />
-                  <div class="dropdown-options" id="device-type-options">
-                    <!-- سيتم تعبئة الخيارات عبر JavaScript -->
-                  </div>
-                </div>
-              </div>
-            </div><input type="hidden" id="device-type" name="device-type"required />
+      <label for="device-type" data-i18n="device_type">Device Type</label> <span class="required">*</span>
+      <div class="custom-dropdown-wrapper" id="device-type-dropdown-wrapper">
+        <div class="custom-dropdown">
+          <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+            <span id="selected-device-type" data-i18n="select_device_type">Select device type</span>
+            <span>▼</span>
+          </div>
+          <div class="dropdown-content">
+            <input
+              type="text"
+              data-i18n-placeholder="search_device_type"
+              placeholder="Search device type..."
+              class="dropdown-search"
+              oninput="filterDropdown(this, 'device-type-options')"
+            />
+            <div class="dropdown-options" id="device-type-options">
+              <!-- سيتم تعبئة الخيارات عبر JavaScript -->
+            </div>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" id="device-type" name="device-type" required />
 
       <!-- Section -->
-            <label for="section">Section <span class="required">*</span></label>
-            <div class="custom-dropdown-wrapper" id="section-dropdown-wrapper">
-              <div class="custom-dropdown">
-                <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-                  <span id="selected-section">Select section</span>
-                  <span>▼</span>
-                </div>
-                <div class="dropdown-content">
-                  <input
-                    type="text"
-                    placeholder="Search section..."
-                    class="dropdown-search"
-                    oninput="filterDropdown(this, 'section-options')"
-                  />
-                  <div class="dropdown-options" id="section-options">
-                    <!-- يتم تعبئتها عبر JavaScript -->
-                  </div>
-                </div>
-              </div>
+      <label for="section" data-i18n="section">Section</label> <span class="required">*</span>
+      <div class="custom-dropdown-wrapper" id="section-dropdown-wrapper">
+        <div class="custom-dropdown">
+          <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+            <span id="selected-section" data-i18n="select_section">Select section</span>
+            <span>▼</span>
+          </div>
+          <div class="dropdown-content">
+            <input
+              type="text"
+              data-i18n-placeholder="search_section"
+              placeholder="Search section..."
+              class="dropdown-search"
+              oninput="filterDropdown(this, 'section-options')"
+            />
+            <div class="dropdown-options" id="section-options">
+              <!-- يتم تعبئتها عبر JavaScript -->
             </div>
-            <input type="hidden" id="section" name="section" required />
-            
-            <label>Device Specifications <span class="required">*</span></label>
-            <div class="custom-dropdown-wrapper">
-              <div class="custom-dropdown">
-                <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-                  <span id="selected-device-spec">Select specification</span>
-                  <span>▼</span>
-                </div>
-                <div class="dropdown-content">
-                  <input type="text" class="dropdown-search" placeholder="Search specification..." oninput="filterDropdown(this, 'device-spec-options')">
-                  <div class="dropdown-options" id="device-spec-options"></div>
-                </div>
-              </div>
-            </div>
-            <input type="hidden" id="device-spec" name="device-spec" required />
+          </div>
+        </div>
+      </div>
+      <input type="hidden" id="section" name="section" required />
+      
+      <label data-i18n="device_specifications">Device Specifications</label> <span class="required">*</span>
+      <div class="custom-dropdown-wrapper">
+        <div class="custom-dropdown">
+          <div class="dropdown-toggle" onclick="toggleDropdown(this)">
+            <span id="selected-device-spec" data-i18n="select_specification">Select specification</span>
+            <span>▼</span>
+          </div>
+          <div class="dropdown-content">
+            <input type="text" class="dropdown-search" data-i18n-placeholder="search_specification" placeholder="Search specification..." oninput="filterDropdown(this, 'device-spec-options')">
+            <div class="dropdown-options" id="device-spec-options"></div>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" id="device-spec" name="device-spec" required />
       <!-- Placeholder for dynamic specs -->
       <div id="device-specifications" class="specs-container">
         <!-- Loaded based on device type -->
       </div>
 
-      <button type="submit">Submit</button>
+      <label for="notes" data-i18n="notes">Notes</label>
+      <textarea id="notes" name="notes" data-i18n-placeholder="add_notes" placeholder="Add any additional notes here..."></textarea>
+
+      <button type="submit" data-i18n="add_device">Add Device</button>
     </form>
   </div>
 
   <div id="popup-modal" class="popup-overlay" style="display: none;">
-    <div class="popup-contentt wide-popup">
-      <h3 id="popup-title">Enter Device Specifications</h3>
+    <div class="popup-content wide-popup">
+      <h3 id="popup-title" data-i18n="enter_device_specifications">Enter Device Specifications</h3>
       <form id="pc-spec-form">
         <div id="popup-fields"></div> 
         <div class="popup-buttons">
-          <button type="button" class="save-btn" onclick="savePCSpec()">Save</button>
-          <button type="button" class="cancel-btn" onclick="closePopup()">Cancel</button>
+          <button type="button" class="save-btn" data-i18n="save">Save</button>
+          <button type="button" class="cancel-btn" data-i18n="cancel">Cancel</button>
         </div>
       </form>
     </div>
   </div>
   <!-- ✅ Popup for Adding Generic Options -->
-<div id="generic-popup" class="popup-overlay" style="display: none;">
+  <div id="generic-popup" class="popup-overlay" style="display: none;">
     <div class="popup-content">
-      <h3 id="generic-popup-title">Add New</h3>
-      <label for="generic-popup-input" id="generic-label">New Value</label>
-      <input type="text" id="generic-popup-input" placeholder="Enter new value..." required />
+      <h3 id="generic-popup-title" data-i18n="add_new">Add New</h3>
+      <label for="generic-popup-input" id="generic-label" data-i18n="new_value">New Value</label>
+      <input type="text" id="generic-popup-input" data-i18n-placeholder="enter_new_value" placeholder="Enter new value..." required />
       <input type="hidden" id="generic-popup-target-id" />
       <div class="popup-buttons">
-        <button type="button" class="save-btn" onclick="saveGenericOption()">Save</button>
-        <button type="button" class="cancel-btn" onclick="closeGenericPopup()">Cancel</button>
+        <button type="button" class="save-btn" data-i18n="save">Save</button>
+        <button type="button" class="cancel-btn" data-i18n="cancel">Cancel</button>
       </div>
     </div>
   </div>
 
-    <script src="Maintenance.js"></script>
-
+  <script src="Maintenance.js"></script>
   <script src="add.js"></script>
+  <script src="/Language/Language.js"></script>
 </body>
 
 </html>

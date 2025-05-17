@@ -1,15 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>New Report</title>
+  <title data-i18n="new_report">New Report</title>
 
   <!-- Google Fonts (Inter) -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
   <!-- External CSS -->
   <link rel="stylesheet" href="NewReport.CSS" />
+  <link rel="stylesheet" href="/Language/Language.css" />
+  <style>
+    * {
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
 </head>
 <body>
 
@@ -17,12 +23,12 @@
   <div class="nav-buttons">
     <div class="back-button">
       <a href="#" onclick="goBack()">
-        <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> Back
+        <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> <span data-i18n="back">Back</span>
       </a>
     </div>
     <div class="Home-button">
-            <a href="../../Home/Home.html">
-        <img src="/icon/Home.png" alt="Home Icon" class="Home-icon"> Home
+      <a href="../../Home/Home.html">
+        <img src="/icon/Home.png" alt="Home Icon" class="Home-icon"> <span data-i18n="home">Home</span>
       </a>
     </div>
   </div>
@@ -41,19 +47,19 @@
   <form id="report-form" action="Search reports.html" method="GET" enctype="multipart/form-data">
     <div class="container">
 
-      <div class="title">New Report</div>
-      <p>Fill out the report details below</p>
+      <div class="title" data-i18n="new_report">New Report</div>
+      <p data-i18n="fill_report_details">Fill out the report details below</p>
 
       <!-- First Row -->
       <div class="row">
         <div>
-          <label>Report Type</label>
+          <label data-i18n="report_type">Report Type</label>
           <select name="reportType">
-            <option>Select report type</option>
+            <option data-i18n="select_report_type">Select report type</option>
           </select>
         </div>
         <div>
-          <label>Submission Date</label>
+          <label data-i18n="submission_date">Submission Date</label>
           <input type="date" name="submissionDate" />
         </div>
       </div>
@@ -61,58 +67,58 @@
       <!-- Second Row -->
       <div class="row">
         <div>
-          <label>Device Type</label>
+          <label data-i18n="device_type">Device Type</label>
           <select name="deviceType">
-            <option>Select device type</option>
+            <option data-i18n="select_device_type">Select device type</option>
           </select>
         </div>
         <div>
-          <label>Status</label>
+          <label data-i18n="status">Status</label>
           <select name="status">
-            <option>Select status</option>
+            <option data-i18n="select_status">Select status</option>
           </select>
         </div>
       </div>
 
       <!-- Description -->
-      <label>Detailed Description</label>
-      <textarea name="description" placeholder="Enter detailed description of the report..."></textarea>
+      <label data-i18n="detailed_description">Detailed Description</label>
+      <textarea name="description" data-i18n-placeholder="enter_description" placeholder="Enter detailed description of the report..."></textarea>
 
       <!-- 📎 Upload -->
       <div class="form-group">
-        <label>Upload a Copy of the Email</label>
+        <label data-i18n="upload_email_copy">Upload a Copy of the Email</label>
         <div id="drop-area" class="upload-box">
           <img src="/icon/upload.png" alt="Upload Icon" class="upload-icon">
-          <p>Drop files here or click to upload</p>
-          <span class="file-format-info">Supported formats: PDF, DOC, DOCX, EML</span>
+          <p data-i18n="drop_files_here">Drop files here or click to upload</p>
+          <span class="file-format-info" data-i18n="supported_formats">Supported formats: PDF, DOC, DOCX, EML</span>
           <input type="file" id="upload-file" name="attachments" multiple hidden>
         </div>
       </div>
 
       <!-- ✍️ Signature Section -->
-      <label class="signature-box">Signature</label>
-      <p>✍️ Choose how to provide your signature</p>
+      <label class="signature-box" data-i18n="signature">Signature</label>
+      <p data-i18n="choose_signature">✍️ Choose how to provide your signature</p>
 
       <div style="display: flex; gap: 20px; flex-wrap: wrap;">
         <!-- Draw Signature -->
         <div style="flex: 1;">
-          <p>Draw Signature</p>
+          <p data-i18n="draw_signature">Draw Signature</p>
           <canvas id="signatureCanvas" width="300" height="150" style="border: 1px solid #ccc;"></canvas>
         </div>
 
         <!-- Upload Signature -->
         <div style="flex: 1;">
-          <p>Or Upload Signature Image</p>
+          <p data-i18n="upload_signature">Or Upload Signature Image</p>
           <input type="file" id="signatureUpload" accept="image/*" />
           <img id="uploadedSignature" src="" alt="Uploaded Signature" style="max-width: 100%; margin-top: 10px; display: none;" />
         </div>
       </div>
 
-      <p id="clearSignature" style="margin-top: 8px; font-size: 14px; color: #007bff; cursor: pointer;">Clear Signature</p>
+      <p id="clearSignature" style="margin-top: 8px; font-size: 14px; color: #007bff; cursor: pointer;" data-i18n="clear_signature">Clear Signature</p>
 
       <!-- Submit Button -->
       <div class="buttons">
-        <button type="submit" class="submit-btn">Submit Report</button>
+        <button type="submit" class="submit-btn" data-i18n="submit_report">Submit Report</button>
       </div>
 
     </div>
@@ -123,8 +129,9 @@
     function goBack() {
       window.history.back();
     }
-</script>
-   <script src="Newreport.js"></script>
+  </script>
+  <script src="Newreport.js"></script>
+  <script src="/Language/Language.js"></script>
 
 </body>
 </html>

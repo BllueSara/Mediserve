@@ -1,10 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8"> <!-- Character encoding -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Responsive layout on different devices -->
     <title>Ticket Selection</title> <!-- Page title -->
     <link rel="stylesheet" href="Tickets.css"> <!-- Link to external CSS file -->
+    <link rel="stylesheet" href="/Language/Language.css">
+    <style>
+        body {
+            font-family: var(--font-family);
+        }
+        h1, h2, h3, p, span, button, select, input {
+            font-family: var(--font-family);
+        }
+    </style>
 </head>
 <body>
 
@@ -13,14 +22,14 @@
         <!-- Back Button -->
         <div class="back-button">
             <a href="#" onclick="goBack()"> <!-- JavaScript function for going back -->
-                <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> Back
+                <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> <span data-i18n="back">Back</span>
             </a>
         </div>
 
         <!-- Home Button -->
         <div class="home-button">
             <a href="../../Home/Home.html">
-                <img src="/icon/Home.png" alt="Home Icon" class="home-icon"> Home
+                <img src="/icon/Home.png" alt="Home Icon" class="home-icon"> <span data-i18n="home">Home</span>
             </a>
         </div>
     </div>
@@ -36,13 +45,14 @@
         <div class="hospital-logo">
             <img src="/icon/hospital-logo.png" alt="Hospital Logo">
         </div>
+
     </header>
 
     <!-- 🧾 Page Title -->
-    <h1 class="title">Choose Ticket Type</h1>
+    <h1 class="title" data-i18n="choose_ticket_type">Choose Ticket Type</h1>
 
     <!-- Short description -->
-    <p class="description">Select the appropriate ticket type for your request</p>
+    <p class="description" data-i18n="select_ticket_type">Select the appropriate ticket type for your request</p>
 
     <!-- 🎫 Ticket Type Options -->
     <div class="ticket-container">
@@ -56,7 +66,7 @@
                     <div class="icon-container">
                         <img src="/icon/external-hover.png" alt="Internal Ticket Icon">
                     </div>
-                    <p>Internal Ticket</p>
+                    <p data-i18n="internal_ticket">Internal Ticket</p>
                 </div>
 
                 <!-- External Ticket Option -->
@@ -66,7 +76,7 @@
                     <div class="icon-container">
                         <img src="/icon/ET.png" alt="External Ticket Icon">
                     </div>
-                    <p>External Ticket</p>
+                    <p data-i18n="external_ticket">External Ticket</p>
                 </div>
 
             </div>
@@ -75,5 +85,6 @@
 
     <!-- 📜 JavaScript File -->
     <script src="Tickets.js"></script> <!-- Link to external JavaScript file -->
+    <script src="/Language/Language.js"></script>
 </body>
 </html>
