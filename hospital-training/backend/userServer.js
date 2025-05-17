@@ -224,6 +224,68 @@ app.delete('/notifications/clear', authenticateToken, (req, res) => {
   });
 });
 
+// ✅ Get all users
+// جلب كل المستخدمين
+app.get('/users', authenticateToken, (req, res) => {
+  db.query('SELECT id, name, email, department, employee_id FROM users', (err, results) => {
+    if (err) return res.status(500).json({ message: 'Database error' });
+    res.json(results);
+  });
+});
+
+// جلب مستخدم مفصل
+app.get('/users/:id', authenticateToken, (req, res) => {
+  const userId = req.params.id;
+  db.query('SELECT * FROM users WHERE id = ?', [userId], (err, results) => {
+    if (err) return res.status(500).json({ message: 'Database error' });
+    if (!results.length) return res.status(404).json({ message: 'User not found' });
+    res.json(results[0]);
+  });
+});
+
+
+app.put('/users/:id/permissions', authenticateToken, (req, res) => {
+  const userId = req.params.id;
+  const permissions = req.body;
+
+  const sql = `
+    INSERT INTO user_permissions (user_id, permissions)
+    VALUES (?, ?)
+    ON DUPLICATE KEY UPDATE permissions = VALUES(permissions)
+  `;
+
+  db.query(sql, [userId, JSON.stringify(permissions)], (err) => {
+    if (err) return res.status(500).json({ message: 'Failed to save permissions' });
+    res.json({ message: 'Permissions saved' });
+  });
+});
+app.put('/users/:id/status', authenticateToken, (req, res) => {
+  const userId = req.params.id;
+  const { status } = req.body;
+
+  if (!['active', 'inactive'].includes(status)) {
+    return res.status(400).json({ message: 'Invalid status value' });
+  }
+
+  db.query('UPDATE users SET status = ? WHERE id = ?', [status, userId], (err) => {
+    if (err) return res.status(500).json({ message: 'Failed to update status' });
+
+    logActivity(userId, 'System', 'Toggle Status', `Status changed to ${status}`);
+    res.json({ message: `User status updated to ${status}` });
+  });
+});
+app.delete('/users/:id', authenticateToken, (req, res) => {
+  const userId = req.params.id;
+
+  db.query('DELETE FROM users WHERE id = ?', [userId], (err, result) => {
+    if (err) return res.status(500).json({ message: 'Failed to delete user' });
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'User not found' });
+
+    logActivity(userId, 'System', 'Delete User', `User ID ${userId} deleted`);
+    res.json({ message: 'User deleted successfully' });
+  });
+});
+
 
 app.delete('/notifications/:id', authenticateToken, (req, res) => {
   const userId = req.user.id;

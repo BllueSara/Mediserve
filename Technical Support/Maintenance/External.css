@@ -656,3 +656,13 @@ textarea:focus {
   font-size: 13px;
   margin-top: 4px;
 }
+.required-star {
+  color: red;
+  font-weight: bold;
+  margin-left: 4px;
+}
+
+[dir="rtl"] .required-star {
+  margin-left: 0;
+  margin-right: 4px;
+}
