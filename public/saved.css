@@ -644,6 +644,102 @@ cmd-btn {
 }
 
 
+.input-section {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 32px;
+  margin: 0 auto 32px auto;
+  max-width: 1000px;
+  padding: 0 20px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.input-column {
+  flex: 1;
+  min-width: 150px;
+}
+
+.input-column label {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: #111827;
+  text-align: left;
+}
+
+.input-group p {
+  margin: 6px 0;
+  background-color: #f9f9f9;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  text-align: left;
+  word-break: break-word;
+}
+
+
+#column-display {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 32px;
+  max-width: 1000px;
+  margin: 0 auto 40px auto;
+  flex-wrap: nowrap;
+}
+
+.input-column {
+  flex: 1;
+  min-width: 120px;
+}
+
+.input-column label {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #111827;
+  text-align: center;
+}
+
+.input-group p {
+  background: #f4f4f4;
+  padding: 8px 10px;
+  border-radius: 6px;
+  margin: 4px 0;
+  font-size: 13px;
+  color: #333;
+  text-align: center;
+  border: 1px solid #ddd;
+  word-break: break-word;
+}
+
+
+.data-cell {
+  background-color: #f3f4f6;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 6px 0;
+  font-size: 14px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.ip-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.selected-row {
+  background-color: #dbeafe !important;
+}
+
 
 @media (max-width: 600px) {
   .header {
