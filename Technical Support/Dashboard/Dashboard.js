@@ -78,6 +78,148 @@ Chart.register({
   }
 });
 
+document.addEventListener('DOMContentLoaded', function () {
+  // دالة لرسم الدوائر
+  function drawDoughnut(id, percent, color) {
+    const ctx = document.getElementById(id);
+    if (!ctx) return;
+
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Completed', 'Remaining'],
+        datasets: [{
+          data: [percent, 100 - percent],
+          backgroundColor: [color, '#F3F4F6'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '70%',
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false }
+        }
+      }
+    });
+  }
+
+  // تحميل البيانات من الـ API
+  fetch('http://localhost:4000/api/maintenance/completion-rates', {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`  // إذا كنت مخزن التوكن هنا
+    }
+  })
+  .then(res => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  })
+  .then(data => {
+    drawDoughnut('routineStatusChart', data.regular.percentage, '#8B5CF6');
+    drawDoughnut('internalStatusChart', data.internal.percentage, '#3B82F6');
+    drawDoughnut('externalStatusChart', data.external.percentage, '#F59E0B');
+  
+    document.getElementById('regularPercentage').textContent = `${data.regular.percentage}%`;
+    document.getElementById('regularDetail').textContent = `${data.regular.closed}/${data.regular.total} tasks`;
+  
+    document.getElementById('internalPercentage').textContent = `${data.internal.percentage}%`;
+    document.getElementById('internalDetail').textContent = `${data.internal.closed}/${data.internal.total} tasks`;
+  
+    document.getElementById('externalPercentage').textContent = `${data.external.percentage}%`;
+    document.getElementById('externalDetail').textContent = `${data.external.closed}/${data.external.total} tasks`;
+  })
+  .catch(err => {
+    console.error('Failed to load maintenance data:', err);
+  });
+});
+
+
+
+
+
+
+// Navigation functions
+function goBack() {
+  window.history.back();
+}
+
+function goToHome() {
+  window.location.href = "Home.html";
+}
+
+// Custom chart plugins for enhanced interactivity
+Chart.register({
+  id: 'centerTextPlugin',
+  beforeDraw(chart) {
+    if (chart.config.type === 'doughnut') {
+      const { ctx, width, height } = chart;
+      const dataset = chart.data.datasets[0];
+      const total = dataset.data.reduce((a, b) => a + b, 0);
+      const value = dataset.data[0];
+      const percent = total === 0 ? 0 : Math.round((value / total) * 100);
+      
+      ctx.save();
+      const fontSize = Math.min(height / 5, 16);
+      ctx.font = `600 ${fontSize}px 'Inter'`;
+      ctx.fillStyle = chart.data.datasets[0].backgroundColor[0];
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${percent}%`, width / 2, height / 2);
+      ctx.restore();
+    }
+  }
+});
+
+// Tooltip plugin for charts
+Chart.register({
+  id: 'customTooltip',
+  afterEvent(chart, args) {
+    const { ctx, chartArea } = chart;
+    const tooltip = document.getElementById('chart-tooltip');
+    
+    if (!args.event.x || !args.event.y) return;
+    
+    if (args.event.type === 'mousemove') {
+      const x = args.event.x;
+      const y = args.event.y;
+      
+      // Check if mouse is within chart area
+      if (x >= chartArea.left && x <= chartArea.right && 
+          y >= chartArea.top && y <= chartArea.bottom) {
+        const points = chart.getElementsAtEventForMode(
+          args.event, 
+          'nearest', 
+          { intersect: true }, 
+          false
+        );
+        
+        if (points.length) {
+          const point = points[0];
+          const dataset = chart.data.datasets[point.datasetIndex];
+          const value = dataset.data[point.index];
+          const label = chart.data.labels[point.index];
+          
+          tooltip.innerHTML = `
+            <div style="font-weight:600;margin-bottom:4px">${label}</div>
+            <div>${dataset.label}: ${value}%</div>
+          `;
+          tooltip.style.opacity = 1;
+          tooltip.style.left = `${x + 10}px`;
+          tooltip.style.top = `${y + 10}px`;
+        } else {
+          tooltip.style.opacity = 0;
+        }
+      } else {
+        tooltip.style.opacity = 0;
+      }
+    } else {
+      tooltip.style.opacity = 0;
+    }
+  }
+});
+
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
   // Create tooltip element
@@ -87,41 +229,22 @@ document.addEventListener('DOMContentLoaded', function() {
   document.body.appendChild(tooltip);
   
   // Sample data - in a real app, this would come from an API
-  fetch('/api/maintenance/completion-rates')
-  .then(res => res.json())
-  .then(data => {
-    drawDoughnut('routineStatusChart', data.regular.percentage, '#8B5CF6');
-    drawDoughnut('internalStatusChart', data.internal.percentage, '#3B82F6');
-    drawDoughnut('externalStatusChart', data.external.percentage, '#F59E0B');
-
-    // تعبئة تفاصيل الهوفر
-    document.getElementById('regularPercentage').textContent = `${data.regular.percentage}%`;
-    document.getElementById('regularDetail').textContent = `${data.regular.closed}/${data.regular.total} tasks`;
-
-    document.getElementById('internalPercentage').textContent = `${data.internal.percentage}%`;
-    document.getElementById('internalDetail').textContent = `${data.internal.closed}/${data.internal.total} tasks`;
-
-    document.getElementById('externalPercentage').textContent = `${data.external.percentage}%`;
-    document.getElementById('externalDetail').textContent = `${data.external.closed}/${data.external.total} tasks`;
-
-    // باقي الرسومات
-    drawLineChart(
-      'reportLineChart',
-      data.reportMonths,
-      data.internalMonthly,
-      data.externalMonthly,
-      data.routineMonthly
-    );
-
-    drawBar(
-      'maintenanceOverviewChart',
-      data.overviewLabels,
-      data.overviewInternal,
-      data.overviewExternal
-    );
-  })
-  .catch(err => console.error('Error fetching dashboard data:', err));
-
+  const maintenanceData = {
+    internal: 60,
+    external: 45,
+    routine: 85,
+    reportMonths: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    internalMonthly: [70, 78, 85, 82, 75, 80],
+    externalMonthly: [50, 60, 65, 70, 68, 72],
+    routineMonthly: [80, 75, 90, 88, 85, 92],
+    overviewLabels: ['PCs', 'Printers', 'Scanners', 'Servers', 'Network'],
+    overviewInternal: [50, 35, 15, 70, 60],
+    overviewExternal: [30, 25, 10, 40, 35],
+    // Added task counts for the new hover details
+    routineTasks: { completed: 42, total: 50 },
+    internalTasks: { completed: 30, total: 50 },
+    externalTasks: { completed: 18, total: 40 }
+  };
   
   // Enhanced function to draw doughnut charts
   function drawDoughnut(id, percent, color) {
@@ -406,11 +529,7 @@ function drawLineChart(id, labels, internalData, externalData, routineData) {
     });
   }
   
-  // Initialize all charts with the enhanced doughnut configuration
-  drawDoughnut('routineStatusChart', maintenanceData.routine, '#8B5CF6');
-  drawDoughnut('internalStatusChart', maintenanceData.internal, '#3B82F6');
-  drawDoughnut('externalStatusChart', maintenanceData.external, '#F59E0B');
-  
+
   drawLineChart(
     'reportLineChart',
     maintenanceData.reportMonths,
@@ -419,12 +538,7 @@ function drawLineChart(id, labels, internalData, externalData, routineData) {
     maintenanceData.routineMonthly
   );
   
-  drawBar(
-    'maintenanceOverviewChart',
-    maintenanceData.overviewLabels,
-    maintenanceData.overviewInternal,
-    maintenanceData.overviewExternal
-  );
+
   
   // Add hover effects to device boxes
   document.querySelectorAll('.device-box').forEach(box => {
