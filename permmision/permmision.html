@@ -58,39 +58,46 @@
   <div class="container">
     <aside class="sidebar">
       <input type="text" data-i18n-placeholder="search_users" placeholder="Search users...">
-      <div class="user-item"> Sara Hamed <span style="margin-left:auto;width:8px;height:8px;background:#10b981;border-radius:50%;"></span></div>
-      <div class="user-item"> Hani omar <span style="margin-left:auto;width:8px;height:8px;background:#10b981;border-radius:50%;"></span></div>
-      <div class="user-item"> Osama Ali <span style="margin-left:auto;width:8px;height:8px;background:#10b981;border-radius:50%;"></span></div>
+
 
       <button class="add-user" data-i18n="add_new_user">+ Add New User</button>
     </aside>
     <main class="main">
       <div class="profile-header">
-        <div class="info" style="display: flex; align-items: center; gap: 16px;">
-          <div style="display: flex; flex-direction: column;">
-            <strong style="font-size: 16px; color: #111827;">Sara Hamed</strong>
-            <span style="font-size: 14px; color: #6b7280;">sara.Hamed@company.com</span>
-          </div>
-        </div>
-        <div class="actions" style="display: flex; align-items: center; gap: 20px;">
-          <span style="font-size: 14px; color: #6b7280;" data-i18n="status">Status:</span>
-          <span style="display: flex; align-items: center; gap: 6px; background: #ecfdf5; color: #10b981; padding: 4px 10px; border-radius: 9999px; font-size: 14px; font-weight: 500;">
-            <span style="width: 8px; height: 8px; background: #10b981; border-radius: 50%;"></span>
-            <span data-i18n="active">Active</span>
-          </span>
-          <span style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: #ef4444; font-size: 14px;">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px; height:18px;">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            <span data-i18n="delete">Delete</span>
-          </span>
-          <span style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: #3DA9E0; font-size: 14px;">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px; height:18px;">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5v-1.125A4.125 4.125 0 0012.375 5.25h-.75A4.125 4.125 0 007.5 9.375V10.5m9 0H7.5m9 0v6.375a2.625 2.625 0 01-2.625 2.625h-3.75A2.625 2.625 0 017.5 16.875V10.5" />
-            </svg>
-            <span data-i18n="reset_password">Reset Password</span>
-          </span>
-        </div>
+<div class="info" style="display: flex; align-items: center; gap: 16px;">
+  <div style="display: flex; flex-direction: column;">
+    <strong id="user-name" style="font-size: 16px; color: #111827;"></strong>
+    <span id="user-email" style="font-size: 14px; color: #6b7280;"></span>
+  </div>
+  <div id="user-extra-info" style="display: flex; flex-direction: column; margin-left: 20px;"></div>
+</div>
+
+<div class="actions" style="display: flex; align-items: center; gap: 20px;">
+  <span style="font-size: 14px; color: #6b7280;" data-i18n="status">Status:</span>
+<span id="user-status-badge" style="cursor: pointer; display: flex; align-items: center; gap: 6px; background: #ecfdf5; color: #10b981; padding: 4px 10px; border-radius: 9999px; font-size: 14px; font-weight: 500;">
+  <span style="width: 8px; height: 8px; background: #10b981; border-radius: 50%;"></span>
+  <span id="status-text" data-i18n="active">Active</span>
+</span>
+
+  </span>
+
+  <span id="delete-btn" style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: #ef4444; font-size: 14px;">
+    <!-- Delete SVG -->
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px; height:18px;">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+    <span data-i18n="delete">Delete</span>
+  </span>
+
+  <span id="toggle-status-btn" style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: #3DA9E0; font-size: 14px;">
+    <!-- Lock/Unlock Icon -->
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px; height:18px;">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5v-1.125A4.125 4.125 0 0012.375 5.25h-.75A4.125 4.125 0 007.5 9.375V10.5m9 0H7.5m9 0v6.375a2.625 2.625 0 01-2.625 2.625h-3.75A2.625 2.625 0 017.5 16.875V10.5" />
+    </svg>
+    <span data-i18n="reset_password">Toggle Status</span>
+  </span>
+</div>
+
       </div>
 
       <div class="permissions-section">

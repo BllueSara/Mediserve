@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
+
 <head>
   <!-- Metadata and page setup -->
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>External Maintenance</title>
 
   <!-- External CSS file for styling -->
@@ -15,12 +16,22 @@
     body {
       font-family: var(--font-family);
     }
-    h1, h2, h3, p, span, button, select, input, label {
+
+    h1,
+    h2,
+    h3,
+    p,
+    span,
+    button,
+    select,
+    input,
+    label {
       font-family: var(--font-family);
     }
   </style>
 
 </head>
+
 <body>
   <!-- Navigation buttons section (Back & Home) -->
   <div class="nav-buttons">
@@ -32,7 +43,7 @@
     </div>
     <!-- Home button -->
     <div class="Home-button">
-            <a href="../../Home/Home.html">
+      <a href="../../Home/Home.html">
         <img src="/icon/Home.png" alt="Home Icon" class="Home-icon" /> <span data-i18n="home">Home</span>
       </a>
     </div>
@@ -56,12 +67,15 @@
     <form id="external-maintenance-form">
       <!-- Section title for device info -->
       <p class="section-title" data-i18n="device_information">Device Information</p>
-      
+
       <!-- Device input fields -->
       <div class="device-container">
         <!-- Device Type dropdown -->
         <div class="device-box">
-          <label for="device-type" data-i18n="device_type">Type of Problem <span class="required">*</span></label>
+          <label for="device-type">
+            <span data-i18n="device_type">Type of Problem</span>
+            <span class="required-star">*</span>
+          </label>
           <div class="custom-dropdown-wrapper" id="device-type-dropdown-wrapper">
             <div class="custom-dropdown">
               <div class="dropdown-toggle" onclick="toggleDropdown(this)">
@@ -69,24 +83,22 @@
                 <span>▼</span>
               </div>
               <div class="dropdown-content">
-                <input
-                  type="text"
-                  data-i18n-placeholder="search_device_type"
-                  placeholder="Search device type..."
-                  class="dropdown-search"
-                  oninput="filterDropdown(this, 'device-type-options')"
-                />
+                <input type="text" data-i18n-placeholder="search_device_type" placeholder="Search device type..."
+                  class="dropdown-search" oninput="filterDropdown(this, 'device-type-options')" />
                 <div class="dropdown-options" id="device-type-options">
                   <!-- سيتم تعبئة الخيارات عبر JavaScript -->
                 </div>
               </div>
             </div>
-          </div><input type="hidden" id="device-type" name="device-type" required/>
+          </div><input type="hidden" id="device-type" name="device-type" required />
         </div>
 
         <!-- Section dropdown -->
         <div class="device-box">
-          <label for="section" data-i18n="section">Section <span class="required">*</span></label>
+          <label for="section">
+            <span data-i18n="section">Section</span>
+            <span class="required-star">*</span>
+          </label>
           <div class="custom-dropdown-wrapper">
             <div class="custom-dropdown">
               <div class="dropdown-toggle" onclick="toggleDropdown(this)">
@@ -94,7 +106,8 @@
                 <span>▼</span>
               </div>
               <div class="dropdown-content">
-                <input type="text" class="dropdown-search" data-i18n-placeholder="search_section" placeholder="Search section..." oninput="filterDropdown(this, 'section-options')">
+                <input type="text" class="dropdown-search" data-i18n-placeholder="search_section"
+                  placeholder="Search section..." oninput="filterDropdown(this, 'section-options')">
                 <div class="dropdown-options" id="section-options"></div>
               </div>
             </div>
@@ -104,7 +117,10 @@
 
         <!-- Device specification dropdown -->
         <div class="device-box">
-          <label data-i18n="device_specifications">Device Specifications <span class="required">*</span></label>
+          <label for="device-spec">
+            <span data-i18n="device_specifications">Device Specifications</span>
+            <span class="required-star">*</span>
+          </label>
           <div class="custom-dropdown-wrapper">
             <div class="custom-dropdown">
               <div class="dropdown-toggle" onclick="toggleDropdown(this)">
@@ -112,7 +128,8 @@
                 <span>▼</span>
               </div>
               <div class="dropdown-content">
-                <input type="text" class="dropdown-search" data-i18n-placeholder="search_specification" placeholder="Search specification..." oninput="filterDropdown(this, 'device-spec-options')">
+                <input type="text" class="dropdown-search" data-i18n-placeholder="search_specification"
+                  placeholder="Search specification..." oninput="filterDropdown(this, 'device-spec-options')">
                 <div class="dropdown-options" id="device-spec-options"></div>
               </div>
             </div>
@@ -123,17 +140,23 @@
 
       <!-- Section title for ticket info -->
       <p class="section-title" data-i18n="ticket_information">Ticket Information</p>
-      
+
       <!-- Ticket number input -->
       <div>
-        <label data-i18n="ticket_number">Ticket Number <span class="required">*</span></label>
-        <input type="text" id="ticket-number" data-i18n-placeholder="enter_ticket_number" placeholder="Enter ticket number" required />
+        <label for="ticket-number">
+          <span data-i18n="ticket_number">Ticket Number</span>
+          <span class="required-star">*</span>
+        </label> <input type="text" id="ticket-number" data-i18n-placeholder="enter_ticket_number"
+          placeholder="Enter ticket number" required />
       </div>
 
       <!-- Maintenance manager name -->
       <div>
-        <label data-i18n="maintenance_manager">Maintenance Manager <span class="required">*</span></label>
-        <input type="text" id="maintenance-manager" data-i18n-placeholder="enter_manager_name" placeholder="Enter manager name" required />
+        <label for="maintenance-manager">
+          <span data-i18n="maintenance_manager">Maintenance Manager</span>
+          <span class="required-star">*</span>
+        </label> <input type="text" id="maintenance-manager" data-i18n-placeholder="enter_manager_name"
+          placeholder="Enter manager name" required />
       </div>
 
       <!-- Reporter dropdown -->
@@ -146,7 +169,8 @@
               <span>▼</span>
             </div>
             <div class="dropdown-content">
-              <input type="text" class="dropdown-search" data-i18n-placeholder="search_reporter" placeholder="Search reporter..." oninput="filterDropdown(this, 'technical-options')">
+              <input type="text" class="dropdown-search" data-i18n-placeholder="search_reporter"
+                placeholder="Search reporter..." oninput="filterDropdown(this, 'technical-options')">
               <div class="dropdown-options" id="technical-options"></div>
             </div>
           </div>
@@ -156,17 +180,21 @@
 
       <!-- Section title for diagnosis -->
       <p class="section-title" data-i18n="diagnosis_details">Diagnosis Details</p>
-      
+
       <!-- Initial diagnosis textarea -->
       <div>
-        <label data-i18n="initial_diagnosis">Initial Diagnosis <span class="required">*</span></label>
-        <textarea id="initial-diagnosis" data-i18n-placeholder="enter_initial_diagnosis" placeholder="Enter initial diagnosis" required></textarea>
+        <label for="initial-diagnosis">
+          <span data-i18n="initial_diagnosis">Initial Diagnosis</span>
+          <span class="required-star">*</span>
+        </label> <textarea id="initial-diagnosis" data-i18n-placeholder="enter_initial_diagnosis"
+          placeholder="Enter initial diagnosis" required></textarea>
       </div>
 
       <!-- Final diagnosis textarea -->
       <div>
         <label data-i18n="final_diagnosis">Final Diagnosis</label>
-        <textarea id="final-diagnosis" data-i18n-placeholder="enter_final_diagnosis" placeholder="Enter final diagnosis"></textarea>
+        <textarea id="final-diagnosis" data-i18n-placeholder="enter_final_diagnosis"
+          placeholder="Enter final diagnosis"></textarea>
       </div>
 
       <!-- Submit and cancel buttons -->
@@ -181,7 +209,7 @@
     <div class="popup-contentt wide-popup">
       <h3 id="popup-title" data-i18n="enter_device_specifications">Enter Device Specifications</h3>
       <form id="pc-spec-form">
-        <div id="popup-fields"></div> 
+        <div id="popup-fields"></div>
         <div class="popup-buttons">
           <button type="button" class="save-btn" data-i18n="save">Save</button>
           <button type="button" class="cancel-btn" data-i18n="cancel">Cancel</button>
@@ -190,7 +218,7 @@
     </div>
   </div>
   <!-- ✅ Popup for Adding Generic Options -->
-<div id="generic-popup" class="popup-overlay" style="display: none;">
+  <div id="generic-popup" class="popup-overlay" style="display: none;">
     <div class="popup-content">
       <h3 id="generic-popup-title" data-i18n="add_new">Add New</h3>
       <label for="generic-popup-input" id="generic-label" data-i18n="new_value">New Value</label>
@@ -209,4 +237,5 @@
   <script src="/Language/Language.js"></script>
 
 </body>
+
 </html>
