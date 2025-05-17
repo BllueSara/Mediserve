@@ -1,12 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Internal Ticket</title>
   <link rel="stylesheet" href="Internal Ticket.css" />
+  <link rel="stylesheet" href="/Language/Language.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
+  <style>
+    body {
+      font-family: var(--font-family);
+    }
+    h1, h2, h3, p, span, button, select, input, label {
+      font-family: var(--font-family);
+    }
+  </style>
 </head>
 <body>
   <div class="container" id="container">
@@ -14,12 +22,12 @@
     <div class="nav-buttons">
       <div class="back-button">
         <a href="#" onclick="goBack()">
-          <img src="/icon/Back.png" class="back-icon" /> Back
+          <img src="/icon/Back.png" class="back-icon" /> <span data-i18n="back">Back</span>
         </a>
       </div>
       <div class="home-button">
-            <a href="../../Home/Home.html">
-          <img src="/icon/home.png" class="home-icon" /> Home
+        <a href="../../Home/Home.html">
+          <img src="/icon/home.png" class="home-icon" /> <span data-i18n="home">Home</span>
         </a>
       </div>
     </div>
@@ -32,22 +40,22 @@
 
     <!-- Form -->
     <div class="ticket-container">
-      <h1 class="title">Internal Ticket</h1>
-      <p class="subtitle">Fill in the details below to create a new Internal ticket</p>
+      <h1 class="title" data-i18n="internal_ticket">Internal Ticket</h1>
+      <p class="subtitle" data-i18n="fill_ticket_details">Fill in the details below to create a new Internal ticket</p>
 
       <form id="ticket-form" enctype="multipart/form-data" method="POST" onsubmit="return validateForm(event)">
 
         <!-- النوع -->
         <div class="form-group">
-          <label for="ticket-type">Ticket Type <span class="required">*</span></label>
+          <label for="ticket-type" data-i18n="ticket_type">Ticket Type <span class="required">*</span></label>
           <div class="custom-dropdown-wrapper" id="ticket-type-wrapper">
             <div class="custom-dropdown">
               <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-                <span id="selected-ticket-type">Select Ticket Type</span>
+                <span id="selected-ticket-type" data-i18n="select_ticket_type">Select Ticket Type</span>
                 <span>▼</span>
               </div>
               <div class="dropdown-content">
-                <input type="text" class="dropdown-search" placeholder="Search ticket types..." oninput="filterDropdown(this, 'ticket-type-options')">
+                <input type="text" class="dropdown-search" data-i18n-placeholder="search_ticket_types" placeholder="Search ticket types..." oninput="filterDropdown(this, 'ticket-type-options')">
                 <div class="dropdown-options" id="ticket-type-options"></div>
               </div>
             </div>
@@ -57,27 +65,27 @@
 
         <!-- Custom نوع -->
         <div class="form-group" id="custom-type-container" style="display: none;">
-          <label for="custom-ticket-type">Specify Custom Type</label>
-          <input type="text" id="custom-ticket-type" placeholder="Enter custom type" />
+          <label for="custom-ticket-type" data-i18n="specify_custom_type">Specify Custom Type</label>
+          <input type="text" id="custom-ticket-type" data-i18n-placeholder="enter_custom_type" placeholder="Enter custom type" />
         </div>
 
         <!-- رقم التذكرة -->
         <div class="form-group">
-          <label for="ticket-number">Ticket Number</label>
-          <input type="text" id="ticket-number" name="ticket_number" readonly placeholder="Auto-generated..." />
+          <label for="ticket-number" data-i18n="ticket_number">Ticket Number</label>
+          <input type="text" id="ticket-number" name="ticket_number" readonly data-i18n-placeholder="auto_generated" placeholder="Auto-generated..." />
         </div>
 
         <!-- الفني -->
         <div class="form-group">
-          <label for="technical-status">Technical Name <span class="required">*</span></label>
+          <label for="technical-status" data-i18n="technical_name">Technical Name <span class="required">*</span></label>
           <div class="custom-dropdown-wrapper" id="technical-status-wrapper">
             <div class="custom-dropdown">
               <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-                <span id="selected-technical-status">Select Technical Engineer</span>
+                <span id="selected-technical-status" data-i18n="select_technical_engineer">Select Technical Engineer</span>
                 <span>▼</span>
               </div>
               <div class="dropdown-content">
-                <input type="text" class="dropdown-search" placeholder="Search technical..." oninput="filterDropdown(this, 'technical-status-options')">
+                <input type="text" class="dropdown-search" data-i18n-placeholder="search_technical" placeholder="Search technical..." oninput="filterDropdown(this, 'technical-status-options')">
                 <div class="dropdown-options" id="technical-status-options"></div>
               </div>
             </div>
@@ -87,15 +95,15 @@
 
         <!-- الحالة -->
         <div class="form-group">
-          <label for="report-status">Report Status <span class="required">*</span></label>
+          <label for="report-status" data-i18n="report_status">Report Status <span class="required">*</span></label>
           <div class="custom-dropdown-wrapper" id="report-status-wrapper">
             <div class="custom-dropdown">
               <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-                <span id="selected-report-status">Select Report Status</span>
+                <span id="selected-report-status" data-i18n="select_report_status">Select Report Status</span>
                 <span>▼</span>
               </div>
               <div class="dropdown-content">
-                <input type="text" class="dropdown-search" placeholder="Search report statuses..." oninput="filterDropdown(this, 'report-status-options')">
+                <input type="text" class="dropdown-search" data-i18n-placeholder="search_report_statuses" placeholder="Search report statuses..." oninput="filterDropdown(this, 'report-status-options')">
                 <div class="dropdown-options" id="report-status-options"></div>
               </div>
             </div>
@@ -103,16 +111,17 @@
           <input type="hidden" id="report-status" name="report_status" required />
         </div>
 
-        <label for="device-type">Device Type <span class="required">*</span></label>
+        <label for="device-type" data-i18n="device_type">Device Type <span class="required">*</span></label>
         <div class="custom-dropdown-wrapper" id="device-type-dropdown-wrapper">
           <div class="custom-dropdown">
             <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-              <span id="selected-device-type">Select device type</span>
+              <span id="selected-device-type" data-i18n="select_device_type">Select device type</span>
               <span>▼</span>
             </div>
             <div class="dropdown-content">
               <input
                 type="text"
+                data-i18n-placeholder="search_device_type"
                 placeholder="Search device type..."
                 class="dropdown-search"
                 oninput="filterDropdown(this, 'device-type-options')"
@@ -127,16 +136,17 @@
 
         <!-- القسم -->
         <div class="form-group">
-          <label for="section">Section <span class="required">*</span></label>
+          <label for="section" data-i18n="section">Section <span class="required">*</span></label>
           <div class="custom-dropdown-wrapper" id="section-dropdown-wrapper">
             <div class="custom-dropdown">
               <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-                <span id="selected-section">Select section</span>
+                <span id="selected-section" data-i18n="select_section">Select section</span>
                 <span>▼</span>
               </div>
               <div class="dropdown-content">
                 <input
                   type="text"
+                  data-i18n-placeholder="search_section"
                   placeholder="Search section..."
                   class="dropdown-search"
                   oninput="filterDropdown(this, 'section-options')"
@@ -151,15 +161,15 @@
         </div>
 
         <!-- المواصفات -->
-        <label>Device Specifications <span class="required">*</span></label>
+        <label data-i18n="device_specifications">Device Specifications <span class="required">*</span></label>
         <div class="custom-dropdown-wrapper">
           <div class="custom-dropdown">
             <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-              <span id="selected-device-spec">Select specification</span>
+              <span id="selected-device-spec" data-i18n="select_specification">Select specification</span>
               <span>▼</span>
             </div>
             <div class="dropdown-content">
-              <input type="text" class="dropdown-search" placeholder="Search specification..." oninput="filterDropdown(this, 'device-spec-options')">
+              <input type="text" class="dropdown-search" data-i18n-placeholder="search_specification" placeholder="Search specification..." oninput="filterDropdown(this, 'device-spec-options')">
               <div class="dropdown-options" id="device-spec-options"></div>
             </div>
           </div>
@@ -169,15 +179,15 @@
         <!-- باقي الحقول -->
         <div class="form-group">
       <!-- Problem Status -->
-<label for="problem-status">Initial Diagnosis <span class="required">*</span></label>
+<label for="problem-status" data-i18n="initial_diagnosis">Initial Diagnosis <span class="required">*</span></label>
 <div class="custom-dropdown-wrapper" id="problem-status-wrapper">
   <div class="custom-dropdown">
     <div class="dropdown-toggle" onclick="toggleDropdown(this)">
-      <span id="selected-problem-status">Select Initial Diagnosis</span>
+      <span id="selected-problem-status" data-i18n="select_initial_diagnosis">Select Initial Diagnosis</span>
       <span>▼</span>
     </div>
     <div class="dropdown-content">
-      <input type="text" class="dropdown-search" placeholder="Search problem status..." oninput="filterDropdown(this, 'problem-status-options')">
+      <input type="text" class="dropdown-search" data-i18n-placeholder="search_problem_status" placeholder="Search problem status..." oninput="filterDropdown(this, 'problem-status-options')">
       <div class="dropdown-options" id="problem-status-options"></div>
     </div>
   </div>
@@ -188,32 +198,41 @@
 
         <!-- رفع ملف -->
         <div class="form-group">
-          <label>Upload a Copy of the Email</label>
+          <label data-i18n="upload_email_copy">Upload a Copy of the Email</label>
           <div id="drop-area" class="upload-box">
             <img src="/icon/upload.png" class="upload-icon" />
-            <p>Drop files here or click to upload</p>
-            <span class="file-format-info">Supported formats: PDF, DOC, DOCX, EML</span>
+            <p data-i18n="drop_files_here">Drop files here or click to upload</p>
+            <span class="file-format-info" data-i18n="supported_formats">Supported formats: PDF, DOC, DOCX, EML</span>
             <input type="file" id="upload-file" hidden />
           </div>
         </div>
 
         <!-- أولوية -->
         <div class="form-group">
-          <label>Priority <span class="required">*</span></label>
+          <label data-i18n="priority">Priority <span class="required">*</span></label>
           <div class="priority-options">
-            <label><input type="radio" name="priority" value="high" required /> <img src="/icon/high.png" class="priority-icon" /> High</label>
-            <label><input type="radio" name="priority" value="medium" /> <img src="/icon/Medium.png" class="priority-icon" /> Medium</label>
-            <label><input type="radio" name="priority" value="low" /> <img src="/icon/low.png" class="priority-icon" /> Low</label>
+            <label><input type="radio" name="priority" value="high" required /> <img src="/icon/high.png" class="priority-icon" /> <span data-i18n="high">High</span></label>
+            <label><input type="radio" name="priority" value="medium" /> <img src="/icon/Medium.png" class="priority-icon" /> <span data-i18n="medium">Medium</span></label>
+            <label><input type="radio" name="priority" value="low" /> <img src="/icon/low.png" class="priority-icon" /> <span data-i18n="low">Low</span></label>
           </div>
         </div>
 
         <!-- التفاصيل -->
-        <div class="form-group"><label>Report Details</label><textarea placeholder="Enter detailed description of the issue"></textarea></div>
-        <div class="form-group"><label>Final Diagnosis</label><textarea placeholder="Enter final diagnosis after investigation"></textarea></div>
-        <div class="form-group"><label>Other Description</label><textarea placeholder="Please provide additional details if 'Other' is selected"></textarea></div>
+        <div class="form-group">
+          <label data-i18n="report_details">Report Details</label>
+          <textarea data-i18n-placeholder="enter_description" placeholder="Enter detailed description of the issue"></textarea>
+        </div>
+        <div class="form-group">
+          <label data-i18n="final_diagnosis">Final Diagnosis</label>
+          <textarea data-i18n-placeholder="enter_final_diagnosis" placeholder="Enter final diagnosis after investigation"></textarea>
+        </div>
+        <div class="form-group">
+          <label data-i18n="other_description">Other Description</label>
+          <textarea data-i18n-placeholder="provide_additional_details" placeholder="Please provide additional details if 'Other' is selected"></textarea>
+        </div>
 
         <!-- زر الحفظ -->
-        <button type="submit" class="submit-btn">Save Ticket</button>
+        <button type="submit" class="submit-btn" data-i18n="save_ticket">Save Ticket</button>
       </form>
     </div>
   </div>
@@ -221,12 +240,12 @@
 <!-- ✅ Popup for Custom Device Specification -->
 <div id="popup-modal" class="popup-overlay" style="display: none;">
   <div class="popup-contentt wide-popup">
-    <h3 id="popup-title">Enter Device Specifications</h3>
+    <h3 id="popup-title" data-i18n="enter_device_specifications">Enter Device Specifications</h3>
     <form id="pc-spec-form">
       <div id="popup-fields"></div> 
       <div class="popup-buttons">
-        <button type="button" class="save-btn" onclick="savePCSpec()">Save</button>
-        <button type="button" class="cancel-btn" onclick="closePopup()">Cancel</button>
+        <button type="button" class="save-btn" data-i18n="save">Save</button>
+        <button type="button" class="cancel-btn" data-i18n="cancel">Cancel</button>
       </div>
     </form>
   </div>
@@ -234,18 +253,19 @@
 <!-- ✅ Popup for Adding Generic Options -->
 <div id="generic-popup" class="popup-overlay" style="display: none;">
   <div class="popup-content">
-    <h3 id="generic-popup-title">Add New</h3>
-    <label for="generic-popup-input" id="generic-label">New Value</label>
-    <input type="text" id="generic-popup-input" placeholder="Enter new value..." required />
+    <h3 id="generic-popup-title" data-i18n="add_new">Add New</h3>
+    <label for="generic-popup-input" id="generic-label" data-i18n="new_value">New Value</label>
+    <input type="text" id="generic-popup-input" data-i18n-placeholder="enter_new_value" placeholder="Enter new value..." required />
     <input type="hidden" id="generic-popup-target-id" />
     <div class="popup-buttons">
-      <button type="button" class="save-btn" onclick="saveGenericOption()">Save</button>
-      <button type="button" class="cancel-btn" onclick="closeGenericPopup()">Cancel</button>
+      <button type="button" class="save-btn" data-i18n="save">Save</button>
+      <button type="button" class="cancel-btn" data-i18n="cancel">Cancel</button>
     </div>
   </div>
 </div>
 
   <!-- JavaScript -->
   <script src="Internal Ticket.js"></script>
+  <script src="/Language/Language.js"></script>
 </body>
 </html>
