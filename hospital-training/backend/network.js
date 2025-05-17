@@ -130,7 +130,7 @@ app.post('/api/add-entry', authenticateToken, (req, res) => {
   } = req.body;
 
   db.query(`
-    INSERT INTO entries (circuit_name, isp, location, ip, speed, contract_start, contract_end, user_id)
+    INSERT INTO entries (circuit_name, isp, location, ip, speed, start_date, end_date, user_id)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `, [circuit, isp, location, ip, speed, start_date, end_date, userId], (err) => {
     if (err) return res.status(500).json({ error: 'Insert failed' });
@@ -138,8 +138,6 @@ app.post('/api/add-entry', authenticateToken, (req, res) => {
   });
 });
 
-
-// 5. Get entries from DB
 
 
 
@@ -217,49 +215,55 @@ app.post('/api/share-entry', authenticateToken, async (req, res) => {
   const senderId = req.user.id;
   const { devices, receiver_ids } = req.body;
 
+  // تحقق من البيانات المرسلة
   if (!Array.isArray(devices) || devices.length === 0 || !Array.isArray(receiver_ids) || receiver_ids.length === 0) {
     return res.status(400).json({ error: '❌ Missing devices or receivers' });
   }
 
   try {
-    for (let device of devices) {
-      // نتحقق إن السطر ما تم إنشاؤه سابقًا بنفس البيانات
-      const [existing] = await db.promise().query(`
+    // جلب معلومات المرسل
+    const [senderInfoRows] = await db.promise().query(`SELECT name FROM users WHERE id = ?`, [senderId]);
+    if (!senderInfoRows.length) {
+      return res.status(400).json({ error: '❌ Sender not found' });
+    }
+
+    const senderName = senderInfoRows[0].name;
+    const ipList = [];
+    const receiverNames = [];
+
+    for (const device of devices) {
+      const {
+        circuit, isp, location, ip, speed, start_date, end_date
+      } = device;
+
+      // تحقق من الحقول المطلوبة
+      if (!circuit || !isp || !location || !ip || !speed || !start_date || !end_date) {
+        continue; // تخطي الجهاز الناقص
+      }
+
+      // تحقق هل الإدخال موجود مسبقًا
+      const [existingRows] = await db.promise().query(`
         SELECT id FROM entries
         WHERE circuit_name = ? AND isp = ? AND location = ? AND ip = ? AND speed = ? AND start_date = ? AND end_date = ? AND user_id IS NULL
         LIMIT 1
-      `, [
-        device.circuit,
-        device.isp,
-        device.location,
-        device.ip,
-        device.speed,
-        device.start_date,
-        device.end_date
-      ]);
+      `, [circuit, isp, location, ip, speed, start_date, end_date]);
 
       let entryId;
 
-      if (existing.length > 0) {
-        entryId = existing[0].id;
+      if (existingRows.length > 0) {
+        entryId = existingRows[0].id;
       } else {
-        const insertResult = await db.promise().query(`
+        const [insertResult] = await db.promise().query(`
           INSERT INTO entries (circuit_name, isp, location, ip, speed, start_date, end_date, user_id)
           VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
-        `, [
-          device.circuit,
-          device.isp,
-          device.location,
-          device.ip,
-          device.speed,
-          device.start_date,
-          device.end_date
-        ]);
-        entryId = insertResult[0].insertId;
+        `, [circuit, isp, location, ip, speed, start_date, end_date]);
+
+        entryId = insertResult.insertId;
       }
 
-      // تجنب التكرار في shared_entries
-      for (let receiverId of receiver_ids) {
+      ipList.push(ip);
+
+      for (const receiverId of receiver_ids) {
         await db.promise().query(`
           INSERT IGNORE INTO shared_entries (sender_id, receiver_id, entry_id)
           VALUES (?, ?, ?)
@@ -267,12 +271,34 @@ app.post('/api/share-entry', authenticateToken, async (req, res) => {
       }
     }
 
+    // إشعارات للمستلمين
+    for (const receiverId of receiver_ids) {
+      const [receiverInfo] = await db.promise().query(`SELECT name FROM users WHERE id = ?`, [receiverId]);
+      const receiverName = receiverInfo[0]?.name || 'Unknown';
+      receiverNames.push(receiverName);
+
+      const message = `📡 Network entries with IPs [${ipList.join(', ')}] were shared with you by ${senderName}`;
+      await db.promise().query(`
+        INSERT INTO Notifications (user_id, message, type)
+        VALUES (?, ?, 'network-share')
+      `, [receiverId, message]);
+    }
+
+    // لوق العملية
+    const logMsg = `Shared entries with IPs [${ipList.join(', ')}] with users: [${receiverNames.join(', ')}]`;
+    await db.promise().query(`
+      INSERT INTO Activity_Logs (user_id, user_name, action, details)
+      VALUES (?, ?, 'Shared Network Entry', ?)
+    `, [senderId, senderName, logMsg]);
+
     res.json({ success: true });
   } catch (err) {
     console.error('❌ Share Error:', err);
     res.status(500).json({ error: '❌ Failed to share entries' });
   }
 });
+
+
 
 
 
@@ -392,6 +418,59 @@ app.get('/api/distinct-values/:key', authenticateToken, async (req, res) => {
   }
 });
 
+const cron = require('node-cron');
+
+cron.schedule('0 2 * * *', async () => {
+  try {
+    const intervals = [
+      { days: 90, label: '3 months' },
+      { days: 30, label: '1 month' },
+      { days: 7, label: '1 week' }
+    ];
+
+    for (let interval of intervals) {
+      const [entries] = await db.promise().query(`
+        SELECT id, user_id, circuit_name, ip, end_date
+        FROM entries
+        WHERE DATEDIFF(end_date, CURDATE()) = ?
+      `, [interval.days]);
+
+      for (let entry of entries) {
+        const message = `Contract for circuit "${entry.circuit_name}" (IP: ${entry.ip}) will expire in ${interval.label}`;
+        
+        // تحقق إذا الإشعار تم مسبقًا
+        const [existingNotif] = await db.promise().query(`
+          SELECT id FROM Notifications
+          WHERE user_id = ? AND message = ? AND type = 'contract-expiry-warning'
+        `, [entry.user_id, message]);
+
+        if (existingNotif.length === 0) {
+          const [userRes] = await db.promise().query(`SELECT name FROM users WHERE id = ?`, [entry.user_id]);
+          const userName = userRes[0]?.name || 'Unknown';
+
+          await db.promise().query(`
+            INSERT INTO Notifications (user_id, message, type)
+            VALUES (?, ?, ?)
+          `, [entry.user_id, message, 'contract-expiry-warning']);
+
+          await db.promise().query(`
+            INSERT INTO Activity_Logs (user_id, user_name, action, details)
+            VALUES (?, ?, ?, ?)
+          `, [
+            entry.user_id,
+            userName,
+            'Contract Expiry Reminder',
+            `System notified ${interval.label} before contract end for IP: ${entry.ip}`
+          ]);
+        }
+      }
+    }
+
+    console.log('✅ Contract expiry reminders processed.');
+  } catch (err) {
+    console.error('❌ Error in contract expiry check:', err);
+  }
+});
 
 // Start server
 //const os = require('os');

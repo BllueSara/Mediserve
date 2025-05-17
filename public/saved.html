@@ -122,26 +122,43 @@
 
 
 <!-- Device Table -->
-<section class="input-section">
-  <table style="width:100%; max-width:1000px; margin: auto; border-collapse: collapse; table-layout: fixed;">
-    <thead>
-      <tr>
-        <th>Circuit Name</th>
-        <th>ISP</th>
-        <th>Location</th>
-        <th>IP Address</th>
-        <th>Circuit Speed</th>
-        <th>Start Date</th>
-        <th>End Date</th>
-      </tr>
-    </thead>
-    
-    
-    <tbody id="device-table-body" style="text-align: center;">
-      <!-- Filled dynamically -->
-    </tbody>
-  </table>
+<section class="input-section" id="column-display">
+  <div class="input-column">
+    <label>Circuit Name</label>
+    <div class="input-group" id="circuit-column"></div>
+  </div>
+
+  <div class="input-column">
+    <label>ISP</label>
+    <div class="input-group" id="isp-column"></div>
+  </div>
+
+  <div class="input-column">
+    <label>Location</label>
+    <div class="input-group" id="location-column"></div>
+  </div>
+
+  <div class="input-column">
+    <label>IP Address</label>
+    <div class="input-group" id="ip-column"></div>
+  </div>
+
+  <div class="input-column">
+    <label>Speed</label>
+    <div class="input-group" id="speed-column"></div>
+  </div>
+
+  <div class="input-column">
+    <label>Start Date</label>
+    <div class="input-group" id="start-column"></div>
+  </div>
+
+  <div class="input-column">
+    <label>End Date</label>
+    <div class="input-group" id="end-column"></div>
+  </div>
 </section>
+
 
 
   <!-- ✅ Share Popup -->
