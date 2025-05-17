@@ -87,22 +87,41 @@ document.addEventListener('DOMContentLoaded', function() {
   document.body.appendChild(tooltip);
   
   // Sample data - in a real app, this would come from an API
-  const maintenanceData = {
-    internal: 60,
-    external: 45,
-    routine: 85,
-    reportMonths: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-    internalMonthly: [70, 78, 85, 82, 75, 80],
-    externalMonthly: [50, 60, 65, 70, 68, 72],
-    routineMonthly: [80, 75, 90, 88, 85, 92],
-    overviewLabels: ['PCs', 'Printers', 'Scanners', 'Servers', 'Network'],
-    overviewInternal: [50, 35, 15, 70, 60],
-    overviewExternal: [30, 25, 10, 40, 35],
-    // Added task counts for the new hover details
-    routineTasks: { completed: 42, total: 50 },
-    internalTasks: { completed: 30, total: 50 },
-    externalTasks: { completed: 18, total: 40 }
-  };
+  fetch('/api/maintenance/completion-rates')
+  .then(res => res.json())
+  .then(data => {
+    drawDoughnut('routineStatusChart', data.regular.percentage, '#8B5CF6');
+    drawDoughnut('internalStatusChart', data.internal.percentage, '#3B82F6');
+    drawDoughnut('externalStatusChart', data.external.percentage, '#F59E0B');
+
+    // تعبئة تفاصيل الهوفر
+    document.getElementById('regularPercentage').textContent = `${data.regular.percentage}%`;
+    document.getElementById('regularDetail').textContent = `${data.regular.closed}/${data.regular.total} tasks`;
+
+    document.getElementById('internalPercentage').textContent = `${data.internal.percentage}%`;
+    document.getElementById('internalDetail').textContent = `${data.internal.closed}/${data.internal.total} tasks`;
+
+    document.getElementById('externalPercentage').textContent = `${data.external.percentage}%`;
+    document.getElementById('externalDetail').textContent = `${data.external.closed}/${data.external.total} tasks`;
+
+    // باقي الرسومات
+    drawLineChart(
+      'reportLineChart',
+      data.reportMonths,
+      data.internalMonthly,
+      data.externalMonthly,
+      data.routineMonthly
+    );
+
+    drawBar(
+      'maintenanceOverviewChart',
+      data.overviewLabels,
+      data.overviewInternal,
+      data.overviewExternal
+    );
+  })
+  .catch(err => console.error('Error fetching dashboard data:', err));
+
   
   // Enhanced function to draw doughnut charts
   function drawDoughnut(id, percent, color) {
