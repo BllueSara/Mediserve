@@ -1071,6 +1071,7 @@ app.post("/add-options-external", authenticateToken, (req, res) => {
     });
   });
 });
+
 app.post("/add-options-regular", authenticateToken, (req, res) => {
   const { target, value, type } = req.body;
   const userId = req.user?.id;
@@ -1115,26 +1116,39 @@ app.post("/add-options-regular", authenticateToken, (req, res) => {
     ? `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ? AND ${mapping.extra} = ?`
     : `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ?`;
 
-  db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
-    if (errUser || resultUser.length === 0) {
-      return res.status(500).json({ error: "❌ Failed to get user name" });
+  db.query(checkQuery, params, (err, existing) => {
+    if (err) return res.status(500).json({ error: "DB check error" });
+    if (existing.length > 0) {
+      return res.status(400).json({ error: `⚠️ \"${value}\" already exists in ${mapping.table}` });
     }
 
-    const userName = resultUser[0].name;
-
-    db.query(checkQuery, params, (err, existing) => {
-      if (err) return res.status(500).json({ error: "DB check error" });
-      if (existing.length > 0) {
-        return res.status(400).json({ error: `⚠️ "${value}" already exists in ${mapping.table}` });
+    db.query(query, params, (err2, result) => {
+      if (err2) {
+        console.error("❌ DB Insert Error:", err2);
+        return res.status(500).json({ error: "Database error while inserting option" });
       }
 
-      db.query(query, params, (err2, result) => {
-        if (err2) {
-          console.error("❌ DB Insert Error:", err2);
-          return res.status(500).json({ error: "Database error while inserting option" });
+      // ✅ Log to Activity_Logs
+      db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
+        if (!errUser && resultUser.length > 0) {
+          const userName = resultUser[0].name;
+          const logQuery = `
+            INSERT INTO Activity_Logs (user_id, user_name, action, details)
+            VALUES (?, ?, ?, ?)
+          `;
+          const logValues = [
+            userId,
+            userName,
+            `Added '${mapping.table}'`,
+            `Added '${value}' to '${mapping.table}'`
+          ];
+          db.query(logQuery, logValues, (logErr) => {
+            if (logErr) console.error("❌ Logging failed:", logErr);
+          });
         }
-        res.json({ message: `✅ ${value} added to ${mapping.table}` });
       });
+
+      res.json({ message: `✅ ${value} added to ${mapping.table}`, insertedId: result.insertId });
     });
   });
 });
@@ -1981,8 +1995,9 @@ WHERE mr.id = ?
 
 
 // POST /add-options-device
-app.post("/add-options-add-device", (req, res) => {
+app.post("/add-options-add-device",authenticateToken, (req, res) => {
   const { target, value } = req.body;
+    const userId = req.user?.id;
 
   if (!target || !value) {
     return res.status(400).json({ error: "❌ Missing target or value" });
@@ -2004,35 +2019,34 @@ app.post("/add-options-add-device", (req, res) => {
   };
 
   const mapping = tableMap[target];
-  if (!mapping) return res.status(400).json({ error: "❌ Invalid target field" });
+  if (!mapping) return res.status(400).json({ error: "Invalid target field" });
 
-  let query = "";
-  let params = [];
+  const query = mapping.extra
+    ? `INSERT INTO ${mapping.table} (${mapping.column}, ${mapping.extra}) VALUES (?, ?)`
+    : `INSERT INTO ${mapping.table} (${mapping.column}) VALUES (?)`;
 
-  // بناء استعلام التحقق
-  const checkQuery = `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ?`;
-  params = [value];
+  const params = mapping.extra ? [value, type] : [value];
 
-  // تنفيذ التحقق
+  const checkQuery = mapping.extra
+    ? `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ? AND ${mapping.extra} = ?`
+    : `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ?`;
+
   db.query(checkQuery, params, (err, existing) => {
-    if (err) return res.status(500).json({ error: "Database check error" });
+    if (err) return res.status(500).json({ error: "DB check error" });
     if (existing.length > 0) {
-      return res.status(400).json({ error: `⚠️ "${value}" already exists in ${mapping.table}` });
+      return res.status(400).json({ error: `⚠️ \"${value}\" already exists in ${mapping.table}` });
     }
 
-    // تنفيذ الإضافة
-    const insertQuery = `INSERT INTO ${mapping.table} (${mapping.column}) VALUES (?)`;
-    db.query(insertQuery, [value], (err2, result) => {
+    db.query(query, params, (err2, result) => {
       if (err2) {
         console.error("❌ DB Insert Error:", err2);
-        return res.status(500).json({ error: "Database insert failed" });
+        return res.status(500).json({ error: "Database error while inserting option" });
       }
 
-      // ✅ سجل النشاط في Activity_Logs
-      db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, userResult) => {
-        if (!errUser && userResult.length > 0) {
-          const userName = userResult[0].name;
-
+      // ✅ Log to Activity_Logs
+      db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
+        if (!errUser && resultUser.length > 0) {
+          const userName = resultUser[0].name;
           const logQuery = `
             INSERT INTO Activity_Logs (user_id, user_name, action, details)
             VALUES (?, ?, ?, ?)
@@ -2040,42 +2054,16 @@ app.post("/add-options-add-device", (req, res) => {
           const logValues = [
             userId,
             userName,
-            `Added '${mapping.table}'`
+            `Added '${mapping.table}'`,
             `Added '${value}' to '${mapping.table}'`
           ];
-
           db.query(logQuery, logValues, (logErr) => {
             if (logErr) console.error("❌ Logging failed:", logErr);
           });
         }
       });
 
-      // استخراج اسم المستخدم لتسجيل اللوغ
-      db.query("SELECT name FROM users WHERE id = ?", [userId], (userErr, userRes) => {
-        if (userErr || userRes.length === 0) {
-          console.error("❌ Failed to get user name:", userErr);
-          return res.json({ message: `✅ ${value} added successfully`, insertedId: result.insertId });
-        }
-
-        const userName = userRes[0].name;
-
-        const logQuery = `
-          INSERT INTO Activity_Logs (user_id, user_name, action, details)
-          VALUES (?, ?, ?, ?)
-        `;
-        const logValues = [
-          userId,
-          userName,
-          "Add Device Option",
-          `Added '${value}' to '${mapping.table}' via '${target}'`
-        ];
-
-        db.query(logQuery, logValues, (logErr) => {
-          if (logErr) console.error("❌ Failed to log activity:", logErr);
-        });
-
-        res.json({ message: `✅ ${value} added successfully`, insertedId: result.insertId });
-      });
+      res.json({ message: `✅ ${value} added to ${mapping.table}`, insertedId: result.insertId });
     });
   });
 });

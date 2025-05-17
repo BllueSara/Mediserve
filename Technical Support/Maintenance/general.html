@@ -236,8 +236,8 @@
       <form id="pc-spec-form">
         <div id="popup-fields"></div>
         <div class="popup-buttons">
-          <button type="button" class="save-btn" data-i18n="save">Save</button>
-          <button type="button" class="cancel-btn" data-i18n="cancel">Cancel</button>
+          <button type="button" class="save-btn" onclick="savePCSpec()"  data-i18n="save">Save</button>
+          <button type="button" class="cancel-btn" onclick="closePopup()" data-i18n="cancel">Cancel</button>
         </div>
       </form>
     </div>
@@ -251,8 +251,8 @@
         placeholder="Enter new value..." required />
       <input type="hidden" id="generic-popup-target-id" />
       <div class="popup-buttons">
-        <button type="button" class="save-btn" data-i18n="save">Save</button>
-        <button type="button" class="cancel-btn" data-i18n="cancel">Cancel</button>
+        <button type="button" class="save-btn" onclick="saveGenericOption()"  data-i18n="save">Save</button>
+        <button type="button" class="cancel-btn" onclick="closeGenericPopup()" data-i18n="cancel">Cancel</button>
       </div>
     </div>
   </div>
