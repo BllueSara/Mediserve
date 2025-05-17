@@ -2815,6 +2815,8 @@ function openAddSectionPopup(contextId = "section") {
 function saveNewModel() {
   const deviceType = document.getElementById("device-type").value.trim().toLowerCase();
   const modelName = document.getElementById("new-model-name").value.trim();
+    const token = localStorage.getItem("token"); // ✅ استرجاع التوكن
+
   const lang = languageManager.currentLang;
   const t = languageManager.translations[lang];
 
@@ -2825,8 +2827,10 @@ function saveNewModel() {
 
   fetch("http://localhost:5050/add-device-model", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model_name: modelName, device_type_name: deviceType })
+ headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + token // ✅ مهم جدًا
+    },    body: JSON.stringify({ model_name: modelName, device_type_name: deviceType })
   })
     .then(res => res.json())
     .then(result => {
@@ -2835,7 +2839,6 @@ function saveNewModel() {
         return;
       }
 
-      alert(result.message);
       sessionStorage.setItem("lastAddedModel", modelName);
       fetchAndRenderModels(deviceType, `model-${deviceType}`);
 
