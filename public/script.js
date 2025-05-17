@@ -275,7 +275,8 @@ async function saveAllIPs() {
   const locations = Array.from(form.querySelectorAll('input[name="Location[]"]')).map(i => i.value.trim());
   const ips = Array.from(form.querySelectorAll('input[name="ip[]"]')).map(i => i.value.trim());
   const speeds = Array.from(form.querySelectorAll('input[name="speed[]"]')).map(i => i.value.trim());
-  const durations = Array.from(form.querySelectorAll('input[name="duration[]"]')).map(i => i.value.trim());
+  const startDates = Array.from(form.querySelectorAll('input[name="start[]"]')).map(i => i.value);
+  const endDates = Array.from(form.querySelectorAll('input[name="end[]"]')).map(i => i.value);
 
   const devices = [];
   let hasError = false;
@@ -287,19 +288,19 @@ async function saveAllIPs() {
       location: locations[i],
       ip: ips[i],
       speed: speeds[i],
-      duration: durations[i]
+      start_date: startDates[i],
+      end_date: endDates[i]
     };
 
-    // نتحقق إذا الصف فيه أي قيمة (عشان ما نتحقق من الصفوف الفاضية بالكامل)
     const hasAnyValue = Object.values(row).some(val => val);
 
     if (hasAnyValue) {
       const isComplete = Object.values(row).every(val => val);
       if (!isComplete) {
-        highlightMissingFieldsSmart(i, row); // نلون الحقول الناقصة فقط
+        highlightMissingFieldsSmart(i, row);
         hasError = true;
       } else {
-        devices.push(row); // مكتمل ونضيفه
+        devices.push(row);
       }
     }
   }
@@ -317,7 +318,10 @@ async function saveAllIPs() {
   try {
     const res = await fetch(`${API_BASE_URL}/save`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem("token")}`
+      },
       body: JSON.stringify({ devices })
     });
 
@@ -333,6 +337,7 @@ async function saveAllIPs() {
 }
 
 
+
 function highlightMissingFieldsSmart(index, rowData) {
   const nameMap = {
     circuit: "Circuit",
@@ -340,7 +345,7 @@ function highlightMissingFieldsSmart(index, rowData) {
     location: "Location",
     ip: "ip",
     speed: "speed",
-    duration: "duration"
+
   };
 
   Object.entries(rowData).forEach(([key, value]) => {
@@ -385,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('traceroute-btn')?.addEventListener('click', tracerouteSelectedIP);
   document.getElementById('saveBtn')?.addEventListener('click', saveAllIPs);
   document.getElementById('shareBtn')?.addEventListener('click', openSharePopup);
-  document.getElementById('confirmShare')?.addEventListener('click', handleShareConfirm);
+
 });
 
 
@@ -577,40 +582,43 @@ function openSharePopup() {
   const popup = document.getElementById('sharePopup');
   popup.classList.remove('hidden');
 
-
+  // إعادة الربط بشكل صريح
+  const confirmBtn = document.getElementById('confirmShare');
+  confirmBtn.onclick = handleShareConfirm;
 
   fetch(`${API_BASE_URL}/users`, {
     headers: {
       'Authorization': `Bearer ${localStorage.getItem("token")}`
     }
   })
-    .then(res => res.json())
-    .then(users => {
-      if (!Array.isArray(users)) {
+  .then(res => res.json())
+  .then(users => {
+    if (!Array.isArray(users)) {
         appendToTerminal('❌ Failed to load users.', true);
-        return;
-      }
+      return;
+    }
 
-      const container = document.getElementById('userCheckboxContainer');
-      container.innerHTML = '';
+    const container = document.getElementById('userCheckboxContainer');
+    container.innerHTML = '';
 
-      users.forEach(user => {
-        const label = document.createElement('label');
+    users.forEach(user => {
+      const label = document.createElement('label');
         label.className = 'user-checkbox'; // <-- استخدم كلاس بدل inline CSS
       
 
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.name = 'shareUsers';
-        checkbox.value = user.id;
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.name = 'shareUsers';
+      checkbox.value = user.id;
 
-        label.appendChild(checkbox);
-        label.appendChild(document.createTextNode(' ' + user.name));
-        container.appendChild(label);
-      });
+      label.appendChild(checkbox);
+      label.appendChild(document.createTextNode(' ' + user.name));
+      container.appendChild(label);
+    });
 
     })
 }
+
 
 
 function closeSharePopup() {
@@ -623,12 +631,13 @@ function closeSharePopup() {
 
 async function handleShareConfirm() {
   const selectedUserIds = Array.from(document.querySelectorAll('input[name="shareUsers"]:checked'))
+  
     .map(cb => cb.value);
 
-  if (!selectedUserIds.length) {
+    if (!selectedUserIds.length) {
     appendToTerminal('❌ Please select at least one user to share with.', true);
-    return;
-  }
+      return;
+    }
 
   const form = document.getElementById('deviceForm');
 
@@ -642,18 +651,18 @@ async function handleShareConfirm() {
 
   const devices = [];
 
-  for (let i = 0; i < ips.length; i++) {
-    const row = {
-      circuit: circuits[i],
-      isp: isps[i],
-      location: locations[i],
-      ip: ips[i],
-      speed: speeds[i],
-      start_date: startDates[i],
-      end_date: endDates[i]
-    };
+for (let i = 0; i < ips.length; i++) {
+  const row = {
+    circuit: circuits[i],
+    isp: isps[i],
+    location: locations[i],
+    ip: ips[i],
+    speed: speeds[i],
+    start_date: startDates[i],
+    end_date: endDates[i]
+  };
     if (Object.values(row).every(val => val?.trim?.())) devices.push(row);
-  }
+}
 
   const res = await fetch(`${API_BASE_URL}/share-entry`, {
     method: 'POST',
