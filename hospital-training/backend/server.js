@@ -423,40 +423,44 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
     ];
 
     // 1️⃣ إدخال التقرير الأساسي
-    await queryAsync(`
-      INSERT INTO External_Maintenance (
-        ticket_number, device_type, device_specifications, section,
-        maintenance_manager, reporter_name,
-        initial_diagnosis, final_diagnosis,
-        serial_number, governmental_number, device_name,
-        department_name, cpu_name, ram_type, os_name,
-        generation_number, model_name, drive_type, ram_size, mac_address,ip_address,
-        printer_type, ink_type, ink_serial_number,scanner_type, user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?,?)
-    `, commonValues);
+ await queryAsync(`
+  INSERT INTO External_Maintenance (
+    ticket_number, device_type, device_specifications, section,
+    maintenance_manager, reporter_name,
+    initial_diagnosis, final_diagnosis,
+    serial_number, governmental_number, device_name,
+    department_name, cpu_name, ram_type, os_name,
+    generation_number, model_name, drive_type, ram_size,
+    mac_address, ip_address,
+    printer_type, ink_type, ink_serial_number, scanner_type, user_id
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, commonValues);
+
 
     // 2️⃣ إدخال تلخيص التذكرة
-    await queryAsync(`
-      INSERT INTO External_Maintenance (
-        ticket_number, device_type, device_specifications, section,
-        maintenance_manager, reporter_name,
-        initial_diagnosis, final_diagnosis,
-        serial_number, governmental_number, device_name,
-        department_name, cpu_name, ram_type, os_name,
-        generation_number, model_name, drive_type, ram_size, mac_address,ip_address,
-        printer_type, ink_type, ink_serial_number,scanner_type, user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?)
-    `, [
-      ticket_number, deviceType, device_specifications, section,
-      maintenance_manager, reporter_name,
-      initial_diagnosis, `Ticket (${ticket_number}) has been created by (${userName})`,
-      deviceInfo.serial_number, deviceInfo.governmental_number, deviceInfo.device_name,
-      deviceInfo.department_name, deviceInfo.cpu_name, deviceInfo.ram_type, deviceInfo.os_name,
-      deviceInfo.generation_number, deviceInfo.model_name, deviceInfo.drive_type, deviceInfo.ram_size,
-      deviceInfo.mac_address,deviceInfo.ip_address, deviceInfo.printer_type, deviceInfo.ink_type, deviceInfo.ink_serial_number,
-      deviceInfo.scanner_type,
-      userId
-    ]);
+await queryAsync(`
+  INSERT INTO External_Maintenance (
+    ticket_number, device_type, device_specifications, section,
+    maintenance_manager, reporter_name,
+    initial_diagnosis, final_diagnosis,
+    serial_number, governmental_number, device_name,
+    department_name, cpu_name, ram_type, os_name,
+    generation_number, model_name, drive_type, ram_size,
+    mac_address, ip_address,
+    printer_type, ink_type, ink_serial_number, scanner_type, user_id
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, [ // ✅ This must contain 26 values
+  ticket_number, deviceType, device_specifications, section,
+  maintenance_manager, reporter_name,
+  initial_diagnosis, `Ticket (${ticket_number}) has been created by (${userName})`,
+  deviceInfo.serial_number, deviceInfo.governmental_number, deviceInfo.device_name,
+  deviceInfo.department_name, deviceInfo.cpu_name, deviceInfo.ram_type, deviceInfo.os_name,
+  deviceInfo.generation_number, deviceInfo.model_name, deviceInfo.drive_type, deviceInfo.ram_size,
+  deviceInfo.mac_address, deviceInfo.ip_address, deviceInfo.printer_type, deviceInfo.ink_type,
+  deviceInfo.ink_serial_number, deviceInfo.scanner_type,
+  userId // ✅ Add this final value
+]);
+
 
     // 🛎️ إشعار 1: تقرير الصيانة
     await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
@@ -1174,11 +1178,12 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
   } = req.body;
 // تنسيق عرض المشاكل للإشعارات
 let formattedProblemStatus = "No issues reported";
-if (Array.isArray(problem_status)) {
-  formattedProblemStatus = problem_status.length ? problem_status.join(", ") : formattedProblemStatus;
-} else if (typeof problem_status === "string" && problem_status.trim() !== "") {
-  formattedProblemStatus = problem_status;
+if (Array.isArray(problemStatus)) {
+  formattedProblemStatus = problemStatus.length ? problemStatus.join(", ") : formattedProblemStatus;
+} else if (typeof problemStatus === "string" && problemStatus.trim() !== "") {
+  formattedProblemStatus = problemStatus;
 }
+
 
   const adminUser = await getUserById(userId);
   const userName = await getUserNameById(userId);
