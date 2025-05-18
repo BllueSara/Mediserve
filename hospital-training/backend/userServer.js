@@ -415,7 +415,8 @@ const resetLink = `http://localhost:4000/reset-password.html?token=${token}`;
 
 
 //داش بورد
-app.get('/api/maintenance/completion-rates', authenticateToken, async (req, res) => {
+// اول جزئيه 
+app.get('/api/maintenance/completion-rates', async (req, res) => {
   try {
     const [generalTotal] = await db.promise().query(`SELECT COUNT(*) AS total FROM General_Maintenance`);
     const [generalClosed] = await db.promise().query(`SELECT COUNT(*) AS closed FROM General_Maintenance WHERE problem_status = 'Closed'`);
@@ -450,6 +451,20 @@ app.get('/api/maintenance/completion-rates', authenticateToken, async (req, res)
     res.status(500).json({ error: "Server error" });
   }
 });
+
+
+// ثاني جزئيه 
+
+
+
+
+
+
+
+
+
+
+
 
 
   // تشغيل السيرفر
