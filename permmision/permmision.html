@@ -101,80 +101,103 @@
       </div>
 
       <div class="permissions-section">
-        <div class="permissions-title" data-i18n="device_access_permissions">Device Access Permissions</div>
-        <div class="permissions-grid">
-          <label class="radio-wrapper">
-            <input type="radio" name="device" checked>
-            <div class="permission-text"><strong data-i18n="all_devices">All Devices</strong></div>
-          </label>
-          <label class="radio-wrapper">
-            <input type="radio" name="device">
-            <div class="permission-text"><strong data-i18n="pc_only">PC Only</strong></div>
-          </label>
-          <label class="radio-wrapper">
-            <input type="radio" name="device">
-            <div class="permission-text"><strong data-i18n="scanner_only">Scanner Only</strong></div>
-          </label>
-          <label class="radio-wrapper">
-            <input type="radio" name="device">
-            <div class="permission-text"><strong data-i18n="printer_only">Printer Only</strong></div>
-          </label>
-        </div>
+  <div class="permissions-title" data-i18n="device_access_permissions">Device Access Permissions</div>
+  <div class="permissions-grid">
+    <label class="radio-wrapper">
+      <input type="radio" name="device" id="device_all" value="all">
+      <div class="permission-text"><strong data-i18n="all_devices">All Devices</strong></div>
+    </label>
+    <label class="radio-wrapper">
+      <input type="radio" name="device" id="device_pc" value="pc">
+      <div class="permission-text"><strong data-i18n="pc_only">PC Only</strong></div>
+    </label>
+    <label class="radio-wrapper">
+      <input type="radio" name="device" id="device_scanner" value="scanner">
+      <div class="permission-text"><strong data-i18n="scanner_only">Scanner Only</strong></div>
+    </label>
+    <label class="radio-wrapper">
+      <input type="radio" name="device" id="device_printer" value="printer">
+      <div class="permission-text"><strong data-i18n="printer_only">Printer Only</strong></div>
+    </label>
+  </div>
+</div>
+
+<div class="permissions-section">
+  <div class="permissions-title" data-i18n="action_permissions">Action Permissions</div>
+  <div class="permissions-grid">
+    <div class="permission-item">
+      <div class="permission-text">
+        <strong data-i18n="full_access">Full Access</strong>
+        <span data-i18n="can_perform_all">Can perform all actions</span>
       </div>
-      <div class="permissions-section">
-        <div class="permissions-title" data-i18n="action_permissions">Action Permissions</div>
-        <div class="permissions-grid">
-          <div class="permission-item">
-            <div class="permission-text">
-              <strong data-i18n="full_access">Full Access</strong>
-              <span data-i18n="can_perform_all">Can perform all actions</span>
-            </div>
-            <label class="switch"><input type="checkbox"><span class="slider"></span></label>
-          </div>
-          <div class="permission-item">
-            <div class="permission-text">
-              <strong data-i18n="view_access">View Access</strong>
-              <span data-i18n="can_view_only">Can view information only</span>
-            </div>
-            <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
-          </div>
-          <div class="permission-item">
-            <div class="permission-text">
-              <strong data-i18n="add_items">Add Items</strong>
-              <span data-i18n="can_add_new">Can add new items</span>
-            </div>
-            <label class="switch"><input type="checkbox"><span class="slider"></span></label>
-          </div>
-          <div class="permission-item">
-            <div class="permission-text">
-              <strong data-i18n="edit_items">Edit Items</strong>
-              <span data-i18n="can_modify">Can modify existing items</span>
-            </div>
-            <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
-          </div>
-          <div class="permission-item">
-            <div class="permission-text">
-              <strong data-i18n="delete_items">Delete Items</strong>
-              <span data-i18n="can_remove">Can remove items</span>
-            </div>
-            <label class="switch"><input type="checkbox"><span class="slider"></span></label>
-          </div>
-          <div class="permission-item">
-            <div class="permission-text">
-              <strong data-i18n="check_logs">Check Logs</strong>
-              <span data-i18n="can_check_logs">Can check logs</span>
-            </div>
-            <label class="switch"><input type="checkbox"><span class="slider"></span></label>
-          </div>
-          <div class="permission-item">
-            <div class="permission-text">
-              <strong data-i18n="edit_permission">Edit Permission</strong>
-              <span data-i18n="can_edit_permission">Can edit permission</span>
-            </div>
-            <label class="switch"><input type="checkbox"><span class="slider"></span></label>
-          </div>
-        </div>
+      <label class="switch">
+        <input type="checkbox" id="full_access">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-text">
+        <strong data-i18n="view_access">View Access</strong>
+        <span data-i18n="can_view_only">Can view information only</span>
       </div>
+      <label class="switch">
+        <input type="checkbox" id="view_access">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-text">
+        <strong data-i18n="add_items">Add Items</strong>
+        <span data-i18n="can_add_new">Can add new items</span>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="add_items">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-text">
+        <strong data-i18n="edit_items">Edit Items</strong>
+        <span data-i18n="can_modify">Can modify existing items</span>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="edit_items">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-text">
+        <strong data-i18n="delete_items">Delete Items</strong>
+        <span data-i18n="can_remove">Can remove items</span>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="delete_items">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-text">
+        <strong data-i18n="check_logs">Check Logs</strong>
+        <span data-i18n="can_check_logs">Can check logs</span>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="check_logs">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="permission-item">
+      <div class="permission-text">
+        <strong data-i18n="edit_permission">Edit Permission</strong>
+        <span data-i18n="can_edit_permission">Can edit permission</span>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="edit_permission">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+</div>
+
     </main>
   </div>
   <script src="/permmision/permmison.js"></script>
