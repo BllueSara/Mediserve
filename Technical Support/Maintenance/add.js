@@ -375,7 +375,7 @@ function updatePopupHeadingAndFields(type) {
 
     fieldsHtml += `</div>`;
 
-popupHeading.textContent = `${t['enter_device_specifications']}`;
+    popupHeading.textContent = `${t['enter_device_specifications']}`;
     popupFieldsContainer.innerHTML = fieldsHtml;
 
     fetchDepartments(`department-${typeCleaned}`);
@@ -804,9 +804,9 @@ function fetchDepartments(selectId = "department") {
       // ✅ زر إضافة جديد
       const addNewRow = document.createElement("div");
       addNewRow.className = "dropdown-option-row add-new-option";
-const lang = languageManager.currentLang;
-const t = languageManager.translations[lang];
-addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new']} ${t['section']}</div>`;
+      const lang = languageManager.currentLang;
+      const t = languageManager.translations[lang];
+      addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new']} ${t['section']}</div>`;
       addNewRow.onclick = () => {
         sessionStorage.setItem("lastDepartmentSelectId", selectId);
 
@@ -1502,6 +1502,9 @@ function fetchRAMSize() {
         sessionStorage.removeItem("ram-size-select");
       }
       attachEditDeleteHandlers("ram-size-select-options", t['ram_size']);
+    })
+    .catch(err => {
+      console.error(`❌ ${t['error_fetching_ram_sizes']}:`, err);
     });
 }
 
@@ -1928,7 +1931,9 @@ function saveOptionForSelect() {
 }
 
 
-function fetchDeviceTypes() {
+async function fetchDeviceTypes() {
+  const permissions = await checkUserPermissions();
+
   fetch("http://localhost:5050/TypeProplem", {
     headers: {
       'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -1944,20 +1949,22 @@ function fetchDeviceTypes() {
       const lang = languageManager.currentLang;
       const translations = languageManager.translations[lang];
 
-      const addNewRow = document.createElement("div");
-      addNewRow.className = "dropdown-option-row add-new-option";
-      addNewRow.innerHTML = `
-      <div class="dropdown-option-text">+ ${translations['add_new']} ${translations['device_type']}</div>
-    `;
-      addNewRow.onclick = () => {
-        sessionStorage.setItem("lastDropdownOpened", "device-type");
-        const el = document.getElementById("device-type");
-        if (el) sessionStorage.setItem("device-type", el.value);
-        openGenericPopup("device_type", "device-type");
-        closeAllDropdowns();
-      };
-
-      container.appendChild(addNewRow);
+      // إضافة زر "Add New" فقط إذا كان لديه صلاحية كاملة
+      if (permissions.full_access || permissions.add_items) {
+        const addNewRow = document.createElement("div");
+        addNewRow.className = "dropdown-option-row add-new-option";
+        addNewRow.innerHTML = `
+          <div class="dropdown-option-text">+ ${translations['add_new']} ${translations['device_type']}</div>
+        `;
+        addNewRow.onclick = () => {
+          sessionStorage.setItem("lastDropdownOpened", "device-type");
+          const el = document.getElementById("device-type");
+          if (el) sessionStorage.setItem("device-type", el.value);
+          openGenericPopup("device_type", "device-type");
+          closeAllDropdowns();
+        };
+        container.appendChild(addNewRow);
+      }
 
       data.deviceTypes.forEach((item) => {
         const row = document.createElement("div");
@@ -1982,36 +1989,45 @@ function fetchDeviceTypes() {
           closeAllDropdowns();
           fetchDeviceSpecsByTypeAndDepartment();
         };
-
-        const icons = document.createElement("div");
-        icons.className = "dropdown-actions-icons";
-
-        const editIcon = document.createElement("i");
-        editIcon.className = "fas fa-edit";
-        editIcon.title = translations['edit'];
-        editIcon.onclick = (e) => {
-          e.stopPropagation();
-          const newValue = prompt(`${translations['edit']} ${translations['device_type']}:`, item.DeviceType);
-          if (newValue && newValue.trim() !== item.DeviceType) {
-            editOption("problem-type", item.DeviceType, newValue.trim());
-          }
-        };
-
-        const deleteIcon = document.createElement("i");
-        deleteIcon.className = "fas fa-trash";
-        deleteIcon.title = translations['delete'];
-        deleteIcon.onclick = (e) => {
-          e.stopPropagation();
-          if (confirm(`${translations['confirm_delete']} "${item.DeviceType}"?`)) {
-            deleteOption("problem-type", item.DeviceType);
-          }
-        };
-
-        icons.appendChild(editIcon);
-        icons.appendChild(deleteIcon);
         row.appendChild(text);
-        row.appendChild(icons);
         container.appendChild(row);
+        // إضافة أيقونات التعديل والحذف فقط إذا كان لديه صلاحية كاملة
+        if (permissions.full_access || permissions.edit_items || permissions.delete_items) {
+          const icons = document.createElement("div");
+          icons.className = "dropdown-actions-icons";
+
+          if (permissions.full_access || permissions.edit_items) {
+            const editIcon = document.createElement("i");
+            editIcon.className = "fas fa-edit";
+            editIcon.title = translations['edit'];
+            editIcon.onclick = (e) => {
+              e.stopPropagation();
+              const newValue = prompt(`${translations['edit']} ${translations['device_type']}:`, item.DeviceType);
+              if (newValue && newValue.trim() !== item.DeviceType) {
+                editOption("problem-type", item.DeviceType, newValue.trim());
+              }
+            };
+            icons.appendChild(editIcon);
+          }
+
+          if (permissions.full_access || permissions.delete_items) {
+            const deleteIcon = document.createElement("i");
+            deleteIcon.className = "fas fa-trash";
+            deleteIcon.title = translations['delete'];
+            deleteIcon.onclick = (e) => {
+              e.stopPropagation();
+              if (confirm(`${translations['confirm_delete']} "${item.DeviceType}"?`)) {
+                deleteOption("problem-type", item.DeviceType);
+              }
+            };
+            icons.appendChild(deleteIcon);
+          }
+
+          row.appendChild(icons);
+        }
+
+
+
       });
 
       if (data.role === 'admin') {
@@ -2033,8 +2049,6 @@ function fetchDeviceTypes() {
         hiddenInput.value = savedDeviceType;
         sessionStorage.removeItem("device-type");
       }
-
-      attachEditDeleteHandlers("device-type-options", "problem-type");
     })
     .catch(err => {
       console.error("❌ Failed to fetch device types:", err);
@@ -2149,9 +2163,9 @@ function fetchDeviceSpecsByTypeAndDepartment() {
   // + Add New Specification
   const addNewRow = document.createElement("div");
   addNewRow.className = "dropdown-option-row add-new-option";
-const lang = languageManager.currentLang;
-const t = languageManager.translations[lang];
-addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new']} ${t['device_specifications']}</div>`;
+  const lang = languageManager.currentLang;
+  const t = languageManager.translations[lang];
+  addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new']} ${t['device_specifications']}</div>`;
   addNewRow.onclick = () => {
     sessionStorage.setItem("lastDropdownOpened", "device-spec");
 
@@ -2454,32 +2468,86 @@ function refreshDropdown(selectId) {
 }
 
 
-function editOption(selectId, oldValue, newValue, type = null) {
-  const lang = languageManager.currentLang;
-  const t = languageManager.translations[lang];
+async function editOption(selectId, oldValue, newValue, type = null) {
+  try {
+    const permissions = await checkUserPermissions();
+    if (!permissions.full_access || permissions.edit_items) {
+      alert('You do not have permission to edit items');
+      return;
+    }
 
-  if (!oldValue || !newValue) {
-    alert(t['please_select_and_enter_valid_value']);
-    return;
-  }
+    const lang = languageManager.currentLang;
+    const t = languageManager.translations[lang];
 
-  fetch("http://localhost:5050/update-option-complete", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
-    body: JSON.stringify({ target: mapSelectIdToServerTarget(selectId), oldValue, newValue, type })
-  })
-    .then(res => res.json())
-    .then(result => {
-      if (result.error) {
-        alert(result.error);
-      } else {
-        refreshDropdown(selectId);
-      }
+    if (!oldValue || !newValue) {
+      alert(t['please_select_and_enter_valid_value']);
+      return;
+    }
+
+    fetch("http://localhost:5050/update-option-complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
+      body: JSON.stringify({ target: mapSelectIdToServerTarget(selectId), oldValue, newValue, type })
     })
-    .catch(err => {
-      console.error("❌ Error editing option:", err);
-      alert(t['failed_to_edit_option']);
-    });
+      .then(res => res.json())
+      .then(result => {
+        if (result.error) {
+          alert(result.error);
+        } else {
+          refreshDropdown(selectId);
+        }
+      })
+      .catch(err => {
+        console.error("❌ Error editing option:", err);
+        alert(t['failed_to_edit_option']);
+      });
+  } catch (error) {
+    console.error('Error in editOption:', error);
+    alert('An error occurred while editing the option');
+  }
+}
+
+async function deleteOption(selectId, value, type = null) {
+  try {
+    const permissions = await checkUserPermissions();
+    if (!permissions.full_access || permissions.delete_items) {
+      alert('You do not have permission to delete items');
+      return;
+    }
+
+    const lang = languageManager.currentLang;
+    const t = languageManager.translations[lang];
+
+    if (!value) {
+      alert(t['please_select_valid_option']);
+      return;
+    }
+
+    if (!confirm(`${t['confirm_delete']} "${value}"?`)) {
+      return;
+    }
+
+    fetch("http://localhost:5050/delete-option-complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
+      body: JSON.stringify({ target: mapSelectIdToServerTarget(selectId), value, type })
+    })
+      .then(res => res.json())
+      .then(result => {
+        if (result.error) {
+          alert(result.error);
+        } else {
+          refreshDropdown(selectId);
+        }
+      })
+      .catch(err => {
+        console.error("❌ Error deleting option:", err);
+        alert(t['failed_to_delete_option']);
+      });
+  } catch (error) {
+    console.error('Error in deleteOption:', error);
+    alert('An error occurred while deleting the option');
+  }
 }
 
 
@@ -2812,63 +2880,71 @@ function openAddSectionPopup(contextId = "section") {
 }
 
 
-function saveNewModel() {
-  const deviceType = document.getElementById("device-type").value.trim().toLowerCase();
-  const modelName = document.getElementById("new-model-name").value.trim();
-    const token = localStorage.getItem("token"); // ✅ استرجاع التوكن
+async function saveNewModel() {
+  try {
 
-  const lang = languageManager.currentLang;
-  const t = languageManager.translations[lang];
 
-  if (!modelName) {
-    alert(t['please_enter_model_name']);
-    return;
-  }
+    const deviceType = document.getElementById("device-type").value.trim().toLowerCase();
+    const modelName = document.getElementById("new-model-name").value.trim();
+    const token = localStorage.getItem("token");
 
-  fetch("http://localhost:5050/add-device-model", {
-    method: "POST",
- headers: {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer " + token // ✅ مهم جدًا
-    },    body: JSON.stringify({ model_name: modelName, device_type_name: deviceType })
-  })
-    .then(res => res.json())
-    .then(result => {
-      if (result.error) {
-        alert(result.error);
-        return;
-      }
+    const lang = languageManager.currentLang;
+    const t = languageManager.translations[lang];
 
-      sessionStorage.setItem("lastAddedModel", modelName);
-      fetchAndRenderModels(deviceType, `model-${deviceType}`);
+    if (!modelName) {
+      alert(t['please_enter_model_name']);
+      return;
+    }
 
-      const isSpecContext = sessionStorage.getItem("returnToPopup") === "true";
-      if (isSpecContext) {
-        fetchAndRenderModels(deviceType, "spec-model");
-
-        setTimeout(() => {
-          const displaySpan = document.getElementById(`selected-spec-model`);
-          const hiddenInput = document.getElementById(`spec-model`);
-          if (displaySpan && hiddenInput) {
-            displaySpan.textContent = modelName;
-            hiddenInput.value = modelName;
-          }
-        }, 300);
-      }
-
-      document.getElementById("generic-popup").style.display = "none";
-      sessionStorage.removeItem("returnToPopup");
-
-      if (!["pc", "printer", "scanner"].includes(deviceType)) {
-        setTimeout(() => {
-          openGenericPopup("device_specifications", "device-spec");
-        }, 150);
-      }
+    fetch("http://localhost:5050/add-device-model", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token
+      },
+      body: JSON.stringify({ model_name: modelName, device_type_name: deviceType })
     })
-    .catch(err => {
-      console.error("❌ Failed to save model:", err);
-      alert(t['failed_to_save_model']);
-    });
+      .then(res => res.json())
+      .then(result => {
+        if (result.error) {
+          alert(result.error);
+          return;
+        }
+
+        sessionStorage.setItem("lastAddedModel", modelName);
+        fetchAndRenderModels(deviceType, `model-${deviceType}`);
+
+        const isSpecContext = sessionStorage.getItem("returnToPopup") === "true";
+        if (isSpecContext) {
+          fetchAndRenderModels(deviceType, "spec-model");
+
+          setTimeout(() => {
+            const displaySpan = document.getElementById(`selected-spec-model`);
+            const hiddenInput = document.getElementById(`spec-model`);
+            if (displaySpan && hiddenInput) {
+              displaySpan.textContent = modelName;
+              hiddenInput.value = modelName;
+            }
+          }, 300);
+        }
+
+        document.getElementById("generic-popup").style.display = "none";
+        sessionStorage.removeItem("returnToPopup");
+
+        if (!["pc", "printer", "scanner"].includes(deviceType)) {
+          setTimeout(() => {
+            openGenericPopup("device_specifications", "device-spec");
+          }, 150);
+        }
+      })
+      .catch(err => {
+        console.error("❌ Failed to save model:", err);
+        alert(t['failed_to_save_model']);
+      });
+  } catch (error) {
+    console.error('Error in saveNewModel:', error);
+    alert('An error occurred while saving the model');
+  }
 }
 
 
@@ -3148,3 +3224,50 @@ function applyDeletions(selectId) {
   }
 }
 
+// دالة للتحقق من صلاحيات المستخدم
+async function checkUserPermissions(userId) {
+  if (!userId) {
+    userId = localStorage.getItem("userId");
+  }
+
+  const userRole = localStorage.getItem("userRole"); // ← نجيب الدور من التخزين المحلي
+
+  // ✅ لو أدمن، نرجع كل الصلاحيات مفتوحة
+  if (userRole === "admin") {
+    return {
+      device_access: "all",
+      view_access: true,
+      full_access: true,
+      add_items: true,
+      edit_items: true,
+      delete_items: true,
+      check_logs: true,
+      edit_permission: true
+    };
+  }
+
+  // ✅ باقي المستخدمين (عاديين) نجيب صلاحياتهم من السيرفر
+  try {
+    const response = await fetch(`http://localhost:4000/users/${userId}/with-permissions`);
+    if (!response.ok) throw new Error('Failed to fetch user permissions');
+
+    const userData = await response.json();
+    return {
+      device_access: userData.permissions?.device_access || 'none',
+      view_access: userData.permissions?.view_access || false,
+      full_access: userData.permissions?.full_access || false,
+      add_items: userData.permissions?.add_items || false,
+      edit_items: userData.permissions?.edit_items || false,
+      delete_items: userData.permissions?.delete_items || false,
+      check_logs: userData.permissions?.check_logs || false,
+      edit_permission: userData.permissions?.edit_permission || false
+    };
+  } catch (error) {
+    console.error('Error checking permissions:', error);
+    return {
+      device_access: 'none',
+      view_access: false,
+      full_access: false
+    };
+  }
+}

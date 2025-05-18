@@ -1,9 +1,9 @@
-const express = require('express');
+ const express = require('express');
 const db = require("./db");
 const bodyParser = require('body-parser');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const cors = require('cors'); 
+const cors = require('cors');
 
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
@@ -20,10 +20,9 @@ const transporter = nodemailer.createTransport({
 
 
 const app = express();
-app.use(cors()); 
+app.use(cors());
 app.use(bodyParser.json());
 
-app.use('/', express.static(path.join(__dirname, '../../authintication/AuthPage')));
 
 
 // مفتاح التوكن (مهم تحفظه بمكان آمن)
@@ -105,6 +104,44 @@ app.post('/register', async (req, res) => {
           if (err) return res.status(500).json({ message: 'Error saving user' });
 
           const userId = result.insertId;
+          const defaultPermissions = {
+            device_access: 'all',
+            full_access: false,
+            view_access: true,
+            add_items: true,
+            edit_items: false,
+            delete_items: false,
+            check_logs: false,
+            edit_permission: false
+          };
+
+       db.query(
+  `INSERT INTO user_permissions (
+    user_id,
+    device_access,
+    full_access,
+    view_access,
+    add_items,
+    edit_items,
+    delete_items,
+    check_logs,
+    edit_permission
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  [
+    userId,
+    defaultPermissions.device_access,
+    defaultPermissions.full_access,
+    defaultPermissions.view_access,
+    defaultPermissions.add_items,
+    defaultPermissions.edit_items,
+    defaultPermissions.delete_items,
+    defaultPermissions.check_logs,
+    defaultPermissions.edit_permission
+  ],
+  (err) => {
+    if (err) console.warn("❌ Failed to insert default permissions:", err);
+  }
+);
 
           if (isEngineer) {
             db.query(`INSERT INTO Engineers (name) VALUES (?)`, [name], (engErr) => {
@@ -186,33 +223,92 @@ app.post('/login', (req, res) => {
 
 
 app.get("/Departments", (req, res) => {
-    const query = "SELECT * FROM Departments  ORDER BY name ASC ";
-    db.query(query, (err, result) => {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      res.json(result);
-    });
+  const query = "SELECT * FROM Departments  ORDER BY name ASC ";
+  db.query(query, (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(result);
   });
-  
+});
 
-  app.get('/notifications', authenticateToken, async (req, res) => {
-    const userId = req.user.id;
-    const role = req.user.role;
-  
-    const query = role === 'admin'
-      ? `SELECT * FROM Notifications ORDER BY created_at DESC LIMIT 50`
-      : `SELECT * FROM Notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`;
-  
-    db.query(query, role === 'admin' ? [] : [userId], (err, result) => {
-      if (err) {
-        console.error('❌ Error loading notifications:', err);
-        return res.status(500).json({ error: 'Failed to load notifications' });
-      }
-      res.json(result);
-    });
+
+app.get('/notifications', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const role = req.user.role;
+
+  const query = role === 'admin'
+    ? `SELECT * FROM Notifications ORDER BY created_at DESC LIMIT 50`
+    : `SELECT * FROM Notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`;
+
+  db.query(query, role === 'admin' ? [] : [userId], (err, result) => {
+    if (err) {
+      console.error('❌ Error loading notifications:', err);
+      return res.status(500).json({ error: 'Failed to load notifications' });
+    }
+    res.json(result);
   });
-  
+});
+// ✅ تحديث صلاحيات المستخدم
+app.put('/users/:id/permissions', authenticateToken, (req, res) => {
+  const userId = req.params.id;
+  const {
+    device_access,
+    full_access,
+    view_access,
+    add_items,
+    edit_items,
+    delete_items,
+    check_logs,
+    edit_permission
+  } = req.body;
+
+  const sql = `
+    INSERT INTO user_permissions (
+      user_id,
+      device_access,
+      full_access,
+      view_access,
+      add_items,
+      edit_items,
+      delete_items,
+      check_logs,
+      edit_permission
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON DUPLICATE KEY UPDATE
+      device_access = VALUES(device_access),
+      full_access = VALUES(full_access),
+      view_access = VALUES(view_access),
+      add_items = VALUES(add_items),
+      edit_items = VALUES(edit_items),
+      delete_items = VALUES(delete_items),
+      check_logs = VALUES(check_logs),
+      edit_permission = VALUES(edit_permission)
+  `;
+
+  const values = [
+    userId,
+    device_access,
+    full_access,
+    view_access,
+    add_items,
+    edit_items,
+    delete_items,
+    check_logs,
+    edit_permission
+  ];
+
+  db.query(sql, values, (err) => {
+    if (err) {
+      console.error("❌ Error saving permissions:", err);
+      return res.status(500).json({ message: "Failed to save permissions" });
+    }
+
+    res.json({ message: "✅ Permissions saved successfully" });
+  });
+});
+
 app.delete('/notifications/clear', authenticateToken, (req, res) => {
   const userId = req.user.id;
   db.query(`DELETE FROM Notifications WHERE user_id = ?`, [userId], (err) => {
@@ -243,22 +339,87 @@ app.get('/users/:id', authenticateToken, (req, res) => {
   });
 });
 
-
-app.put('/users/:id/permissions', authenticateToken, (req, res) => {
+// Get user permissions
+// Get user permissions
+app.get('/users/:id/permissions', authenticateToken, (req, res) => {
   const userId = req.params.id;
-  const permissions = req.body;
 
-  const sql = `
-    INSERT INTO user_permissions (user_id, permissions)
-    VALUES (?, ?)
-    ON DUPLICATE KEY UPDATE permissions = VALUES(permissions)
-  `;
+  const sql = `SELECT * FROM user_permissions WHERE user_id = ?`;
 
-  db.query(sql, [userId, JSON.stringify(permissions)], (err) => {
-    if (err) return res.status(500).json({ message: 'Failed to save permissions' });
-    res.json({ message: 'Permissions saved' });
+  db.query(sql, [userId], (err, results) => {
+    if (err) return res.status(500).json({ message: 'Database error' });
+
+    if (!results.length) {
+      return res.json({
+        device_access: 'none',
+        full_access: false,
+        view_access: true,
+        add_items: false,
+        edit_items: false,
+        delete_items: false,
+        check_logs: false,
+        edit_permission: false
+      });
+    }
+
+    res.json(results[0]);
   });
 });
+
+app.get('/users/:id/with-permissions', (req, res) => {
+  const userId = req.params.id;
+
+  db.query('SELECT id, name, email FROM users WHERE id = ?', [userId], (err, userResult) => {
+    if (err || userResult.length === 0) {
+      return res.status(500).json({ message: 'Failed to load user' });
+    }
+
+    const user = userResult[0];
+
+    db.query(
+      `SELECT 
+        device_access,
+        full_access,
+        view_access,
+        add_items,
+        edit_items,
+        delete_items,
+        check_logs,
+        edit_permission
+       FROM user_permissions WHERE user_id = ?`,
+      [userId],
+      (permErr, permResult) => {
+        if (permErr) {
+          return res.status(500).json({ message: 'Failed to load permissions' });
+        }
+
+        let permissions = {
+          device_access: 'none',
+          full_access: false,
+          view_access: false,
+          add_items: false,
+          edit_items: false,
+          delete_items: false,
+          check_logs: false,
+          edit_permission: false
+        };
+
+        if (permResult.length > 0) {
+          permissions = permResult[0];
+        }
+
+        res.json({
+          ...user,
+          permissions
+        });
+      }
+    );
+  });
+});
+
+
+
+
 app.put('/users/:id/status', authenticateToken, (req, res) => {
   const userId = req.params.id;
   const { status } = req.body;
@@ -329,33 +490,33 @@ app.get('/notifications/unseen-count', authenticateToken, async (req, res) => {
   }
 });
 
-  function logActivity(userId, userName, action, details) {
-    const sql = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
-    db.query(sql, [userId, userName, action, details], (err) => {
-      if (err) console.error('❌ Error logging activity:', err);
-    });
-  }
-  
-
-  app.get('/activity-logs', authenticateToken, (req, res) => {
-    const userId = req.user.id;
-    const userRole = req.user.role;
-  
-    const sql = userRole === 'admin'
-      ? `SELECT * FROM Activity_Logs ORDER BY timestamp DESC LIMIT 100`
-      : `SELECT * FROM Activity_Logs WHERE user_id = ? ORDER BY timestamp DESC LIMIT 100`;
-  
-    const params = userRole === 'admin' ? [] : [userId];
-  
-    db.query(sql, params, (err, results) => {
-      if (err) {
-        console.error('❌ Failed to load activity logs:', err);
-        return res.status(500).json({ error: 'Failed to load activity logs' });
-      }
-      res.json(results);
-    });
+function logActivity(userId, userName, action, details) {
+  const sql = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
+  db.query(sql, [userId, userName, action, details], (err) => {
+    if (err) console.error('❌ Error logging activity:', err);
   });
-  
+}
+
+
+app.get('/activity-logs', authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  const userRole = req.user.role;
+
+  const sql = userRole === 'admin'
+    ? `SELECT * FROM Activity_Logs ORDER BY timestamp DESC LIMIT 100`
+    : `SELECT * FROM Activity_Logs WHERE user_id = ? ORDER BY timestamp DESC LIMIT 100`;
+
+  const params = userRole === 'admin' ? [] : [userId];
+
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      console.error('❌ Failed to load activity logs:', err);
+      return res.status(500).json({ error: 'Failed to load activity logs' });
+    }
+    res.json(results);
+  });
+});
+
 app.post('/reset-password/:token', async (req, res) => {
   const token = req.params.token;
   const { newPassword } = req.body;
@@ -381,7 +542,7 @@ app.post('/reset-password/:token', async (req, res) => {
 
 
 app.post('/forgot-password', (req, res) => {
-  const { email,  } = req.body;
+  const { email, } = req.body;
   if (!email) return res.status(400).json({ message: 'Please provide email' });
 
   db.query('SELECT * FROM users WHERE email = ?', [email], (err, users) => {
@@ -396,7 +557,7 @@ app.post('/forgot-password', (req, res) => {
       (updateErr) => {
         if (updateErr) return res.status(500).json({ message: 'Database error' });
 
-const resetLink = `http://localhost:4000/reset-password.html?token=${token}`;
+        const resetLink = `http://localhost:4000/reset-password.html?token=${token}`;
         const mailOptions = {
           from: 'your_email@gmail.com',
           to: email,
@@ -458,14 +619,7 @@ app.get('/api/maintenance/completion-rates', async (req, res) => {
 
 
 
+app.use('/', express.static(path.join(__dirname, '../../authintication/AuthPage')));
 
-
-
-
-
-
-
-
-
-  // تشغيل السيرفر
-app.listen(4000, () => console.log('🚀 userServer.js running on http://localhost:4000'));
+// تشغيل السيرفر
+app.listen(4000, () => console.log('🚀 userServer.js running on http://localhost:4000'));  
