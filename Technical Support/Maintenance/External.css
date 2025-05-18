@@ -282,7 +282,8 @@ textarea:focus {
 .popup-content {
     background: white;
     padding: 30px;
-    width: 900px;
+    
+    width: 600px;
     max-height: 90vh;
     overflow-y: auto;
     border-radius: 10px;
@@ -420,15 +421,15 @@ textarea:focus {
     background: white;
     padding: 30px;
     border-radius: 10px;
-    max-width: 500px;
-    width: 90%;
+    max-width: 900px;
+    width: 60%;
     box-shadow: 0 0 10px rgba(0,0,0,0.2);
   }
-  .popup-contentt {
+   .popup-contentt {
     background: white;
     padding: 30px;
     border-radius: 10px;
-    max-width: 900px;
+    max-width: 500px;
     width: 90%;
     box-shadow: 0 0 10px rgba(0,0,0,0.2);
   }

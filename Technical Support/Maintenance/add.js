@@ -1865,7 +1865,7 @@ function openAddOptionPopup(targetId) {
 
   const popup = document.getElementById("generic-popup");
   popup.innerHTML = `
-    <div class="popup-content">
+    <div class="popup-contentt">
       <h3>${t['add_new']} ${label}</h3>
       <label for="generic-popup-input">${label} ${t['name'] || t['new_value']}:</label>
       <input type="text" id="generic-popup-input" placeholder="${t['enter_new_value']}" />
@@ -2635,7 +2635,7 @@ function openGenericPopup(labelKey, targetId) {
           `<option value="add-new-department">+ ${t['add_new']} ${t['section']}</option>`;
 
         popup.innerHTML = `
-          <div class="popup-content">
+          <div class="popup-contentt">
             <h3>${t['add_device']}</h3>
 
             <label>${labelWithStar(t['device_name'], true)}</label>
@@ -2741,7 +2741,7 @@ function openGenericPopup(labelKey, targetId) {
 
   } else {
     popup.innerHTML = `
-      <div class="popup-content">
+      <div class="popup-contentt">
         <h3 id="generic-popup-title">${addNewText} ${translatedLabel}</h3>
         <label for="generic-popup-input" id="generic-label">${translatedLabel}:</label>
         <input type="text" id="generic-popup-input" placeholder="${enterValueText}" required />
@@ -2769,7 +2769,7 @@ function openAddModelPopup() {
 
   const popup = document.getElementById("generic-popup");
   popup.innerHTML = `
-    <div class="popup-content">
+    <div class="popup-contentt">
       <h3>${t['add_new']} ${t['model']} ${t['for']} ${deviceType}</h3>
       <label>${t['model_name']}:</label>
       <input type="text" id="new-model-name" placeholder="${t['enter_model_name']}" />
@@ -2797,7 +2797,7 @@ function openAddSectionPopup(contextId = "section") {
 
   const popup = document.getElementById("generic-popup");
   popup.innerHTML = `
-    <div class="popup-content">
+    <div class="popup-contentt">
       <h3>${t['add_new']} ${t['section']}</h3>
       <label>${t['section_name']}:</label>
       <input type="text" id="new-section-name" placeholder="${t['enter_section_name']}" />

@@ -13,7 +13,7 @@ const languageManager = {
             'english': 'English',
             'arabic': 'عربي',
             'back': 'Back',
-            
+
             // Common
             'welcome': 'Welcome',
             'please_enter_info': 'Please enter your information',
@@ -30,7 +30,7 @@ const languageManager = {
             'submit': 'Submit',
             'cancel': 'Cancel',
             'save_changes': 'Save Changes',
-            
+
             // Home Page
             'enterprise_solutions': 'Enterprise Technology Solutions',
             'comprehensive_services': 'Comprehensive technical services for modern businesses, empowering your digital transformation with cutting-edge solutions.',
@@ -46,7 +46,7 @@ const languageManager = {
             'data_center_desc': 'State-of-the-art data center management and hosting',
             'admin_panel': 'Admin Permissions',
             'admin_desc': 'Manage system users, logs, and advanced settings',
-            
+
             // Reports
             'choose_reports_type': 'Choose Reports Type',
             'select_reports_type': 'Select the appropriate reports type for your request',
@@ -54,7 +54,7 @@ const languageManager = {
             'external_report': 'External Report',
             'for_internal_team': 'For internal team members and employees',
             'for_external_partners': 'For clients and external partners',
-            
+
             // Maintenance
             'maintenance': 'Maintenance',
             'processor_generation': 'Processor Generation',
@@ -64,7 +64,7 @@ const languageManager = {
             'select_processor': 'Select processor',
             'search_cpu': 'Search CPU...',
             'ram': 'RAM',
-            
+
             // Tickets
             'choose_ticket_type': 'Choose Ticket Type',
             'select_ticket_type': 'Select the appropriate ticket type for your request',
@@ -74,7 +74,7 @@ const languageManager = {
             'software_desc': 'Report software issues or request new features',
             'network': 'Network',
             'network_desc': 'Report network connectivity issues or request network changes',
-            
+
             // Notifications
             'clear_all': 'Clear all',
             'view_all': 'View All Notifications',
@@ -88,7 +88,7 @@ const languageManager = {
             'maintenance_complete_desc': 'The scheduled maintenance has been completed successfully.',
             'security_alert': 'Security Alert',
             'security_alert_desc': 'New security patches have been installed. Your system is now more secure.',
-            
+
             // Profile
             'personal_info': 'Personal Information',
             'account_settings': 'Account Settings',
@@ -103,25 +103,25 @@ const languageManager = {
             'theme': 'Theme',
             'light': 'Light',
             'dark': 'Dark',
-            
+
             // Dashboard
             'dashboard': 'Dashboard',
             'dashboard_desc': 'Overview of system performance and key metrics',
             'active_monitors': '12 Active Monitors',
-            
+
             // Reports
             'reports': 'Reports',
             'reports_desc': 'Detailed analytics and performance reports',
             'available_reports': '28 Available Reports',
-            
+
             // Tickets
             'tickets': 'Tickets',
             'tickets_desc': 'Manage and track support requests',
             'open_tickets': '15 Open Tickets',
-            
+
             // Maintenance
             'scheduled_tasks': '2 Scheduled Tasks',
-            
+
             // Maintenance Types
             'regular_maintenance': 'Regular Maintenance',
             'regular_maintenance_desc': 'Schedule and perform routine maintenance tasks',
@@ -131,7 +131,7 @@ const languageManager = {
             'add_maintenance_desc': 'Create new maintenance requests and tasks',
             'general_maintenance': 'General Maintenance',
             'general_maintenance_desc': 'View and manage all maintenance activities',
-            
+
             // Regular Maintenance
             'scheduled_maintenance': 'Scheduled Maintenance',
             'device_name': 'Device Name',
@@ -171,7 +171,7 @@ const languageManager = {
             'add_new': 'Add New',
             'new_value': 'New Value',
             'enter_new_value': 'Enter new value...',
-            
+
             // External Maintenance
             'external_requests': 'External Requests',
             'add_external': 'Add External Request',
@@ -180,13 +180,13 @@ const languageManager = {
             'repair': 'Repair',
             'installation': 'Installation',
             'request_date': 'Request Date',
-            
+
             // Add Maintenance
             'priority': 'Priority',
             'low': 'Low',
             'medium': 'Medium',
             'high': 'High',
-            
+
             // General Maintenance
             'status': 'Status',
             'all': 'All',
@@ -195,14 +195,14 @@ const languageManager = {
             'completed': 'Completed',
             'date': 'Date',
             'actions': 'Actions',
-            
+
             // External Maintenance Details
             'fill_maintenance_details': 'Please fill in the maintenance details below',
             'device_information': 'Device Information',
             'problem_type': 'Type of Problem',
             'select_problem_type': 'Select Problem type',
             'search_problem_type': 'Search problem type...',
-            
+
             // Ticket Information
             'ticket_information': 'Ticket Information',
             'ticket_number': 'Ticket Number',
@@ -218,7 +218,7 @@ const languageManager = {
             'final_diagnosis': 'Final Diagnosis',
             'enter_final_diagnosis': 'Enter final diagnosis',
             'submit_form': 'Submit Form',
-            
+
             // Add Maintenance Details
             'enter_device_name': 'Enter device name',
             'computer': 'Computer',
@@ -235,12 +235,12 @@ const languageManager = {
             'previous': 'Previous',
             'next': 'Next',
             'page_info': 'Page {0} of {1}',
-            
+
             // Profile Page
             'reset_password': 'Reset Password',
             'sign_out': 'Sign Out',
             'role': 'Role',
-            
+
             // Track Page
             'activity_log': 'Activity Log',
             'all_activities': 'All Activities',
@@ -250,7 +250,7 @@ const languageManager = {
             'submitted': 'Submitted',
             'uploaded': 'Uploaded',
             'search_activities': 'Search activities...',
-            
+
             // Permissions Page
             'search_users': 'Search users...',
             'add_new_user': '+ Add New User',
@@ -277,7 +277,7 @@ const languageManager = {
             'can_check_logs': 'Can check logs',
             'edit_permission': 'Edit Permission',
             'can_edit_permission': 'Can edit permission',
-            
+
             // Dashboard Page
             'server_status': 'Server Status',
             'active_servers': 'Active Servers',
@@ -307,24 +307,24 @@ const languageManager = {
             'normal': 'NORMAL',
             'warning': 'WARNING',
             'critical': 'CRITICAL',
-            
+
             // Reports Page
             'general_reports': 'General Reports',
             'view_manage_reports': 'View and manage standard reports',
             'periodic_reports': 'Periodic Reports',
             'schedule_track_reports': 'Schedule and track recurring reports',
-            
+
             // Tickets Page
             'internal_ticket': 'Internal Ticket',
             'external_ticket': 'External Ticket',
-            
+
             // Maintenance Page
             'add_devices': 'Add Devices',
-            
+
             // Report Type3 Page
             'type_of_report': 'Type of report',
             'closed': 'Closed',
-            
+
             // Login Page
             'login_signup': 'Login and Sign Up',
             'remember_me': 'Remember Me',
@@ -332,7 +332,7 @@ const languageManager = {
             'username': 'Username',
             'employee_id': 'Employee ID',
             'phone_number': 'Phone Number',
-            
+
             // General Maintenance
             'fill_required_fields': 'Please fill in all required fields',
             'customer_name': 'Customer Name',
@@ -360,7 +360,7 @@ const languageManager = {
             'printer': 'Printer',
             'scanner': 'Scanner',
             'other': 'Other',
-            
+
             // External Maintenance Page
             'record_external_maintenance': 'Record external device maintenance information',
             'device_information': 'Device Information',
@@ -377,12 +377,12 @@ const languageManager = {
             'search_reporter': 'Search reporter...',
             'ticket_number': 'Ticket Number',
             'enter_ticket_number': 'Enter ticket number',
-            
+
             // Add Devices Page
             'add_new_device': 'Add a new device to the system',
             'add_device': 'Add Device',
             'enter_new_value': 'Enter new value...',
-            
+
             // Internal Ticket Page
             'internal_ticket': 'Internal Ticket',
             'fill_ticket_details': 'Fill in the details below to create a new Internal ticket',
@@ -415,7 +415,7 @@ const languageManager = {
             'initial_diagnosis': 'Initial Diagnosis',
             'select_initial_diagnosis': 'Select Initial Diagnosis',
             'search_problem_status': 'Search problem status...',
-            
+
             // External Ticket Page
             'external_ticket': 'External Ticket',
             'fill_support_ticket': 'Fill in the details below to create a new support ticket',
@@ -426,7 +426,7 @@ const languageManager = {
             'describe_issue': 'Describe the issue in detail...',
             'report_datetime': 'Report Date/Time',
             'save_ticket': 'Save Ticket',
-            
+
             // Reports Pages
             'reports_dashboard': 'Reports Dashboard',
             'search_reports': 'Search reports...',
@@ -468,7 +468,7 @@ const languageManager = {
             'upload_signature': 'Or Upload Signature Image',
             'clear_signature': 'Clear Signature',
             'submit_report': 'Submit Report',
-            
+
             // Report Details Page
             'maintenance_report': 'Maintenance Report',
             'download_pdf': 'Download PDF',
@@ -514,7 +514,7 @@ const languageManager = {
             'ink_type': 'Ink Type',
             'ink_serial': 'Ink Serial Number',
             'scanner_type': 'Scanner Type',
-            
+
             // Dropdowns
             'select_specification': "Select specification",
             'select_department': "Select Department",
@@ -530,7 +530,7 @@ const languageManager = {
             'select_scanner_type': "Select Scanner Type",
             'select_ink_serial': "Select Ink Serial Number",
             'select_processor_generation': "Select Processor Generation",
-            
+
             // Add New Options
             'add_new_processor': "Add New Processor",
             'add_new_ram': "Add New RAM",
@@ -543,7 +543,12 @@ const languageManager = {
             'add_new_scanner_type': "Add New Scanner Type",
             'add_new_department': "Add New Department",
             'add_new_model': "Add New Model",
-            
+            'add_new_report_status': "Add New Report Status",
+            'add_new_ticket_type': "Add New Ticket Type",
+            'report_status': "Report Status",
+            'ticket_type': "Ticket Type",
+
+
             // Placeholders
             'search_processor': "Search processor...",
             'search_ram': "Search RAM...",
@@ -556,7 +561,7 @@ const languageManager = {
             'search_scanner_type': "Search scanner type...",
             'search_department': "Search department...",
             'search_model': "Search model...",
-            
+
             // Error Messages
             'please_select_valid_option': "Please select a valid option",
             'please_enter_valid_value': "Please enter a valid value",
@@ -571,29 +576,29 @@ const languageManager = {
             'please_enter_printer_type': "Please enter printer type",
             'please_enter_ink_type': "Please enter ink type",
             'please_enter_scanner_type': "Please enter scanner type",
-            
+
             // Success Messages
             'saved_successfully': "Saved successfully",
             'updated_successfully': "Updated successfully",
             'deleted_successfully': "Deleted successfully",
-            
+
             // Error Messages
             'failed_to_save': "Failed to save",
             'failed_to_update': "Failed to update",
             'failed_to_delete': "Failed to delete",
             'failed_to_load': "Failed to load data",
-            
+
             // Confirmations
             'confirm_delete': "Are you sure you want to delete",
             'confirm_update': "Are you sure you want to update",
-            
+
             // Device Types
             'pc': "PC",
             'laptop': "Laptop",
             'desktop': "Desktop",
             'printer': "Printer",
             'scanner': "Scanner",
-            
+
             // Device Specifications
             'device_name': "Device Name",
             'serial_number': "Serial Number",
@@ -610,13 +615,17 @@ const languageManager = {
             'ink_type': "Ink Type",
             'scanner_type': "Scanner Type",
             'ink_serial_number': "Ink Serial Number",
-            
+
             // Sections
             'department': "Department",
             'model': "Model",
             'section': "Section",
-            
-            
+            'section_name': "Section Name",
+            'model_name': "Model Name",
+            'enter_section_name': "Enter section name",
+            'enter_model_name': "Enter model name",
+
+
             // Actions
             'edit': "Edit",
             'delete': "Delete",
@@ -626,12 +635,12 @@ const languageManager = {
             'update': "Update",
             'remove': "Remove",
             'enter': "Enter",
-            
+
             // Status
             'is_required': "is required",
             'all_devices': "All Devices",
             'no_specifications_found': "No specifications found",
-            
+
             // Popup Titles
             'add_device': "Add Device",
             'edit_device': "Edit Device",
@@ -640,12 +649,17 @@ const languageManager = {
             'add_model': "Add Model",
             'edit_model': "Edit Model",
             'add_section': "Add Section",
-            'edit_section': "Edit Section"
+            'edit_section': "Edit Section",
+            'for': "For",
         },
         ar: {
             'department': 'الاقسام',
             'model': 'الموديلات',
             'section': 'القسم',
+            'section_name': 'اسم القسم',
+            'model_name': 'اسم الموديل',
+            'enter_section_name': 'ادخل اسم القسم',
+            'enter_model_name': 'ادخل اسم الموديل',
             // Navigation
             'home': 'الرئيسية',
             'profile': 'الملف الشخصي',
@@ -657,6 +671,7 @@ const languageManager = {
             'arabic': 'عربي',
             'back': 'رجوع',
             'enter': 'ادخل',
+            'for': 'ل',
             'technical_status': "الحالة الفنية",
             'technical_status_name': "اسم الحالة الفنية",
             'enter_technical_status': "أدخل الحالة الفنية...",
@@ -665,12 +680,12 @@ const languageManager = {
             'error_saving_technical_status': "خطأ في حفظ الحالة الفنية",
             'failed_to_save_technical_status': "فشل في حفظ الحالة الفنية",
             'problem_status': "حالة المشكلة",
-            'problem_status_name': "اسم حالة المشكلة",
-            'enter_problem_status': "أدخل حالة المشكلة...",
-            'please_enter_problem_status': "الرجاء إدخال حالة المشكلة",
-            'error_fetching_problem_status': "خطأ في جلب حالة المشكلة",
-            'error_saving_problem_status': "خطأ في حفظ حالة المشكلة",
-            'failed_to_save_problem_status': "فشل في حفظ حالة المشكلة",
+            'problem_status_name': "اسم نوع المشكلة",
+            'enter_problem_status': "أدخل نوع المشكلة...",
+            'please_enter_problem_status': "الرجاء إدخال نوع المشكلة",
+            'error_fetching_problem_status': "خطأ في جلب نوع المشكلة",
+            'error_saving_problem_status': "خطأ في حفظ نوع المشكلة",
+            'failed_to_save_problem_status': "فشل في حفظ نوع المشكلة",
             // Common
             'welcome': 'مرحباً',
             'please_enter_info': 'الرجاء إدخال معلوماتك',
@@ -687,7 +702,7 @@ const languageManager = {
             'submit': 'إرسال',
             'cancel': 'إلغاء',
             'save_changes': 'حفظ التغييرات',
-            
+
             // Home Page
             'enterprise_solutions': 'حلول تكنولوجيا المؤسسات',
             'comprehensive_services': 'خدمات تقنية شاملة للشركات الحديثة، تمكين التحول الرقمي الخاص بك مع حلول متطورة',
@@ -703,7 +718,7 @@ const languageManager = {
             'data_center_desc': 'إدارة واستضافة مراكز البيانات المتطورة',
             'admin_panel': 'صلاحيات المشرف',
             'admin_desc': 'إدارة مستخدمي النظام والسجلات والإعدادات المتقدمة',
-            
+
             // Reports
             'choose_reports_type': 'اختر نوع التقارير',
             'select_reports_type': 'اختر نوع التقرير المناسب لطلبك',
@@ -711,7 +726,7 @@ const languageManager = {
             'external_report': 'تقرير خارجي',
             'for_internal_team': 'لأعضاء الفريق الداخلي والموظفين',
             'for_external_partners': 'للعملاء والشركاء الخارجيين',
-            
+
             // Maintenance
             'maintenance': 'الصيانة',
             'processor_generation': 'جيل المعالج',
@@ -721,7 +736,7 @@ const languageManager = {
             'select_processor': 'اختر المعالج',
             'search_cpu': 'ابحث عن معالج...',
             'ram': 'الذاكرة العشوائية',
-            
+
             // Tickets
             'choose_ticket_type': 'اختر نوع التذكرة',
             'select_ticket_type': 'اختر نوع التذكرة المناسب لطلبك',
@@ -731,7 +746,7 @@ const languageManager = {
             'software_desc': 'الإبلاغ عن مشكلات البرمجيات أو طلب ميزات جديدة',
             'network': 'الشبكة',
             'network_desc': 'الإبلاغ عن مشكلات الاتصال بالشبكة أو طلب تغييرات الشبكة',
-            
+
             // Notifications
             'clear_all': 'مسح الكل',
             'view_all': 'عرض كل الإشعارات',
@@ -745,7 +760,7 @@ const languageManager = {
             'maintenance_complete_desc': 'تم إكمال الصيانة المجدولة بنجاح.',
             'security_alert': 'تنبيه أمني',
             'security_alert_desc': 'تم تثبيت تحديثات أمنية جديدة. نظامك الآن أكثر أماناً.',
-            
+
             // Profile
             'personal_info': 'المعلومات الشخصية',
             'account_settings': 'إعدادات الحساب',
@@ -760,25 +775,25 @@ const languageManager = {
             'theme': 'المظهر',
             'light': 'فاتح',
             'dark': 'داكن',
-            
+
             // Dashboard
             'dashboard': 'لوحة التحكم',
             'dashboard_desc': 'نظرة عامة على أداء النظام والمقاييس الرئيسية',
             'active_monitors': '12 مراقب نشط',
-            
+
             // Reports
             'reports': 'التقارير',
             'reports_desc': 'تحليلات وتقارير أداء مفصلة',
             'available_reports': '28 تقرير متاح',
-            
+
             // Tickets
             'tickets': 'التذاكر',
             'tickets_desc': 'إدارة وتتبع طلبات الدعم',
             'open_tickets': '15 تذكرة مفتوحة',
-            
+
             // Maintenance
             'scheduled_tasks': '2 مهمة مجدولة',
-            
+
             // Maintenance Types
             'regular_maintenance': 'الصيانة الدورية',
             'regular_maintenance_desc': 'جدولة وتنفيذ مهام الصيانة الروتينية',
@@ -788,7 +803,7 @@ const languageManager = {
             'add_maintenance_desc': 'إنشاء طلبات ومهام صيانة جديدة',
             'general_maintenance': 'الصيانة العامة',
             'general_maintenance_desc': 'عرض وإدارة جميع أنشطة الصيانة',
-            
+
             // Regular Maintenance
             'scheduled_maintenance': 'الصيانة المجدولة',
             'device_name': 'اسم الجهاز',
@@ -813,10 +828,10 @@ const languageManager = {
             'select_specification': 'اختر المواصفات',
             'search_specification': 'ابحث عن مواصفات...',
             'problem_status': 'حالة المشكلة',
-            'select_problem_status': 'اختر حالة المشكلة',
-            'search_problem_status': 'ابحث عن حالة المشكلة...',
-            'technical_name': 'اسم الفني',
-            'select_technical': 'اختر الفني',
+            'select_problem_status': 'اختر نوع المشكلة',
+            'search_problem_status': 'ابحث عن نوع المشكلة...',
+            'technical_name': 'اسم المهندس',
+            'select_technical': 'اختر المهندس',
             'search_technical': 'ابحث عن فني...',
             'notes': 'ملاحظات',
             'add_notes': 'أضف أي ملاحظات إضافية هنا...',
@@ -828,7 +843,7 @@ const languageManager = {
             'add_new': 'إضافة ',
             'new_value': 'قيمة جديدة',
             'enter_new_value': 'أدخل قيمة جديدة...',
-            
+
             // External Maintenance
             'external_requests': 'الطلبات الخارجية',
             'add_external': 'إضافة طلب خارجي',
@@ -837,13 +852,13 @@ const languageManager = {
             'repair': 'إصلاح',
             'installation': 'تركيب',
             'request_date': 'تاريخ الطلب',
-            
+
             // Add Maintenance
             'priority': 'الأولوية',
             'low': 'منخفضة',
             'medium': 'متوسطة',
             'high': 'عالية',
-            
+
             // General Maintenance
             'status': 'الحالة',
             'all': 'الكل',
@@ -852,14 +867,14 @@ const languageManager = {
             'completed': 'مكتمل',
             'date': 'التاريخ',
             'actions': 'الإجراءات',
-            
+
             // External Maintenance Details
             'fill_maintenance_details': 'يرجى ملء تفاصيل الصيانة أدناه',
             'device_information': 'معلومات الجهاز',
             'problem_type': 'نوع المشكلة',
             'select_problem_type': 'اختر نوع المشكلة',
             'search_problem_type': 'ابحث عن نوع المشكلة...',
-            
+
             // Ticket Information
             'ticket_information': 'معلومات التذكرة',
             'ticket_number': 'رقم التذكرة',
@@ -875,7 +890,7 @@ const languageManager = {
             'final_diagnosis': 'التشخيص النهائي',
             'enter_final_diagnosis': 'أدخل التشخيص النهائي',
             'submit_form': 'إرسال النموذج',
-            
+
             // Add Maintenance Details
             'enter_device_name': 'أدخل اسم الجهاز',
             'computer': 'حاسوب',
@@ -885,19 +900,19 @@ const languageManager = {
             'location': 'الموقع',
             'enter_location': 'أدخل الموقع',
             'assigned_to': 'تعيين إلى',
-            'select_technician': 'اختر الفني',
+            'select_technician': 'اختر المهندس',
             'date_range': 'النطاق الزمني',
             'start_date': 'تاريخ البداية',
             'end_date': 'تاريخ النهاية',
             'previous': 'السابق',
             'next': 'التالي',
             'page_info': 'الصفحة {0} من {1}',
-            
+
             // Profile Page
             'reset_password': 'إعادة تعيين كلمة المرور',
             'sign_out': 'تسجيل الخروج',
             'role': 'الدور',
-            
+
             // Track Page
             'activity_log': 'سجل النشاط',
             'all_activities': 'جميع الأنشطة',
@@ -907,7 +922,7 @@ const languageManager = {
             'submitted': 'تم الإرسال',
             'uploaded': 'تم الرفع',
             'search_activities': 'البحث في الأنشطة...',
-            
+
             // Permissions Page
             'search_users': 'البحث عن المستخدمين...',
             'add_new_user': '+ إضافة مستخدم جديد',
@@ -934,7 +949,7 @@ const languageManager = {
             'can_check_logs': 'يمكنه فحص السجلات',
             'edit_permission': 'تعديل الصلاحيات',
             'can_edit_permission': 'يمكنه تعديل الصلاحيات',
-            
+
             // Dashboard Page
             'server_status': 'حالة الخادم',
             'active_servers': 'الخوادم النشطة',
@@ -964,24 +979,24 @@ const languageManager = {
             'normal': 'طبيعي',
             'warning': 'تحذير',
             'critical': 'حرج',
-            
+
             // Reports Page
             'general_reports': 'التقارير العامة',
             'view_manage_reports': 'عرض وإدارة التقارير القياسية',
             'periodic_reports': 'التقارير الدورية',
             'schedule_track_reports': 'جدولة وتتبع التقارير المتكررة',
-            
+
             // Tickets Page
             'internal_ticket': 'تذكرة داخلية',
             'external_ticket': 'تذكرة خارجية',
-            
+
             // Maintenance Page
             'add_devices': 'إضافة أجهزة',
-            
+
             // Report Type3 Page
             'type_of_report': 'نوع التقرير',
             'closed': 'مغلق',
-            
+
             // Login Page
             'login_signup': 'تسجيل الدخول وإنشاء حساب',
             'remember_me': 'تذكرني',
@@ -989,7 +1004,7 @@ const languageManager = {
             'username': 'اسم المستخدم',
             'employee_id': 'الرقم الوظيفي',
             'phone_number': 'رقم الهاتف',
-            
+
             // General Maintenance
             'fill_required_fields': 'يرجى ملء جميع الحقون المطلوبة',
             'customer_name': 'اسم العميل',
@@ -1001,9 +1016,9 @@ const languageManager = {
             'floor': 'الطابق',
             'select_floor': 'اختر الطابق',
             'search_floor': 'ابحث عن طابق...',
-            'technical': 'فني',
-            'select_technical': 'اختر الفني',
-            'search_technical': 'ابحث عن فني...',
+            'technical': 'المهندس',
+            'select_technical': 'اختر االمهندس',
+            'search_technical': 'ابحث عن المهندس...',
             'problem_status': 'حالة المشكلة',
             'select_status': 'اختر الحالة',
             'search_status': 'ابحث عن حالة...',
@@ -1017,7 +1032,7 @@ const languageManager = {
             'printer': 'طابعة',
             'scanner': 'ماسح ضوئي',
             'other': 'أخرى',
-            
+
             // External Maintenance Page
             'record_external_maintenance': 'تسجيل معلومات صيانة الجهاز الخارجي',
             'device_information': 'معلومات الجهاز',
@@ -1029,17 +1044,18 @@ const languageManager = {
             'enter_final_diagnosis': 'أدخل التشخيص النهائي',
             'maintenance_manager': 'مدير الصيانة',
             'enter_manager_name': 'أدخل اسم المدير',
-            'reporter_name': 'اسم المبلغ',
-            'select_reporter': 'اختر المبلغ',
+            'reporter_name': 'اسم صاحب البلاغ',
+            'select_reporter': 'اختر صاحب البلاغ',
             'search_reporter': 'ابحث عن مبلغ...',
             'ticket_number': 'رقم التذكرة',
             'enter_ticket_number': 'أدخل رقم التذكرة',
-            
+            'reporter': 'صاحب البلاغ',
+
             // Add Devices Page
             'add_new_device': 'إضافة جهاز جديد إلى النظام',
             'add_device': 'إضافة جهاز',
             'enter_new_value': 'أدخل قيمة جديدة...',
-            
+
             // Internal Ticket Page
             'internal_ticket': 'تذكرة داخلية',
             'fill_ticket_details': 'املأ التفاصيل أدناه لإنشاء تذكرة داخلية جديدة',
@@ -1049,8 +1065,8 @@ const languageManager = {
             'specify_custom_type': 'تحديد نوع مخصص',
             'enter_custom_type': 'أدخل النوع المخصص',
             'auto_generated': 'يتم إنشاؤه تلقائياً...',
-            'technical_name': 'اسم الفني',
-            'select_technical_engineer': 'اختر الفني',
+            'technical_name': 'اسم المهندس',
+            'select_technical_engineer': 'اختر المهندس',
             'search_technical': 'ابحث عن فني...',
             'report_status': 'حالة التقرير',
             'select_report_status': 'اختر حالة التقرير',
@@ -1071,8 +1087,13 @@ const languageManager = {
             'save_ticket': 'حفظ التذكرة',
             'initial_diagnosis': 'التشخيص الأولي',
             'select_initial_diagnosis': 'اختر التشخيص الأولي',
-            'search_problem_status': 'ابحث عن حالة المشكلة...',
-            
+            'search_problem_status': 'ابحث عن نوع المشكلة...',
+            'add_new_report_status': "إضافة حالة تقرير",
+            'add_new_ticket_type': "إضافة نوع التذكرة",
+            'report_status': "حالة التقرير",
+            'ticket_type': "نوع التذكرة",
+
+
             // External Ticket Page
             'external_ticket': 'تذكرة خارجية',
             'fill_support_ticket': 'املأ التفاصيل أدناه لإنشاء تذكرة دعم جديدة',
@@ -1083,7 +1104,7 @@ const languageManager = {
             'describe_issue': 'صف المشكلة بالتفصيل...',
             'report_datetime': 'تاريخ/وقت التقرير',
             'save_ticket': 'حفظ التذكرة',
-            
+
             // Reports Pages
             'reports_dashboard': 'لوحة التقارير',
             'search_reports': 'البحث في التقارير...',
@@ -1125,7 +1146,7 @@ const languageManager = {
             'upload_signature': 'أو رفع صورة التوقيع',
             'clear_signature': 'مسح التوقيع',
             'submit_report': 'تقديم التقرير',
-            
+
             // Report Details Page
             'maintenance_report': 'تقرير الصيانة',
             'download_pdf': 'تحميل PDF',
@@ -1140,7 +1161,7 @@ const languageManager = {
             'technical_notes': 'ملاحظات فنية',
             'generate_pdf': 'إنشاء PDF',
             'cancel': 'إلغاء',
-            
+
             // Device Specifications
             'device_name': 'اسم الجهاز',
             'serial_number': 'الرقم التسلسلي',
@@ -1157,7 +1178,7 @@ const languageManager = {
             'ink_type': 'نوع الحبر',
             'scanner_type': 'نوع الماسح',
             'ink_serial_number': 'الرقم التسلسلي للحبر',
-            
+
             // Dropdowns
             'select_specification': "اختر المواصفات",
             'select_department': "اختر القسم",
@@ -1173,7 +1194,7 @@ const languageManager = {
             'select_scanner_type': "اختر نوع الماسح",
             'select_ink_serial': "اختر الرقم التسلسلي للحبر",
             'select_processor_generation': "اختر جيل المعالج",
-            
+
             // Add New Options
             'add_new_processor': "إضافة معالج جديد",
             'add_new_ram': "إضافة ذاكرة جديدة",
@@ -1186,7 +1207,7 @@ const languageManager = {
             'add_new_scanner_type': "إضافة نوع ماسح جديد",
             'add_new_department': "إضافة قسم جديد",
             'add_new_model': "إضافة موديل جديد",
-            
+
             // Placeholders
             'search_processor': "ابحث عن معالج...",
             'search_ram': "ابحث عن ذاكرة...",
@@ -1199,7 +1220,7 @@ const languageManager = {
             'search_scanner_type': "ابحث عن نوع ماسح...",
             'search_department': "ابحث عن قسم...",
             'search_model': "ابحث عن موديل...",
-            
+
             // Error Messages
             'please_select_valid_option': "الرجاء اختيار خيار صحيح",
             'please_enter_valid_value': "الرجاء إدخال قيمة صحيحة",
@@ -1214,29 +1235,29 @@ const languageManager = {
             'please_enter_printer_type': "الرجاء إدخال نوع الطابعة",
             'please_enter_ink_type': "الرجاء إدخال نوع الحبر",
             'please_enter_scanner_type': "الرجاء إدخال نوع الماسح",
-            
+
             // Success Messages
             'saved_successfully': "تم الحفظ بنجاح",
             'updated_successfully': "تم التحديث بنجاح",
             'deleted_successfully': "تم الحذف بنجاح",
-            
+
             // Error Messages
             'failed_to_save': "فشل في الحفظ",
             'failed_to_update': "فشل في التحديث",
             'failed_to_delete': "فشل في الحذف",
             'failed_to_load': "فشل في تحميل البيانات",
-            
+
             // Confirmations
             'confirm_delete': "هل أنت متأكد من حذف",
             'confirm_update': "هل أنت متأكد من تحديث",
-            
+
             // Device Types
             'pc': "كمبيوتر",
             'laptop': "لابتوب",
             'desktop': "كمبيوتر مكتبي",
             'printer': "طابعة",
             'scanner': "ماسح ضوئي",
-            
+
             // Device Specifications
             'device_name': "اسم الجهاز",
             'serial_number': "الرقم التسلسلي",
@@ -1253,7 +1274,7 @@ const languageManager = {
             'ink_type': "نوع الحبر",
             'scanner_type': "نوع الماسح",
             'ink_serial_number': "الرقم التسلسلي للحبر",
-            
+
             // Actions
             'edit': "تعديل",
             'delete': "حذف",
@@ -1262,12 +1283,12 @@ const languageManager = {
             'add': "إضافة",
             'update': "تحديث",
             'remove': "إزالة",
-            
+
             // Status
             'is_required': "مطلوب",
             'all_devices': "جميع الأجهزة",
             'no_specifications_found': "لم يتم العثور على مواصفات",
-            
+
             // Popup Titles
             'add_device': "إضافة جهاز",
             'edit_device': "تعديل جهاز",
@@ -1298,10 +1319,10 @@ const languageManager = {
     applyLanguage() {
         // Set HTML lang attribute
         document.documentElement.lang = this.currentLang;
-        
+
         // Set text direction
         document.documentElement.dir = this.currentLang === 'ar' ? 'rtl' : 'ltr';
-        
+
         // Update all elements with data-i18n attribute
         document.querySelectorAll('[data-i18n]').forEach(element => {
             const key = element.getAttribute('data-i18n');
@@ -1323,14 +1344,14 @@ const languageManager = {
         if (langButton) {
             langButton.textContent = this.currentLang === 'en' ? 'ع' : 'En';
         }
-        
+
     }
 };
 
 // Initialize language manager when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     languageManager.init();
-    
+
     // Add click event listener to language switch button
     const langButton = document.querySelector('.lang-switch-btn');
     if (langButton) {
