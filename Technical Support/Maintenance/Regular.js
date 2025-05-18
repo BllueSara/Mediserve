@@ -2350,6 +2350,7 @@ document.addEventListener(" ", () => {
     }
   });
 });
+
 function cleanDropdownError(hiddenInput) {
   if (!hiddenInput) return;
 
@@ -2401,6 +2402,7 @@ function cleanDropdownError(hiddenInput) {
     }
   }
 }
+
 function fetchDevicesBySection() {
   const type = document.getElementById("device-type").value.toLowerCase();
   const department = document.getElementById("section").value;
@@ -3286,7 +3288,7 @@ function closeGenericPopup(cancelled = false) {
     if (returnToSpec === "true" && !["pc", "printer", "scanner", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(deviceType)) {
       sessionStorage.removeItem("returnToPopup");
       setTimeout(() => {
-        openGenericPopup("Device Specification", "device-spec");
+        openGenericPopup("device_specifications", "device-spec");
       }, 100);
     } else {
       sessionStorage.removeItem("returnToPopup");
@@ -3335,7 +3337,7 @@ function closeGenericPopup(cancelled = false) {
     !sessionStorage.getItem("spec-saved")
   ) {
     setTimeout(() => {
-      openGenericPopup("Device Specification", "device-spec");
+      openGenericPopup("device_specifications", "device-spec");
 
       setTimeout(() => {
         fieldsToPreserve.forEach(id => {

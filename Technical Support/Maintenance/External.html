@@ -10,28 +10,33 @@
   <!-- External CSS file for styling -->
   <link rel="stylesheet" href="External.css" />
   <link rel="stylesheet" href="/Language/Language.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal&display=swap" rel="stylesheet">
 
-  <style>
-    body {
-      font-family: var(--font-family);
-    }
+<style>
+  :root {
+    --font-family: 'Tajawal', sans-serif;
+  }
 
-    h1,
-    h2,
-    h3,
-    p,
-    span,
-    button,
-    select,
-    input,
-    label {
-      font-family: var(--font-family);
-    }
-  </style>
+  body,
+  h1, h2, h3, p, span, button, select, input,
+  .dropdown-toggle, .dropdown-option-text, .dropdown-search,
+  label {
+    font-family: var(--font-family) !important;
+  }
+
+  /* حتى الـ placeholder */
+  ::placeholder,
+  input::placeholder,
+  textarea::placeholder,
+  input::-webkit-input-placeholder,
+  input::-moz-placeholder,
+  input:-ms-input-placeholder,
+  input::-ms-input-placeholder {
+    font-family: var(--font-family) !important;
+  }
+</style>
 
 </head>
-
 <body>
   <!-- Navigation buttons section (Back & Home) -->
   <div class="nav-buttons">
