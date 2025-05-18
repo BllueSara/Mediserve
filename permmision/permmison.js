@@ -1,6 +1,47 @@
 const radios = document.querySelectorAll('.radio-wrapper input[type="radio"]');
 document.addEventListener('DOMContentLoaded', () => {
-  loadUsers(); // تحميل المستخدمين من الباك عند بدء الصفحة
+  loadUsers(); // تحميل المستخدمين عند تشغيل الصفحة
+
+  // تفعيل الراديوات وتخزين التغييرات مباشرة
+  document.querySelectorAll('input[name="device"], #full_access, #view_access').forEach(el => {
+    el.addEventListener('change', () => {
+      if (window.currentUserId) {
+        savePermissions(); // حفظ مباشر عند أي تغيير
+      }
+    });
+  });
+
+  // تفعيل النمط النشط للراديوات
+  document.querySelectorAll('.radio-wrapper input[type="radio"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      document.querySelectorAll('.radio-wrapper').forEach(wrapper => {
+        wrapper.classList.remove('active');
+      });
+      if (radio.checked) {
+        radio.parentElement.classList.add('active');
+      }
+    });
+
+    if (radio.checked) {
+      radio.parentElement.classList.add('active');
+    }
+  });
+});
+[
+  '#full_access',
+  '#view_access',
+  '#add_items',
+  '#edit_items',
+  '#delete_items',
+  '#check_logs',
+  '#edit_permission'
+].forEach(id => {
+  const el = document.querySelector(id);
+  if (el) {
+    el.addEventListener('change', () => {
+      if (window.currentUserId) savePermissions();
+    });
+  }
 });
 
   radios.forEach(radio => {
@@ -47,79 +88,128 @@ async function loadUsers() {
 }
 
 async function loadUserDetails(userId) {
-  const res = await fetch(`http://localhost:4000/users/${userId}`, {
-    headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
-  });
+  try {
+    // 1. جلب معلومات المستخدم
+    const userRes = await fetch(`http://localhost:4000/users/${userId}`, {
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+    });
+    const user = await userRes.json();
 
-  const user = await res.json();
+    // 2. جلب الصلاحيات
+    const permRes = await fetch(`http://localhost:4000/users/${userId}/permissions`, {
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+    });
+    let permissions = await permRes.json();
 
-  // الاسم والايميل
-  document.getElementById('user-name').textContent = user.name;
-  document.getElementById('user-email').textContent = user.email;
+    // 3. إذا الصلاحيات غير موجودة، احفظ القيم الافتراضية مباشرة
+    const shouldSaveDefaults = !permissions?.device_access && permissions?.full_access === false;
+    if (shouldSaveDefaults) {
+      permissions = {
+        device_access: 'all',
+        full_access: true,
+        view_access: true
+      };
 
-  // معلومات إضافية
-  const infoBox = document.getElementById('user-extra-info');
-  infoBox.innerHTML = `
-    <span style="color: #4b5563;">Department: ${user.department || '-'}</span>
-    <span style="color: #4b5563;">Employee ID: ${user.employee_id || '-'}</span>
-    <span style="color: #4b5563;">Role: ${user.role}</span>
-  `;
+      await fetch(`http://localhost:4000/users/${userId}/permissions`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + localStorage.getItem('token')
+        },
+        body: JSON.stringify(permissions)
+      });
+    }
 
-  // الحالة
-  const statusBadge = document.getElementById('user-status-badge');
-  const statusText = document.getElementById('status-text');
+    // 4. تحديث الواجهة
+    document.getElementById('user-name').textContent = user.name;
+    document.getElementById('user-email').textContent = user.email;
 
-  if (user.status === 'inactive') {
-    statusBadge.style.color = '#ef4444';
-    statusBadge.style.backgroundColor = '#fef2f2';
-    statusText.textContent = 'Inactive';
-  } else {
-    statusBadge.style.color = '#10b981';
-    statusBadge.style.backgroundColor = '#ecfdf5';
-    statusText.textContent = 'Active';
+    const infoBox = document.getElementById('user-extra-info');
+    infoBox.innerHTML = `
+      <span style="color: #4b5563;">Department: ${user.department || '-'}</span>
+      <span style="color: #4b5563;">Employee ID: ${user.employee_id || '-'}</span>
+      <span style="color: #4b5563;">Role: ${user.role}</span>
+    `;
+
+    const statusBadge = document.getElementById('user-status-badge');
+    const statusText = document.getElementById('status-text');
+
+    if (user.status === 'inactive') {
+      statusBadge.style.color = '#ef4444';
+      statusBadge.style.backgroundColor = '#fef2f2';
+      statusText.textContent = 'Inactive';
+    } else {
+      statusBadge.style.color = '#10b981';
+      statusBadge.style.backgroundColor = '#ecfdf5';
+      statusText.textContent = 'Active';
+    }
+
+    // تحديث الصلاحيات في الواجهة
+    updatePermissionsUI(permissions);
+    window.currentUserId = userId;
+
+  } catch (error) {
+    console.error('Error loading user details:', error);
+    alert('فشل تحميل معلومات المستخدم');
   }
-
-  // ربط الزرين
-// عند الضغط على الحالة: تبديل الوضع
-document.getElementById('user-status-badge').onclick = () => {
-  toggleStatus(user.id, user.status);
-};
-
-// عند الضغط على الحذف
-document.getElementById('delete-btn').onclick = () => {
-  if (confirm(`Are you sure you want to delete ${user.name}?`)) {
-    deleteUser(user.id);
-  }
-};
-
-// عند الضغط على إعادة التعيين
-document.getElementById('toggle-status-btn').onclick = () => {
-  window.location.href = `/reset-password.html?user=${user.id}`;
-};
-
-
-  // خزن الآي دي
-  window.currentUserId = userId;
 }
+
+
+function updatePermissionsUI(permissions) {
+  const deviceAccess = permissions.device_access || 'none';
+  const radio = document.querySelector(`input[name="device"][value="${deviceAccess}"]`);
+  if (radio) {
+    radio.checked = true;
+    document.querySelectorAll('.radio-wrapper').forEach(wrapper => wrapper.classList.remove('active'));
+    radio.parentElement.classList.add('active');
+  }
+
+  // الرئيسية
+  document.getElementById('full_access').checked = !!permissions.full_access;
+  document.getElementById('view_access').checked = !!permissions.view_access;
+
+  // الإضافية
+  document.getElementById('add_items').checked = !!permissions.add_items;
+  document.getElementById('edit_items').checked = !!permissions.edit_items;
+  document.getElementById('delete_items').checked = !!permissions.delete_items;
+  document.getElementById('check_logs').checked = !!permissions.check_logs;
+  document.getElementById('edit_permission').checked = !!permissions.edit_permission;
+}
+
 
 
 async function savePermissions() {
-  const permissions = {
-    device_access: document.querySelector('input[name="device"]:checked')?.value,
-    full_access: document.querySelector('#full_access').checked,
-    view_access: document.querySelector('#view_access').checked,
-    // ... أكمل حسب بقية الصلاحيات
-  };
+  try {
+    const permissions = {
+      device_access: document.querySelector('input[name="device"]:checked')?.value || 'none',
+      full_access: document.getElementById('full_access').checked,
+      view_access: document.getElementById('view_access').checked,
 
-  await fetch(`http://localhost:4000/users/${window.currentUserId}/permissions`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer ' + localStorage.getItem('token')
-    },
-    body: JSON.stringify(permissions)
-  });
+      // الإضافية:
+      add_items: document.getElementById('add_items')?.checked || false,
+      edit_items: document.getElementById('edit_items')?.checked || false,
+      delete_items: document.getElementById('delete_items')?.checked || false,
+      check_logs: document.getElementById('check_logs')?.checked || false,
+      edit_permission: document.getElementById('edit_permission')?.checked || false,
+    };
+
+    const response = await fetch(`http://localhost:4000/users/${window.currentUserId}/permissions`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + localStorage.getItem('token')
+      },
+      body: JSON.stringify(permissions)
+    });
+
+    if (!response.ok) throw new Error('Failed to save permissions');
+    console.log("✅ Permissions saved");
+  } catch (error) {
+    console.error('❌ Error saving permissions:', error);
+  }
 }
+
+
 async function deleteUser(userId) {
   if (!confirm("Are you sure you want to delete this user?")) return;
 
