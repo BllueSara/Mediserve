@@ -409,6 +409,11 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
     deviceType = allowedTypes.includes(deviceType)
       ? deviceType.charAt(0).toUpperCase() + deviceType.slice(1)
       : deviceInfo.device_type;
+const engineerRes = await queryAsync(
+  `SELECT id FROM Engineers WHERE name = ?`,
+  [reporter_name]
+);
+const technicalEngineerId = engineerRes[0]?.id || null;
 
     const commonValues = [
       ticket_number, deviceType, device_specifications, section,
@@ -434,7 +439,7 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
     mac_address, ip_address,
     printer_type, ink_type, ink_serial_number, scanner_type, user_id
   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-`, commonValues);
+`, commonValues,technicalEngineerId);
 
 
     // 2️⃣ إدخال تلخيص التذكرة

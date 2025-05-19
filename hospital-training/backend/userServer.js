@@ -614,9 +614,160 @@ app.get('/api/maintenance/completion-rates', async (req, res) => {
 });
 
 
-// ثاني جزئيه 
+
+//ticket summary
+app.get('/api/tickets/summary', authenticateToken, async (req, res) => {
+  try {
+    const statusQueries = {
+      open: `SELECT COUNT(*) AS count FROM Maintenance_Reports WHERE status = 'Open'`,
+      in_progress: `SELECT COUNT(*) AS count FROM Maintenance_Reports WHERE status = 'In Progress'`,
+      resolved: `SELECT COUNT(*) AS count FROM Maintenance_Reports WHERE status = 'Closed'`,
+      open_last_week: `
+        SELECT COUNT(*) AS count FROM Maintenance_Reports
+        WHERE status = 'Open'
+        AND created_at BETWEEN DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+      `,
+      in_progress_last_week: `
+        SELECT COUNT(*) AS count FROM Maintenance_Reports
+        WHERE status = 'In Progress'
+        AND created_at BETWEEN DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+      `,
+      resolved_last_week: `
+        SELECT COUNT(*) AS count FROM Maintenance_Reports
+        WHERE status = 'Closed'
+        AND created_at BETWEEN DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+      `
+    };
+
+    const results = {};
+    for (const key in statusQueries) {
+      const [rows] = await db.promise().query(statusQueries[key]);
+      results[key] = rows[0].count;
+    }
+
+    const total = results.open + results.in_progress + results.resolved;
+
+    res.json({
+      total,
+      open: results.open,
+      open_delta: results.open - results.open_last_week,
+      in_progress: results.in_progress,
+      in_progress_delta: results.in_progress - results.in_progress_last_week,
+      resolved: results.resolved,
+      resolved_delta: results.resolved - results.resolved_last_week
+    });
+  } catch (err) {
+    console.error('❌ Error fetching ticket summary:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 
+
+// iup coning main
+app.get('/api/maintenance/upcoming', authenticateToken, async (req, res) => {
+  try {
+    const [rows] = await db.promise().query(`
+      SELECT 
+        id,
+        device_name,
+        serial_number,
+        governmental_number,
+        department_name,
+        last_maintenance_date,
+        frequency,
+        status,
+        DATE_ADD(last_maintenance_date,
+          INTERVAL CASE frequency
+            WHEN '3months' THEN 3
+            WHEN '4months' THEN 4
+            ELSE 0
+          END MONTH
+        ) AS next_maintenance_date
+      FROM Regular_Maintenance
+      WHERE status != 'Closed'
+        AND DATE_ADD(last_maintenance_date,
+          INTERVAL CASE frequency
+            WHEN '3months' THEN 3
+            WHEN '4months' THEN 4
+            ELSE 0
+          END MONTH
+        ) >= CURDATE()
+      ORDER BY next_maintenance_date ASC
+      LIMIT 6
+    `);
+
+    res.json(rows);
+  } catch (err) {
+    console.error('❌ Error fetching upcoming maintenance:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+// Maintenance Overview API (devices summary for internal/external)
+app.get('/api/maintenance/overview', authenticateToken, async (req, res) => {
+  try {
+    const query = `
+      SELECT LOWER(d.device_type) AS type, COUNT(*) AS total, 'internal' AS source
+      FROM General_Maintenance gm
+      JOIN Maintenance_Devices d ON gm.device_id = d.id
+      WHERE gm.problem_status = 'Closed'
+      GROUP BY LOWER(d.device_type)
+
+      UNION ALL
+
+      SELECT LOWER(d.device_type) AS type, COUNT(*) AS total, 'internal' AS source
+      FROM Regular_Maintenance rm
+      JOIN Maintenance_Devices d ON rm.device_id = d.id
+      WHERE rm.status = 'Closed'
+      GROUP BY LOWER(d.device_type)
+
+      UNION ALL
+
+      SELECT LOWER(em.device_type) AS type, COUNT(*) AS total, 'external' AS source
+      FROM External_Maintenance em
+      WHERE em.status = 'Closed' AND em.device_type IS NOT NULL
+      GROUP BY LOWER(em.device_type)
+    `;
+
+    const [rows] = await db.promise().query(query);
+
+    const formatted = {
+      internal: {},
+      external: {},
+      types: new Set()
+    };
+
+    for (const row of rows) {
+      const type = row.type;
+      const source = row.source;
+
+      if (source === 'internal') {
+        formatted.internal[type] = (formatted.internal[type] || 0) + row.total;
+      } else if (source === 'external') {
+        formatted.external[type] = (formatted.external[type] || 0) + row.total;
+      }
+
+      formatted.types.add(type);
+    }
+
+    res.json({
+      types: Array.from(formatted.types),
+      internal: formatted.internal,
+      external: formatted.external
+    });
+
+  } catch (err) {
+    console.error('❌ Error loading maintenance overview:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
+
+
+// inter & ex 
 
 
 app.use('/', express.static(path.join(__dirname, '../../authintication/AuthPage')));
