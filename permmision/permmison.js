@@ -44,23 +44,23 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-  radios.forEach(radio => {
-    radio.addEventListener('change', () => {
-      document.querySelectorAll('.radio-wrapper').forEach(wrapper => {
-        wrapper.classList.remove('active');
-      });
-      if (radio.checked) {
-        radio.parentElement.classList.add('active');
-      }
+radios.forEach(radio => {
+  radio.addEventListener('change', () => {
+    document.querySelectorAll('.radio-wrapper').forEach(wrapper => {
+      wrapper.classList.remove('active');
     });
-  });
-
-  // Initialize active state on load
-  document.querySelectorAll('.radio-wrapper input[type="radio"]').forEach(radio => {
     if (radio.checked) {
       radio.parentElement.classList.add('active');
     }
   });
+});
+
+// Initialize active state on load
+document.querySelectorAll('.radio-wrapper input[type="radio"]').forEach(radio => {
+  if (radio.checked) {
+    radio.parentElement.classList.add('active');
+  }
+});
 async function loadUsers() {
   const res = await fetch('http://localhost:4000/users', {
     headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
@@ -68,7 +68,7 @@ async function loadUsers() {
 
   const users = await res.json();
   const container = document.querySelector('.sidebar');
-  
+
   // إعادة بناء القائمة
   container.innerHTML = `
     <input type="text" placeholder="Search users..." class="w-full p-2 mb-2 border rounded" />
@@ -147,11 +147,27 @@ async function loadUserDetails(userId) {
     // تحديث الصلاحيات في الواجهة
     updatePermissionsUI(permissions);
     window.currentUserId = userId;
+    // بعد ما تنتهي من تحميل بيانات المستخدم وتحديث الواجهة
+
+    // حذف المستخدم
+    document.getElementById("delete-btn")?.addEventListener("click", () => {
+      deleteUser(userId);
+    });
+
+    // تغيير الحالة (Active / Inactive)
+    document.getElementById("user-status-badge")?.addEventListener("click", () => {
+      toggleStatus(userId, user.status);
+    });
+
+    // تغيير كلمة السر
+    document.getElementById("reset-password-btn")?.addEventListener("click", () => {
+      resetUserPassword(userId);
+    });
 
   } catch (error) {
     console.error('Error loading user details:', error);
     alert('فشل تحميل معلومات المستخدم');
-  }
+  }                                                                             
 }
 
 
@@ -256,13 +272,39 @@ function showAddUserModal() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, email, password, department, employee_id })
   })
-  .then(res => res.json())
-  .then(data => {
-    alert("User created");
-    loadUsers();
-  })
-  .catch(err => {
-    alert("Error creating user");
-    console.error(err);
-  });
+    .then(res => res.json())
+    .then(data => {
+      alert("User created");
+      loadUsers();
+    })
+    .catch(err => {
+      alert("Error creating user");
+      console.error(err);
+    });
+}
+async function resetUserPassword(userId) {
+  const t = languageManager.translations[languageManager.currentLang];
+  const newPassword = prompt(t['enter_new_password'] || "Enter new password:");
+
+  if (!newPassword || newPassword.trim() === "") {
+    return alert(t['password_required'] || "Password is required");
+  }
+
+  try {
+    const res = await fetch(`http://localhost:4000/users/${userId}/reset-password`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + localStorage.getItem('token')
+      },
+      body: JSON.stringify({ newPassword })
+    });
+
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message);
+    alert(t['password_updated'] || "Password updated successfully");
+  } catch (err) {
+    console.error("❌ Failed to update password:", err);
+    alert(t['password_update_failed'] || "Failed to update password");
+  }
 }
