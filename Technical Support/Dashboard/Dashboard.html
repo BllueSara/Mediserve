@@ -231,52 +231,13 @@
     </div>
 
     <!-- Support Tickets -->
-    <div class="card full-width">
-      <div class="label">Support Tickets</div>
-      <div class="support-tickets-container">
-        <!-- Open Tickets -->
-        <div class="support-ticket open-ticket">
-          <div>
-            <span>Open</span>
-            <span>12</span>
-          </div>
-          <div class="progress-bar">
-            <div style="width: 35%"></div>
-          </div>
-          <div style="font-size: 0.75rem; color: #6B7280; margin-top: 0.5rem;">
-            +2 from last week
-          </div>
-        </div>
-
-        <!-- In Progress Tickets -->
-        <div class="support-ticket progress-ticket">
-          <div>
-            <span>In Progress</span>
-            <span>8</span>
-          </div>
-          <div class="progress-bar">
-            <div style="width: 25%"></div>
-          </div>
-          <div style="font-size: 0.75rem; color: #6B7280; margin-top: 0.5rem;">
-            -3 from last week
-          </div>
-        </div>
-
-        <!-- Resolved Tickets -->
-        <div class="support-ticket resolved-ticket">
-          <div>
-            <span>Resolved</span>
-            <span>24</span>
-          </div>
-          <div class="progress-bar">
-            <div style="width: 80%"></div>
-          </div>
-          <div style="font-size: 0.75rem; color: #6B7280; margin-top: 0.5rem;">
-            +5 from last week
-          </div>
-        </div>
-      </div>
-    </div>
+<!-- Support Tickets Widget (Dynamic - from API) -->
+<div class="card full-width">
+  <div class="label">Support Tickets</div>
+  <div class="support-tickets-container" id="supportTicketsContainer">
+    <!-- Will be filled dynamically -->
+  </div>
+</div>
 
     <!-- Maintenance Overview (Internal vs External) -->
     <div class="card5">
@@ -288,7 +249,7 @@
 
     <!-- Upcoming Maintenance -->
     <div class="card6">
-      <div class="label">Upcoming Maintenance</div>
+      <div class="label">Upcoming Maintenance -  Regular Maintenance</div>
       <table class="upcoming-table">
         <thead>
           <tr>
@@ -297,57 +258,12 @@
             <th>Priority</th>
           </tr>
         </thead>
-        <tbody>
-          <tr>
-            <td>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
-                style="vertical-align: middle; margin-right: 8px;">
-                <path
-                  d="M19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21Z"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                <path d="M16 3V7" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                  stroke-linejoin="round" />
-                <path d="M8 3V7" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                  stroke-linejoin="round" />
-                <path d="M3 11H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                  stroke-linejoin="round" />
-                <path d="M8 15H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
-              Server Backup - Internal
-            </td>
-            <td>2024-02-15</td>
-            <td class="high">HIGH</td>
-          </tr>
-          <tr>
-            <td>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
-                style="vertical-align: middle; margin-right: 8px;">
-                <path
-                  d="M12 15V17M18 11L19 10M21 6L20 5M3 6L4 5M5 10L6 11M12 7L13 6M8 16.9999C6.87439 17.6278 5.63167 18 4.33301 18C3.95417 18 3.57938 17.971 3.21115 17.9141M15.9999 8C16.6278 9.12561 17 10.3683 17 11.667C17 12.0458 16.971 12.4206 16.9141 12.7888M6 11.9999C6 13.6568 7.34315 14.9999 9 14.9999C10.6569 14.9999 12 13.6568 12 11.9999C12 10.343 10.6569 8.99988 9 8.99988C7.34315 8.99988 6 10.343 6 11.9999Z"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-              System Updates - Regular
-            </td>
-            <td>2024-02-16</td>
-            <td class="medium">MEDIUM</td>
-          </tr>
-          <tr>
-            <td>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
-                style="vertical-align: middle; margin-right: 8px;">
-                <path
-                  d="M7 20L3 16M3 16L7 12M3 16H11C13.1217 16 15.1566 15.1571 16.6569 13.6569C18.1571 12.1566 19 10.1217 19 8C19 5.87827 18.1571 3.84344 16.6569 2.34315C15.1566 0.842855 13.1217 0 11 0H7M17 4L21 8M21 8L17 12M21 8H13C11.9391 8 10.9217 8.42143 10.1716 9.17157C9.42143 9.92172 9 10.9391 9 12C9 13.0609 9.42143 14.0783 10.1716 14.8284C10.9217 15.5786 11.9391 16 13 16H17"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-              Network Maintenance - External
-            </td>
-            <td>2024-02-17</td>
-            <td class="low">LOW</td>
-          </tr>
+        <tbody id="upcomingMaintenanceBody">
+          <!-- سيتم تعبئة المهام برمجياً من خلال الجافاسكربت -->
         </tbody>
       </table>
     </div>
+    
   </section>
 
   <script>

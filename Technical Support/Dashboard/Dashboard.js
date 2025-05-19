@@ -588,3 +588,227 @@ function drawLineChart(id, labels, internalData, externalData, routineData) {
 });
 
 
+
+async function loadSupportTicketsSummary() {
+  try {
+    const res = await fetch('http://localhost:4000/api/tickets/summary', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+
+    if (!res.ok) throw new Error('Failed to fetch support ticket summary');
+
+    const data = await res.json();
+
+    const container = document.getElementById('supportTicketsContainer');
+    container.innerHTML = '';
+
+    const statuses = [
+      { name: 'Open', key: 'open', color: '#F59E0B', delta: data.open_delta },
+      { name: 'In Progress', key: 'in_progress', color: '#3B82F6', delta: data.in_progress_delta },
+      { name: 'Resolved', key: 'resolved', color: '#10B981', delta: data.resolved_delta }
+    ];
+
+    statuses.forEach(status => {
+      const value = data[status.key] || 0;
+      const percent = data.total ? Math.round((value / data.total) * 100) : 0;
+      const deltaText = status.delta >= 0 ? `+${status.delta}` : `${status.delta}`;
+
+      const ticketHTML = `
+        <div class="support-ticket" style="--bar-color: ${status.color}">
+          <div>
+            <span>${status.name}</span>
+            <span>${value}</span>
+          </div>
+          <div class="progress-bar">
+            <div style="width: ${percent}%; background-color: ${status.color}"></div>
+          </div>
+          <div style="font-size: 0.75rem; color: #6B7280; margin-top: 0.5rem;">
+            ${deltaText} from last week
+          </div>
+        </div>
+      `;
+
+      container.innerHTML += ticketHTML;
+    });
+  } catch (err) {
+    console.error('❌ Error loading ticket summary:', err);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadSupportTicketsSummary);
+
+
+function drawBar(id, labels, internal, external) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Internal',
+          data: internal,
+          backgroundColor: '#3B82F6',
+          borderRadius: 4,
+          borderWidth: 0,
+          hoverBackgroundColor: '#2563EB'
+        },
+        {
+          label: 'External',
+          data: external,
+          backgroundColor: '#F59E0B',
+          borderRadius: 4,
+          borderWidth: 0,
+          hoverBackgroundColor: '#D97706'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            usePointStyle: true,
+            padding: 20,
+            font: {
+              family: 'Inter'
+            }
+          }
+        },
+        tooltip: {
+          enabled: true,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          titleFont: {
+            size: 14,
+            weight: 'bold'
+          },
+          bodyFont: {
+            size: 12
+          },
+          padding: 12,
+          cornerRadius: 6
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            font: {
+              family: 'Inter'
+            }
+          }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            font: {
+              family: 'Inter'
+            }
+          },
+          grid: {
+            color: 'rgba(0, 0, 0, 0.05)'
+          }
+        }
+      },
+      animation: {
+        duration: 1000
+      },
+      onHover: (event, chartElement) => {
+        if (chartElement.length) {
+          ctx.style.cursor = 'pointer';
+        } else {
+          ctx.style.cursor = 'default';
+        }
+      }
+    }
+  });
+}
+
+async function loadUpcomingMaintenance() {
+  try {
+    const res = await fetch('http://localhost:4000/api/maintenance/upcoming', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+
+    if (!res.ok) throw new Error('❌ Failed to fetch upcoming maintenance');
+
+    const tasks = await res.json();
+    const tbody = document.querySelector('.upcoming-table tbody');
+
+    tbody.innerHTML = ''; // Clear existing static rows
+
+    tasks.forEach(task => {
+      const priorityClass = (task.priority || 'Medium').toLowerCase(); // Default fallback
+      const row = document.createElement('tr');
+
+      row.innerHTML = `
+        <td>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+            style="vertical-align: middle; margin-right: 8px;">
+            <path
+              d="M19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21Z"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M8 15H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+          ${task.device_name || 'Unnamed Device'} 
+        </td>
+        <td>${new Date(task.next_maintenance_date).toLocaleDateString()}</td>
+        <td class="${priorityClass}">${task.priority || 'Medium'}</td>
+      `;
+
+      tbody.appendChild(row);
+    });
+  } catch (err) {
+    console.error('Error loading upcoming maintenance:', err);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadUpcomingMaintenance);
+
+
+async function loadMaintenanceOverviewChart() {
+  try {
+    const res = await fetch('http://localhost:4000/api/maintenance/overview', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+
+    if (!res.ok) throw new Error('Failed to load overview data');
+
+    const data = await res.json();
+
+    // جمع كل الأنواع من internal و external
+    const allTypesSet = new Set([
+      ...Object.keys(data.internal || {}),
+      ...Object.keys(data.external || {})
+    ]);
+
+    const allTypes = Array.from(allTypesSet).map(type => type.toLowerCase());
+
+    const internal = allTypes.map(type => data.internal[type] || 0);
+    const external = allTypes.map(type => data.external[type] || 0);
+
+    drawBar('maintenanceOverviewChart', allTypes, internal, external);
+
+  } catch (err) {
+    console.error('❌ Error loading overview chart:', err);
+  }
+}
+
+
+
+
+
+document.addEventListener('DOMContentLoaded', loadMaintenanceOverviewChart);
