@@ -179,9 +179,12 @@ document.addEventListener("DOMContentLoaded", () => {
         report.report_number || report.request_number || `MR-${report.id}`;
       document.getElementById("priority").textContent = isExternal ? "" : (report.priority || "");
       document.getElementById("device-type").textContent = report.device_type || "";
-      if (report.maintenance_type === "Regular" || report.maintenance_type === "Internal" || report.maintenance_type === "General") {
+      if (report.maintenance_type === "Regular" ) {
         document.getElementById("assigned-to").textContent = report.technical_engineer || "";
-      } else {
+      }else if (  report.maintenance_type === "General") {
+        document.getElementById("assigned-to").textContent = report.technician_name || "";
+      }
+       else {
         document.getElementById("assigned-to").textContent = isExternal
           ? (report.reporter_name || "")
           : (report.assigned_to || report.reporter_name || report.technical_engineer);
