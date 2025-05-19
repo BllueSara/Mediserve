@@ -15,109 +15,56 @@ if (deviceTypeSelect) {
     fetchDeviceSpecsByTypeAndDepartment(); // ✅ تحديث الأجهزة
   });
 }
+
+
 function fetchAndRenderModels(deviceType, dropdownId) {
   const cleanedType = deviceType.trim().toLowerCase();
-  const optionsContainer = document.getElementById(`${dropdownId}-options`);
-  const displaySpan = document.getElementById(`selected-${dropdownId}`);
-  const hiddenInput = document.getElementById(dropdownId);
-  const lang = languageManager.currentLang;
-  const t = languageManager.translations[lang];
-
-  if (!optionsContainer || !displaySpan || !hiddenInput) {
-    console.error(`❌ ${t['dropdown_elements_not_found']}: ${dropdownId}`);
-    return;
-  }
-
   let endpoint = "";
+
   if (["pc", "laptop", "desktop", "كمبيوتر", "لابتوب"].includes(cleanedType)) {
-    endpoint = "/PC_Model";
+    endpoint = "http://localhost:5050/PC_Model";
   } else if (cleanedType === "printer") {
-    endpoint = "/Printer_Model";
+    endpoint = "http://localhost:5050/Printer_Model";
   } else if (cleanedType === "scanner") {
-    endpoint = "/Scanner_Model";
+    endpoint = "http://localhost:5050/Scanner_Model";
   } else {
-    endpoint = `/models-by-type/${cleanedType}`;
+    endpoint = `http://localhost:5050/models-by-type/${cleanedType}`;
   }
 
-  fetch(`http://localhost:5050${endpoint}`)
-    .then(res => res.json())
-    .then(data => {
-      optionsContainer.innerHTML = "";
+  renderDropdownOptions({
+    endpoint,
+    containerId: `${dropdownId}-options`,
+    displayId: `selected-${dropdownId}`,
+    inputId: dropdownId,
+    labelKey: "model",
+    itemKey: "model_name",
+    storageKey: dropdownId,
+    onAddNew: () => {
+      sessionStorage.setItem("lastDropdownOpened", dropdownId);
 
-      const addNewRow = document.createElement("div");
-      addNewRow.className = "dropdown-option-row add-new-option";
-      addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new_model']}</div>`;
-      addNewRow.onclick = () => {
-        sessionStorage.setItem("lastDropdownOpened", dropdownId);
-
-        ["spec-ministry", "spec-name", "spec-serial", "spec-department"].forEach(id => {
-          const el = document.getElementById(id);
-          if (el) sessionStorage.setItem(id, el.value);
-        });
-
-        openAddModelPopup();
-        closeAllDropdowns();
-      };
-      optionsContainer.appendChild(addNewRow);
-
-      data.forEach(item => {
-        const row = document.createElement("div");
-        row.className = "dropdown-option-row";
-
-        const text = document.createElement("div");
-        text.className = "dropdown-option-text";
-        text.textContent = item.model_name;
-        text.onclick = () => {
-          displaySpan.textContent = item.model_name;
-          hiddenInput.value = item.model_name;
-          cleanDropdownError(hiddenInput);
-          closeAllDropdowns();
-        };
-
-        const icons = document.createElement("div");
-        icons.className = "dropdown-actions-icons";
-
-        const editIcon = document.createElement("i");
-        editIcon.className = "fas fa-edit";
-        editIcon.title = t['edit'];
-        editIcon.onclick = (e) => {
-          e.stopPropagation();
-          const newValue = prompt(`${t['edit']} ${t['model']}:`, item.model_name);
-          if (newValue) {
-            editOption(dropdownId, item.model_name, newValue, cleanedType);
-          }
-        };
-
-        const deleteIcon = document.createElement("i");
-        deleteIcon.className = "fas fa-trash";
-        deleteIcon.title = t['delete'];
-        deleteIcon.onclick = (e) => {
-          e.stopPropagation();
-          if (confirm(`${t['confirm_delete']} "${item.model_name}"?`)) {
-            deleteOption(dropdownId, item.model_name, cleanedType);
-          }
-        };
-
-        icons.appendChild(editIcon);
-        icons.appendChild(deleteIcon);
-        row.appendChild(text);
-        row.appendChild(icons);
-        optionsContainer.appendChild(row);
+      ["spec-ministry", "spec-name", "spec-serial", "spec-department"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) sessionStorage.setItem(id, el.value);
       });
 
-      const saved = sessionStorage.getItem(dropdownId) || sessionStorage.getItem("lastAddedModel");
-      if (saved) {
-        displaySpan.textContent = saved;
-        hiddenInput.value = saved;
-        sessionStorage.removeItem(dropdownId);
-        sessionStorage.removeItem("lastAddedModel");
+      openAddModelPopup();
+    },
+    onEditOption: (oldVal) => {
+      const newVal = prompt("Edit Model:", oldVal);
+      if (newVal && newVal !== oldVal) {
+        editOption(dropdownId, oldVal, newVal, cleanedType);
       }
-      attachEditDeleteHandlers(`${dropdownId}-options`, t['model']);
-    })
-    .catch(err => {
-      console.error(`❌ ${t['error_fetching_models']}:`, err);
-    });
+    },
+    onDeleteOption: (val) => {
+      if (confirm(`Delete "${val}"?`)) {
+        deleteOption(dropdownId, val, cleanedType);
+      }
+    },
+    onSelectOption: () => {
+    }
+  });
 }
+
 
 
 
@@ -539,353 +486,122 @@ function savePCSpec() {
 }
 
 function fetchScannerTypes() {
-  fetch("http://localhost:5050/Scanner_Types")
-    .then(res => res.json())
-    .then(data => {
-      const optionsContainer = document.getElementById("scanner-type-options");
-      const displaySpan = document.getElementById("selected-scanner-type");
-      const hiddenInput = document.getElementById("scanner-type");
-
-      if (!optionsContainer || !displaySpan || !hiddenInput) return;
-
-      optionsContainer.innerHTML = "";
-
-      // + Add New Scanner Type
-      const addNewRow = document.createElement("div");
-      addNewRow.className = "dropdown-option-row add-new-option";
-      addNewRow.innerHTML = `<div class="dropdown-option-text">+ Add New Scanner Type</div>`;
-      addNewRow.onclick = () => {
-        sessionStorage.setItem("lastDropdownOpened", "scanner-type");
-        openAddOptionPopup("scanner-type");
-        closeAllDropdowns();
-      };
-      optionsContainer.appendChild(addNewRow);
-
-      data.forEach(item => {
-        const row = document.createElement("div");
-        row.className = "dropdown-option-row";
-
-        const text = document.createElement("div");
-        text.className = "dropdown-option-text";
-        text.textContent = item.scanner_type;
-        text.onclick = () => {
-          displaySpan.textContent = item.scanner_type;
-          hiddenInput.value = item.scanner_type;
-          cleanDropdownError(hiddenInput);
-
-          closeAllDropdowns();
-        };
-
-        const icons = document.createElement("div");
-        icons.className = "dropdown-actions-icons";
-
-        const editIcon = document.createElement("i");
-        editIcon.className = "fas fa-edit";
-        editIcon.title = "Edit";
-        editIcon.onclick = (e) => {
-          e.stopPropagation();
-          const newValue = prompt("Edit Scanner Type:", item.scanner_type);
-          if (newValue) {
-            editOption("scanner-type", item.scanner_type, newValue);
-          }
-        };
-
-        const deleteIcon = document.createElement("i");
-        deleteIcon.className = "fas fa-trash";
-        deleteIcon.title = "Delete";
-        deleteIcon.onclick = (e) => {
-          e.stopPropagation();
-          if (confirm(`Delete "${item.scanner_type}"?`)) {
-            deleteOption("scanner-type", item.scanner_type);
-          }
-        };
-
-        icons.appendChild(editIcon);
-        icons.appendChild(deleteIcon);
-        row.appendChild(text);
-        row.appendChild(icons);
-        optionsContainer.appendChild(row);
-      });
-
-      const saved = sessionStorage.getItem("scanner-type");
-      if (saved) {
-        displaySpan.textContent = saved;
-        hiddenInput.value = saved;
-        sessionStorage.removeItem("scanner-type");
+  renderDropdownOptions({
+    endpoint: "http://localhost:5050/Scanner_Types",
+    containerId: "scanner-type-options",
+    displayId: "selected-scanner-type",
+    inputId: "scanner-type",
+    labelKey: "scanner_type",
+    itemKey: "scanner_type",
+    storageKey: "scanner-type",
+    onAddNew: () => {
+      sessionStorage.setItem("lastDropdownOpened", "scanner-type");
+      openAddOptionPopup("scanner-type");
+    },
+    onEditOption: (oldValue) => {
+      const newValue = prompt("Edit Scanner Type:", oldValue);
+      if (newValue && newValue.trim() !== oldValue) {
+        editOption("scanner-type", oldValue, newValue.trim());
       }
-
-      attachEditDeleteHandlers("scanner-type-options", "Scanner Type");
-    })
-    .catch(err => {
-      console.error("❌ Error fetching scanner types:", err);
-    });
+    },
+    onDeleteOption: (val) => {
+      if (confirm(`Delete "${val}"?`)) {
+        deleteOption("scanner-type", val);
+      }
+    }
+  });
 }
+
 
 function fetchPrinterTypes() {
-  fetch("http://localhost:5050/Printer_Types")
-    .then(res => res.json())
-    .then(data => {
-      const optionsContainer = document.getElementById("printer-type-options");
-      const displaySpan = document.getElementById("selected-printer-type");
-      const hiddenInput = document.getElementById("printer-type");
-
-      if (!optionsContainer || !displaySpan || !hiddenInput) return;
-
-      optionsContainer.innerHTML = "";
-
-      // + Add New Printer Type
-      const addNewRow = document.createElement("div");
-      addNewRow.className = "dropdown-option-row add-new-option";
-      addNewRow.innerHTML = `<div class="dropdown-option-text">+ Add New Printer Type</div>`;
-      addNewRow.onclick = () => {
-        sessionStorage.setItem("lastDropdownOpened", "printer-type");
-        openAddOptionPopup("printer-type");
-        closeAllDropdowns();
-      };
-      optionsContainer.appendChild(addNewRow);
-
-      data.forEach(item => {
-        const row = document.createElement("div");
-        row.className = "dropdown-option-row";
-
-        const text = document.createElement("div");
-        text.className = "dropdown-option-text";
-        text.textContent = item.printer_type;
-        text.onclick = () => {
-          displaySpan.textContent = item.printer_type;
-          hiddenInput.value = item.printer_type;
-          cleanDropdownError(hiddenInput);
-
-          closeAllDropdowns();
-        };
-
-        const icons = document.createElement("div");
-        icons.className = "dropdown-actions-icons";
-
-        const editIcon = document.createElement("i");
-        editIcon.className = "fas fa-edit";
-        editIcon.title = "Edit";
-        editIcon.onclick = (e) => {
-          e.stopPropagation();
-          const newValue = prompt("Edit Printer Type:", item.printer_type);
-          if (newValue) {
-            editOption("printer-type", item.printer_type, newValue);
-          }
-        };
-
-        const deleteIcon = document.createElement("i");
-        deleteIcon.className = "fas fa-trash";
-        deleteIcon.title = "Delete";
-        deleteIcon.onclick = (e) => {
-          e.stopPropagation();
-          if (confirm(`Delete "${item.printer_type}"?`)) {
-            deleteOption("printer-type", item.printer_type);
-          }
-        };
-
-        icons.appendChild(editIcon);
-        icons.appendChild(deleteIcon);
-        row.appendChild(text);
-        row.appendChild(icons);
-        optionsContainer.appendChild(row);
-      });
-
-      const saved = sessionStorage.getItem("printer-type");
-      if (saved) {
-        displaySpan.textContent = saved;
-        hiddenInput.value = saved;
-        sessionStorage.removeItem("printer-type");
+  renderDropdownOptions({
+    endpoint: "http://localhost:5050/Printer_Types",
+    containerId: "printer-type-options",
+    displayId: "selected-printer-type",
+    inputId: "printer-type",
+    labelKey: "printer_type",
+    itemKey: "printer_type",
+    storageKey: "printer-type",
+    onAddNew: () => {
+      sessionStorage.setItem("lastDropdownOpened", "printer-type");
+      openAddOptionPopup("printer-type");
+    },
+    onEditOption: (oldValue) => {
+      const newValue = prompt("Edit Printer Type:", oldValue);
+      if (newValue && newValue.trim() !== oldValue) {
+        editOption("printer-type", oldValue, newValue.trim());
       }
-      attachEditDeleteHandlers("printer-type-options", "Printer Type");
-    })
-    .catch(err => {
-      console.error("❌ Error fetching printer types:", err);
-    });
+    },
+    onDeleteOption: (val) => {
+      if (confirm(`Delete "${val}"?`)) {
+        deleteOption("printer-type", val);
+      }
+    }
+  });
 }
+
 function fetchInkTypes() {
-  fetch("http://localhost:5050/Ink_Types")
-    .then(res => res.json())
-    .then(data => {
-      const optionsContainer = document.getElementById("ink-type-options");
-      const displaySpan = document.getElementById("selected-ink-type");
-      const hiddenInput = document.getElementById("ink-type");
-
-      if (!optionsContainer || !displaySpan || !hiddenInput) return;
-
-      optionsContainer.innerHTML = "";
-
-      // + Add New Ink Type
-      const addNewRow = document.createElement("div");
-      addNewRow.className = "dropdown-option-row add-new-option";
-      addNewRow.innerHTML = `<div class="dropdown-option-text">+ Add New Ink Type</div>`;
-      addNewRow.onclick = () => {
-        sessionStorage.setItem("lastDropdownOpened", "ink-type");
-        openAddOptionPopup("ink-type");
-        closeAllDropdowns();
-      };
-      optionsContainer.appendChild(addNewRow);
-
-      data.forEach(item => {
-        const row = document.createElement("div");
-        row.className = "dropdown-option-row";
-
-        const text = document.createElement("div");
-        text.className = "dropdown-option-text";
-        text.textContent = item.ink_type;
-        text.onclick = () => {
-          displaySpan.textContent = item.ink_type;
-          hiddenInput.value = item.ink_type;
-          cleanDropdownError(hiddenInput);
-
-          closeAllDropdowns();
-        };
-
-        const icons = document.createElement("div");
-        icons.className = "dropdown-actions-icons";
-
-        const editIcon = document.createElement("i");
-        editIcon.className = "fas fa-edit";
-        editIcon.title = "Edit";
-        editIcon.onclick = (e) => {
-          e.stopPropagation();
-          const newValue = prompt("Edit Ink Type:", item.ink_type);
-          if (newValue) {
-            editOption("ink-type", item.ink_type, newValue);
-          }
-        };
-
-        const deleteIcon = document.createElement("i");
-        deleteIcon.className = "fas fa-trash";
-        deleteIcon.title = "Delete";
-        deleteIcon.onclick = (e) => {
-          e.stopPropagation();
-          if (confirm(`Delete "${item.ink_type}"?`)) {
-            deleteOption("ink-type", item.ink_type);
-          }
-        };
-
-        icons.appendChild(editIcon);
-        icons.appendChild(deleteIcon);
-        row.appendChild(text);
-        row.appendChild(icons);
-        optionsContainer.appendChild(row);
-      });
-
-      const saved = sessionStorage.getItem("ink-type");
-      if (saved) {
-        displaySpan.textContent = saved;
-        hiddenInput.value = saved;
-        sessionStorage.removeItem("ink-type");
+  renderDropdownOptions({
+    endpoint: "http://localhost:5050/Ink_Types",
+    containerId: "ink-type-options",
+    displayId: "selected-ink-type",
+    inputId: "ink-type",
+    labelKey: "ink_type",
+    itemKey: "ink_type",
+    storageKey: "ink-type",
+    onAddNew: () => {
+      sessionStorage.setItem("lastDropdownOpened", "ink-type");
+      openAddOptionPopup("ink-type");
+    },
+    onEditOption: (oldValue) => {
+      const newValue = prompt("Edit Ink Type:", oldValue);
+      if (newValue && newValue.trim() !== oldValue) {
+        editOption("ink-type", oldValue, newValue.trim());
       }
-      attachEditDeleteHandlers("ink-type-options", "Ink Type");
-    })
-    .catch(err => {
-      console.error("❌ Error fetching ink types:", err);
-    });
+    },
+    onDeleteOption: (val) => {
+      if (confirm(`Delete "${val}"?`)) {
+        deleteOption("ink-type", val);
+      }
+    }
+  });
 }
-
 
 
 
 function fetchDepartments(selectId = "department") {
-  fetch("http://localhost:5050/Departments")
-    .then(res => res.json())
-    .then(data => {
-      const optionsContainer = document.getElementById(`${selectId}-options`);
-      const displaySpan = document.getElementById(`selected-${selectId}`);
-      const hiddenInput = document.getElementById(selectId);
-
-      if (!optionsContainer || !displaySpan || !hiddenInput) {
-        console.error(`❌ عناصر الدروب داون غير موجودة لـ: ${selectId}`);
-        return;
-      }
-
-      optionsContainer.innerHTML = "";
-
-      // ✅ زر إضافة جديد
-      const addNewRow = document.createElement("div");
-      addNewRow.className = "dropdown-option-row add-new-option";
-const lang = languageManager.currentLang;
-const t = languageManager.translations[lang];
-addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new']} ${t['section']}</div>`;
-      addNewRow.onclick = () => {
-        sessionStorage.setItem("lastDepartmentSelectId", selectId);
-
-        ["spec-name", "spec-serial", "spec-ministry", "spec-model", selectId].forEach(id => {
-          const el = document.getElementById(id);
-          if (el) sessionStorage.setItem(id, el.value);
-        });
-
-        sessionStorage.setItem("lastDropdownOpened", selectId);
-        openAddSectionPopup();
-        closeAllDropdowns();
-      };
-      optionsContainer.appendChild(addNewRow);
-
-      // ✅ الأقسام من السيرفر
-      data.forEach((item) => {
-        const row = document.createElement("div");
-        row.className = "dropdown-option-row";
-
-        const text = document.createElement("div");
-        text.className = "dropdown-option-text";
-        text.textContent = item.name;
-        text.onclick = () => {
-          displaySpan.textContent = item.name;
-          hiddenInput.value = item.name;
-          cleanDropdownError(hiddenInput);
-
-          closeAllDropdowns();
-          fetchDeviceSpecsByTypeAndDepartment(); // 🔁 لتحديث الأجهزة حسب القسم
-        };
-
-        const icons = document.createElement("div");
-        icons.className = "dropdown-actions-icons";
-
-        // ✏️ أيقونة التعديل (Edit)
-        const editIcon = document.createElement("i");
-        editIcon.className = "fas fa-edit";
-        editIcon.title = "Edit";
-        editIcon.onclick = (e) => {
-          e.stopPropagation();
-          const oldValue = item.name;
-          const newValue = prompt("Edit Section:", oldValue);
-          if (newValue && newValue.trim() !== oldValue) {
-            editOption("section", oldValue, newValue.trim(), "Department");
-          }
-        };
-
-        // 🗑️ أيقونة الحذف (Delete)
-        const deleteIcon = document.createElement("i");
-        deleteIcon.className = "fas fa-trash";
-        deleteIcon.title = "Delete";
-        deleteIcon.onclick = (e) => {
-          e.stopPropagation();
-          if (confirm(`Delete "${item.name}"?`)) {
-            deleteOption("section", item.name, "Department");
-          }
-        };
-
-        icons.appendChild(editIcon);
-        icons.appendChild(deleteIcon);
-        row.appendChild(text);
-        row.appendChild(icons);
-        optionsContainer.appendChild(row);
+  renderDropdownOptions({
+    endpoint: "http://localhost:5050/Departments",
+    containerId: `${selectId}-options`,
+    displayId: `selected-${selectId}`,
+    inputId: selectId,
+    labelKey: "section",
+    itemKey: "name",
+    storageKey: selectId,
+    onAddNew: () => {
+      sessionStorage.setItem("lastDepartmentSelectId", selectId);
+      ["spec-name", "spec-serial", "spec-ministry", "spec-model", selectId].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) sessionStorage.setItem(id, el.value);
       });
-
-      // ✅ استعادة القيمة المخزنة مؤقتًا
-      const saved = sessionStorage.getItem(selectId);
-      if (saved) {
-        displaySpan.textContent = saved;
-        hiddenInput.value = saved;
-        sessionStorage.removeItem(selectId);
+      sessionStorage.setItem("lastDropdownOpened", selectId);
+      openAddSectionPopup();
+    },
+    onEditOption: (oldVal) => {
+      const newVal = prompt("Edit Section:", oldVal);
+      if (newVal && newVal !== oldVal) {
+        editOption("section", oldVal, newVal, "Department");
       }
-
-      attachEditDeleteHandlers(`${selectId}-options`, "Department");
-    })
-    .catch(err => {
-      console.error(`❌ Failed to fetch departments for ${selectId}:`, err);
-    });
+    },
+    onDeleteOption: (val) => {
+      if (confirm(`Delete "${val}"?`)) {
+        deleteOption("section", val, "Department");
+      }
+    },
+    onSelectOption: () => {
+      fetchDeviceSpecsByTypeAndDepartment();
+    }
+  });
 }
 
 function saveNewSection() {
@@ -933,814 +649,142 @@ function saveNewSection() {
     });
 }
 
-function fetchRAMSize() {
-  fetch("http://localhost:5050/RAM_Sizes")
-    .then(res => res.json())
-    .then(data => {
-      const optionsContainer = document.getElementById("ram-size-select-options");
-      const displaySpan = document.getElementById("selected-ram-size-select");
-      const hiddenInput = document.getElementById("ram-size-select");
-      const lang = languageManager.currentLang;
-      const t = languageManager.translations[lang];
-
-      if (!optionsContainer || !displaySpan || !hiddenInput) return;
-
-      optionsContainer.innerHTML = "";
-
-      const addNewRow = document.createElement("div");
-      addNewRow.className = "dropdown-option-row add-new-option";
-      addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new_ram_size']}</div>`;
-      addNewRow.onclick = () => {
-        sessionStorage.setItem("lastDropdownOpened", "ram-size-select");
-        openAddOptionPopup("ram-size-select");
-        closeAllDropdowns();
-      };
-      optionsContainer.appendChild(addNewRow);
-
-      data.forEach(item => {
-        const row = document.createElement("div");
-        row.className = "dropdown-option-row";
-
-        const text = document.createElement("div");
-        text.className = "dropdown-option-text";
-        text.textContent = item.ram_size;
-        text.onclick = () => {
-          displaySpan.textContent = item.ram_size;
-          hiddenInput.value = item.ram_size;
-          cleanDropdownError(hiddenInput);
-          closeAllDropdowns();
-        };
-
-        const icons = document.createElement("div");
-        icons.className = "dropdown-actions-icons";
-
-        const editIcon = document.createElement("i");
-        editIcon.className = "fas fa-edit";
-        editIcon.title = t['edit'];
-        editIcon.onclick = (e) => {
-          e.stopPropagation();
-          const newValue = prompt(`${t['edit']} ${t['ram_size']}:`, item.ram_size);
-          if (newValue) {
-            editOption("ram-size-select", item.ram_size, newValue);
-          }
-        };
-
-        const deleteIcon = document.createElement("i");
-        deleteIcon.className = "fas fa-trash";
-        deleteIcon.title = t['delete'];
-        deleteIcon.onclick = (e) => {
-          e.stopPropagation();
-          if (confirm(`${t['confirm_delete']} "${item.ram_size}"?`)) {
-            deleteOption("ram-size-select", item.ram_size);
-          }
-        };
-
-        icons.appendChild(editIcon);
-        icons.appendChild(deleteIcon);
-        row.appendChild(text);
-        row.appendChild(icons);
-        optionsContainer.appendChild(row);
-      });
-
-      const saved = sessionStorage.getItem("ram-size-select");
-      if (saved) {
-        displaySpan.textContent = saved;
-        hiddenInput.value = saved;
-        sessionStorage.removeItem("ram-size-select");
-      }
-      attachEditDeleteHandlers("ram-size-select-options", t['ram_size']);
-    })
-    .catch(err => {
-      console.error(`❌ ${t['error_fetching_ram_sizes']}:`, err);
-    });
-}
 
 function fetchDrives() {
-  fetch("http://localhost:5050/Hard_Drive_Types")
-    .then(res => res.json())
-    .then(data => {
-      const optionsContainer = document.getElementById("drive-select-options");
-      const displaySpan = document.getElementById("selected-drive-select");
-      const hiddenInput = document.getElementById("drive-select");
-      const lang = languageManager.currentLang;
-      const t = languageManager.translations[lang];
-
-      if (!optionsContainer || !displaySpan || !hiddenInput) return;
-
-      optionsContainer.innerHTML = "";
-
-      const addNewRow = document.createElement("div");
-      addNewRow.className = "dropdown-option-row add-new-option";
-      addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new_hard_drive']}</div>`;
-      addNewRow.onclick = () => {
-        sessionStorage.setItem("lastDropdownOpened", "drive-select");
-        openAddOptionPopup("drive-select");
-        closeAllDropdowns();
-      };
-      optionsContainer.appendChild(addNewRow);
-
-      data.forEach(item => {
-        const row = document.createElement("div");
-        row.className = "dropdown-option-row";
-
-        const text = document.createElement("div");
-        text.className = "dropdown-option-text";
-        text.textContent = item.drive_type;
-        text.onclick = () => {
-          displaySpan.textContent = item.drive_type;
-          hiddenInput.value = item.drive_type;
-          cleanDropdownError(hiddenInput);
-          closeAllDropdowns();
-        };
-
-        const icons = document.createElement("div");
-        icons.className = "dropdown-actions-icons";
-
-        const editIcon = document.createElement("i");
-        editIcon.className = "fas fa-edit";
-        editIcon.title = t['edit'];
-        editIcon.onclick = (e) => {
-          e.stopPropagation();
-          const newValue = prompt(`${t['edit']} ${t['hard_drive']}:`, item.drive_type);
-          if (newValue) {
-            editOption("drive-select", item.drive_type, newValue);
-          }
-        };
-
-        const deleteIcon = document.createElement("i");
-        deleteIcon.className = "fas fa-trash";
-        deleteIcon.title = t['delete'];
-        deleteIcon.onclick = (e) => {
-          e.stopPropagation();
-          if (confirm(`${t['confirm_delete']} "${item.drive_type}"?`)) {
-            deleteOption("drive-select", item.drive_type);
-          }
-        };
-
-        icons.appendChild(editIcon);
-        icons.appendChild(deleteIcon);
-        row.appendChild(text);
-        row.appendChild(icons);
-        optionsContainer.appendChild(row);
-      });
-
-      const saved = sessionStorage.getItem("drive-select");
-      if (saved) {
-        displaySpan.textContent = saved;
-        hiddenInput.value = saved;
-        sessionStorage.removeItem("drive-select");
-      }
-      attachEditDeleteHandlers("drive-select-options", t['hard_drive']);
-    })
-    .catch(err => {
-      console.error(`❌ ${t['error_fetching_drives']}:`, err);
-    });
+  renderDropdownOptions({
+    endpoint: "http://localhost:5050/Hard_Drive_Types",
+    containerId: "drive-select-options",
+    displayId: "selected-drive-select",
+    inputId: "drive-select",
+    labelKey: "hard_drive",
+    itemKey: "drive_type",
+    storageKey: "drive-select",
+    onAddNew: () => {
+      sessionStorage.setItem("lastDropdownOpened", "drive-select");
+      openAddOptionPopup("drive-select");
+    },
+    onEditOption: (oldVal) => {
+      const newVal = prompt("Edit Hard Drive:", oldVal);
+      if (newVal) editOption("drive-select", oldVal, newVal);
+    },
+    onDeleteOption: (val) => {
+      if (confirm(`Delete "${val}"?`)) deleteOption("drive-select", val);
+    }
+  });
 }
 
-
-
 function fetchCPU() {
-  fetch("http://localhost:5050/CPU_Types")
-    .then(res => res.json())
-    .then(data => {
-      const optionsContainer = document.getElementById("cpu-select-options");
-      const displaySpan = document.getElementById("selected-cpu-select");
-      const hiddenInput = document.getElementById("cpu-select");
-      const lang = languageManager.currentLang;
-      const t = languageManager.translations[lang];
-
-      if (!optionsContainer || !displaySpan || !hiddenInput) return;
-
-      optionsContainer.innerHTML = "";
-
-      const addNewRow = document.createElement("div");
-      addNewRow.className = "dropdown-option-row add-new-option";
-      addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new_processor']}</div>`;
-      addNewRow.onclick = () => {
-        sessionStorage.setItem("lastDropdownOpened", "cpu-select");
-        openAddOptionPopup("cpu-select");
-        closeAllDropdowns();
-      };
-      optionsContainer.appendChild(addNewRow);
-
-      data.forEach(item => {
-        const row = document.createElement("div");
-        row.className = "dropdown-option-row";
-
-        const text = document.createElement("div");
-        text.className = "dropdown-option-text";
-        text.textContent = item.cpu_name;
-        text.onclick = () => {
-          displaySpan.textContent = item.cpu_name;
-          hiddenInput.value = item.cpu_name;
-          cleanDropdownError(hiddenInput);
-          closeAllDropdowns();
-        };
-
-        const icons = document.createElement("div");
-        icons.className = "dropdown-actions-icons";
-
-        const editIcon = document.createElement("i");
-        editIcon.className = "fas fa-edit";
-        editIcon.title = t['edit'];
-        editIcon.onclick = (e) => {
-          e.stopPropagation();
-          const newValue = prompt(`${t['edit']} ${t['processor']}:`, item.cpu_name);
-          if (newValue) {
-            editOption("cpu-select", item.cpu_name, newValue);
-          }
-        };
-
-        const deleteIcon = document.createElement("i");
-        deleteIcon.className = "fas fa-trash";
-        deleteIcon.title = t['delete'];
-        deleteIcon.onclick = (e) => {
-          e.stopPropagation();
-          if (confirm(`${t['confirm_delete']} "${item.cpu_name}"?`)) {
-            deleteOption("cpu-select", item.cpu_name);
-          }
-        };
-
-        icons.appendChild(editIcon);
-        icons.appendChild(deleteIcon);
-        row.appendChild(text);
-        row.appendChild(icons);
-        optionsContainer.appendChild(row);
-      });
-
-      const saved = sessionStorage.getItem("cpu-select");
-      if (saved) {
-        displaySpan.textContent = saved;
-        hiddenInput.value = saved;
-        sessionStorage.removeItem("cpu-select");
-      }
-      attachEditDeleteHandlers("cpu-select-options", t['processor']);
-    })
-    .catch(err => {
-      console.error(`❌ ${t['error_fetching_processors']}:`, err);
-    });
+  renderDropdownOptions({
+    endpoint: "http://localhost:5050/CPU_Types",
+    containerId: "cpu-select-options",
+    displayId: "selected-cpu-select",
+    inputId: "cpu-select",
+    labelKey: "processor",
+    itemKey: "cpu_name",
+    storageKey: "cpu-select",
+    onAddNew: () => {
+      sessionStorage.setItem("lastDropdownOpened", "cpu-select");
+      openAddOptionPopup("cpu-select");
+    },
+    onEditOption: (oldVal) => {
+      const newVal = prompt("Edit CPU:", oldVal);
+      if (newVal) editOption("cpu-select", oldVal, newVal);
+    },
+    onDeleteOption: (val) => {
+      if (confirm(`Delete "${val}"?`)) deleteOption("cpu-select", val);
+    }
+  });
 }
 
 function fetchRAM() {
-  fetch("http://localhost:5050/RAM_Types")
-    .then(res => res.json())
-    .then(data => {
-      const optionsContainer = document.getElementById("ram-select-options");
-      const displaySpan = document.getElementById("selected-ram-select");
-      const hiddenInput = document.getElementById("ram-select");
-      const lang = languageManager.currentLang;
-      const t = languageManager.translations[lang];
-
-      if (!optionsContainer || !displaySpan || !hiddenInput) return;
-
-      optionsContainer.innerHTML = "";
-
-      const addNewRow = document.createElement("div");
-      addNewRow.className = "dropdown-option-row add-new-option";
-      addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new_ram']}</div>`;
-      addNewRow.onclick = () => {
-        sessionStorage.setItem("lastDropdownOpened", "ram-select");
-        openAddOptionPopup("ram-select");
-        closeAllDropdowns();
-      };
-      optionsContainer.appendChild(addNewRow);
-
-      data.forEach(item => {
-        const row = document.createElement("div");
-        row.className = "dropdown-option-row";
-
-        const text = document.createElement("div");
-        text.className = "dropdown-option-text";
-        text.textContent = item.ram_type;
-        text.onclick = () => {
-          displaySpan.textContent = item.ram_type;
-          hiddenInput.value = item.ram_type;
-          cleanDropdownError(hiddenInput);
-          closeAllDropdowns();
-        };
-
-        const icons = document.createElement("div");
-        icons.className = "dropdown-actions-icons";
-
-        const editIcon = document.createElement("i");
-        editIcon.className = "fas fa-edit";
-        editIcon.title = t['edit'];
-        editIcon.onclick = (e) => {
-          e.stopPropagation();
-          const newValue = prompt(`${t['edit']} ${t['ram']}:`, item.ram_type);
-          if (newValue) {
-            editOption("ram-select", item.ram_type, newValue);
-          }
-        };
-
-        const deleteIcon = document.createElement("i");
-        deleteIcon.className = "fas fa-trash";
-        deleteIcon.title = t['delete'];
-        deleteIcon.onclick = (e) => {
-          e.stopPropagation();
-          if (confirm(`${t['confirm_delete']} "${item.ram_type}"?`)) {
-            deleteOption("ram-select", item.ram_type);
-          }
-        };
-
-        icons.appendChild(editIcon);
-        icons.appendChild(deleteIcon);
-        row.appendChild(text);
-        row.appendChild(icons);
-        optionsContainer.appendChild(row);
-      });
-
-      const saved = sessionStorage.getItem("ram-select");
-      if (saved) {
-        displaySpan.textContent = saved;
-        hiddenInput.value = saved;
-        sessionStorage.removeItem("ram-select");
-      }
-      attachEditDeleteHandlers("ram-select-options", t['ram']);
-    })
-    .catch(err => {
-      console.error(`❌ ${t['error_fetching_ram_types']}:`, err);
-    });
+  renderDropdownOptions({
+    endpoint: "http://localhost:5050/RAM_Types",
+    containerId: "ram-select-options",
+    displayId: "selected-ram-select",
+    inputId: "ram-select",
+    labelKey: "ram",
+    itemKey: "ram_type",
+    storageKey: "ram-select",
+    onAddNew: () => {
+      sessionStorage.setItem("lastDropdownOpened", "ram-select");
+      openAddOptionPopup("ram-select");
+    },
+    onEditOption: (oldVal) => {
+      const newVal = prompt("Edit RAM Type:", oldVal);
+      if (newVal) editOption("ram-select", oldVal, newVal);
+    },
+    onDeleteOption: (val) => {
+      if (confirm(`Delete "${val}"?`)) deleteOption("ram-select", val);
+    }
+  });
 }
 
 function fetchOS() {
-  fetch("http://localhost:5050/OS_Types")
-    .then(res => res.json())
-    .then(data => {
-      const optionsContainer = document.getElementById("os-select-options");
-      const displaySpan = document.getElementById("selected-os-select");
-      const hiddenInput = document.getElementById("os-select");
-      const lang = languageManager.currentLang;
-      const t = languageManager.translations[lang];
-
-      if (!optionsContainer || !displaySpan || !hiddenInput) return;
-
-      optionsContainer.innerHTML = "";
-
-      const addNewRow = document.createElement("div");
-      addNewRow.className = "dropdown-option-row add-new-option";
-      addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new_os']}</div>`;
-      addNewRow.onclick = () => {
-        sessionStorage.setItem("lastDropdownOpened", "os-select");
-        openAddOptionPopup("os-select");
-        closeAllDropdowns();
-      };
-      optionsContainer.appendChild(addNewRow);
-
-      data.forEach(item => {
-        const row = document.createElement("div");
-        row.className = "dropdown-option-row";
-
-        const text = document.createElement("div");
-        text.className = "dropdown-option-text";
-        text.textContent = item.os_name;
-        text.onclick = () => {
-          displaySpan.textContent = item.os_name;
-          hiddenInput.value = item.os_name;
-          cleanDropdownError(hiddenInput);
-          closeAllDropdowns();
-        };
-
-        const icons = document.createElement("div");
-        icons.className = "dropdown-actions-icons";
-
-        const editIcon = document.createElement("i");
-        editIcon.className = "fas fa-edit";
-        editIcon.title = t['edit'];
-        editIcon.onclick = (e) => {
-          e.stopPropagation();
-          const newValue = prompt(`${t['edit']} ${t['operating_system']}:`, item.os_name);
-          if (newValue) {
-            editOption("os-select", item.os_name, newValue);
-          }
-        };
-
-        const deleteIcon = document.createElement("i");
-        deleteIcon.className = "fas fa-trash";
-        deleteIcon.title = t['delete'];
-        deleteIcon.onclick = (e) => {
-          e.stopPropagation();
-          if (confirm(`${t['confirm_delete']} "${item.os_name}"?`)) {
-            deleteOption("os-select", item.os_name);
-          }
-        };
-
-        icons.appendChild(editIcon);
-        icons.appendChild(deleteIcon);
-        row.appendChild(text);
-        row.appendChild(icons);
-        optionsContainer.appendChild(row);
-      });
-
-      const saved = sessionStorage.getItem("os-select");
-      if (saved) {
-        displaySpan.textContent = saved;
-        hiddenInput.value = saved;
-        sessionStorage.removeItem("os-select");
-      }
-      attachEditDeleteHandlers("os-select-options", t['operating_system']);
-    })
-    .catch(err => {
-      console.error(`❌ ${t['error_fetching_os_types']}:`, err);
-    });
+  renderDropdownOptions({
+    endpoint: "http://localhost:5050/OS_Types",
+    containerId: "os-select-options",
+    displayId: "selected-os-select",
+    inputId: "os-select",
+    labelKey: "operating_system",
+    itemKey: "os_name",
+    storageKey: "os-select",
+    onAddNew: () => {
+      sessionStorage.setItem("lastDropdownOpened", "os-select");
+      openAddOptionPopup("os-select");
+    },
+    onEditOption: (oldVal) => {
+      const newVal = prompt("Edit OS:", oldVal);
+      if (newVal) editOption("os-select", oldVal, newVal);
+    },
+    onDeleteOption: (val) => {
+      if (confirm(`Delete "${val}"?`)) deleteOption("os-select", val);
+    }
+  });
 }
 
 function fetchProcessorGen() {
-  fetch("http://localhost:5050/Processor_Generations")
-    .then(res => res.json())
-    .then(data => {
-      const optionsContainer = document.getElementById("generation-select-options");
-      const displaySpan = document.getElementById("selected-generation-select");
-      const hiddenInput = document.getElementById("generation-select");
-      const lang = languageManager.currentLang;
-      const t = languageManager.translations[lang];
-
-      if (!optionsContainer || !displaySpan || !hiddenInput) return;
-
-      optionsContainer.innerHTML = "";
-
-      const addNewRow = document.createElement("div");
-      addNewRow.className = "dropdown-option-row add-new-option";
-      addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new_generation']}</div>`;
-      addNewRow.onclick = () => {
-        sessionStorage.setItem("lastDropdownOpened", "generation-select");
-        openAddOptionPopup("generation-select");
-        closeAllDropdowns();
-      };
-      optionsContainer.appendChild(addNewRow);
-
-      data.forEach(item => {
-        const row = document.createElement("div");
-        row.className = "dropdown-option-row";
-
-        const text = document.createElement("div");
-        text.className = "dropdown-option-text";
-        text.textContent = item.generation_number;
-        text.onclick = () => {
-          displaySpan.textContent = item.generation_number;
-          hiddenInput.value = item.generation_number;
-          cleanDropdownError(hiddenInput);
-          closeAllDropdowns();
-        };
-
-        const icons = document.createElement("div");
-        icons.className = "dropdown-actions-icons";
-
-        const editIcon = document.createElement("i");
-        editIcon.className = "fas fa-edit";
-        editIcon.title = t['edit'];
-        editIcon.onclick = (e) => {
-          e.stopPropagation();
-          const newValue = prompt(`${t['edit']} ${t['processor_generation']}:`, item.generation_number);
-          if (newValue) {
-            editOption("generation-select", item.generation_number, newValue);
-          }
-        };
-
-        const deleteIcon = document.createElement("i");
-        deleteIcon.className = "fas fa-trash";
-        deleteIcon.title = t['delete'];
-        deleteIcon.onclick = (e) => {
-          e.stopPropagation();
-          if (confirm(`${t['confirm_delete']} "${item.generation_number}"?`)) {
-            deleteOption("generation-select", item.generation_number);
-          }
-        };
-
-        icons.appendChild(editIcon);
-        icons.appendChild(deleteIcon);
-        row.appendChild(text);
-        row.appendChild(icons);
-        optionsContainer.appendChild(row);
-      });
-
-      const saved = sessionStorage.getItem("generation-select");
-      if (saved) {
-        displaySpan.textContent = saved;
-        hiddenInput.value = saved;
-        sessionStorage.removeItem("generation-select");
-      }
-      attachEditDeleteHandlers("generation-select-options", t['processor_generation']);
-    })
-    .catch(err => {
-      console.error(`❌ ${t['error_fetching_generations']}:`, err);
-    });
+  renderDropdownOptions({
+    endpoint: "http://localhost:5050/Processor_Generations",
+    containerId: "generation-select-options",
+    displayId: "selected-generation-select",
+    inputId: "generation-select",
+    labelKey: "processor_generation",
+    itemKey: "generation_number",
+    storageKey: "generation-select",
+    onAddNew: () => {
+      sessionStorage.setItem("lastDropdownOpened", "generation-select");
+      openAddOptionPopup("generation-select");
+    },
+    onEditOption: (oldVal) => {
+      const newVal = prompt("Edit Generation:", oldVal);
+      if (newVal) editOption("generation-select", oldVal, newVal);
+    },
+    onDeleteOption: (val) => {
+      if (confirm(`Delete "${val}"?`)) deleteOption("generation-select", val);
+    }
+  });
 }
-
 function fetchRAMSize() {
-  fetch("http://localhost:5050/RAM_Sizes")
-    .then(res => res.json())
-    .then(data => {
-      const optionsContainer = document.getElementById("ram-size-select-options");
-      const displaySpan = document.getElementById("selected-ram-size-select");
-      const hiddenInput = document.getElementById("ram-size-select");
-      const lang = languageManager.currentLang;
-      const t = languageManager.translations[lang];
-
-      if (!optionsContainer || !displaySpan || !hiddenInput) return;
-
-      optionsContainer.innerHTML = "";
-
-      const addNewRow = document.createElement("div");
-      addNewRow.className = "dropdown-option-row add-new-option";
-      addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new_ram_size']}</div>`;
-      addNewRow.onclick = () => {
-        sessionStorage.setItem("lastDropdownOpened", "ram-size-select");
-        openAddOptionPopup("ram-size-select");
-        closeAllDropdowns();
-      };
-      optionsContainer.appendChild(addNewRow);
-
-      data.forEach(item => {
-        const row = document.createElement("div");
-        row.className = "dropdown-option-row";
-
-        const text = document.createElement("div");
-        text.className = "dropdown-option-text";
-        text.textContent = item.ram_size;
-        text.onclick = () => {
-          displaySpan.textContent = item.ram_size;
-          hiddenInput.value = item.ram_size;
-          cleanDropdownError(hiddenInput);
-          closeAllDropdowns();
-        };
-
-        const icons = document.createElement("div");
-        icons.className = "dropdown-actions-icons";
-
-        const editIcon = document.createElement("i");
-        editIcon.className = "fas fa-edit";
-        editIcon.title = t['edit'];
-        editIcon.onclick = (e) => {
-          e.stopPropagation();
-          const newValue = prompt(`${t['edit']} ${t['ram_size']}:`, item.ram_size);
-          if (newValue) {
-            editOption("ram-size-select", item.ram_size, newValue);
-          }
-        };
-
-        const deleteIcon = document.createElement("i");
-        deleteIcon.className = "fas fa-trash";
-        deleteIcon.title = t['delete'];
-        deleteIcon.onclick = (e) => {
-          e.stopPropagation();
-          if (confirm(`${t['confirm_delete']} "${item.ram_size}"?`)) {
-            deleteOption("ram-size-select", item.ram_size);
-          }
-        };
-
-        icons.appendChild(editIcon);
-        icons.appendChild(deleteIcon);
-        row.appendChild(text);
-        row.appendChild(icons);
-        optionsContainer.appendChild(row);
-      });
-
-      const saved = sessionStorage.getItem("ram-size-select");
-      if (saved) {
-        displaySpan.textContent = saved;
-        hiddenInput.value = saved;
-        sessionStorage.removeItem("ram-size-select");
-      }
-      attachEditDeleteHandlers("ram-size-select-options", t['ram_size']);
-    });
-}
-
-function fetchPrinterTypes() {
-  fetch("http://localhost:5050/Printer_Types")
-    .then(res => res.json())
-    .then(data => {
-      const optionsContainer = document.getElementById("printer-type-options");
-      const displaySpan = document.getElementById("selected-printer-type");
-      const hiddenInput = document.getElementById("printer-type");
-      const lang = languageManager.currentLang;
-      const t = languageManager.translations[lang];
-
-      if (!optionsContainer || !displaySpan || !hiddenInput) return;
-
-      optionsContainer.innerHTML = "";
-
-      const addNewRow = document.createElement("div");
-      addNewRow.className = "dropdown-option-row add-new-option";
-      addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new_printer_type']}</div>`;
-      addNewRow.onclick = () => {
-        sessionStorage.setItem("lastDropdownOpened", "printer-type");
-        openAddOptionPopup("printer-type");
-        closeAllDropdowns();
-      };
-      optionsContainer.appendChild(addNewRow);
-
-      data.forEach(item => {
-        const row = document.createElement("div");
-        row.className = "dropdown-option-row";
-
-        const text = document.createElement("div");
-        text.className = "dropdown-option-text";
-        text.textContent = item.printer_type;
-        text.onclick = () => {
-          displaySpan.textContent = item.printer_type;
-          hiddenInput.value = item.printer_type;
-          cleanDropdownError(hiddenInput);
-          closeAllDropdowns();
-        };
-
-        const icons = document.createElement("div");
-        icons.className = "dropdown-actions-icons";
-
-        const editIcon = document.createElement("i");
-        editIcon.className = "fas fa-edit";
-        editIcon.title = t['edit'];
-        editIcon.onclick = (e) => {
-          e.stopPropagation();
-          const newValue = prompt(`${t['edit']} ${t['printer_type']}:`, item.printer_type);
-          if (newValue) {
-            editOption("printer-type", item.printer_type, newValue);
-          }
-        };
-
-        const deleteIcon = document.createElement("i");
-        deleteIcon.className = "fas fa-trash";
-        deleteIcon.title = t['delete'];
-        deleteIcon.onclick = (e) => {
-          e.stopPropagation();
-          if (confirm(`${t['confirm_delete']} "${item.printer_type}"?`)) {
-            deleteOption("printer-type", item.printer_type);
-          }
-        };
-
-        icons.appendChild(editIcon);
-        icons.appendChild(deleteIcon);
-        row.appendChild(text);
-        row.appendChild(icons);
-        optionsContainer.appendChild(row);
-      });
-
-      const saved = sessionStorage.getItem("printer-type");
-      if (saved) {
-        displaySpan.textContent = saved;
-        hiddenInput.value = saved;
-        sessionStorage.removeItem("printer-type");
-      }
-      attachEditDeleteHandlers("printer-type-options", t['printer_type']);
-    });
-}
-
-function fetchInkTypes() {
-  fetch("http://localhost:5050/Ink_Types")
-    .then(res => res.json())
-    .then(data => {
-      const optionsContainer = document.getElementById("ink-type-options");
-      const displaySpan = document.getElementById("selected-ink-type");
-      const hiddenInput = document.getElementById("ink-type");
-      const lang = languageManager.currentLang;
-      const t = languageManager.translations[lang];
-
-      if (!optionsContainer || !displaySpan || !hiddenInput) return;
-
-      optionsContainer.innerHTML = "";
-
-      const addNewRow = document.createElement("div");
-      addNewRow.className = "dropdown-option-row add-new-option";
-      addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new_ink_type']}</div>`;
-      addNewRow.onclick = () => {
-        sessionStorage.setItem("lastDropdownOpened", "ink-type");
-        openAddOptionPopup("ink-type");
-        closeAllDropdowns();
-      };
-      optionsContainer.appendChild(addNewRow);
-
-      data.forEach(item => {
-        const row = document.createElement("div");
-        row.className = "dropdown-option-row";
-
-        const text = document.createElement("div");
-        text.className = "dropdown-option-text";
-        text.textContent = item.ink_type;
-        text.onclick = () => {
-          displaySpan.textContent = item.ink_type;
-          hiddenInput.value = item.ink_type;
-          cleanDropdownError(hiddenInput);
-          closeAllDropdowns();
-        };
-
-        const icons = document.createElement("div");
-        icons.className = "dropdown-actions-icons";
-
-        const editIcon = document.createElement("i");
-        editIcon.className = "fas fa-edit";
-        editIcon.title = t['edit'];
-        editIcon.onclick = (e) => {
-          e.stopPropagation();
-          const newValue = prompt(`${t['edit']} ${t['ink_type']}:`, item.ink_type);
-          if (newValue) {
-            editOption("ink-type", item.ink_type, newValue);
-          }
-        };
-
-        const deleteIcon = document.createElement("i");
-        deleteIcon.className = "fas fa-trash";
-        deleteIcon.title = t['delete'];
-        deleteIcon.onclick = (e) => {
-          e.stopPropagation();
-          if (confirm(`${t['confirm_delete']} "${item.ink_type}"?`)) {
-            deleteOption("ink-type", item.ink_type);
-          }
-        };
-
-        icons.appendChild(editIcon);
-        icons.appendChild(deleteIcon);
-        row.appendChild(text);
-        row.appendChild(icons);
-        optionsContainer.appendChild(row);
-      });
-
-      const saved = sessionStorage.getItem("ink-type");
-      if (saved) {
-        displaySpan.textContent = saved;
-        hiddenInput.value = saved;
-        sessionStorage.removeItem("ink-type");
-      }
-      attachEditDeleteHandlers("ink-type-options", t['ink_type']);
-    });
-}
-
-function fetchScannerTypes() {
-  fetch("http://localhost:5050/Scanner_Types")
-    .then(res => res.json())
-    .then(data => {
-      const optionsContainer = document.getElementById("scanner-type-options");
-      const displaySpan = document.getElementById("selected-scanner-type");
-      const hiddenInput = document.getElementById("scanner-type");
-      const lang = languageManager.currentLang;
-      const t = languageManager.translations[lang];
-
-      if (!optionsContainer || !displaySpan || !hiddenInput) return;
-
-      optionsContainer.innerHTML = "";
-
-      const addNewRow = document.createElement("div");
-      addNewRow.className = "dropdown-option-row add-new-option";
-      addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new_scanner_type']}</div>`;
-      addNewRow.onclick = () => {
-        sessionStorage.setItem("lastDropdownOpened", "scanner-type");
-        openAddOptionPopup("scanner-type");
-        closeAllDropdowns();
-      };
-      optionsContainer.appendChild(addNewRow);
-
-      data.forEach(item => {
-        const row = document.createElement("div");
-        row.className = "dropdown-option-row";
-
-        const text = document.createElement("div");
-        text.className = "dropdown-option-text";
-        text.textContent = item.scanner_type;
-        text.onclick = () => {
-          displaySpan.textContent = item.scanner_type;
-          hiddenInput.value = item.scanner_type;
-          cleanDropdownError(hiddenInput);
-          closeAllDropdowns();
-        };
-
-        const icons = document.createElement("div");
-        icons.className = "dropdown-actions-icons";
-
-        const editIcon = document.createElement("i");
-        editIcon.className = "fas fa-edit";
-        editIcon.title = t['edit'];
-        editIcon.onclick = (e) => {
-          e.stopPropagation();
-          const newValue = prompt(`${t['edit']} ${t['scanner_type']}:`, item.scanner_type);
-          if (newValue) {
-            editOption("scanner-type", item.scanner_type, newValue);
-          }
-        };
-
-        const deleteIcon = document.createElement("i");
-        deleteIcon.className = "fas fa-trash";
-        deleteIcon.title = t['delete'];
-        deleteIcon.onclick = (e) => {
-          e.stopPropagation();
-          if (confirm(`${t['confirm_delete']} "${item.scanner_type}"?`)) {
-            deleteOption("scanner-type", item.scanner_type);
-          }
-        };
-
-        icons.appendChild(editIcon);
-        icons.appendChild(deleteIcon);
-        row.appendChild(text);
-        row.appendChild(icons);
-        optionsContainer.appendChild(row);
-      });
-
-      const saved = sessionStorage.getItem("scanner-type");
-      if (saved) {
-        displaySpan.textContent = saved;
-        hiddenInput.value = saved;
-        sessionStorage.removeItem("scanner-type");
-      }
-      attachEditDeleteHandlers("scanner-type-options", t['scanner_type']);
-    });
+  renderDropdownOptions({
+    endpoint: "http://localhost:5050/RAM_Sizes",
+    containerId: "ram-size-select-options",
+    displayId: "selected-ram-size-select",
+    inputId: "ram-size-select",
+    labelKey: "ram_size",
+    itemKey: "ram_size",
+    storageKey: "ram-size-select",
+    onAddNew: () => {
+      sessionStorage.setItem("lastDropdownOpened", "ram-size-select");
+      openAddOptionPopup("ram-size-select");
+    },
+    onEditOption: (oldVal) => {
+      const newVal = prompt("Edit RAM Size:", oldVal);
+      if (newVal) editOption("ram-size-select", oldVal, newVal);
+    },
+    onDeleteOption: (val) => {
+      if (confirm(`Delete "${val}"?`)) deleteOption("ram-size-select", val);
+    }
+  });
 }
 
 function closeGenericPopup(cancelled = false) {
@@ -1866,7 +910,7 @@ function openAddOptionPopup(targetId) {
 
   const popup = document.getElementById("generic-popup");
   popup.innerHTML = `
-    <div class=popup-content">
+    <div class="popup-contentt">
       <h3>${t['add_new']} ${label}</h3>
       <label for="generic-popup-input">${label} ${t['name'] || t['new_value']}:</label>
       <input type="text" id="generic-popup-input" placeholder="${t['enter_new_value']}" />
@@ -1929,7 +973,9 @@ function saveOptionForSelect() {
 }
 
 
-function fetchDeviceTypes() {
+async function fetchDeviceTypes() {
+  const permissions = await checkUserPermissions();
+
   fetch("http://localhost:5050/TypeProplem", {
     headers: {
       'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -1945,20 +991,22 @@ function fetchDeviceTypes() {
       const lang = languageManager.currentLang;
       const translations = languageManager.translations[lang];
 
-      const addNewRow = document.createElement("div");
-      addNewRow.className = "dropdown-option-row add-new-option";
-      addNewRow.innerHTML = `
-      <div class="dropdown-option-text">+ ${translations['add_new']} ${translations['device_type']}</div>
-    `;
-      addNewRow.onclick = () => {
-        sessionStorage.setItem("lastDropdownOpened", "device-type");
-        const el = document.getElementById("device-type");
-        if (el) sessionStorage.setItem("device-type", el.value);
-        openGenericPopup("device_type", "device-type");
-        closeAllDropdowns();
-      };
-
-      container.appendChild(addNewRow);
+      // إضافة زر "Add New" فقط إذا كان لديه صلاحية كاملة
+      if (permissions.full_access || permissions.add_items) {
+        const addNewRow = document.createElement("div");
+        addNewRow.className = "dropdown-option-row add-new-option";
+        addNewRow.innerHTML = `
+          <div class="dropdown-option-text">+ ${translations['add_new']} ${translations['device_type']}</div>
+        `;
+        addNewRow.onclick = () => {
+          sessionStorage.setItem("lastDropdownOpened", "device-type");
+          const el = document.getElementById("device-type");
+          if (el) sessionStorage.setItem("device-type", el.value);
+          openGenericPopup("device_type", "device-type");
+          closeAllDropdowns();
+        };
+        container.appendChild(addNewRow);
+      }
 
       data.deviceTypes.forEach((item) => {
         const row = document.createElement("div");
@@ -1983,36 +1031,45 @@ function fetchDeviceTypes() {
           closeAllDropdowns();
           fetchDeviceSpecsByTypeAndDepartment();
         };
-
-        const icons = document.createElement("div");
-        icons.className = "dropdown-actions-icons";
-
-        const editIcon = document.createElement("i");
-        editIcon.className = "fas fa-edit";
-        editIcon.title = translations['edit'];
-        editIcon.onclick = (e) => {
-          e.stopPropagation();
-          const newValue = prompt(`${translations['edit']} ${translations['device_type']}:`, item.DeviceType);
-          if (newValue && newValue.trim() !== item.DeviceType) {
-            editOption("problem-type", item.DeviceType, newValue.trim());
-          }
-        };
-
-        const deleteIcon = document.createElement("i");
-        deleteIcon.className = "fas fa-trash";
-        deleteIcon.title = translations['delete'];
-        deleteIcon.onclick = (e) => {
-          e.stopPropagation();
-          if (confirm(`${translations['confirm_delete']} "${item.DeviceType}"?`)) {
-            deleteOption("problem-type", item.DeviceType);
-          }
-        };
-
-        icons.appendChild(editIcon);
-        icons.appendChild(deleteIcon);
         row.appendChild(text);
-        row.appendChild(icons);
         container.appendChild(row);
+        // إضافة أيقونات التعديل والحذف فقط إذا كان لديه صلاحية كاملة
+        if (permissions.full_access || permissions.edit_items || permissions.delete_items) {
+          const icons = document.createElement("div");
+          icons.className = "dropdown-actions-icons";
+
+          if (permissions.full_access || permissions.edit_items) {
+            const editIcon = document.createElement("i");
+            editIcon.className = "fas fa-edit";
+            editIcon.title = translations['edit'];
+            editIcon.onclick = (e) => {
+              e.stopPropagation();
+              const newValue = prompt(`${translations['edit']} ${translations['device_type']}:`, item.DeviceType);
+              if (newValue && newValue.trim() !== item.DeviceType) {
+                editOption("problem-type", item.DeviceType, newValue.trim());
+              }
+            };
+            icons.appendChild(editIcon);
+          }
+
+          if (permissions.full_access || permissions.delete_items) {
+            const deleteIcon = document.createElement("i");
+            deleteIcon.className = "fas fa-trash";
+            deleteIcon.title = translations['delete'];
+            deleteIcon.onclick = (e) => {
+              e.stopPropagation();
+              if (confirm(`${translations['confirm_delete']} "${item.DeviceType}"?`)) {
+                deleteOption("problem-type", item.DeviceType);
+              }
+            };
+            icons.appendChild(deleteIcon);
+          }
+
+          row.appendChild(icons);
+        }
+
+
+
       });
 
       if (data.role === 'admin') {
@@ -2034,14 +1091,11 @@ function fetchDeviceTypes() {
         hiddenInput.value = savedDeviceType;
         sessionStorage.removeItem("device-type");
       }
-
-      attachEditDeleteHandlers("device-type-options", "problem-type");
     })
     .catch(err => {
       console.error("❌ Failed to fetch device types:", err);
     });
 }
-
 function cleanDropdownError(hiddenInput) {
   if (!hiddenInput) return;
 
@@ -2093,58 +1147,8 @@ function cleanDropdownError(hiddenInput) {
     }
   }
 }
-function fetchTechnicalStatus(callback) {
-  fetch("http://localhost:5050/Technical")
-    .then(res => res.json())
-    .then(data => {
-      const optionsContainer = document.getElementById("technical-status-options");
-      const displaySpan = document.getElementById("selected-technical-status");
-      const hiddenInput = document.getElementById("technical-status");
-  const t = languageManager.translations[languageManager.currentLang];
 
-      if (!optionsContainer || !displaySpan || !hiddenInput) return;
 
-      optionsContainer.innerHTML = "";
-
-      const addNewRow = document.createElement("div");
-      addNewRow.className = "dropdown-option-row add-new-option";
-      addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new']} ${t['technical']}</div>`;
-      addNewRow.onclick = () => {
-        sessionStorage.setItem("lastDropdownOpened", "technical-status");
-        openAddTechnicalPopup();
-        closeAllDropdowns();
-      };
-      optionsContainer.appendChild(addNewRow);
-
-      data.forEach(engineer => {
-        const row = document.createElement("div");
-        row.className = "dropdown-option-row";
-
-        const text = document.createElement("div");
-        text.className = "dropdown-option-text";
-        const engineerName = engineer.Engineer_Name || engineer.name || "No Name";
-        text.textContent = engineerName;
-        text.dataset.id = engineer.id;
-
-        text.onclick = () => {
-          displaySpan.textContent = engineerName;
-          hiddenInput.value = engineer.id;
-                              cleanDropdownError(hiddenInput);
-
-          closeAllDropdowns();
-        };
-
-        row.appendChild(text);
-        optionsContainer.appendChild(row);
-      });
-
-      // ✅ بعد ما تخلص بناء العناصر, اربط الازرار
-      attachEditDeleteHandlers("technical-status-options", "technical");
-
-      if (typeof callback === "function") callback();
-    })
-    .catch(err => console.error("❌ Error fetching technical statuses:", err));
-}
 
 
 function openAddTechnicalPopup() {
@@ -3242,98 +2246,33 @@ function toggleSearch(selectId) {
     }
   };
 }
-
-
 function fetchReporterNames() {
-  fetch("http://localhost:5050/Technical")
-    .then(res => res.json())
-    .then(data => {
-      const optionsContainer = document.getElementById("technical-options");
-      const displaySpan = document.getElementById("selected-technical");
-      const hiddenInput = document.getElementById("technical");
-  const t = languageManager.translations[languageManager.currentLang];
-
-      if (!optionsContainer || !displaySpan || !hiddenInput) {
-        console.error("❌ عناصر دروب داون الريبورتر ناقصة");
-        return;
+  renderDropdownOptions({
+    endpoint: "http://localhost:5050/Technical",
+    containerId: "technical-options",
+    displayId: "selected-technical",
+    inputId: "technical",
+    labelKey: "reporter",
+    itemKey: (item) => item.Engineer_Name || item.name || "Unnamed", // ← هذا هو المفتاح لحل المشكلة
+    storageKey: "technical",
+    onAddNew: () => {
+      openAddTechnicalPopup();
+    },
+    onEditOption: (oldVal) => {
+      const newVal = prompt("Edit Reporter Name:", oldVal);
+      if (newVal && newVal.trim() !== oldVal) {
+        editOption("technical-status", oldVal, newVal.trim());
       }
-
-      optionsContainer.innerHTML = "";
-
-      // ✅ زر + Add New Reporter
-      const addNewRow = document.createElement("div");
-      addNewRow.className = "dropdown-option-row add-new-option";
-      addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new']} ${t['reporter']}</div>`;
-      addNewRow.onclick = () => {
-        sessionStorage.setItem("lastDropdownOpened", "technical");
-        openAddTechnicalPopup();
-        closeAllDropdowns();
-      };
-      optionsContainer.appendChild(addNewRow);
-
-      // ✅ قائمة الريبورترز مع التعديل والحذف
-      data.forEach((reporter, index) => {
-        const row = document.createElement("div");
-        row.className = "dropdown-option-row";
-
-        const text = document.createElement("div");
-        text.className = "dropdown-option-text";
-        text.textContent = reporter.Engineer_Name || reporter.name || "Unnamed";
-        text.onclick = () => {
-          displaySpan.textContent = text.textContent;
-          hiddenInput.value = text.textContent;
-                              cleanDropdownError(hiddenInput);
-
-          closeAllDropdowns();
-        };
-
-        const icons = document.createElement("div");
-        icons.className = "dropdown-actions-icons";
-
-        // ✏️ Edit
-        const editIcon = document.createElement("i");
-        editIcon.className = "fas fa-edit";
-        editIcon.title = "Edit Reporter";
-        editIcon.onclick = (e) => {
-          e.stopPropagation();
-          const oldValue = reporter.Engineer_Name || reporter.name;
-          const newValue = prompt("Edit Reporter Name:", oldValue);
-          if (newValue && newValue.trim() !== oldValue) {
-            editOption("technical-status", oldValue, newValue.trim());
-          }
-        };
-
-        // 🗑️ Delete
-        const deleteIcon = document.createElement("i");
-        deleteIcon.className = "fas fa-trash";
-        deleteIcon.title = "Delete Reporter";
-        deleteIcon.onclick = (e) => {
-          e.stopPropagation();
-          const valueToDelete = reporter.Engineer_Name || reporter.name;
-          deleteOption("technical-status", valueToDelete);
-
-        };
-
-        icons.appendChild(editIcon);
-        icons.appendChild(deleteIcon);
-
-        row.appendChild(text);
-        row.appendChild(icons);
-        optionsContainer.appendChild(row);
-      });
-
-      // ✅ استعادة الاختيار لو موجود
-      const saved = sessionStorage.getItem("technical");
-      if (saved) {
-        displaySpan.textContent = saved;
-        hiddenInput.value = saved;
-        sessionStorage.removeItem("technical");
+    },
+    onDeleteOption: (val) => {
+      if (confirm(`Delete "${val}"?`)) {
+        deleteOption("technical-status", val);
       }
-    })
-    .catch(err => {
-      console.error("❌ Error fetching reporter names:", err);
-    });
+    }
+  });
 }
+
+
 
 document.addEventListener("DOMContentLoaded", function () {
   const form = document.getElementById("external-maintenance-form");
@@ -3428,3 +2367,153 @@ document.addEventListener("DOMContentLoaded", function () {
       });
   });
 });
+async function checkUserPermissions(userId) {
+  if (!userId) {
+    userId = localStorage.getItem("userId");
+  }
+
+  const userRole = localStorage.getItem("userRole"); // ← نجيب الدور من التخزين المحلي
+
+  // ✅ لو أدمن، نرجع كل الصلاحيات مفتوحة
+  if (userRole === "admin") {
+    return {
+      device_access: "all",
+      view_access: true,
+      full_access: true,
+      add_items: true,
+      edit_items: true,
+      delete_items: true,
+      check_logs: true,
+      edit_permission: true
+    };
+  }
+
+  // ✅ باقي المستخدمين (عاديين) نجيب صلاحياتهم من السيرفر
+  try {
+    const response = await fetch(`http://localhost:4000/users/${userId}/with-permissions`);
+    if (!response.ok) throw new Error('Failed to fetch user permissions');
+
+    const userData = await response.json();
+    return {
+      device_access: userData.permissions?.device_access || 'none',
+      view_access: userData.permissions?.view_access || false,
+      full_access: userData.permissions?.full_access || false,
+      add_items: userData.permissions?.add_items || false,
+      edit_items: userData.permissions?.edit_items || false,
+      delete_items: userData.permissions?.delete_items || false,
+      check_logs: userData.permissions?.check_logs || false,
+      edit_permission: userData.permissions?.edit_permission || false
+    };
+  } catch (error) {
+    console.error('Error checking permissions:', error);
+    return {
+      device_access: 'none',
+      view_access: false,
+      full_access: false
+    };
+  }
+}
+
+async function renderDropdownOptions({
+  endpoint,
+  containerId,
+  displayId,
+  inputId,
+  labelKey,
+  itemKey, // ممكن تكون string أو دالة
+  storageKey,
+  onAddNew,
+  onEditOption,
+  onDeleteOption,
+  onSelectOption
+}) {
+  const permissions = await checkUserPermissions();
+  const res = await fetch(endpoint);
+  const data = await res.json();
+
+  const container = document.getElementById(containerId);
+  const display = document.getElementById(displayId);
+  const input = document.getElementById(inputId);
+  const lang = languageManager?.currentLang || 'en';
+  const t = languageManager?.translations?.[lang] || {};
+
+  if (!container || !display || !input) {
+    console.warn(`❌ عناصر الدروب داون ناقصة: ${containerId}, ${displayId}, ${inputId}`);
+    return;
+  }
+
+  container.innerHTML = "";
+
+  // ✅ زر الإضافة - فقط إذا كان عنده صلاحية
+  if ((permissions.full_access || permissions.add_items) && onAddNew) {
+    const addNewRow = document.createElement("div");
+    addNewRow.className = "dropdown-option-row add-new-option";
+    addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new'] || 'Add New'} ${t[labelKey] || labelKey}</div>`;
+    addNewRow.onclick = () => {
+      sessionStorage.setItem("lastDropdownOpened", inputId);
+      onAddNew();
+      closeAllDropdowns();
+    };
+    container.appendChild(addNewRow);
+  }
+
+  // ✅ العناصر
+  data.forEach(item => {
+    const value = typeof itemKey === 'function' ? itemKey(item) : item[itemKey];
+
+    const row = document.createElement("div");
+    row.className = "dropdown-option-row";
+
+    const text = document.createElement("div");
+    text.className = "dropdown-option-text";
+    text.textContent = value;
+    text.onclick = () => {
+      display.textContent = value;
+      input.value = value;
+      if (onSelectOption) onSelectOption(value);
+      cleanDropdownError(input);
+      closeAllDropdowns();
+    };
+
+    const icons = document.createElement("div");
+    icons.className = "dropdown-actions-icons";
+
+    // ✏️ تعديل
+    if (permissions.full_access || permissions.edit_items) {
+      const editIcon = document.createElement("i");
+      editIcon.className = "fas fa-edit";
+      editIcon.title = t['edit'] || "Edit";
+      editIcon.onclick = (e) => {
+        e.stopPropagation();
+        onEditOption?.(value);
+      };
+      icons.appendChild(editIcon);
+    }
+
+    // 🗑️ حذف
+    if (permissions.full_access || permissions.delete_items) {
+      const deleteIcon = document.createElement("i");
+      deleteIcon.className = "fas fa-trash";
+      deleteIcon.title = t['delete'] || "Delete";
+      deleteIcon.onclick = (e) => {
+        e.stopPropagation();
+        onDeleteOption?.(value);
+      };
+      icons.appendChild(deleteIcon);
+    }
+
+    row.appendChild(text);
+    row.appendChild(icons);
+    container.appendChild(row);
+  });
+
+  // ✅ استرجاع القيمة المحفوظة
+  const saved = sessionStorage.getItem(storageKey || inputId);
+  if (saved) {
+    display.textContent = saved;
+    input.value = saved;
+    sessionStorage.removeItem(storageKey || inputId);
+  }
+
+  attachEditDeleteHandlers(containerId, t[labelKey] || labelKey);
+}
