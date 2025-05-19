@@ -4492,7 +4492,7 @@ app.post('/add-option-internal-ticket', authenticateToken, async (req, res) => {
         const logValues = [
           userId,
           userName,
-          `Added '${target}'`
+          `Added '${target}'`,
           `Added '${value}' to '${target}'`
         ];
         db.query(logQuery, logValues, (logErr) => {

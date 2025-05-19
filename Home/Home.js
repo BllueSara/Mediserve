@@ -1,23 +1,44 @@
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("🚀 الصفحة تم تحميلها بنجاح!");
-
-  const role = localStorage.getItem("userRole");
   const token = localStorage.getItem("token");
   const userId = localStorage.getItem("userId");
+  const role = localStorage.getItem("userRole");
 
-  // ✅ إظهار رابط Logs إذا أدمن أو عنده صلاحية check_logs
-  const logsLink = document.getElementById("logs-link");
-  if (logsLink && await hasPermissionOrAdmin("check_logs")) {
-    logsLink.classList.remove("hidden");
+  console.log("🚀 الصفحة تم تحميلها بنجاح!");
+
+  // ✅ تحقق من حالة الحساب كل دقيقة
+  checkAccountStatus(); // تحقق فوري عند تحميل الصفحة
+
+  setInterval(checkAccountStatus, 60000); // وبعدها كل دقيقة
+
+  async function checkAccountStatus() {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const res = await fetch("http://localhost:4000/me/status", {
+        headers: { Authorization: "Bearer " + token }
+      });
+      const data = await res.json();
+      if (data.status === "inactive") {
+        alert("🚫 تم تعطيل حسابك. سيتم تسجيل الخروج الآن.");
+        localStorage.clear();
+        window.location.href = "/authintication/AuthPage/LoginEnglish.html";
+      }
+    } catch (err) {
+      console.error("🚨 فشل التحقق من حالة الحساب:", err);
+    }
   }
 
-  // ✅ إظهار لوحة الأدمن إذا أدمن أو عنده صلاحية edit_permission
-  const adminBox = document.getElementById("admin-panel");
-  if (adminBox && await hasPermissionOrAdmin("edit_permission")) {
-    adminBox.classList.remove("hidden");
+
+  // ✅ إظهار صلاحيات حسب الدور
+  if (await hasPermissionOrAdmin("check_logs")) {
+    document.getElementById("logs-link")?.classList.remove("hidden");
+  }
+  if (await hasPermissionOrAdmin("edit_permission")) {
+    document.getElementById("admin-panel")?.classList.remove("hidden");
   }
 
-  // ✅ عرض عدد الإشعارات
+  // ✅ إشعارات
   const notifCountSpan = document.getElementById("notif-count");
   if (notifCountSpan) {
     try {
@@ -29,22 +50,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       notifCountSpan.textContent = count;
       notifCountSpan.style.display = count > 0 ? "inline-block" : "none";
     } catch (err) {
-      console.error("❌ Error fetching notification count:", err);
+      console.error("❌ Error fetching notifications:", err);
     }
   }
 
   // ✅ تقليل عدد الإشعارات عند الضغط
-  const notifBtn = document.getElementById("notif-btn");
-  if (notifBtn && notifCountSpan) {
-    notifBtn.addEventListener("click", () => {
-      let count = parseInt(notifCountSpan.textContent) || 0;
-      if (count > 0) {
-        count--;
-        notifCountSpan.textContent = count;
-        if (count === 0) notifCountSpan.style.display = "none";
-      }
-    });
-  }
+  document.getElementById("notif-btn")?.addEventListener("click", () => {
+    let count = parseInt(notifCountSpan.textContent) || 0;
+    if (count > 0) {
+      count--;
+      notifCountSpan.textContent = count;
+      if (count === 0) notifCountSpan.style.display = "none";
+    }
+  });
 
   // ✅ تحديد البطاقة والتنقل
   document.querySelectorAll(".service-box").forEach(service => {
@@ -57,6 +75,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 });
+
 async function hasPermissionOrAdmin(key) {
   const role = localStorage.getItem("userRole");
   if (role === "admin") return true;

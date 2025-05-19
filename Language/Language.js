@@ -332,7 +332,12 @@ const languageManager = {
             'username': 'Username',
             'employee_id': 'Employee ID',
             'phone_number': 'Phone Number',
-
+            'loginError': 'Invalid username or password',
+            'inactive': 'Your account is inactive. Please contact the administrator.',
+            'enter_new_password': "Enter new password",
+            'password_required': "Password is required",
+            'password_updated': "Password updated successfully",
+            'password_update_failed': "Failed to update password",
             // General Maintenance
             'fill_required_fields': 'Please fill in all required fields',
             'customer_name': 'Customer Name',
@@ -624,7 +629,8 @@ const languageManager = {
             'model_name': "Model Name",
             'enter_section_name': "Enter section name",
             'enter_model_name': "Enter model name",
-
+            'technical': "Technical",
+            'reporter': "Reporter",
 
             // Actions
             'edit': "Edit",
@@ -654,12 +660,17 @@ const languageManager = {
         },
         ar: {
             'department': 'الاقسام',
+            'reporter': 'صاحب البلاغ',
             'model': 'الموديلات',
             'section': 'القسم',
             'section_name': 'اسم القسم',
             'model_name': 'اسم الموديل',
             'enter_section_name': 'ادخل اسم القسم',
             'enter_model_name': 'ادخل اسم الموديل',
+            'enter_new_password': "أدخل كلمة المرور الجديدة",
+            'password_required': "كلمة المرور مطلوبة",
+            'password_updated': "تم تحديث كلمة المرور بنجاح",
+            'password_update_failed': "فشل في تحديث كلمة المرور",
             // Navigation
             'home': 'الرئيسية',
             'profile': 'الملف الشخصي',
@@ -1004,7 +1015,8 @@ const languageManager = {
             'username': 'اسم المستخدم',
             'employee_id': 'الرقم الوظيفي',
             'phone_number': 'رقم الهاتف',
-
+            'loginError': 'بيانات الدخول غير صحيحة',
+            'inactive:': '🚫 حسابك غير نشط. الرجاء التواصل مع المشرف.',
             // General Maintenance
             'fill_required_fields': 'يرجى ملء جميع الحقون المطلوبة',
             'customer_name': 'اسم العميل',
