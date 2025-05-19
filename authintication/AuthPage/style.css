@@ -353,71 +353,7 @@ h2 {
 
 /* ----------------- Responsive Layout ----------------- */
 
-/* For medium screens */
-@media screen and (max-width: 1024px) {
-    .container {
-        max-width: 900px;
-        min-height: 600px;
-    }
 
-    .form-container {
-        width: 100%;
-    }
-
-    .overlay-container {
-        display: none;
-    }
-}
-
-/* For tablets */
-@media screen and (max-width: 768px) {
-    .container {
-        max-width: 600px;
-        min-height: 550px;
-    }
-
-    .form-container {
-        width: 100%;
-        position: relative;
-    }
-
-    .login-container,
-    .signup-container {
-        width: 100%;
-        left: 0;
-    }
-
-    .overlay-container {
-        display: none;
-    }
-}
-
-/* For small screens (mobiles) */
-@media screen and (max-width: 480px) {
-    .container {
-        max-width: 90%;
-        min-height: auto;
-        padding: 20px;
-        box-shadow: none;
-    }
-
-    .logo {
-        width: 100px;
-    }
-
-    button {
-        width: 100%;
-        padding: 10px;
-    }
-
-    form {
-        padding: 0 20px;
-    }
-
-    input {
-        width: 100%;
-    }
-}
 
 
 .custom-dropdown-wrapper{
@@ -550,4 +486,63 @@ h2 {
   .dropdown-option:hover {
     background-color: #f0f0f0;
   }
-  
+/* Responsive adjustments for logos on small screens */
+@media (max-width: 1024px) {
+  .right-logo,
+  .left-logo {
+    width: 100px; /* أصغر شوي */
+    top: 10px;
+  }
+
+  .right-logo {
+    left: 20px; /* أبعد شوي عن الزاوية */
+  }
+
+  .left-logo {
+    right: 20px; /* أبعد شوي عن الزاوية */
+  }
+
+  .container {
+    padding-top: 80px; /* نزيد مسافة من الأعلى لتفادي تراكب اللوغو مع المحتوى */
+  }
+}
+
+@media (max-width: 768px) {
+  .right-logo,
+  .left-logo {
+    width: 80px;
+    top: 10px;
+  }
+
+  .right-logo {
+    left: 15px;
+  }
+
+  .left-logo {
+    right: 15px;
+  }
+
+  .container {
+    padding-top: 90px;
+  }
+}
+
+@media (max-width: 480px) {
+  .right-logo,
+  .left-logo {
+    width: 70px;
+    top: 8px;
+  }
+
+  .right-logo {
+    left: 10px;
+  }
+
+  .left-logo {
+    right: 10px;
+  }
+
+  .container {
+    padding-top: 100px;
+  }
+}
