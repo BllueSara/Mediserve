@@ -39,20 +39,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ✅ إشعارات
-  const notifCountSpan = document.getElementById("notif-count");
-  if (notifCountSpan) {
-    try {
-      const res = await fetch("http://localhost:4000/notifications", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      const count = Array.isArray(data) ? data.length : 0;
-      notifCountSpan.textContent = count;
-      notifCountSpan.style.display = count > 0 ? "inline-block" : "none";
-    } catch (err) {
-      console.error("❌ Error fetching notifications:", err);
-    }
-  }
+// ✅ إشعارات
+const notifCountSpan = document.getElementById("notif-count");
+if (notifCountSpan) {
+  await fetchUnseenCount(); // فقط جلب غير المقروءة
+}
+
 
   // ✅ تقليل عدد الإشعارات عند الضغط
   document.getElementById("notif-btn")?.addEventListener("click", () => {

@@ -115,15 +115,17 @@ header {
 
 /* Option box styles */
 .option {
-    background-color: #f8f9fa; /* Light gray background */
-    padding: 5px; /* Add padding */
-    border-radius: 10px; /* Rounded corners */
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Light shadow */
-    transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s; /* Smooth transitions */
-    cursor: pointer; /* Show pointer cursor */
-    text-align: center; /* Center text */
-    width: 180px; /* Set box width */
+    background-color: #f8f9fa;
+    padding: 10px; /* بدل 5px */
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
+    cursor: pointer;
+    text-align: center;
+    width: 220px; /* بدل 180px */
+    font-size: 16px; /* أكبر شوي */
 }
+
 
 /* Option icon size */
 .icon-container img {
@@ -164,8 +166,10 @@ header {
         width: 90%; /* Adjust width */
     }
 
-    .option {
-        width: 160px; /* Reduce option box width */
+  .option {
+        width: 140px;
+        font-size: 15px;
+        padding: 8px;
     }
 }
 
@@ -186,12 +190,16 @@ header {
         margin-bottom: 40px; /* Adjust spacing */
     }
 
-    .maintenance-options {
-        flex-direction: column; /* Stack options vertically */
-        gap: 15px; /* Adjust spacing */
+  .maintenance-options {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
     }
 
     .option {
-        width: 90%; /* Set full width */
+        width: 140px;
+        font-size: 14px;
+        padding: 6px;
     }
 }
