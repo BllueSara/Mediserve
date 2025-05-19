@@ -170,17 +170,42 @@ app.post('/register', async (req, res) => {
 });
 
 
-
+app.get('/me/status', authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  db.query('SELECT status FROM users WHERE id = ?', [userId], (err, result) => {
+    if (err || result.length === 0) {
+      return res.status(500).json({ status: 'error' });
+    }
+    res.json({ status: result[0].status });
+  });
+});
 
 
 
 
 
 app.post('/login', (req, res) => {
-  const { email: identifier, password } = req.body;
+  const { email: identifier, password, lang = 'en' } = req.body;
+
+  const messages = {
+    en: {
+      missing: 'Missing login or password',
+      invalid: 'Invalid login or password',
+      inactive: '🚫 Your account is inactive. Please contact the administrator.',
+      success: 'LOGIN successful'
+    },
+    ar: {
+      missing: '❌ الرجاء إدخال بيانات الدخول',
+      invalid: '❌ بيانات الدخول غير صحيحة',
+      inactive: '🚫 حسابك غير نشط. الرجاء التواصل مع المشرف.',
+      success: '✅ تم تسجيل الدخول بنجاح'
+    }
+  };
+
+  const t = messages[lang] || messages.en;
 
   if (!identifier || !password) {
-    return res.status(400).json({ message: 'Missing login or password' });
+    return res.status(400).json({ message: t.missing });
   }
 
   db.query(
@@ -190,14 +215,18 @@ app.post('/login', (req, res) => {
       if (err) return res.status(500).json({ message: 'Database error' });
 
       if (results.length === 0) {
-        return res.status(401).json({ message: 'Invalid login or password' });
+        return res.status(401).json({ message: t.invalid });
       }
 
       const user = results[0];
       const isMatch = await bcrypt.compare(password, user.password);
 
       if (!isMatch) {
-        return res.status(401).json({ message: 'Invalid login or password' });
+        return res.status(401).json({ message: t.invalid });
+      }
+
+      if (user.status === 'inactive') {
+        return res.status(403).json({ message: t.inactive });
       }
 
       const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
@@ -205,7 +234,7 @@ app.post('/login', (req, res) => {
       logActivity(user.id, user.name, 'Login', `User ${user.name} logged in successfully.`);
 
       res.json({
-        message: 'LOGIN successful',
+        message: t.success,
         token,
         role: user.role,
         user: {
@@ -217,6 +246,7 @@ app.post('/login', (req, res) => {
     }
   );
 });
+
 
 
 
@@ -572,6 +602,24 @@ app.post('/forgot-password', (req, res) => {
       }
     );
   });
+});
+app.put('/users/:id/reset-password', authenticateToken, async (req, res) => {
+  const userId = req.params.id;
+  const { newPassword } = req.body;
+
+  if (!newPassword) {
+    return res.status(400).json({ message: 'Password is required' });
+  }
+
+  try {
+    const hashed = await bcrypt.hash(newPassword, 12);
+    await db.promise().query('UPDATE users SET password = ? WHERE id = ?', [hashed, userId]);
+    logActivity(userId, 'System', 'Reset Password', 'Password was reset by admin');
+    res.json({ message: '✅ Password updated successfully' });
+  } catch (err) {
+    console.error("❌ Error resetting password:", err);
+    res.status(500).json({ message: '❌ Server error while resetting password' });
+  }
 });
 
 
