@@ -64,21 +64,27 @@ async function renderDropdownOptions({
 
   // ✅ العناصر
   data.forEach(item => {
-    const value = typeof itemKey === 'function' ? itemKey(item) : item[itemKey];
+ const value = typeof itemKey === 'function' ? itemKey(item) : item[itemKey];
 
-    const row = document.createElement("div");
-    row.className = "dropdown-option-row";
+// لو استخدمنا itemKey كدالة بيرجع object فيه id و name
+const displayText = typeof value === 'object' ? value.name : value;
+const actualValue = typeof value === 'object' ? value.id : value;
 
-    const text = document.createElement("div");
-    text.className = "dropdown-option-text";
-    text.textContent = value;
-    text.onclick = () => {
-      display.textContent = value;
-      input.value = value;
-      if (onSelectOption) onSelectOption(value);
-      cleanDropdownError(input);
-      closeAllDropdowns();
-    };
+const row = document.createElement("div");
+row.className = "dropdown-option-row";
+
+const text = document.createElement("div");
+text.className = "dropdown-option-text";
+text.textContent = displayText;
+
+text.onclick = () => {
+  display.textContent = displayText;
+  input.value = actualValue; // هنا نخزن الـ ID
+  if (onSelectOption) onSelectOption(actualValue);
+  cleanDropdownError(input);
+  closeAllDropdowns();
+};
+
 
     const icons = document.createElement("div");
     icons.className = "dropdown-actions-icons";
@@ -712,49 +718,90 @@ function fetchDepartments(selectId = "department") {
 
 function saveNewSection() {
   const sectionName = document.getElementById("new-section-name").value.trim();
-  const lang = languageManager.currentLang;
-  const t = languageManager.translations[lang];
-
   if (!sectionName) {
-    alert(t['please_enter_section_name']);
+    alert("❌ Please enter a section name");
     return;
   }
 
-  fetch("http://localhost:5050/AddDepartment", {
+  fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
-    body: JSON.stringify({ department_name: sectionName })
+    body: JSON.stringify({ target: "section", value: sectionName })
   })
     .then(res => res.json())
     .then(result => {
       if (result.error) {
-        if (result.error === "already_exists") {
-          alert(t['department_already_exists']);
-        } else {
-          console.error(`⚠️ ${t['unexpected_error']}:`, result.error);
-        }
+        alert(result.error);
         return;
       }
 
-      const selectId = sessionStorage.getItem("lastDropdownOpened");
-      if (selectId) {
+
+      const selectId = sessionStorage.getItem("lastDepartmentSelectId") || "spec-department";
+
+      // ✅ تحديث الدروب داون المخصص
+      // ✅ بعد fetchDepartments(selectId);
+      fetchDepartments(selectId);
+      sessionStorage.setItem(selectId, sectionName);
+
+      // ✅ إظهار القيمة الجديدة يدويًا
+      setTimeout(() => {
         const displaySpan = document.getElementById(`selected-${selectId}`);
         const hiddenInput = document.getElementById(selectId);
+
         if (displaySpan && hiddenInput) {
           displaySpan.textContent = sectionName;
           hiddenInput.value = sectionName;
-          sessionStorage.setItem(selectId, sectionName);
+        }
+      }, 200);
+
+
+      // ✅ إزالة بيانات الجلس
+      sessionStorage.removeItem("lastDepartmentSelectId");
+      sessionStorage.removeItem("returnToPopup");
+
+      // ✅ أغلق البوب أب الحالي
+      document.getElementById("generic-popup").style.display = "none";
+
+      // ✅ فقط إذا كانت الإضافة داخل popup المواصفات + نوع الجهاز غير معروف
+      const deviceType = document.getElementById("device-type")?.value?.toLowerCase();
+      const isSpecContext = ["spec-department", "department-pc", "department-printer", "department-scanner"].includes(selectId);
+
+        if (isSpecContext && !["pc", "printer", "scanner","desktop", "laptop", "كمبيوتر", "لابتوب"].includes(deviceType)) {
+        const modelName = document.getElementById("spec-model")?.value;
+        if (modelName) sessionStorage.setItem("spec-model", modelName);
+
+        const popup = document.getElementById("generic-popup");
+
+        // ✅ إذا البوب أب موجود ومفتوح، لا تفتحه من جديد
+        if (popup && popup.style.display !== "flex") {
+          setTimeout(() => {
+            openGenericPopup("Device Specification", "device-spec");
+
+            setTimeout(() => {
+              const deptSelect = document.getElementById("spec-department");
+              if (deptSelect) {
+                deptSelect.value = sectionName;
+                deptSelect.dispatchEvent(new Event("change", { bubbles: true }));
+              }
+
+              const modelSelect = document.getElementById("spec-model");
+              const savedModel = sessionStorage.getItem("spec-model");
+              if (modelSelect && savedModel) {
+                modelSelect.value = savedModel;
+                modelSelect.dispatchEvent(new Event("change", { bubbles: true }));
+                sessionStorage.removeItem("spec-model");
+              }
+            }, 150);
+          }, 100);
         }
       }
 
-      closeGenericPopup();
-      refreshDropdown(selectId);
     })
     .catch(err => {
-      console.error(`❌ ${t['server_connection_error']}:`, err);
+      console.error("❌ Failed to save section:", err);
+      alert("❌ Error saving section");
     });
 }
-
 
 
 
@@ -1214,7 +1261,7 @@ function fetchTechnicalStatus(callback) {
     displayId: "selected-technical-status",
     inputId: "technical-status",
     labelKey: "technical",
-    itemKey: (item) => item.Engineer_Name || item.name || "N/A",
+itemKey: (item) => ({ id: item.id, name: item.Engineer_Name || item.name || "N/A" }),
     storageKey: "technical-status",
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "technical-status");
@@ -1295,7 +1342,7 @@ function saveNewTechnical() {
     });
 }
 
-async function fetchProblemStatus(deviceType) {
+async function fetchProblemStatus(deviceType, onFinished) {
   const permissions = await checkUserPermissions();
   const t = languageManager.translations[languageManager.currentLang];
 
@@ -1312,7 +1359,14 @@ async function fetchProblemStatus(deviceType) {
 
   const isAllDevices = deviceType?.toLowerCase() === "all" || deviceType?.toLowerCase() === "all-devices";
 
-  // ✅ Add new option
+  if (!deviceType || deviceType === "add-custom") {
+    const row = document.createElement("div");
+    row.className = "dropdown-option-row";
+    row.innerHTML = `<div class="dropdown-option-text">${t['select_device_type']}</div>`;
+    container.appendChild(row);
+    return;
+  }
+
   if (!isAllDevices && (permissions.full_access || permissions.add_items)) {
     const addNewRow = document.createElement("div");
     addNewRow.className = "dropdown-option-row add-new-option";
@@ -1325,16 +1379,6 @@ async function fetchProblemStatus(deviceType) {
     container.appendChild(addNewRow);
   }
 
-  // ✅ Show message if deviceType missing
-  if (!deviceType || deviceType === "add-custom") {
-    const row = document.createElement("div");
-    row.className = "dropdown-option-row";
-    row.innerHTML = `<div class="dropdown-option-text">${t['select_device_type']}</div>`;
-    container.appendChild(row);
-    return;
-  }
-
-  // 🔄 Fetch problem statuses
   try {
     const res = await fetch(`http://localhost:5050/problem-states/${encodeURIComponent(deviceType)}`);
     const data = await res.json();
@@ -1411,6 +1455,9 @@ async function fetchProblemStatus(deviceType) {
       container.appendChild(row);
     });
 
+    // ✅ Call callback after loading
+    if (typeof onFinished === "function") onFinished();
+
   } catch (err) {
     console.error("❌ Failed to fetch problem statuses:", err);
     const row = document.createElement("div");
@@ -1441,7 +1488,6 @@ function openAddProblemStatusPopup(deviceType) {
   popup.style.display = "flex";
 }
 
-
 function saveNewProblemStatus(deviceType) {
   const t = languageManager.translations[languageManager.currentLang];
   const name = document.getElementById("new-problem-status-name").value.trim();
@@ -1468,11 +1514,12 @@ function saveNewProblemStatus(deviceType) {
       if (result.error) {
         alert(result.error);
       } else {
+        // ✅ أعد تحميل القائمة وحدد العنصر المضاف
         fetchProblemStatus(deviceType, () => {
           const displaySpan = document.getElementById("selected-problem-status");
           const hiddenInput = document.getElementById("problem-status");
           displaySpan.textContent = name;
-          hiddenInput.value = name;
+          hiddenInput.value = JSON.stringify([name]);
         });
         closeGenericPopup();
       }
@@ -2323,6 +2370,8 @@ function saveNewModel() {
 
 
 function saveDeviceSpecification() {
+
+
   const lang = languageManager.currentLang;
   const t = languageManager.translations[lang];
 

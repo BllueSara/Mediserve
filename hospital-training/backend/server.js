@@ -816,6 +816,59 @@ if (techEngineerName) {
   }
 });
 
+app.get('/notifications/upcoming-maintenance-test', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const now = new Date();
+
+  try {
+    const entries = await queryAsync(`
+      SELECT rm.*, md.device_name, md.device_type, u.name AS user_name
+      FROM Regular_Maintenance rm
+      JOIN Maintenance_Devices md ON rm.device_id = md.id
+      JOIN Users u ON rm.user_id = u.id
+    `);
+
+    for (const entry of entries) {
+      const freq = parseInt(entry.frequency);
+      const lastDate = new Date(entry.last_maintenance_date);
+      const testReminder = new Date(lastDate);
+      testReminder.setMinutes(testReminder.getMinutes() + 1); // بعد دقيقة من وقت الصيانة
+
+      const diff = Math.abs(now - testReminder) / 1000;
+
+      if (diff < 30) {
+        const deviceDisplay = `${entry.device_name} (${entry.device_type})`;
+
+        // إشعار لصاحب الطلب
+        await queryAsync(`
+          INSERT INTO Notifications (user_id, message, type)
+          VALUES (?, ?, ?)
+        `, [
+          entry.user_id,
+          `⏰ اقترب وقت صيانة الجهاز ${deviceDisplay} (اختبار بعد دقيقة)`,
+          'upcoming-maintenance'
+        ]);
+
+        // إشعار للمهندس الفني
+        if (entry.technical_engineer_id) {
+          await queryAsync(`
+            INSERT INTO Notifications (user_id, message, type)
+            VALUES (?, ?, ?)
+          `, [
+            entry.technical_engineer_id,
+            `🛠️ لديك مهمة صيانة للجهاز ${deviceDisplay} خلال دقيقة (اختبار)`,
+            'upcoming-maintenance'
+          ]);
+        }
+      }
+    }
+
+    res.json({ message: '✅ Checked and created test notifications if due.' });
+  } catch (err) {
+    console.error('❌ Error in upcoming-maintenance-test:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 
 app.get("/report-statuses", (req, res) => {
@@ -1195,7 +1248,7 @@ if (Array.isArray(problemStatus)) {
 
   let engineerName;
   if (adminUser?.role === 'admin' && technical) {
-    const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE id = ?`, [technical]);
+    const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE name = ?`, [technical]);
     engineerName = techEngineerRes[0]?.name || userName;
   } else {
     engineerName = userName;
@@ -1320,7 +1373,7 @@ if (Array.isArray(problemStatus)) {
       'internal-ticket-report'
     ]);
 
-    const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE id = ?`, [technical]);
+    const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE name = ?`, [technical]);
     const techEngineerName = techEngineerRes[0]?.name;
 
 if (techEngineerName) {
@@ -1449,15 +1502,19 @@ FROM External_Maintenance
 
   // لو ليس admin → فلتر بالتقارير المملوكة للمستخدم فقط
 if (userRole !== 'admin') {
-  externalSql += ` WHERE user_id = ${db.escape(userId)} `;
+  externalSql += `
+    WHERE user_id = ${db.escape(userId)} 
+    OR LOWER(reporter_name) LIKE CONCAT('%', LOWER(${db.escape(userName)}), '%')
+  `;
   newSql += ` WHERE user_id = ${db.escape(userId)} `;
   externalReportsSQL += `
     AND (
-      mr.user_id = ${db.escape(userId)}
-      OR LOWER(et.assigned_to) = LOWER(${db.escape(userName)})
+      mr.user_id = ${db.escape(userId)} 
+      OR LOWER(et.assigned_to) LIKE CONCAT('%', LOWER(${db.escape(userName)}), '%')
     )
   `;
 }
+
 
 
   const combinedSql = `
@@ -3687,7 +3744,7 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), authenticate
 
     let engineerName;
     if (adminUser?.role === 'admin' && assigned_to) {
-      const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE id = ?`, [assigned_to]);
+      const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE name = ?`, [assigned_to]);
       engineerName = techEngineerRes[0]?.name || userName;
     } else {
       engineerName = userName;
@@ -3777,7 +3834,7 @@ if (assigned_to) {
     SELECT u.id 
     FROM Users u 
     JOIN Engineers e ON u.name = e.name 
-    WHERE e.id = ?
+    WHERE e.name = ?
   `, [assigned_to]);
 
   const techUserId = techUserRes[0]?.id;

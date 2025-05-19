@@ -19,12 +19,14 @@ async function fetchUnseenCount() {
     });
 
     const { count } = await res.json();
-    if (count > 0) {
-      notifCount.textContent = count;
-      notifCount.style.display = 'inline-block';
-    } else {
-      notifCount.style.display = 'none';
-    }
+ if (count > 0) {
+  notifCount.textContent = count;
+  notifCount.style.display = 'inline-block';
+} else {
+  notifCount.textContent = ''; // ✨ مسح الرقم صراحة
+  notifCount.style.display = 'none';
+}
+
   } catch (err) {
     console.error('❌ Failed to fetch unseen count:', err);
   }
@@ -37,19 +39,34 @@ async function toggleNotifications() {
     await loadNotifications();
     notifPopup.classList.remove('hidden');
 
-    // ✅ خفِ الرقم من الواجهة
-    if (notifCount) notifCount.style.display = 'none';
+    try {
+      // ✅ انتظر تأكيد السيرفر قبل أي تعديل على الواجهة
+      const res = await fetch('http://localhost:4000/notifications/mark-as-seen', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+      });
 
-    // ✅ أعلِم السيرفر إنه تم المشاهدة
-    await fetch('http://localhost:4000/notifications/mark-as-seen', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
-    });
+      const result = await res.json();
+
+      if (res.ok && result.message === 'All notifications marked as seen') {
+        // ✅ فقط بعد التأكد، نحدث الرقم في الواجهة
+        await fetchUnseenCount();
+
+        // ✅ نحدّث الحالة داخليًا
+        allNotifications = allNotifications.map(n => ({ ...n, is_seen: true }));
+      } else {
+        console.warn("⚠️ Server didn't confirm marking as seen.");
+      }
+
+    } catch (err) {
+      console.error('❌ Failed to mark notifications as seen:', err);
+    }
 
   } else {
     notifPopup.classList.add('hidden');
   }
 }
+
 
 
 
