@@ -183,6 +183,8 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("assigned-to").textContent = report.technical_engineer || "";
       }else if (  report.maintenance_type === "General") {
         document.getElementById("assigned-to").textContent = report.technician_name || "";
+      } else if (report.maintenance_type === "Internal") {
+        document.getElementById("assigned-to").textContent = report.technician_name || "";
       }
        else {
         document.getElementById("assigned-to").textContent = isExternal
