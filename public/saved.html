@@ -24,7 +24,7 @@
       </a>
     </div>
     <div class="home-button">
-      <a href="index.html">
+        <a href="../../Home/Home.html">
         <img src="/icon/Home.png" alt="Home" class="home-icon" />
         Home
       </a>
@@ -124,6 +124,11 @@
 <!-- Device Table -->
 <section class="input-section" id="column-display">
   <div class="input-column">
+  <label>Actions</label>
+  <div class="input-group" id="action-column"></div>
+</div>
+
+  <div class="input-column">
     <label>Circuit Name</label>
     <div class="input-group" id="circuit-column"></div>
   </div>
@@ -174,6 +179,69 @@
     </div>
   </div>
 
+
+<div id="editModal" class="popup hidden">
+  <div class="popup-content">
+    <h3>Edit Entry</h3>
+    <div class="input-section" style="flex-wrap: wrap;">
+      <div class="input-column">
+        <label>Circuit Name</label>
+        <div class="input-group">
+          <input id="edit-circuit" placeholder="Circuit Name" />
+        </div>
+      </div>
+
+      <div class="input-column">
+        <label>ISP</label>
+        <div class="input-group">
+          <input id="edit-isp" placeholder="ISP" />
+        </div>
+      </div>
+
+      <div class="input-column">
+        <label>Location</label>
+        <div class="input-group">
+          <input id="edit-location" placeholder="Location" />
+        </div>
+      </div>
+
+      <div class="input-column">
+        <label>IP Address</label>
+        <div class="input-group">
+          <input id="edit-ip" placeholder="IP Address" />
+        </div>
+      </div>
+
+      <div class="input-column">
+        <label>Speed</label>
+        <div class="input-group">
+          <input id="edit-speed" placeholder="Speed" />
+        </div>
+      </div>
+
+      <div class="input-column">
+        <label>Start Date</label>
+        <div class="input-group">
+          <input id="edit-start" type="date" />
+        </div>
+      </div>
+
+      <div class="input-column">
+        <label>End Date</label>
+        <div class="input-group">
+          <input id="edit-end" type="date" />
+        </div>
+      </div>
+    </div>
+
+    <input type="hidden" id="edit-id" />
+
+    <div class="popup-buttons">
+      <button onclick="submitEdit()">Save</button>
+      <button onclick="closeEditModal()">Cancel</button>
+    </div>
+  </div>
+</div>
 
 
   <script src="saved.js"></script>
