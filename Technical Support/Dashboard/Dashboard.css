@@ -638,3 +638,29 @@ header {
   border-radius: 0.75rem;
   padding: 1rem;
 }
+
+
+.device-table th:nth-child(2) {
+  text-align: center;
+}
+
+.device-table {
+  width: 100%;
+  table-layout: fixed; /* ✅ هذا يجعل الأعمدة تأخذ نفس الحجم */
+  border-collapse: collapse;
+}
+
+.device-table th:nth-child(1),
+.device-table td:nth-child(1) {
+  width: 35%; /* عمود TYPE */
+}
+
+.device-table th:nth-child(2),
+.device-table td:nth-child(2) {
+  width: 45%; /* عمود SPECS */
+}
+
+.device-table th:nth-child(3),
+.device-table td:nth-child(3) {
+  width: 20%; /* عمود STATUS */
+}
