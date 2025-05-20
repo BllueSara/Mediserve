@@ -690,6 +690,7 @@ cmd-btn {
   max-width: 1000px;
   margin: 0 auto 40px auto;
   flex-wrap: nowrap;
+  justify-content: flex-start;
 }
 
 .input-column {
@@ -783,4 +784,135 @@ cmd-btn {
   padding: 3px 8px;
   border-radius: 6px;
   font-size: 12px;
+}
+.edit-btn,
+.delete-btn {
+  margin-right: 5px;
+  padding: 2px 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.edit-btn {
+  color: white;
+}
+
+.delete-btn {
+  color: white;
+}
+/* ===== Edit Modal Styling ===== */
+#editModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: none; /* استخدم 'flex' عند الفتح */
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+#editModal.show {
+  display: flex;
+}
+
+#editModal .popup-content {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 30px 35px;
+  max-width: 750px;
+  width: 95%;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+  text-align: left;
+}
+
+#editModal h2 {
+  font-size: 22px;
+  margin-bottom: 25px;
+  color: #111827;
+  font-weight: 700;
+}
+
+/* 2-column grid layout */
+#editModal .form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+/* Field wrapper */
+#editModal .form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+#editModal .form-group label {
+  font-size: 14px;
+  color: #374151;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+#editModal .form-group input[type="text"],
+#editModal .form-group input[type="date"] {
+  padding: 10px 14px;
+  font-size: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background-color: #fff;
+  transition: border-color 0.3s ease;
+}
+
+#editModal .form-group input:focus {
+  border-color: #3baae0;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 170, 224, 0.25);
+}
+
+/* Button section */
+#editModal .popup-buttons {
+  margin-top: 30px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+#editModal .popup-buttons button {
+  background-color: #3baae0;
+  color: #fff;
+  border: none;
+  padding: 10px 22px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+#editModal .popup-buttons button:hover {
+  background-color: #2f9ccf;
+}
+
+/* Required asterisk */
+.required-star {
+  color: red;
+  margin-left: 4px;
+}
+#editModal .form-group input {
+  padding: 10px 14px;
+  font-size: 14px;
+  border: 1px solid #d1d5db;           /* لون حدود هادئ */
+  border-radius: 8px;                  /* حواف مستديرة */
+  background-color: #fff;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05); /* ظل داخلي خفيف */
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#editModal .form-group input:focus {
+  border-color: #3baae0;
+  box-shadow: 0 0 0 2px rgba(59, 170, 224, 0.25); /* تمييز عند التركيز */
+  outline: none;
 }
