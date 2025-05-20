@@ -827,61 +827,6 @@ if (techEngineerName) {
   }
 });
 
-app.get('/notifications/upcoming-maintenance-test', authenticateToken, async (req, res) => {
-  const userId = req.user.id;
-  const now = new Date();
-
-  try {
-    const entries = await queryAsync(`
-      SELECT rm.*, md.device_name, md.device_type, u.name AS user_name
-      FROM Regular_Maintenance rm
-      JOIN Maintenance_Devices md ON rm.device_id = md.id
-      JOIN Users u ON rm.user_id = u.id
-    `);
-
-    for (const entry of entries) {
-      const freq = parseInt(entry.frequency);
-      const lastDate = new Date(entry.last_maintenance_date);
-      const testReminder = new Date(lastDate);
-      testReminder.setMinutes(testReminder.getMinutes() + 1); // بعد دقيقة من وقت الصيانة
-
-      const diff = Math.abs(now - testReminder) / 1000;
-
-      if (diff < 30) {
-        const deviceDisplay = `${entry.device_name} (${entry.device_type})`;
-
-        // إشعار لصاحب الطلب
-        await queryAsync(`
-          INSERT INTO Notifications (user_id, message, type)
-          VALUES (?, ?, ?)
-        `, [
-          entry.user_id,
-          `⏰ اقترب وقت صيانة الجهاز ${deviceDisplay} (اختبار بعد دقيقة)`,
-          'upcoming-maintenance'
-        ]);
-
-        // إشعار للمهندس الفني
-        if (entry.technical_engineer_id) {
-          await queryAsync(`
-            INSERT INTO Notifications (user_id, message, type)
-            VALUES (?, ?, ?)
-          `, [
-            entry.technical_engineer_id,
-            `🛠️ لديك مهمة صيانة للجهاز ${deviceDisplay} خلال دقيقة (اختبار)`,
-            'upcoming-maintenance'
-          ]);
-        }
-      }
-    }
-
-    res.json({ message: '✅ Checked and created test notifications if due.' });
-  } catch (err) {
-    console.error('❌ Error in upcoming-maintenance-test:', err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-
 app.get("/report-statuses", (req, res) => {
   db.query("SELECT * FROM Report_Statuses", (err, result) => {
     if (err) {
@@ -4747,5 +4692,123 @@ app.post("/external-ticket-with-file", upload.single("attachment"), authenticate
   } catch (err) {
     console.error("❌ Server error:", err);
     res.status(500).json({ error: "Unexpected server error" });
+  }
+});
+
+
+const cron = require('node-cron');
+cron.schedule('09 * * * *', async () => {
+  console.log('🔍 Checking for due maintenance...');
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  try {
+    const [rows] = await db.promise().query(`
+      SELECT 
+        rm.id, rm.device_id, rm.device_name, rm.device_type, rm.technical_engineer_id,
+        rm.last_maintenance_date, rm.frequency
+      FROM Regular_Maintenance rm
+      WHERE rm.status = 'Open' AND rm.frequency IS NOT NULL
+    `);
+
+    for (const row of rows) {
+      const dueDate = new Date(row.last_maintenance_date);
+      dueDate.setMonth(dueDate.getMonth() + parseInt(row.frequency));
+      dueDate.setHours(0, 0, 0, 0);
+
+      if (dueDate.getTime() === today.getTime()) {
+        // ✅ نجيب اسم المهندس
+        const [engineerRes] = await db.promise().query(
+          `SELECT name FROM Engineers WHERE id = ?`, [row.technical_engineer_id]
+        );
+        const engineerName = engineerRes[0]?.name;
+        if (!engineerName) {
+          console.warn(`⚠️ Engineer not found for ID ${row.technical_engineer_id}`);
+          continue;
+        }
+
+        // ✅ نجيب user_id بناءً على الاسم
+        const [userRes] = await db.promise().query(
+          `SELECT id FROM Users WHERE name = ?`, [engineerName]
+        );
+        const techUserId = userRes[0]?.id;
+        if (!techUserId) {
+          console.warn(`⚠️ No matching user for engineer name ${engineerName}`);
+          continue;
+        }
+
+        // ✅ نص الإشعار
+        const message = `🔔 Maintenance is due today for device: ${row.device_name} (${row.device_type})`;
+
+        // ✅ منع تكرار الإشعار في نفس اليوم
+        const [existingNotifs] = await db.promise().query(`
+          SELECT id FROM Notifications 
+          WHERE user_id = ? AND message = ? AND DATE(created_at) = CURDATE()
+        `, [techUserId, message]);
+
+        if (existingNotifs.length > 0) {
+          console.log(`⏭️ Skipping duplicate reminder for ${engineerName} & device ${row.device_name}`);
+          continue;
+        }
+
+        // ✅ إرسال الإشعار
+        await db.promise().query(`
+          INSERT INTO Notifications (user_id, message, type)
+          VALUES (?, ?, ?)
+        `, [
+          techUserId,
+          message,
+          'maintenance-reminder'
+        ]);
+
+        console.log(`✅ Notification sent to ${engineerName} for ${row.device_name}`);
+      }
+    }
+  } catch (error) {
+    console.error("❌ Error in maintenance reminder cron:", error);
+  }
+});
+cron.schedule('0 9 * * *', async () => {
+  console.log('🔍 Checking external tickets older than 3 days...');
+
+  try {
+    const [tickets] = await db.promise().query(`
+      SELECT et.id, et.ticket_number, et.status, et.report_datetime, et.user_id, u.name AS user_name
+      FROM External_Tickets et
+      LEFT JOIN Users u ON et.user_id = u.id
+      WHERE et.status = 'Open'
+        AND DATEDIFF(CURDATE(), DATE(et.report_datetime)) >= 3
+    `);
+
+    for (const ticket of tickets) {
+      const notifMessage = `🚨 Ticket ${ticket.ticket_number} has been open for 3+ days. Please follow up.`;
+
+      // ✅ تأكد إن ما تم إرسال إشعار من قبل
+      const [existing] = await db.promise().query(`
+        SELECT id FROM Notifications
+        WHERE user_id = ? AND message = ? AND DATE(created_at) = CURDATE()
+      `, [ticket.user_id, notifMessage]);
+
+      if (existing.length > 0) {
+        console.log(`⏭️ Notification already sent today for ticket ${ticket.ticket_number}`);
+        continue;
+      }
+
+      // ✅ إرسال الإشعار
+      await db.promise().query(`
+        INSERT INTO Notifications (user_id, message, type)
+        VALUES (?, ?, ?)
+      `, [
+        ticket.user_id,
+        notifMessage,
+        'external-ticket-followup'
+      ]);
+
+      console.log(`✅ Reminder sent to ${ticket.user_name} for ticket ${ticket.ticket_number}`);
+    }
+
+  } catch (err) {
+    console.error("❌ Error in external ticket reminder cron:", err);
   }
 });

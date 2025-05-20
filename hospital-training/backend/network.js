@@ -606,7 +606,7 @@ app.get('/api/distinct-values/:key', authenticateToken, async (req, res) => {
 
 const cron = require('node-cron');
 
-cron.schedule('0 2 * * *', async () => {
+cron.schedule('02 * * * *', async () => {
   try {
     const intervals = [
       { days: 90, label: '3 months' },
