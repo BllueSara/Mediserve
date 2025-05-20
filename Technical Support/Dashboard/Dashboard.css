@@ -23,91 +23,100 @@ body {
   background-color: #FFFF;
   color: var(--dark);
   min-height: 100vh;
+  
   overflow-x: hidden;
 }
 
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 2rem;
-  position: relative;
-  z-index: 10;
-}
 
-.ms-logo {
-  position: absolute;
-  left: 2rem;
-  top: 1rem;
-}
-
-.ms-logo img {
-  width: 120px;
-  height: auto;
-}
-
-.hospital-logo {
-  position: absolute;
-  right: 2rem;
-  top: 1rem;
-}
-
-.hospital-logo img {
-  height: 50px;
-  width: auto;
-}
-
-.nav-buttons {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 1rem 2rem;
-  margin-top: 4rem;
-
-  position: relative;
-}
-
-.back-button {
-  position: absolute;
-  left: 2rem;
-}
-
-.back-button a,
- .Home-button a {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  text-decoration: none;
-  font-weight: 500;
-  color: var(--gray);
-  transition: all 0.2s ease;
-  
-}
-
-.back-button a:hover, .Home-button a:hover {
-  background: var(--light);
-  color: var(--dark);
-}
-
+/* Back and Home buttons */
+.back-button, 
 .Home-button {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+    position: absolute; /* Position the buttons absolutely */
+    top: 20px; /* Place buttons near the top */
+    display: flex; /* Use flexbox for alignment */
+    align-items: center; /* Align icons and text */
+    gap: 8px; /* Space between icon and text */
+    width: fit-content; /* Adjust width based on content */
+    height: 150px; /* Set button height */
+}
+
+/* Back button (left side) */
+.back-button {
+    left: 20px; /* Align to left */
+} 
+
+/* Home button (centered) */
+.Home-button {
+    left: 50%; /* Center horizontally */
+    transform: translateX(-50%); /* Adjust centering */
+}
+
+/* Button links */
+.back-button a,
+.Home-button a {
+    text-decoration: none; /* Remove default underline */
+    font-size: 14px; /* Set font size */
+    display: flex; /* Use flexbox for alignment */
+    align-items: center; /* Align icon and text */
+    gap: 5px; /* Space between icon and text */
+}
+
+/* Button text colors */
+.back-button a {
+    color: #4A5568; /* Gray color for back button */
 }
 
 .Home-button a {
-  color: var(--primary);
+    color: #3BAAE0; /* Blue color for home button */
+}
+
+/* Icons for Back and Home buttons */
+.back-icon, 
+.Home-icon {
+    width: 20px; /* Set icon width */
+    height: 20px; /* Set icon height */
+}
+
+
+header {
+  display: flex; /* Use flexbox */
+  justify-content: space-between; /* Align elements to edges */
+  align-items: center; /* Center elements vertically */
+  padding: 20px; /* Add padding */
+  width: 100%; /* Full width */
+  position: relative; /* Relative positioning */
+}
+
+/* MS Logo (left side) */
+.ms-logo {
+  position: absolute; /* Position absolutely */
+  left: 5px; /* Set left distance */
+  top: 10px; /* Set top distance */
+}
+
+.ms-logo img {
+  width: 120px; /* Set logo width */
+}
+
+/* Hospital Logo (right side) */
+.hospital-logo {
+  position: absolute; /* Position absolutely */
+  right: 40px; /* Set right distance */
+  top: 5px; /* Set top distance */
+}
+
+.hospital-logo img {
+  height: 50px; /* Set logo height */
 }
 
 .dashboard-title {
   font-size: 1.75rem;
   font-weight: 700;
   color: var(--dark);
-  margin: 2rem 0 1rem;
+  margin: 5rem 0 1rem; /* زودنا المسافة من الأعلى */
   padding: 0 2rem;
 }
+
 
 .dashboard {
   display: grid;
