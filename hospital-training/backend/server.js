@@ -619,6 +619,17 @@ if (Array.isArray(problem_status)) {
   try {
     const departmentRes = await queryAsync("SELECT id FROM Departments WHERE name = ?", [section]);
     const departmentId = departmentRes[0]?.id || null;
+// ✅ فحص إذا فيه صيانة مفتوحة لنفس الجهاز
+const existingOpenMaintenance = await queryAsync(`
+  SELECT id FROM Regular_Maintenance
+  WHERE device_id = ? AND status = 'Open'
+`, [deviceSpec]);
+
+if (existingOpenMaintenance.length > 0) {
+  return res.status(400).json({
+    error: "❌ This device already has an active regular maintenance request."
+  });
+}
 
 const deviceRes = await queryAsync(`
   SELECT md.*, COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,

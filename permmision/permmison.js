@@ -163,6 +163,10 @@ async function loadUserDetails(userId) {
     document.getElementById("reset-password-btn")?.addEventListener("click", () => {
       resetUserPassword(userId);
     });
+    document.getElementById("change-role-btn")?.addEventListener("click", () => {
+changeUserRole(userId, user.role);
+    });
+
 
   } catch (error) {
     console.error('Error loading user details:', error);
@@ -257,10 +261,19 @@ async function toggleStatus(userId, currentStatus) {
 }
 function showAddUserModal() {
   const name = prompt("User name:");
+  if (name === null) return;
+
   const email = prompt("Email:");
+  if (email === null) return;
+
   const password = prompt("Password:");
+  if (password === null) return;
+
   const department = prompt("Department:");
+  if (department === null) return;
+
   const employee_id = prompt("Employee ID:");
+  if (employee_id === null) return;
 
   if (!name || !email || !password) {
     alert("Required fields missing");
@@ -282,6 +295,7 @@ function showAddUserModal() {
       console.error(err);
     });
 }
+
 async function resetUserPassword(userId) {
   const t = languageManager.translations[languageManager.currentLang];
   const newPassword = prompt(t['enter_new_password'] || "Enter new password:");
@@ -306,5 +320,30 @@ async function resetUserPassword(userId) {
   } catch (err) {
     console.error("❌ Failed to update password:", err);
     alert(t['password_update_failed'] || "Failed to update password");
+  }
+}
+async function changeUserRole(userId, currentRole) {
+  const newRole = currentRole === 'admin' ? 'user' : 'admin';
+  const confirmText = `هل أنت متأكد أنك تريد تحويل هذا المستخدم إلى ${newRole}?`;
+
+  if (!confirm(confirmText)) return;
+
+  try {
+    const res = await fetch(`http://localhost:4000/users/${userId}/role`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + localStorage.getItem('token')
+      },
+      body: JSON.stringify({ role: newRole })
+    });
+
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message);
+
+    alert(result.message);
+    loadUserDetails(userId); // إعادة تحميل البيانات بعد التحديث
+  } catch (err) {
+    alert("❌ فشل تغيير الدور: " + err.message);
   }
 }
