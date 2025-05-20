@@ -7,6 +7,142 @@ function goToHome() {
   window.location.href = "Home.html";
 }
 
+function drawLineChart(id, labels, internalData, externalData, routineData) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Internal Maintenance',
+          data: internalData,
+          borderColor: '#3B82F6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderWidth: 3,
+          pointBackgroundColor: '#3B82F6',
+          pointRadius: 0, // Hide points for cleaner look
+          pointHoverRadius: 6,
+          tension: 0.4, // Increased tension for wavier lines
+          fill: {
+            target: 'origin',
+            above: 'rgba(59, 130, 246, 0.05)' // Very light fill
+          },
+          borderJoinStyle: 'round', // Smoother line joints
+          borderCapStyle: 'round' // Rounded line ends
+        },
+        {
+          label: 'External Maintenance',
+          data: externalData,
+          borderColor: '#F59E0B',
+          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+          borderWidth: 3,
+          pointBackgroundColor: '#F59E0B',
+          pointRadius: 0,
+          pointHoverRadius: 6,
+          tension: 0.4,
+          fill: {
+            target: 'origin',
+            above: 'rgba(245, 158, 11, 0.05)'
+          },
+          borderJoinStyle: 'round',
+          borderCapStyle: 'round'
+        },
+        {
+          label: 'Regular Maintenance',
+          data: routineData,
+          borderColor: '#8B5CF6',
+          backgroundColor: 'rgba(139, 92, 246, 0.1)',
+          borderWidth: 3,
+          pointBackgroundColor: '#8B5CF6',
+          pointRadius: 0,
+          pointHoverRadius: 6,
+          tension: 0.4,
+          fill: {
+            target: 'origin',
+            above: 'rgba(139, 92, 246, 0.05)'
+          },
+          borderJoinStyle: 'round',
+          borderCapStyle: 'round'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            usePointStyle: true,
+            padding: 20,
+            font: {
+              family: 'Inter',
+              size: 12
+            }
+          }
+        },
+        tooltip: {
+          enabled: true,
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          titleFont: {
+            size: 14,
+            weight: 'bold'
+          },
+          bodyFont: {
+            size: 12
+          },
+          padding: 12,
+          cornerRadius: 6,
+          displayColors: true
+        }
+      },
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+      scales: {
+        y: {
+          beginAtZero: false, // Allow chart to start from actual data minimum
+          min: Math.min(...[...internalData, ...externalData, ...routineData]) - 5,
+          grid: {
+            color: 'rgba(0, 0, 0, 0.05)',
+            drawBorder: false
+          },
+          ticks: {
+            font: {
+              family: 'Inter'
+            },
+            callback: function (value) {
+              return value + '%'; // Add percentage sign to Y-axis
+            }
+          }
+        },
+        x: {
+          grid: {
+            display: false,
+            drawBorder: false
+          },
+          ticks: {
+            font: {
+              family: 'Inter'
+            }
+          }
+        }
+      },
+      elements: {
+        line: {
+          cubicInterpolationMode: 'monotone' // Smoother curves
+        }
+      }
+    }
+  });
+}
+
 // Custom chart plugins for enhanced interactivity
 Chart.register({
   id: 'centerTextPlugin',
@@ -300,243 +436,8 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // Function to draw line charts with enhanced interactivity
-  function drawLineChart(id, labels, internalData, externalData, routineData) {
-    const ctx = document.getElementById(id);
-    if (!ctx) return;
-
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            label: 'Internal Maintenance',
-            data: internalData,
-            borderColor: '#3B82F6',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            borderWidth: 3,
-            pointBackgroundColor: '#3B82F6',
-            pointRadius: 0, // Hide points for cleaner look
-            pointHoverRadius: 6,
-            tension: 0.4, // Increased tension for wavier lines
-            fill: {
-              target: 'origin',
-              above: 'rgba(59, 130, 246, 0.05)' // Very light fill
-            },
-            borderJoinStyle: 'round', // Smoother line joints
-            borderCapStyle: 'round' // Rounded line ends
-          },
-          {
-            label: 'External Maintenance',
-            data: externalData,
-            borderColor: '#F59E0B',
-            backgroundColor: 'rgba(245, 158, 11, 0.1)',
-            borderWidth: 3,
-            pointBackgroundColor: '#F59E0B',
-            pointRadius: 0,
-            pointHoverRadius: 6,
-            tension: 0.4,
-            fill: {
-              target: 'origin',
-              above: 'rgba(245, 158, 11, 0.05)'
-            },
-            borderJoinStyle: 'round',
-            borderCapStyle: 'round'
-          },
-          {
-            label: 'Regular Maintenance',
-            data: routineData,
-            borderColor: '#8B5CF6',
-            backgroundColor: 'rgba(139, 92, 246, 0.1)',
-            borderWidth: 3,
-            pointBackgroundColor: '#8B5CF6',
-            pointRadius: 0,
-            pointHoverRadius: 6,
-            tension: 0.4,
-            fill: {
-              target: 'origin',
-              above: 'rgba(139, 92, 246, 0.05)'
-            },
-            borderJoinStyle: 'round',
-            borderCapStyle: 'round'
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: {
-              usePointStyle: true,
-              padding: 20,
-              font: {
-                family: 'Inter',
-                size: 12
-              }
-            }
-          },
-          tooltip: {
-            enabled: true,
-            mode: 'index',
-            intersect: false,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            titleFont: {
-              size: 14,
-              weight: 'bold'
-            },
-            bodyFont: {
-              size: 12
-            },
-            padding: 12,
-            cornerRadius: 6,
-            displayColors: true
-          }
-        },
-        interaction: {
-          mode: 'index',
-          intersect: false
-        },
-        scales: {
-          y: {
-            beginAtZero: false, // Allow chart to start from actual data minimum
-            min: Math.min(...[...internalData, ...externalData, ...routineData]) - 5,
-            grid: {
-              color: 'rgba(0, 0, 0, 0.05)',
-              drawBorder: false
-            },
-            ticks: {
-              font: {
-                family: 'Inter'
-              },
-              callback: function (value) {
-                return value + '%'; // Add percentage sign to Y-axis
-              }
-            }
-          },
-          x: {
-            grid: {
-              display: false,
-              drawBorder: false
-            },
-            ticks: {
-              font: {
-                family: 'Inter'
-              }
-            }
-          }
-        },
-        elements: {
-          line: {
-            cubicInterpolationMode: 'monotone' // Smoother curves
-          }
-        }
-      }
-    });
-  }
-
-  // Function to draw bar charts with enhanced interactivity
-  function drawBar(id, labels, internal, external) {
-    const ctx = document.getElementById(id);
-    if (!ctx) return;
-
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            label: 'Internal',
-            data: internal,
-            backgroundColor: '#3B82F6',
-            borderRadius: 4,
-            borderWidth: 0,
-            hoverBackgroundColor: '#2563EB'
-          },
-          {
-            label: 'External',
-            data: external,
-            backgroundColor: '#F59E0B',
-            borderRadius: 4,
-            borderWidth: 0,
-            hoverBackgroundColor: '#D97706'
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: {
-              usePointStyle: true,
-              padding: 20,
-              font: {
-                family: 'Inter'
-              }
-            }
-          },
-          tooltip: {
-            enabled: true,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            titleFont: {
-              size: 14,
-              weight: 'bold'
-            },
-            bodyFont: {
-              size: 12
-            },
-            padding: 12,
-            cornerRadius: 6
-          }
-        },
-        scales: {
-          x: {
-            grid: {
-              display: false
-            },
-            ticks: {
-              font: {
-                family: 'Inter'
-              }
-            }
-          },
-          y: {
-            beginAtZero: true,
-            ticks: {
-              font: {
-                family: 'Inter'
-              }
-            },
-            grid: {
-              color: 'rgba(0, 0, 0, 0.05)'
-            }
-          }
-        },
-        animation: {
-          duration: 1000
-        },
-        onHover: (event, chartElement) => {
-          if (chartElement.length) {
-            ctx.style.cursor = 'pointer';
-          } else {
-            ctx.style.cursor = 'default';
-          }
-        }
-      }
-    });
-  }
 
 
-  drawLineChart(
-    'reportLineChart',
-    maintenanceData.reportMonths,
-    maintenanceData.internalMonthly,
-    maintenanceData.externalMonthly,
-    maintenanceData.routineMonthly
-  );
 
 
 
@@ -920,17 +821,24 @@ async function loadUpgradeDevices() {
     data.forEach(device => {
       const row = document.createElement('tr');
 
-      const ram = parseInt(device.ram_size);
-      const gen = parseInt(device.generation_number);
-      const os = device.os_name?.toLowerCase() || '';
+      // 🧠 جلب القيم وتحويلها
+      const ram = parseInt(device.ram_size) || 0;
+      const gen = parseInt(device.generation_number) || 0;
+      const os = (device.os_name || '').toLowerCase();
 
+      // 🔥 حساب عدد المشاكل
       let issueCount = 0;
-
       if (ram < 8) issueCount++;
       if (gen < 6) issueCount++;
-      if (os.includes('windows') && !os.includes('11') && !os.includes('10')) issueCount++;
+      if (os.includes('windows') && !os.includes('10') && !os.includes('11')) issueCount++;
 
+      // 🚨 تحديد الحالة
       const status = issueCount >= 2 ? 'CRITICAL' : 'WARNING';
+
+      // ✅ عرض اسم الجهاز لو متوفر، أو fallback
+      const displayName = device.device_type === 'PC'
+        ? (device.Computer_Name || device.computer_name || device.device_name || 'Unnamed PC')
+        : device.device_name || device.device_type;
 
       row.innerHTML = `
         <td>
@@ -939,18 +847,19 @@ async function loadUpgradeDevices() {
             <path d="M4 6H20M4 12H20M4 18H20"
               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          ${device.device_type}
+          ${displayName}
         </td>
         <td>
-          ${device.cpu_name}, ${device.ram_size}GB RAM, Gen ${device.generation_number}, ${device.os_name}
+          ${device.ram_size || 'N/A'}, Gen ${device.generation_number || 'N/A'}, ${device.os_name || 'N/A'}
         </td>
-        <td class="${status.toLowerCase()}" title="${device.recommendation}">
+        <td class="${status.toLowerCase()}" title="${device.recommendation || ''}">
           ${status}
         </td>
       `;
 
       tbody.appendChild(row);
     });
+
   } catch (err) {
     console.error('❌ Error loading upgrade devices:', err);
   }
@@ -960,3 +869,30 @@ async function loadUpgradeDevices() {
 
 
 document.addEventListener('DOMContentLoaded', loadUpgradeDevices);
+
+
+
+async function drawMonthlyCompletionLineChart() {
+  try {
+    const res = await fetch('http://localhost:4000/api/maintenance/monthly-closed', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+
+    if (!res.ok) throw new Error('Failed to load monthly completion data');
+    const data = await res.json();
+
+    drawLineChart(
+      'reportLineChart',
+      data.months,
+      data.general,
+      data.external,
+      data.regular
+    );
+  } catch (err) {
+    console.error('❌ Error drawing monthly line chart:', err);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', drawMonthlyCompletionLineChart);
