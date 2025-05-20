@@ -1,13 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Maintenance Dashboard</title>
+  <title data-i18n="maintenance_dashboard">Maintenance Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
   <link rel="stylesheet" href="DashBoard.css" />
+  <link rel="stylesheet" href="/Language/Language.css">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    :root {
+      --font-family: 'Tajawal', 'Arial', ;
+    }
+
+    body,
+    h1, h2, h3, p, span, button, select, input,
+    .dropdown-toggle, .dropdown-option-text, .dropdown-search,
+    label {
+      font-family: var(--font-family) !important;
+    }
+
+    ::placeholder,
+    input::placeholder,
+    textarea::placeholder,
+    input::-webkit-input-placeholder,
+    input::-moz-placeholder,
+    input:-ms-input-placeholder,
+    input::-ms-input-placeholder {
+      font-family: var(--font-family) !important;
+    }
+  </style>
 </head>
 
 <body>
@@ -15,12 +41,31 @@
   <div class="nav-buttons">
     <div class="back-button">
       <a href="#" onclick="goBack()">
+<<<<<<< HEAD
         <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> <span data-i18n="back">Back</span>
       </a>
     </div>
     <div class="Home-button">
             <a href="../../Home/Home.html">
         <img src="/icon/Home.png" alt="Home Icon" class="Home-icon"> <span data-i18n="home">Home</span>
+=======
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+        <span data-i18n="back">Back</span>
+      </a>
+    </div>
+    <div class="Home-button">
+      <a href="#" onclick="goToHome()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
+            stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M9 22V12H15V22" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <span data-i18n="home">Home</span>
+>>>>>>> 96c824eaec832b1d136bf392ab5e2be0a7cf999a
       </a>
     </div>
   </div>
@@ -41,9 +86,9 @@
 
   <!-- Dashboard Title -->
   <div class="dashboard-title">
-    Maintenance Dashboard
+    <span data-i18n="maintenance_dashboard">Maintenance Dashboard</span>
     <div style="font-size: 0.875rem; font-weight: 400; color: #6B7280; margin-top: 0.25rem;">
-      Last updated: <span id="current-date"></span>
+      <span data-i18n="last_updated">Last updated</span>: <span id="current-date"></span>
     </div>
   </div>
 
@@ -51,7 +96,7 @@
   <section class="dashboard">
     <!-- Completion Rates -->
     <div class="card1">
-      <div class="label">Completion Rates</div>
+      <div class="label" data-i18n="completion_rates">Completion Rates</div>
       <div class="circle-group">
         <div class="circle-item">
           <div class="chart-container">
@@ -61,7 +106,7 @@
               <div class="hover-detail" id="regularDetail"></div>
             </div>
           </div>
-          <div class="status-label">Regular</div>
+          <div class="status-label" data-i18n="regular">Regular</div>
         </div>
         <div class="circle-item">
           <div class="chart-container">
@@ -71,7 +116,7 @@
               <div class="hover-detail" id="internalDetail"></div>
             </div>
           </div>
-          <div class="status-label">Internal</div>
+          <div class="status-label" data-i18n="internal">Internal</div>
         </div>
         <div class="circle-item">
           <div class="chart-container">
@@ -81,16 +126,15 @@
               <div class="hover-detail" id="externalDetail"></div>
             </div>
           </div>
-          <div class="status-label">External</div>
+          <div class="status-label" data-i18n="external">External</div>
         </div>
       </div>
-      <div class="chart-footer">Hover over charts for details</div>
+      <div class="chart-footer" data-i18n="hover_for_details">Hover over charts for details</div>
     </div>
 
     <!-- Reports Overview -->
-    <!-- Reports Overview -->
     <div class="card2">
-      <div class="label">Reports Overview</div>
+      <div class="label" data-i18n="reports_overview">Reports Overview</div>
       <div class="chart-wrapper wavy-chart-container">
         <canvas id="reportLineChart"></canvas>
         <div class="wavy-overlay"></div>
@@ -98,45 +142,79 @@
     </div>
     <br><br><br>
     <!-- Internal Maintenance - Critical Devices -->
-
     <div class="card3">
-      <div class="label">Internal Maintenance - Critical Devices</div>
+      <div class="label" data-i18n="internal_maintenance">Internal Maintenance - Critical Devices</div>
       <div class="device-grid" id="repeatedProblemsContainer">
         <!-- سيتم تعبئته برمجياً من Dashboard.js -->
       </div>
     </div>
 
-
     <!-- External Maintenance - Faulty Devices -->
     <div class="card4">
-      <div class="label">Renewing device</div>
+      <div class="label" data-i18n="external_maintenance">Renewing device</div>
       <table class="device-table">
         <thead>
           <tr>
-            <th>TYPE</th>
-            <th>SPECS</th>
-            <th>STATUS</th>
+            <th data-i18n="type">TYPE</th>
+            <th data-i18n="specs">SPECS</th>
+            <th data-i18n="status">STATUS</th>
           </tr>
         </thead>
         <tbody id="upgradeDevicesBody">
           <!-- سيتم تعبئته عبر الجافاسكربت -->
         </tbody>
-        
       </table>
     </div>
 
     <!-- Support Tickets -->
-    <!-- Support Tickets Widget (Dynamic - from API) -->
     <div class="card full-width">
-      <div class="label">Support Tickets</div>
+      <div class="label" data-i18n="support_tickets">Support Tickets</div>
       <div class="support-tickets-container" id="supportTicketsContainer">
-        <!-- Will be filled dynamically -->
+        <div class="support-ticket">
+          <div>
+            <span data-i18n="open">Open</span>
+            <span class="status-badge open" data-i18n="open">Open</span>
+          </div>
+          <div class="progress-bar">
+            <div style="width: 60%; background-color: #F59E0B;"></div>
+          </div>
+          <div class="delta-info">
+            <span class="delta-text"></span>
+            <span data-i18n="from_last_week">from last week</span>
+          </div>
+        </div>
+        <div class="support-ticket">
+          <div>
+            <span data-i18n="in_progress">In Progress</span>
+            <span class="status-badge in_progress" data-i18n="in_progress">In Progress</span>
+          </div>
+          <div class="progress-bar">
+            <div style="width: 30%; background-color: #3B82F6;"></div>
+          </div>
+          <div class="delta-info">
+            <span class="delta-text"></span>
+            <span data-i18n="from_last_week">from last week</span>
+          </div>
+        </div>
+        <div class="support-ticket">
+          <div>
+            <span data-i18n="resolved">Resolved</span>
+            <span class="status-badge resolved" data-i18n="resolved">Resolved</span>
+          </div>
+          <div class="progress-bar">
+            <div style="width: 90%; background-color: #10B981;"></div>
+          </div>
+          <div class="delta-info">
+            <span class="delta-text"></span>
+            <span data-i18n="from_last_week">from last week</span>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Maintenance Overview (Internal vs External) -->
+    <!-- Maintenance Overview -->
     <div class="card5">
-      <div class="label">Maintenance Overview (Internal vs External)</div>
+      <div class="label" data-i18n="maintenance_overview">Maintenance Overview (Internal vs External)</div>
       <div class="chart-wrapper">
         <canvas id="maintenanceOverviewChart"></canvas>
       </div>
@@ -144,13 +222,13 @@
 
     <!-- Upcoming Maintenance -->
     <div class="card6">
-      <div class="label">Upcoming Maintenance - Regular Maintenance</div>
+      <div class="label" data-i18n="upcoming_maintenance">Upcoming Maintenance - Regular Maintenance</div>
       <table class="upcoming-table">
         <thead>
           <tr>
-            <th>Task</th>
-            <th>Date</th>
-            <th>Priority</th>
+            <th data-i18n="task">Task</th>
+            <th data-i18n="date">Date</th>
+            <th data-i18n="priority">Priority</th>
           </tr>
         </thead>
         <tbody id="upcomingMaintenanceBody">
@@ -158,7 +236,6 @@
         </tbody>
       </table>
     </div>
-
   </section>
 
   <script>
@@ -171,10 +248,9 @@
       minute: '2-digit'
     });
   </script>
-</body>
-
-<script src="Dashboard.js"></script>
-<script src="/Language/Language.js"></script>
+  
+  <script src="Dashboard.js"></script>
+  <script src="/Language/Language.js"></script>
 </body>
 
 </html>
