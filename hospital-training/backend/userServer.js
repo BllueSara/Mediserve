@@ -756,30 +756,29 @@ app.get('/api/maintenance/upcoming', authenticateToken, async (req, res) => {
 // Maintenance Overview API (devices summary for internal/external)
 app.get('/api/maintenance/overview', authenticateToken, async (req, res) => {
   try {
-    const query = `
-      SELECT LOWER(d.device_type) AS type, COUNT(*) AS total, 'internal' AS source
+    // 🔹 سحب الطلبات من General_Maintenance
+    const [general] = await db.promise().query(`
+      SELECT LOWER(d.device_type) AS type, COUNT(*) AS total
       FROM General_Maintenance gm
       JOIN Maintenance_Devices d ON gm.device_id = d.id
-      WHERE gm.problem_status = 'Closed'
       GROUP BY LOWER(d.device_type)
+    `);
 
-      UNION ALL
-
-      SELECT LOWER(d.device_type) AS type, COUNT(*) AS total, 'internal' AS source
+    // 🔹 سحب الطلبات من Regular_Maintenance
+    const [regular] = await db.promise().query(`
+      SELECT LOWER(d.device_type) AS type, COUNT(*) AS total
       FROM Regular_Maintenance rm
       JOIN Maintenance_Devices d ON rm.device_id = d.id
-      WHERE rm.status = 'Closed'
       GROUP BY LOWER(d.device_type)
+    `);
 
-      UNION ALL
-
-      SELECT LOWER(em.device_type) AS type, COUNT(*) AS total, 'external' AS source
-      FROM External_Maintenance em
-      WHERE em.status = 'Closed' AND em.device_type IS NOT NULL
-      GROUP BY LOWER(em.device_type)
-    `;
-
-    const [rows] = await db.promise().query(query);
+    // 🔹 سحب الطلبات من External_Maintenance
+    const [external] = await db.promise().query(`
+      SELECT LOWER(device_type) AS type, COUNT(*) AS total
+      FROM External_Maintenance
+      WHERE device_type IS NOT NULL
+      GROUP BY LOWER(device_type)
+    `);
 
     const formatted = {
       internal: {},
@@ -787,25 +786,24 @@ app.get('/api/maintenance/overview', authenticateToken, async (req, res) => {
       types: new Set()
     };
 
-    for (const row of rows) {
-      const type = row.type;
-      const source = row.source;
-
-      if (source === 'internal') {
-        formatted.internal[type] = (formatted.internal[type] || 0) + row.total;
-      } else if (source === 'external') {
-        formatted.external[type] = (formatted.external[type] || 0) + row.total;
+    // 🟦 ندمج العامة + الدورية = internal
+    const mergeCounts = (target, source) => {
+      for (const row of source) {
+        const type = row.type;
+        target[type] = (target[type] || 0) + row.total;
+        formatted.types.add(type);
       }
+    };
 
-      formatted.types.add(type);
-    }
+    mergeCounts(formatted.internal, general);
+    mergeCounts(formatted.internal, regular);
+    mergeCounts(formatted.external, external);
 
     res.json({
       types: Array.from(formatted.types),
       internal: formatted.internal,
       external: formatted.external
     });
-
   } catch (err) {
     console.error('❌ Error loading maintenance overview:', err);
     res.status(500).json({ error: 'Server error' });
@@ -813,9 +811,87 @@ app.get('/api/maintenance/overview', authenticateToken, async (req, res) => {
 });
 
 
+//inter
+app.get('/api/critical-devices', authenticateToken, async (req, res) => {
+  try {
+    const [rows] = await db.promise().query(`
+      SELECT 
+        LOWER(d.device_type) AS device_type,
+        gm.problem_status AS problem,
+        COUNT(*) AS count
+      FROM General_Maintenance gm
+      JOIN Maintenance_Devices d ON gm.device_id = d.id
+      WHERE gm.problem_status IS NOT NULL 
+        AND gm.problem_status != ''
+      GROUP BY d.device_type, gm.problem_status
+      HAVING COUNT(*) >= 10
+      ORDER BY COUNT(*) DESC;
+    `);
+
+    res.json(rows);
+  } catch (err) {
+    console.error('❌ Error loading critical devices:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 
-// inter & ex 
+
+// ✅ API: أجهزة تحتاج Upgrade (RAM < 8 أو الجيل < 6)
+app.get('/api/devices/needs-upgrade', authenticateToken, async (req, res) => {
+  try {
+    const [rows] = await db.promise().query(`
+      SELECT 
+        d.id,
+        d.device_name,
+        d.device_type,
+        dep.name AS department_name,
+        cpu.cpu_name,
+        gen.generation_number,
+        ram.ram_size,
+        os.os_name
+      FROM Maintenance_Devices d
+      LEFT JOIN CPU_Types cpu ON d.cpu_id = cpu.id
+      LEFT JOIN Processor_Generations gen ON d.generation_id = gen.id
+      LEFT JOIN RAM_Sizes ram ON d.ram_size_id = ram.id
+      LEFT JOIN OS_Types os ON d.os_id = os.id
+      LEFT JOIN Departments dep ON d.department_id = dep.id
+      WHERE d.device_type = 'PC'
+        AND (
+          CAST(ram.ram_size AS UNSIGNED) < 8
+          OR CAST(gen.generation_number AS UNSIGNED) < 6
+          OR LOWER(os.os_name) NOT LIKE '%10%' AND LOWER(os.os_name) NOT LIKE '%11%'
+        )
+    `);
+
+    const formatted = rows.map(row => ({
+      ...row,
+      recommendation: generateRecommendation(row)
+    }));
+
+    res.json(formatted);
+
+    function generateRecommendation(row) {
+      const ram = parseInt(row.ram_size);
+      const gen = parseInt(row.generation_number);
+      const os = row.os_name?.toLowerCase() || '';
+
+      const issues = [];
+
+      if (ram < 8) issues.push('RAM is below 8GB');
+      if (gen < 6) issues.push('CPU generation is below 6');
+      if (!os.includes('10') && !os.includes('11')) issues.push('OS is outdated');
+
+      return `⚠️ Recommended upgrade: ${issues.join(' and ')}`;
+    }
+
+  } catch (err) {
+    console.error('❌ Error fetching upgrade-needed devices:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
 
 
 app.use('/', express.static(path.join(__dirname, '../../authintication/AuthPage')));
