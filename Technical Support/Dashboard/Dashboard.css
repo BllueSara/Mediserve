@@ -118,16 +118,6 @@ header {
   margin: 0 auto;
 }
 
-
-
-
-
-
-
-
-
-
-
 .card1 {
     background: white;
     border-radius: 0.75rem;
@@ -189,7 +179,6 @@ header {
     
 }
 
-
 .card5 {
     background: white;
     border-radius: 0.75rem;
@@ -220,7 +209,6 @@ header {
     margin-left: 280px;
     
 }
-
 
 .card {
     background: white;
@@ -261,7 +249,6 @@ header {
   background: var(--primary);
 }
 */
-
 
 .label {
   font-size: 1.125rem;
@@ -438,72 +425,91 @@ header {
 }
 
 .support-ticket {
-  background: white;
-  border-radius: 0.75rem;
-  padding: 1.25rem;
+  background: #fff;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease;
 }
 
 .support-ticket:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
 
 .support-ticket div {
   display: flex;
   justify-content: space-between;
-  font-weight: 600;
-  margin-bottom: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
 }
 
 .progress-bar {
-  height: 8px;
-  background: var(--gray-light);
-  border-radius: 4px;
+  height: 6px;
+  background: #F3F4F6;
+  border-radius: 3px;
   overflow: hidden;
+  margin: 0.5rem 0;
 }
 
 .progress-bar div {
   height: 100%;
-  border-radius: 4px;
+  transition: width 0.3s ease;
 }
 
-.open-ticket span:last-child {
-  color: var(--warning);
+.delta-info {
+  font-size: 0.75rem;
+  color: #6B7280;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
-.open-ticket .progress-bar div {
-  background: var(--warning);
+.delta-text {
+  font-weight: 500;
 }
 
-.progress-ticket span:last-child {
-  color: var(--primary);
+.delta-text.positive {
+  color: #10B981;
 }
 
-.progress-ticket .progress-bar div {
-  background: var(--primary);
+.delta-text.negative {
+  color: #EF4444;
 }
 
-.resolved-ticket span:last-child {
-  color: var(--secondary);
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
-.resolved-ticket .progress-bar div {
-  background: var(--secondary);
+.status-badge.open {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #F59E0B;
 }
 
-.tooltip {
-  position: absolute;
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
-  pointer-events: none;
-  z-index: 100;
-  opacity: 0;
-  transition: opacity 0.2s ease;
+.status-badge.in_progress {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #3B82F6;
+}
+
+.status-badge.resolved {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #10B981;
+}
+
+[dir="rtl"] .support-ticket div {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .delta-info {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .status-badge {
+  margin-left: 0;
+  margin-right: 0.5rem;
 }
 
 /* Responsive adjustments */
@@ -533,8 +539,6 @@ header {
     transform: none;
   }
 }
-
-
 
 /* Enhanced Circular Chart Styles */
 .chart-container {
@@ -614,8 +618,6 @@ header {
   padding: 1.5rem 0;
 }
 
-
-
 /* Wavy Chart Styles */
 .wavy-chart-container {
   position: relative;
@@ -638,7 +640,6 @@ header {
   border-radius: 0.75rem;
   padding: 1rem;
 }
-
 
 .device-table th:nth-child(2) {
   text-align: center;
@@ -663,4 +664,192 @@ header {
 .device-table th:nth-child(3),
 .device-table td:nth-child(3) {
   width: 20%; /* عمود STATUS */
+}
+
+/* RTL Support for Arabic */
+[dir="rtl"] {
+  text-align: right;
+}
+
+[dir="rtl"] .card1 {
+    margin-left: 0;
+    margin-right: 20px;
+    width: 150%;
+    max-width: 1500px;
+}
+
+[dir="rtl"] .card2 {
+    margin-left: 0;
+    margin-right: 280px;
+    width: 150%;
+    max-width: 2500px;
+}
+
+[dir="rtl"] .card3 {
+    margin-left: 0;
+    margin-right: 20px;
+    width: 150%;
+    max-width: 1500px;
+}
+
+[dir="rtl"] .card4 {
+    margin-left: 0;
+    margin-right: 280px;
+    width: 150%;
+    max-width: 2500px;
+}
+
+[dir="rtl"] .card5 {
+    margin-left: 0;
+    margin-right: 20px;
+    width: 150%;
+    max-width: 1500px;
+}
+
+[dir="rtl"] .card6 {
+    margin-left: 0;
+    margin-right: 280px;
+    width: 150%;
+    max-width: 2500px;
+}
+
+[dir="rtl"] .card {
+    margin-left: 0;
+    margin-right: 300px;
+    width: 100%;
+    max-width: 1000px;
+}
+
+[dir="rtl"] .card.full-width {
+    margin-left: 0;
+    margin-right: 40px;
+    width: 97%;
+}
+
+[dir="rtl"] .dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+    padding: 0 2rem 2rem;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+[dir="rtl"] .card1,
+[dir="rtl"] .card2,
+[dir="rtl"] .card3,
+[dir="rtl"] .card4,
+[dir="rtl"] .card5,
+[dir="rtl"] .card6 {
+    position: relative;
+    clear: both;
+    margin-bottom: 2rem;
+}
+
+[dir="rtl"] .dashboard {
+    position: relative;
+    width: 100%;
+    padding-right: 2rem;
+    padding-left: 2rem;
+}
+
+[dir="rtl"] .ms-logo {
+  left: auto;
+  right: 2rem;
+}
+
+[dir="rtl"] .hospital-logo {
+  right: auto;
+  left: 2rem;
+}
+
+
+
+[dir="rtl"] .support-ticket div {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .delta-info {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .status-badge {
+  margin-left: 0;
+  margin-right: 0.5rem;
+}
+
+[dir="rtl"] .device-box svg {
+  margin-right: 0;
+  margin-left: 8px;
+}
+
+[dir="rtl"] .device-table th,
+[dir="rtl"] .device-table td,
+[dir="rtl"] .upcoming-table th,
+[dir="rtl"] .upcoming-table td {
+  text-align: right;
+}
+
+[dir="rtl"] .device-table th:nth-child(2),
+[dir="rtl"] .device-table td:nth-child(2) {
+  text-align: center;
+}
+
+[dir="rtl"] .circle-group {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .label::before {
+  margin-left: 0.5rem;
+  margin-right: 0;
+}
+
+[dir="rtl"] .chart-footer {
+  text-align: right;
+}
+
+/* Adjust spacing for Arabic text */
+[dir="rtl"] * {
+  letter-spacing: 0;
+}
+
+[dir="rtl"] .support-ticket {
+  padding: 1rem 1.25rem;
+}
+
+[dir="rtl"] .status-badge {
+  padding: 0.25rem 0.75rem;
+}
+
+[dir="rtl"] .device-box {
+  padding: 1rem 1.25rem;
+}
+
+[dir="rtl"] .device-table th,
+[dir="rtl"] .device-table td,
+[dir="rtl"] .upcoming-table th,
+[dir="rtl"] .upcoming-table td {
+  padding: 0.75rem 1.25rem;
+}
+
+/* Adjust margins for Arabic layout */
+[dir="rtl"] .dashboard {
+  padding: 0 2rem 2rem;
+}
+
+[dir="rtl"] .dashboard-title {
+  padding: 0 2rem;
+}
+
+[dir="rtl"] .nav-buttons {
+  padding: 1rem 2rem;
+}
+
+/* Adjust icon positions for Arabic */
+
+
+[dir="rtl"] .device-box svg,
+[dir="rtl"] .device-table svg,
+[dir="rtl"] .upcoming-table svg {
+  transform: scaleX(-1);
 }

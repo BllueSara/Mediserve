@@ -2758,6 +2758,7 @@ app.get('/get-internal-reports', authenticateToken,async (req, res) => {
       MAX(CASE WHEN R.maintenance_type = 'Regular' THEN NULL ELSE T.attachment_path END) AS attachment_path,
       MAX(COALESCE(RM.problem_status, T.issue_description)) AS problem_status,
       MAX(COALESCE(E.name, T.assigned_to)) AS technical_engineer
+      
     FROM Maintenance_Reports R
     LEFT JOIN Maintenance_Devices M ON R.device_id = M.id
     LEFT JOIN Departments D ON M.department_id = D.id
@@ -3755,7 +3756,7 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), authenticate
 
     let engineerName;
     if (adminUser?.role === 'admin' && assigned_to) {
-      const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE name = ?`, [assigned_to]);
+      const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE id = ?`, [assigned_to]);
       engineerName = techEngineerRes[0]?.name || userName;
     } else {
       engineerName = userName;
@@ -3845,7 +3846,7 @@ if (assigned_to) {
     SELECT u.id 
     FROM Users u 
     JOIN Engineers e ON u.name = e.name 
-    WHERE e.name = ?
+    WHERE e.id = ?
   `, [assigned_to]);
 
   const techUserId = techUserRes[0]?.id;
