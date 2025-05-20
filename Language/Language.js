@@ -109,6 +109,38 @@ const languageManager = {
             'dashboard_desc': 'Overview of system performance and key metrics',
             'active_monitors': '12 Active Monitors',
 
+            // ... existing English translations ...
+            // Dashboard translations
+            'maintenance_dashboard': "Maintenance Dashboard",
+            'last_updated': "Last updated",
+            'completion_rates': "Completion Rates",
+            'regular': "Regular",
+            'internal': "Internal",
+            'external': "External",
+            'hover_for_details': "Hover over charts for details",
+            'reports_overview': "Reports Overview",
+            'internal_maintenance': "Internal Maintenance - Critical Devices",
+            'external_maintenance': "Renewing device",
+            'support_tickets': "Support Tickets",
+            'maintenance_overview': "Maintenance Overview (Internal vs External)",
+            'upcoming_maintenance': "Upcoming Maintenance - Regular Maintenance",
+            'task': "Task",
+            'date': "Date",
+            'priority': "Priority",
+            'type': "TYPE",
+            'specs': "SPECS",
+            'status': "STATUS",
+            'open': "Open",
+            'in_progress': "In Progress",
+            'resolved': "Resolved",
+            'from_last_week': "from last week",
+            'no_upgrade_needed': "No upgrade needed for any devices.",
+            'critical': "CRITICAL",
+            'warning': "WARNING",
+            'back': "Back",
+            'home': "Home",
+            // ... existing code ...
+
             // Reports
             'reports': 'Reports',
             'reports_desc': 'Detailed analytics and performance reports',
@@ -658,7 +690,7 @@ const languageManager = {
             'edit_section': "Edit Section",
             'for': "For",
 
-            'change_Role' : "Change Role",
+            'change_Role': "Change Role",
             // Saved Devices Page
             'saved_devices': "Saved Devices",
             'total_devices': "Total Devices",
@@ -733,7 +765,10 @@ const languageManager = {
             'ping_existing_device': "Ping from existing device",
             'use_connected_devices': "Use one of your currently connected devices",
             'ping_new_device': "Ping a new device",
-            'add_ping_new_device': "Add and ping a new network device"
+            'add_ping_new_device': "Add and ping a new network device",
+            'reset_password': 'Reset Password',
+            'enter_email_reset': 'Enter your email to reset your password',
+            'error_message': 'Something went wrong.',
         },
         ar: {
             'department': 'الاقسام',
@@ -868,7 +903,35 @@ const languageManager = {
             // Dashboard
             'dashboard': 'لوحة التحكم',
             'dashboard_desc': 'نظرة عامة على أداء النظام والمقاييس الرئيسية',
-            'active_monitors': '12 مراقب نشط',
+            'active_monitors': '12 جهاز مراقبة نشط',
+            'maintenance_dashboard': "لوحة تحكم الصيانة",
+            'last_updated': "آخر تحديث",
+            'completion_rates': "معدلات الإنجاز",
+            'regular': "روتيني",
+            'internal': "داخلي",
+            'external': "خارجي",
+            'hover_for_details': "مرر المؤشر فوق الرسوم البيانية للحصول على التفاصيل",
+            'reports_overview': "نظرة عامة على التقارير",
+            'internal_maintenance': "الصيانة الداخلية - الأجهزة الحرجة",
+            'external_maintenance': "تجديد الأجهزة",
+            'support_tickets': "تذاكر الدعم",
+            'maintenance_overview': "نظرة عامة على الصيانة (داخلية مقابل خارجية)",
+            'upcoming_maintenance': "الصيانة القادمة - الصيانة الروتينية",
+            'task': "المهمة",
+            'date': "التاريخ",
+            'priority': "الأولوية",
+            'type': "النوع",
+            'specs': "المواصفات",
+            'status': "الحالة",
+            'open': "مفتوحة",
+            'in_progress': "قيد التنفيذ",
+            'resolved': "تم الحل",
+            'from_last_week': "من الأسبوع الماضي",
+            'no_upgrade_needed': "لا توجد أجهزة تحتاج إلى ترقية.",
+            'critical': "حرج",
+            'warning': "تحذير",
+            'back': "رجوع",
+            'home': "الرئيسية",
 
             // Reports
             'reports': 'التقارير',
@@ -1297,6 +1360,11 @@ const languageManager = {
             'add_new_scanner_type': "إضافة نوع ماسح جديد",
             'add_new_department': "إضافة قسم جديد",
             'add_new_model': "إضافة موديل جديد",
+            'add_new_report_status': "Add New Report Status",
+            'add_new_ticket_type': "Add New Ticket Type",
+            'report_status': "Report Status",
+            'ticket_type': "Ticket Type",
+
 
             // Placeholders
             'search_processor': "ابحث عن معالج...",
@@ -1464,7 +1532,10 @@ const languageManager = {
             'ping_existing_device': "الـ ping من جهاز موجود",
             'use_connected_devices': "استخدم أحد أجهزتك المتصلة حالياً",
             'ping_new_device': "الـ ping لجهاز جديد",
-            'add_ping_new_device': "إضافة والـ ping لجهاز شبكة جديد"
+            'add_ping_new_device': "إضافة والـ ping لجهاز شبكة جديد",
+            'reset_password': 'إعادة تعيين كلمة المرور',
+            'enter_email_reset': 'أدخل بريدك الإلكتروني لإعادة تعيين كلمة المرور',
+            'error_message': 'حدث خطأ ما.',
         }
     },
 

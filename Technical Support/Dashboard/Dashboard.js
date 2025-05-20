@@ -271,225 +271,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
-
-
-
-
-
-// Navigation functions
-function goBack() {
-  window.history.back();
-}
-
-function goToHome() {
-  window.location.href = "Home.html";
-}
-
-// Custom chart plugins for enhanced interactivity
-Chart.register({
-  id: 'centerTextPlugin',
-  beforeDraw(chart) {
-    if (chart.config.type === 'doughnut') {
-      const { ctx, width, height } = chart;
-      const dataset = chart.data.datasets[0];
-      const total = dataset.data.reduce((a, b) => a + b, 0);
-      const value = dataset.data[0];
-      const percent = total === 0 ? 0 : Math.round((value / total) * 100);
-
-      ctx.save();
-      const fontSize = Math.min(height / 5, 16);
-      ctx.font = `600 ${fontSize}px 'Inter'`;
-      ctx.fillStyle = chart.data.datasets[0].backgroundColor[0];
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(`${percent}%`, width / 2, height / 2);
-      ctx.restore();
-    }
-  }
-});
-
-// Tooltip plugin for charts
-Chart.register({
-  id: 'customTooltip',
-  afterEvent(chart, args) {
-    const { ctx, chartArea } = chart;
-    const tooltip = document.getElementById('chart-tooltip');
-
-    if (!args.event.x || !args.event.y) return;
-
-    if (args.event.type === 'mousemove') {
-      const x = args.event.x;
-      const y = args.event.y;
-
-      // Check if mouse is within chart area
-      if (x >= chartArea.left && x <= chartArea.right &&
-        y >= chartArea.top && y <= chartArea.bottom) {
-        const points = chart.getElementsAtEventForMode(
-          args.event,
-          'nearest',
-          { intersect: true },
-          false
-        );
-
-        if (points.length) {
-          const point = points[0];
-          const dataset = chart.data.datasets[point.datasetIndex];
-          const value = dataset.data[point.index];
-          const label = chart.data.labels[point.index];
-
-          tooltip.innerHTML = `
-            <div style="font-weight:600;margin-bottom:4px">${label}</div>
-            <div>${dataset.label}: ${value}%</div>
-          `;
-          tooltip.style.opacity = 1;
-          tooltip.style.left = `${x + 10}px`;
-          tooltip.style.top = `${y + 10}px`;
-        } else {
-          tooltip.style.opacity = 0;
-        }
-      } else {
-        tooltip.style.opacity = 0;
-      }
-    } else {
-      tooltip.style.opacity = 0;
-    }
-  }
-});
-
-// Initialize dashboard when DOM is loaded
-document.addEventListener('DOMContentLoaded', function () {
-  // Create tooltip element
-  const tooltip = document.createElement('div');
-  tooltip.id = 'chart-tooltip';
-  tooltip.className = 'tooltip';
-  document.body.appendChild(tooltip);
-
-  // Sample data - in a real app, this would come from an API
-  const maintenanceData = {
-    internal: 60,
-    external: 45,
-    routine: 85,
-    reportMonths: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-    internalMonthly: [70, 78, 85, 82, 75, 80],
-    externalMonthly: [50, 60, 65, 70, 68, 72],
-    routineMonthly: [80, 75, 90, 88, 85, 92],
-    overviewLabels: ['PCs', 'Printers', 'Scanners', 'Servers', 'Network'],
-    overviewInternal: [50, 35, 15, 70, 60],
-    overviewExternal: [30, 25, 10, 40, 35],
-    // Added task counts for the new hover details
-    routineTasks: { completed: 42, total: 50 },
-    internalTasks: { completed: 30, total: 50 },
-    externalTasks: { completed: 18, total: 40 }
-  };
-
-  // Enhanced function to draw doughnut charts
-  function drawDoughnut(id, percent, color) {
-    const ctx = document.getElementById(id);
-    if (!ctx) return;
-
-    new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: ['Completed', 'Remaining'],
-        datasets: [{
-          data: [percent, 100 - percent],
-          backgroundColor: [color, '#F3F4F6'], // Lighter background for remaining
-          borderWidth: 0,
-          hoverBorderWidth: 0,
-          hoverOffset: 0,
-          borderRadius: percent === 100 ? 0 : 10, // Rounded edges for partial completion
-          spacing: 2 // Small gap between segments
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '70%',
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            enabled: false // Disable default tooltips since we have our own hover info
-          },
-          centerTextPlugin: true // Keep center text for non-hover state
-        },
-        onHover: (event, chartElement) => {
-          if (chartElement.length) {
-            ctx.style.cursor = 'pointer';
-          } else {
-            ctx.style.cursor = 'default';
-          }
-        },
-        onClick: (event, chartElement) => {
-          if (chartElement.length) {
-            const datasetIndex = chartElement[0].datasetIndex;
-            const index = chartElement[0].index;
-            console.log(`Clicked on ${chart.data.labels[index]} (${chart.data.datasets[datasetIndex].data[index]}%)`);
-          }
-        },
-        animation: {
-          animateScale: true,
-          animateRotate: true,
-          duration: 1000
-        }
-      }
-    });
-  }
-
-  // Function to draw line charts with enhanced interactivity
-
-
-
-
-
-  // Add hover effects to device boxes
-  document.querySelectorAll('.device-box').forEach(box => {
-    box.addEventListener('mouseenter', function () {
-      const status = this.querySelector('span').textContent;
-      const tooltip = document.createElement('div');
-      tooltip.className = 'tooltip';
-      tooltip.textContent = `Status: ${status}`;
-      this.appendChild(tooltip);
-
-      setTimeout(() => {
-        tooltip.style.opacity = '1';
-      }, 10);
-    });
-
-    box.addEventListener('mouseleave', function () {
-      const tooltip = this.querySelector('.tooltip');
-      if (tooltip) {
-        tooltip.remove();
-      }
-    });
-  });
-
-  // Add click event to cards for potential expansion
-  document.querySelectorAll('.card').forEach(card => {
-    card.addEventListener('click', function (e) {
-      // Don't trigger if clicking on a link or interactive element
-      if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON' || e.target.closest('a, button')) {
-        return;
-      }
-
-      // In a real app, this could expand the card or show more details
-      console.log(`Card clicked: ${this.querySelector('.label').textContent}`);
-    });
-  });
-
-  // Add hover effects to the new circular charts
-  document.querySelectorAll('.circle-item').forEach(item => {
-    item.addEventListener('mouseenter', function () {
-      this.querySelector('.chart-container').style.transform = 'scale(1.05)';
-    });
-
-    item.addEventListener('mouseleave', function () {
-      this.querySelector('.chart-container').style.transform = 'scale(1)';
-    });
-  });
-});
-
-
-
 async function loadSupportTicketsSummary() {
   try {
     const res = await fetch('http://localhost:4000/api/tickets/summary', {
@@ -515,31 +296,37 @@ async function loadSupportTicketsSummary() {
       const value = data[status.key] || 0;
       const percent = data.total ? Math.round((value / data.total) * 100) : 0;
       const deltaText = status.delta >= 0 ? `+${status.delta}` : `${status.delta}`;
+      const deltaClass = status.delta >= 0 ? 'positive' : 'negative';
 
       const ticketHTML = `
-        <div class="support-ticket" style="--bar-color: ${status.color}">
+        <div class="support-ticket">
           <div>
-            <span>${status.name}</span>
-            <span>${value}</span>
+            <span data-i18n="${status.key}">${status.name}</span>
+            <span class="status-badge ${status.key}" data-i18n="${status.key}">${status.name}</span>
           </div>
           <div class="progress-bar">
             <div style="width: ${percent}%; background-color: ${status.color}"></div>
           </div>
-          <div style="font-size: 0.75rem; color: #6B7280; margin-top: 0.5rem;">
-            ${deltaText} from last week
+          <div class="delta-info">
+            <span class="delta-text ${deltaClass}">${deltaText}</span>
+            <span data-i18n="from_last_week">from last week</span>
           </div>
         </div>
       `;
 
       container.innerHTML += ticketHTML;
     });
+
+    // Apply translations after adding the elements
+    if (typeof languageManager !== 'undefined') {
+      languageManager.applyLanguage();
+    }
   } catch (err) {
     console.error('❌ Error loading ticket summary:', err);
   }
 }
 
 document.addEventListener('DOMContentLoaded', loadSupportTicketsSummary);
-
 
 function drawBar(id, labels, internal, external) {
   const ctx = document.getElementById(id);
@@ -708,12 +495,7 @@ async function loadMaintenanceOverviewChart() {
   }
 }
 
-
-
-
-
 document.addEventListener('DOMContentLoaded', loadMaintenanceOverviewChart);
-
 
 // internal 
 async function loadRepeatedProblems() {
@@ -795,8 +577,6 @@ async function loadRepeatedProblems() {
 
 document.addEventListener('DOMContentLoaded', loadRepeatedProblems);
 
-
-
 async function loadUpgradeDevices() {
   try {
     const res = await fetch('http://localhost:4000/api/devices/needs-upgrade', {
@@ -865,12 +645,7 @@ async function loadUpgradeDevices() {
   }
 }
 
-
-
-
 document.addEventListener('DOMContentLoaded', loadUpgradeDevices);
-
-
 
 async function drawMonthlyCompletionLineChart() {
   try {
