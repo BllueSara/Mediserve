@@ -285,6 +285,23 @@ function renderColumnLayout(devices) {
       div.addEventListener("click", () => selectDeviceRow(rowId));
       col.appendChild(div);
     });
+    const actionColumn = document.getElementById("action-column");
+if (actionColumn) actionColumn.innerHTML = "";
+
+devices.forEach((device, index) => {
+  const rowId = `row-${index}`;
+  const actionDiv = document.createElement("div");
+  actionDiv.classList.add("data-cell");
+  actionDiv.dataset.rowId = rowId;
+
+  actionDiv.innerHTML = `
+    <button class="edit-btn" onclick="openEditModal(${JSON.stringify(device).replace(/"/g, '&quot;')})">✏️</button>
+    <button class="delete-btn" onclick="deleteDevice('${device.id}', '${device.ip}')">🗑️</button>
+  `;
+
+  actionColumn.appendChild(actionDiv);
+});
+
   });
 }
 function selectDeviceRow(rowId) {
@@ -302,7 +319,87 @@ function selectDeviceRow(rowId) {
     }
   });
 }
+function openEditModal(device) {
+  document.getElementById('edit-id').value = device.id;
+  document.getElementById('edit-circuit').value = device.circuit_name;
+  document.getElementById('edit-isp').value = device.isp;
+  document.getElementById('edit-location').value = device.location;
+  document.getElementById('edit-ip').value = device.ip;
+  document.getElementById('edit-speed').value = device.speed;
+  document.getElementById('edit-start').value = device.start_date?.split('T')[0];
+  document.getElementById('edit-end').value = device.end_date?.split('T')[0];
 
+  const modal = document.getElementById('editModal');
+  modal.classList.add('show');
+  modal.classList.remove('hidden');
+}
+
+function closeEditModal() {
+  const modal = document.getElementById('editModal');
+  modal.classList.remove('show');
+  modal.classList.add('hidden');
+}
+
+
+
+
+async function submitEdit() {
+  const id = document.getElementById('edit-id').value;
+  const body = {
+    circuit: document.getElementById('edit-circuit').value,
+    isp: document.getElementById('edit-isp').value,
+    location: document.getElementById('edit-location').value,
+    ip: document.getElementById('edit-ip').value,
+    speed: document.getElementById('edit-speed').value,
+    start_date: document.getElementById('edit-start').value,
+    end_date: document.getElementById('edit-end').value
+  };
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/entries/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(body)
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      appendToTerminal('✅ Entry updated successfully');
+      closeEditModal();
+      await loadDevicesByOwnership(); // reload list
+    } else {
+      throw new Error(data.error);
+    }
+  } catch (err) {
+    appendToTerminal(`❌ Update failed: ${err.message}`, true);
+  }
+}
+
+async function deleteDevice(id, ip) {
+  if (!confirm(`❗ هل تريد حذف الجهاز ذو IP ${ip}؟`)) return;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/entries/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem("token")}`
+      }
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success) {
+      appendToTerminal(`✅ تم حذف الجهاز ${ip}`);
+      await loadDevicesByOwnership();
+    } else {
+      throw new Error(data.error || 'Unknown error');
+    }
+  } catch (err) {
+    appendToTerminal(`❌ Delete error: ${err.message}`, true);
+  }
+}
 
 
 function filterDevices() {
