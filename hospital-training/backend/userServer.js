@@ -247,6 +247,22 @@ app.post('/login', (req, res) => {
   );
 });
 
+// ✅ تحديث دور المستخدم
+app.put('/users/:id/role', authenticateToken, (req, res) => {
+  const targetUserId = req.params.id;
+  const { role } = req.body;
+
+  if (!['admin', 'user'].includes(role)) {
+    return res.status(400).json({ message: '❌ Invalid role value' });
+  }
+
+  db.query('UPDATE users SET role = ? WHERE id = ?', [role, targetUserId], (err) => {
+    if (err) return res.status(500).json({ message: '❌ Failed to update role' });
+
+    logActivity(targetUserId, 'System', 'Change Role', `Changed role to ${role}`);
+    res.json({ message: `✅ Role updated to ${role}` });
+  });
+});
 
 
 

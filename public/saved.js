@@ -251,59 +251,43 @@ let allDevices = [];
 
 
 function renderColumnLayout(devices) {
-  const fields = {
-    circuit_name: document.getElementById("circuit-column"),
-    isp: document.getElementById("isp-column"),
-    location: document.getElementById("location-column"),
-    ip: document.getElementById("ip-column"),
-    speed: document.getElementById("speed-column"),
-    start_date: document.getElementById("start-column"),
-    end_date: document.getElementById("end-column")
-  };
-
-  // تنظيف الأعمدة
-  Object.values(fields).forEach(col => col.innerHTML = "");
+  const tableBody = document.getElementById("devices-body");
+  tableBody.innerHTML = ""; // تنظيف القديم
 
   devices.forEach((device, index) => {
     const rowId = `row-${index}`;
+    const row = document.createElement("tr");
+    row.dataset.rowId = rowId;
 
-    Object.entries(fields).forEach(([key, col]) => {
-      const div = document.createElement("div");
-      div.classList.add("data-cell");
-      div.dataset.rowId = rowId;
+    // العمود الأول: الأزرار
+    const actionsTd = document.createElement("td");
+    actionsTd.innerHTML = `
+      <button class="edit-btn" onclick="openEditModal(${JSON.stringify(device).replace(/"/g, '&quot;')})">✏️</button>
+      <button class="delete-btn" onclick="deleteDevice('${device.id}', '${device.ip}')">🗑️</button>
+    `;
+    row.appendChild(actionsTd);
 
-      if (key === "ip") {
-        div.classList.add("ip-cell");
-        div.innerHTML = `
-          <span class="lamp lamp-gray" id="ip-dot-${index}"></span>
-          <span class="device-ip">${device.ip || "—"}</span>
-        `;
-      } else {
-        div.textContent = device[key]?.split("T")[0] || "—";
-      }
+    // باقي الأعمدة
+    const values = [
+      device.circuit_name || "—",
+      device.isp || "—",
+      device.location || "—",
+      `<span class="status-dot gray"></span> ${device.ip || "—"}`,
+      device.speed || "—",
+      device.start_date?.split("T")[0] || "—",
+      device.end_date?.split("T")[0] || "—"
+    ];
 
-      div.addEventListener("click", () => selectDeviceRow(rowId));
-      col.appendChild(div);
+    values.forEach(val => {
+      const td = document.createElement("td");
+      td.innerHTML = val;
+      row.appendChild(td);
     });
-    const actionColumn = document.getElementById("action-column");
-if (actionColumn) actionColumn.innerHTML = "";
 
-devices.forEach((device, index) => {
-  const rowId = `row-${index}`;
-  const actionDiv = document.createElement("div");
-  actionDiv.classList.add("data-cell");
-  actionDiv.dataset.rowId = rowId;
-
-  actionDiv.innerHTML = `
-    <button class="edit-btn" onclick="openEditModal(${JSON.stringify(device).replace(/"/g, '&quot;')})">✏️</button>
-    <button class="delete-btn" onclick="deleteDevice('${device.id}', '${device.ip}')">🗑️</button>
-  `;
-
-  actionColumn.appendChild(actionDiv);
-});
-
+    tableBody.appendChild(row);
   });
 }
+
 function selectDeviceRow(rowId) {
   selectedRowId = rowId;
   selectedRow = null;
