@@ -1,41 +1,68 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Network Tools</title>
+  <title data-i18n="network_tools">Network Tools</title>
   <link rel="stylesheet" href="tool-selection.css" />
+  <link rel="stylesheet" href="/Language/Language.css">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-family: 'Tajawal', sans-serif;
+    }
+
+    body,
+    h1, h2, h3, p, span, button, select, input,
+    .dropdown-toggle, .dropdown-option-text, .dropdown-search,
+    label {
+      font-family: var(--font-family) !important;
+    }
+
+    ::placeholder,
+    input::placeholder,
+    textarea::placeholder,
+    input::-webkit-input-placeholder,
+    input::-moz-placeholder,
+    input:-ms-input-placeholder,
+    input::-ms-input-placeholder {
+      font-family: var(--font-family) !important;
+    }
+  </style>
 </head>
 <body>
 
   <!-- Header with back and home buttons -->
-  <header>
+  <!-- Navigation Buttons (Back & Home) -->
+  <div class="nav-buttons">
     <div class="back-button">
-      <a href="#">
-        <img src="/icon/Back.png" alt="Back" class="back-icon" />
-        Back
+      <a href="#" onclick="goBack()">
+        <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> <span data-i18n="back">Back</span>
       </a>
     </div>
-
-    <div class="home-button">
-        <a href="../../Home/Home.html">
-        <img src="/icon/Home.png" alt="Home" class="home-icon" />
-        Home
+    <div class="Home-button">
+            <a href="../../Home/Home.html">
+        <img src="/icon/Home.png" alt="Home Icon" class="Home-icon"> <span data-i18n="home">Home</span>
       </a>
     </div>
+  </div>
 
+  <!-- Header (Logos) -->
+  <header>
     <div class="ms-logo">
-      <img src="/icon/Ms Logo.png" alt="MS Logo" />
+      <img src="/icon/MS Logo.png" alt="MS Logo">
+    </div>
+    <div class="hospital-logo">
+      <img src="/icon/hospital-logo.png" alt="King Abdulaziz Hospital">
     </div>
 
-    <div class="hospital-logo">
-      <img src="/icon/hospital-logo.png" alt="Hospital Logo" />
-    </div>
+    <!-- Language Switcher -->
+
   </header>
 
   <!-- Title -->
-  <h1 class="title">Network Tools</h1>
-  <p class="description">Select your preferred ping method</p>
+  <h1 class="title" data-i18n="network_tools">Network Tools</h1>
+  <p class="description" data-i18n="select_ping_method">Select your preferred ping method</p>
 
   <!-- Tool selection cards -->
   <div class="ticket-container">
@@ -46,22 +73,34 @@
           <div class="icon-container">
             <img src="/icon/disk.png" alt="Existing" />
           </div>
-          <h2>Ping from existing device</h2>
-          <p>Use one of your currently connected devices</p>
+          <h2 data-i18n="ping_existing_device">Ping from existing device</h2>
+          <p data-i18n="use_connected_devices">Use one of your currently connected devices</p>
         </div>
 
         <div class="option" onclick="handleSelection('new')">
           <div class="icon-container">
             <img src="/icon/network.png" alt="New Device" />
           </div>
-          <h2>Ping a new device</h2>
-          <p>Add and ping a new network device</p>
+          <h2 data-i18n="ping_new_device">Ping a new device</h2>
+          <p data-i18n="add_ping_new_device">Add and ping a new network device</p>
         </div>
 
       </div>
     </div>
   </div>
 
+  <script src="/Language/Language.js"></script>
+  <script>
+        
+function goBack() {
+  if (window.history.length > 1) {
+    window.history.back(); // Navigates to the previous page in browser history
+  } else {
+    window.location.href = "tool-selection.html"; // Redirects to Maintenance home if there's no previous page
+  }
+}
+
+    </script>
   <script src="script.js"></script>
 </body>
 </html>

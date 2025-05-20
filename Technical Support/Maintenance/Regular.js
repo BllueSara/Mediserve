@@ -1889,32 +1889,37 @@ document.querySelector("form").addEventListener("submit", function (e) {
     }
   });
   // إرسال البيانات إلى السيرفر
-  async function submitRegularMaintenance(data) {
-    try {
-      const token = localStorage.getItem('token');  // احفظ التوكن بعد تسجيل الدخول
+async function submitRegularMaintenance(data) {
+  try {
+    const token = localStorage.getItem('token');
 
-      const response = await fetch("http://localhost:5050/submit-regular-maintenance", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(data)
-      });
+    const response = await fetch("http://localhost:5050/submit-regular-maintenance", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
+    });
 
-      const result = await response.json();
+    const result = await response.json();
 
-      if (!response.ok) {
-        throw new Error(result.error || "Unknown server error");
-      }
-
-
-      location.reload();  // إعادة تحميل الصفحة بعد الإرسال الناجح
-
-    } catch (err) {
-      console.error("❌ Submission error:", err);
+    if (!response.ok) {
+      // ✅ تنبيه برسالة الخطأ القادمة من السيرفر
+      alert(result.error);
+      return; // نوقف هنا
     }
+
+    // ✅ نجاح العملية
+    alert(result.message);
+    location.reload();  // إعادة تحميل الصفحة
+
+  } catch (err) {
+    console.error("❌ Submission error:", err);
+    alert("❌ فشل في الاتصال بالسيرفر. حاول مرة أخرى.");
   }
+}
+
   submitRegularMaintenance(data);
 });
 

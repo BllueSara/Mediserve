@@ -505,14 +505,43 @@ app.post('/api/save', authenticateToken, async (req, res) => {
 
 
 
-
 app.get('/api/entries/mine', authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const [entries] = await db.promise().query(`
-      SELECT * FROM entries WHERE user_id = ?
-    `, [userId]);
+    let entries;
+    if (req.user.role === 'admin') {
+      [entries] = await db.promise().query(`
+        SELECT 
+          MIN(id) as id,
+          circuit_name,
+          isp,
+          location,
+          ip,
+          speed,
+          MIN(start_date) AS start_date,
+          MAX(end_date) AS end_date,
+          user_id
+        FROM entries
+        GROUP BY circuit_name, isp, location, ip, speed
+      `);
+    } else {
+      [entries] = await db.promise().query(`
+        SELECT 
+          MIN(id) as id,
+          circuit_name,
+          isp,
+          location,
+          ip,
+          speed,
+          MIN(start_date) AS start_date,
+          MAX(end_date) AS end_date,
+          user_id
+        FROM entries
+        WHERE user_id = ?
+        GROUP BY circuit_name, isp, location, ip, speed
+      `, [userId]);
+    }
 
     res.json(entries);
   } catch (err) {
@@ -521,25 +550,35 @@ app.get('/api/entries/mine', authenticateToken, async (req, res) => {
   }
 });
 
+
 app.get('/api/entries/shared-with-me', authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
   try {
     const [entries] = await db.promise().query(`
-      SELECT e.*, se.receiver_id
+      SELECT 
+        MIN(e.id) AS id,
+        e.circuit_name,
+        e.isp,
+        e.location,
+        e.ip,
+        e.speed,
+        MIN(e.start_date) AS start_date,
+        MAX(e.end_date) AS end_date
       FROM entries e
       JOIN shared_entries se ON e.id = se.entry_id
       WHERE se.receiver_id = ?
+      GROUP BY e.circuit_name, e.isp, e.location, e.ip, e.speed
     `, [userId]);
 
-    // نرجعها مع تحديد أن user_id = null لتفرقها عن mine
     res.json(entries.map(e => ({ ...e, user_id: null })));
-
   } catch (err) {
     console.error('❌ Error fetching shared entries:', err.message);
     res.status(500).json({ error: 'Failed to load shared entries' });
   }
 });
+
+
 
 
 
