@@ -855,58 +855,105 @@ app.get('/api/critical-devices', authenticateToken, async (req, res) => {
 
 // ✅ API: أجهزة تحتاج Upgrade (RAM < 8 أو الجيل < 6)
 app.get('/api/devices/needs-upgrade', authenticateToken, async (req, res) => {
+  const query = `
+    SELECT 
+      d.id,
+      d.device_name,
+      d.device_type,
+      pi.Computer_Name,
+      ram_size.ram_size,
+      gen.generation_number,
+      os.os_name,
+      cpu.cpu_name
+    FROM Maintenance_Devices d
+    JOIN PC_info pi ON d.serial_number = pi.Serial_Number
+    LEFT JOIN RAM_Sizes ram_size ON pi.RamSize_id = ram_size.id
+    LEFT JOIN Processor_Generations gen ON pi.Generation_id = gen.id
+    LEFT JOIN OS_Types os ON pi.OS_id = os.id
+    LEFT JOIN CPU_Types cpu ON pi.Processor_id = cpu.id
+    WHERE d.device_type = 'PC'
+      AND (
+        CAST(ram_size.ram_size AS UNSIGNED) < 8 OR
+        CAST(gen.generation_number AS UNSIGNED) < 6 OR
+        (os.os_name NOT LIKE '%10%' AND os.os_name NOT LIKE '%11%')
+      )
+  `;
+
   try {
-    const [rows] = await db.promise().query(`
-      SELECT 
-        d.id,
-        d.device_name,
-        d.device_type,
-        dep.name AS department_name,
-        cpu.cpu_name,
-        gen.generation_number,
-        ram.ram_size,
-        os.os_name
-      FROM Maintenance_Devices d
-      LEFT JOIN CPU_Types cpu ON d.cpu_id = cpu.id
-      LEFT JOIN Processor_Generations gen ON d.generation_id = gen.id
-      LEFT JOIN RAM_Sizes ram ON d.ram_size_id = ram.id
-      LEFT JOIN OS_Types os ON d.os_id = os.id
-      LEFT JOIN Departments dep ON d.department_id = dep.id
-      WHERE d.device_type = 'PC'
-        AND (
-          CAST(ram.ram_size AS UNSIGNED) < 8
-          OR CAST(gen.generation_number AS UNSIGNED) < 6
-          OR LOWER(os.os_name) NOT LIKE '%10%' AND LOWER(os.os_name) NOT LIKE '%11%'
-        )
-    `);
+    db.query(query, (err, results) => {
+      if (err) {
+        console.error("❌ Error in upgrade query:", err);
+        return res.status(500).json({ error: "Internal Server Error" });
+      }
 
-    const formatted = rows.map(row => ({
-      ...row,
-      recommendation: generateRecommendation(row)
-    }));
+      const withRecommendation = results.map(device => {
+        const ram = parseInt(device.ram_size);
+        const gen = parseInt(device.generation_number);
+        const os = (device.os_name || "").toLowerCase();
 
-    res.json(formatted);
+        let issues = 0;
+        if (ram < 8) issues++;
+        if (gen < 6) issues++;
+        if (os.includes("windows") && !os.includes("10") && !os.includes("11")) issues++;
 
-    function generateRecommendation(row) {
-      const ram = parseInt(row.ram_size);
-      const gen = parseInt(row.generation_number);
-      const os = row.os_name?.toLowerCase() || '';
+        let status = issues >= 2 ? 'CRITICAL' : 'WARNING';
+        let recommendation = [];
 
-      const issues = [];
+        if (ram < 8) recommendation.push("Upgrade RAM");
+        if (gen < 6) recommendation.push("Replace CPU or Device");
+        if (os.includes("windows") && !os.includes("10") && !os.includes("11")) recommendation.push("Upgrade OS");
 
-      if (ram < 8) issues.push('RAM is below 8GB');
-      if (gen < 6) issues.push('CPU generation is below 6');
-      if (!os.includes('10') && !os.includes('11')) issues.push('OS is outdated');
+        return {
+          ...device,
+          status,
+          recommendation: recommendation.join(", ")
+        };
+      });
 
-      return `⚠️ Recommended upgrade: ${issues.join(' and ')}`;
-    }
-
+      res.json(withRecommendation);
+    });
   } catch (err) {
-    console.error('❌ Error fetching upgrade-needed devices:', err);
-    res.status(500).json({ error: 'Server error' });
+    console.error("❌ Failed to get devices needing upgrade:", err);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
+
+app.get('/api/maintenance/monthly-closed', authenticateToken, async (req, res) => {
+  try {
+    const query = (table, statusField) => `
+      SELECT 
+        MONTH(created_at) AS month,
+        COUNT(*) AS count
+      FROM ${table}
+      WHERE ${statusField} = 'Closed'
+      GROUP BY MONTH(created_at)
+    `;
+
+    const [general] = await db.promise().query(query('General_Maintenance', 'problem_status'));
+    const [regular] = await db.promise().query(query('Regular_Maintenance', 'status'));
+    const [external] = await db.promise().query(query('External_Maintenance', 'status'));
+
+    const formatData = (rows) => {
+      const result = Array(12).fill(0);
+      rows.forEach(row => {
+        result[row.month - 1] = row.count;
+      });
+      return result;
+    };
+
+    res.json({
+      months: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+      general: formatData(general),
+      regular: formatData(regular),
+      external: formatData(external)
+    });
+
+  } catch (err) {
+    console.error('❌ Error fetching monthly closed stats:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 
 
