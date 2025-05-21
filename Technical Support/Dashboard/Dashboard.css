@@ -1,3 +1,682 @@
+
+
+:root {
+  --primary: #3B82F6;
+  --primary-dark: #2563EB;
+  --primary-light: #93C5FD;
+  --secondary: #10B981;
+  --danger: #EF4444;
+  --warning: #F59E0B;
+  --info: #06B6D4;
+  --dark: #1F2937;
+  --light: #F9FAFB;
+  --gray: #6B7280;
+  --gray-light: #E5E7EB;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+  background-color: #FFFF;
+  color: var(--dark);
+  min-height: 100vh;
+  
+  overflow-x: hidden;
+}
+
+
+/* Back and Home buttons */
+.back-button, 
+.Home-button {
+    position: absolute; /* Position the buttons absolutely */
+    top: 20px; /* Place buttons near the top */
+    display: flex; /* Use flexbox for alignment */
+    align-items: center; /* Align icons and text */
+    gap: 8px; /* Space between icon and text */
+    width: fit-content; /* Adjust width based on content */
+    height: 150px; /* Set button height */
+}
+
+/* Back button (left side) */
+.back-button {
+    left: 20px; /* Align to left */
+} 
+
+/* Home button (centered) */
+.Home-button {
+    left: 50%; /* Center horizontally */
+    transform: translateX(-50%); /* Adjust centering */
+}
+
+/* Button links */
+.back-button a,
+.Home-button a {
+    text-decoration: none; /* Remove default underline */
+    font-size: 14px; /* Set font size */
+    display: flex; /* Use flexbox for alignment */
+    align-items: center; /* Align icon and text */
+    gap: 5px; /* Space between icon and text */
+}
+
+/* Button text colors */
+.back-button a {
+    color: #4A5568; /* Gray color for back button */
+}
+
+.Home-button a {
+    color: #3BAAE0; /* Blue color for home button */
+}
+
+/* Icons for Back and Home buttons */
+.back-icon, 
+.Home-icon {
+    width: 20px; /* Set icon width */
+    height: 20px; /* Set icon height */
+}
+
+
+header {
+  display: flex; /* Use flexbox */
+  justify-content: space-between; /* Align elements to edges */
+  align-items: center; /* Center elements vertically */
+  padding: 20px; /* Add padding */
+  width: 100%; /* Full width */
+  position: relative; /* Relative positioning */
+}
+
+/* MS Logo (left side) */
+.ms-logo {
+  position: absolute; /* Position absolutely */
+  left: 5px; /* Set left distance */
+  top: 10px; /* Set top distance */
+}
+
+.ms-logo img {
+  width: 120px; /* Set logo width */
+}
+
+/* Hospital Logo (right side) */
+.hospital-logo {
+  position: absolute; /* Position absolutely */
+  right: 40px; /* Set right distance */
+  top: 5px; /* Set top distance */
+}
+
+.hospital-logo img {
+  height: 50px; /* Set logo height */
+}
+
+.dashboard-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--dark);
+  margin: 5rem 0 1rem; /* زودنا المسافة من الأعلى */
+  padding: 0 2rem;
+}
+
+
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+  padding: 0 2rem 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+
+
+
+
+
+
+
+
+
+
+.card1 {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 20px; /* Increased padding */
+    width: 150%; /* Set a width */
+    max-width: 1500px; /* Maximum width */
+    margin: 0 auto; /* Center horizontally */
+    margin-right:100px ;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative; /* Changed from inherit to relative */
+    overflow: hidden;
+    margin-left: 20px;
+    
+}
+.card2 {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 20px; /* Increased padding */
+    width: 150%; /* Set a width */
+    max-width: 2500px; /* Maximum width */
+    margin: 0 auto; /* Center horizontally */
+    margin-right:100px ;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative; /* Changed from inherit to relative */
+    overflow: hidden;
+    margin-left: 280px;
+    
+}
+.card3 {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 20px; /* Increased padding */
+    width: 150%; /* Set a width */
+    max-width: 1500px; /* Maximum width */
+    margin: 0 auto; /* Center horizontally */
+    margin-right:100px ;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative; /* Changed from inherit to relative */
+    overflow: hidden;
+    margin-left: 20px;
+    
+}
+.card4 {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 20px; /* Increased padding */
+    width: 150%; /* Set a width */
+    max-width: 2500px; /* Maximum width */
+    margin: 0 auto; /* Center horizontally */
+    margin-right:100px ;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative; /* Changed from inherit to relative */
+    overflow: hidden;
+    margin-left: 280px;
+    
+}
+
+
+.card5 {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 20px; /* Increased padding */
+    width: 150%; /* Set a width */
+    max-width: 1500px; /* Maximum width */
+    margin: 0 auto; /* Center horizontally */
+    margin-right:100px ;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative; /* Changed from inherit to relative */
+    overflow: hidden;
+    margin-left: 20px;
+    
+}
+.card6 {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 20px; /* Increased padding */
+    width: 150%; /* Set a width */
+    max-width: 2500px; /* Maximum width */
+    margin: 0 auto; /* Center horizontally */
+    margin-right:100px ;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative; /* Changed from inherit to relative */
+    overflow: hidden;
+    margin-left: 280px;
+    
+}
+
+
+.card {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 20px; /* Increased padding */
+    width: 100%; /* Set a width */
+    max-width: 1000px; /* Maximum width */
+    margin: 0 auto; /* Center horizontally */
+    margin-right:100px ;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative; /* Changed from inherit to relative */
+    overflow: hidden;
+    margin-left: 300px;
+    
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.card.full-width {
+    width: 97%; /* Adjusted for full-width */
+    max-width: 100%;
+    grid-column: 1 / -1;
+    margin-left: 40px;
+}
+
+/*
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--primary);
+}
+*/
+
+
+.label {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--dark);
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.label::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.circle-group {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 1rem;
+  padding-left: 10px;
+  padding-right: 10px ;
+}
+
+.circle-item {
+  font-size: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.circle-item:hover {
+  transform: scale(1.05);
+}
+
+.circle-item canvas {
+  width: 80px !important;
+  height: 80px !important;
+}
+
+.status-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray);
+}
+
+.device-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.device-box {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid var(--gray-light);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.device-box:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.device-box span {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.device-box.normal {
+  border-left-color: var(--secondary);
+}
+
+.device-box.normal span {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--secondary);
+}
+
+.device-box.warning {
+  border-left-color: var(--warning);
+}
+
+.device-box.warning span {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+}
+
+.device-box.critical {
+  border-left-color: var(--danger);
+}
+
+.device-box.critical span {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+}
+
+.device-table, .upcoming-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.875rem;
+}
+
+.device-table th, 
+.device-table td,
+.upcoming-table th,
+.upcoming-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--gray-light);
+}
+
+.device-table th, .upcoming-table th {
+  font-weight: 600;
+  color: var(--dark);
+  background: var(--light);
+}
+
+.device-table tr:hover td, .upcoming-table tr:hover td {
+  background: var(--light);
+}
+
+.critical {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.warning {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.high {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.medium {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.low {
+  color: var(--secondary);
+  font-weight: 600;
+}
+
+.chart-wrapper {
+  width: 100%;
+  height: 250px;
+  position: relative;
+}
+
+.support-tickets-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  width: 100%;
+}
+
+.support-ticket {
+  background: white;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.support-ticket:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.support-ticket div {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.progress-bar {
+  height: 8px;
+  background: var(--gray-light);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar div {
+  height: 100%;
+  border-radius: 4px;
+}
+
+.open-ticket span:last-child {
+  color: var(--warning);
+}
+
+.open-ticket .progress-bar div {
+  background: var(--warning);
+}
+
+.progress-ticket span:last-child {
+  color: var(--primary);
+}
+
+.progress-ticket .progress-bar div {
+  background: var(--primary);
+}
+
+.resolved-ticket span:last-child {
+  color: var(--secondary);
+}
+
+.resolved-ticket .progress-bar div {
+  background: var(--secondary);
+}
+
+.tooltip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+    padding: 0 1rem 1rem;
+  }
+  
+  header {
+    padding: 1rem;
+  }
+  
+  .ms-logo, .hospital-logo {
+    position: static;
+    margin-bottom: 1rem;
+  }
+  
+  .nav-buttons {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  
+  .back-button, .Home-button {
+    position: static;
+    transform: none;
+  }
+}
+
+
+
+/* Enhanced Circular Chart Styles */
+.chart-container {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto;
+}
+
+.chart-hover-info {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  transform: scale(0.9);
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.hover-percentage {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--dark);
+  line-height: 1;
+}
+
+.hover-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--gray);
+  margin: 0.25rem 0;
+}
+
+.hover-detail {
+  font-size: 0.65rem;
+  color: var(--gray);
+  opacity: 0.8;
+}
+
+.circle-item:hover .chart-hover-info {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.circle-item canvas {
+  width: 100px !important;
+  height: 100px !important;
+  transition: transform 0.3s ease;
+}
+
+.circle-item:hover canvas {
+  transform: scale(1.05);
+}
+
+.chart-footer {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: var(--gray);
+  font-style: italic;
+}
+
+/* Update existing circle-group for better spacing */
+.circle-group {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem 0;
+}
+
+
+
+/* Wavy Chart Styles */
+.wavy-chart-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.wavy-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 30px;
+  background: linear-gradient(transparent, rgba(255,255,255,0.8));
+  z-index: 10;
+}
+
+/* Enhanced line chart appearance */
+.chart-wrapper {
+  background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+
+.device-table th:nth-child(2) {
+  text-align: center;
+}
+
+.device-table {
+  width: 100%;
+  table-layout: fixed; /* ✅ هذا يجعل الأعمدة تأخذ نفس الحجم */
+  border-collapse: collapse;
+}
+
+.device-table th:nth-child(1),
+.device-table td:nth-child(1) {
+  width: 35%; /* عمود TYPE */
+}
+
+.device-table th:nth-child(2),
+.device-table td:nth-child(2) {
+  width: 45%; /* عمود SPECS */
+}
+
+.device-table th:nth-child(3),
+.device-table td:nth-child(3) {
+  width: 20%; /* عمود STATUS */
+}
+
+
 :root {
   --primary: #3B82F6;
   --primary-dark: #2563EB;
