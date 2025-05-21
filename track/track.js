@@ -3,16 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const filterButtons = document.querySelectorAll(".filter-btn");
   let allLogs = [];
 
-  const iconMap = {
-    Added: "/icon/add.png",
-    Deleted: "/icon/delete.png",
-    Edited: "/icon/edit.png",
-    Submitted: "/icon/submit.png",
-    Uploaded: "/icon/upload.png",
-    Login: "/icon/login.png",
-    Register: "/icon/add.png",
-    Default: "/icon/info.png"
-  };
+
 
   // ✅ جلب السجلات مرة واحدة فقط
   fetch("http://localhost:4000/activity-logs", {
@@ -58,7 +49,7 @@ function renderLogs(filter, searchTerm = "") {
   }
 
   filteredLogs.forEach(log => {
-    const icon = iconMap[log.action] || iconMap.Default;
+    
     const createdAt = new Date(log.timestamp);
     const time = createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const date = createdAt.toLocaleDateString();
@@ -68,7 +59,7 @@ function renderLogs(filter, searchTerm = "") {
 
     card.innerHTML = `
       <div class="flex gap-4">
-        <img src="${icon}" class="icon" alt="${log.action}" />
+     
         <div class="activity-content">
           <h2>${log.action}</h2>
           <p>${log.details}</p>
