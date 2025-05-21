@@ -34,79 +34,69 @@ header {
   position: relative;
   z-index: 10;
 }
-
-.ms-logo {
-  position: absolute;
-  left: 2rem;
-  top: 1rem;
+.back-button, .Home-button {
+    position: absolute;
+    top: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    height: 150px;
 }
-
-.ms-logo img {
-  width: 120px;
-  height: auto;
-}
-
-.hospital-logo {
-  position: absolute;
-  right: 2rem;
-  top: 1rem;
-}
-
-.hospital-logo img {
-  height: 50px;
-  width: auto;
-}
-
-.nav-buttons {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 1rem 2rem;
-  margin-top: 4rem;
-
-  position: relative;
-}
-
 .back-button {
-  position: absolute;
-  left: 2rem;
+    left: 20px;
 }
-
-.back-button a,
- .Home-button a {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  text-decoration: none;
-  font-weight: 500;
-  color: var(--gray);
-  transition: all 0.2s ease;
-  
-}
-
-.back-button a:hover, .Home-button a:hover {
-  background: var(--light);
-  color: var(--dark);
-}
-
 .Home-button {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+    left: 50%;
+    transform: translateX(-50%);
 }
-
+.back-button a, .Home-button a {
+    text-decoration: none;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.back-button a {
+    color: #4A5568;
+}
 .Home-button a {
-  color: var(--primary);
+    color: #3BAAE0;
 }
-
+.back-icon, .Home-icon {
+    width: 20px;
+    height: 20px;
+}
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    width: 100%;
+    position: relative;
+}
+.ms-logo {
+    position: absolute;
+    left: 5px;
+    top: 10px;
+}
+.ms-logo img {
+    width: 120px;
+}
+.hospital-logo {
+    position: absolute;
+    right: 40px;
+    top: 5px;
+}
+.hospital-logo img {
+    height: 50px;
+}
 .dashboard-title {
   font-size: 1.75rem;
   font-weight: 700;
   color: var(--dark);
-  margin: 2rem 0 1rem;
-  padding: 0 2rem;
+  margin: 6rem 0 1rem;
+  padding: 0 4rem;
 }
 
 .dashboard {
@@ -753,15 +743,6 @@ header {
     padding-left: 2rem;
 }
 
-[dir="rtl"] .ms-logo {
-  left: auto;
-  right: 2rem;
-}
-
-[dir="rtl"] .hospital-logo {
-  right: auto;
-  left: 2rem;
-}
 
 
 
@@ -837,13 +818,7 @@ header {
   padding: 0 2rem 2rem;
 }
 
-[dir="rtl"] .dashboard-title {
-  padding: 0 2rem;
-}
 
-[dir="rtl"] .nav-buttons {
-  padding: 1rem 2rem;
-}
 
 /* Adjust icon positions for Arabic */
 

@@ -907,7 +907,7 @@ const languageManager = {
             'maintenance_dashboard': "لوحة تحكم الصيانة",
             'last_updated': "آخر تحديث",
             'completion_rates': "معدلات الإنجاز",
-            'regular': "روتيني",
+            'regular': "دورية",
             'internal': "داخلي",
             'external': "خارجي",
             'hover_for_details': "مرر المؤشر فوق الرسوم البيانية للحصول على التفاصيل",
@@ -916,7 +916,7 @@ const languageManager = {
             'external_maintenance': "تجديد الأجهزة",
             'support_tickets': "تذاكر الدعم",
             'maintenance_overview': "نظرة عامة على الصيانة (داخلية مقابل خارجية)",
-            'upcoming_maintenance': "الصيانة القادمة - الصيانة الروتينية",
+            'upcoming_maintenance': "الصيانة القادمة - الصيانة الدورية",
             'task': "المهمة",
             'date': "التاريخ",
             'priority': "الأولوية",
@@ -1362,8 +1362,7 @@ const languageManager = {
             'add_new_model': "إضافة موديل جديد",
             'add_new_report_status': "Add New Report Status",
             'add_new_ticket_type': "Add New Ticket Type",
-            'report_status': "Report Status",
-            'ticket_type': "Ticket Type",
+
 
 
             // Placeholders

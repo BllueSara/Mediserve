@@ -5,6 +5,13 @@
     box-sizing: border-box;
     font-family: Arial, sans-serif;
 }
+:root[dir="rtl"] {
+  --font-family: 'Tajawal', sans-serif;
+}
+
+:root[dir="ltr"] {
+  --font-family: Arial, sans-serif;
+}
 
 /* Page background - Set background color, center align text and ensure enough height */
 body {
@@ -52,10 +59,7 @@ input {
     border-radius: 5px;
     font-size: 14px;
 }
-
-/* Back and Home buttons - Positioned at the top */
-.back-button, 
-.Home-button {
+.back-button, .Home-button {
     position: absolute;
     top: 20px;
     display: flex;
@@ -64,67 +68,31 @@ input {
     width: fit-content;
     height: 150px;
 }
-
-/* Back button - Positioned on the left side */
 .back-button {
     left: 20px;
-} 
-
-/* Home button - Positioned at the center */
+}
 .Home-button {
     left: 50%;
     transform: translateX(-50%);
 }
-
-/* Button links styling */
-.back-button a,
-.Home-button a {
+.back-button a, .Home-button a {
     text-decoration: none;
     font-size: 14px;
     display: flex;
     align-items: center;
     gap: 5px;
 }
-
-/* Button text colors */
 .back-button a {
     color: #4A5568;
 }
-
 .Home-button a {
     color: #3BAAE0;
 }
-
-/* Icons for Back and Home buttons */
-.back-icon, 
-.Home-icon {
+.back-icon, .Home-icon {
     width: 20px;
     height: 20px;
 }
 
-/* MS Logo */
-.ms-logo {
-    position: absolute;
-    left: 5px;
-    top: 10px;
-}
-
-.ms-logo img {
-    width: 120px;
-}
-
-/* Hospital Logo */
-.hospital-logo {
-    position: absolute;
-    right: 10px;
-    top: 5px;
-}
-
-.hospital-logo img {
-    height: 50px;
-}
-
-/* Header */
 header {
     display: flex;
     justify-content: space-between;
@@ -132,7 +100,22 @@ header {
     padding: 20px 50px;
     background-color: white;
 }
-
+.ms-logo {
+    position: absolute;
+    left: 5px;
+    top: 10px;
+}
+.ms-logo img {
+    width: 120px;
+}
+.hospital-logo {
+    position: absolute;
+    right: 40px;
+    top: 5px;
+}
+.hospital-logo img {
+    height: 50px;
+}
 /* Title Styling */
 .title {
     font-size: 24px;
