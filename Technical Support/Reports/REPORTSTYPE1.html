@@ -20,7 +20,6 @@
 </head>
 
 <body>
-  <!-- Header section with logo, back button, home button, and hospital logo -->
   <div class="nav-buttons">
     <div class="back-button">
       <a href="#" onclick="goBack()">
@@ -28,7 +27,7 @@
       </a>
     </div>
     <div class="Home-button">
-            <a href="../../Home/Home.html">
+      <a href="../../Home/Home.html">
         <img src="/icon/Home.png" alt="Home Icon" class="Home-icon"> <span data-i18n="home">Home</span>
       </a>
     </div>
@@ -73,7 +72,13 @@
       </div>
     </div>
   </div>
-
+<script>function goBack() {
+  if (window.history.length > 1) {
+    window.history.back(); // Navigates to the previous page in browser history
+  } else {
+    window.location.href = "REPORTSTYPE1.html"; // Redirects to Maintenance home if there's no previous page
+  }
+}</script>
   <!-- External JavaScript file that adds interactivity -->
   <script src="Reports.js"></script>
   <script src="/Language/Language.js"></script>

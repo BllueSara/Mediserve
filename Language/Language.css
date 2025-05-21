@@ -240,3 +240,21 @@
 [dir="rtl"] .modal-body {
     font-family: 'Tajawal', sans-serif;
 }
+html[dir="rtl"] .back-icon,
+html[dir="rtl"] .Home-icon {
+    transform: scaleX(-1); /* يعكس الاتجاه الأفقي */
+}
+html[dir="rtl"] .back-button {
+    right: 60px;
+    left: auto;
+}
+
+html[dir="rtl"] .Home-button {
+    left: 50%;
+}
+
+
+
+html[dir="rtl"] .Home-button a {
+    flex-direction: row-reverse;
+}

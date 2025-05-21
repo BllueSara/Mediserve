@@ -39,7 +39,7 @@ body, html {
 }
 
 .Home-button {
-    left: 48%;
+    left: 50%;
     transform: translateX(-50%);
 }
 
@@ -59,24 +59,6 @@ body, html {
 .Home-button a {
     color: #3BAAE0;
 }
-
-/* Page title */
-.title {
-    font-size: 28px;
-    font-weight: bold;
-    margin-top: 100px;
-}
-
-/* Header */
-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    width: 100%;
-    position: relative;
-}
-
 /* MS Logo (left side) */
 .ms-logo {
     position: absolute;
@@ -98,6 +80,24 @@ header {
 .hospital-logo img {
     height: 50px;
 }
+/* Header */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    width: 100%;
+    position: relative;
+}
+/* Page title */
+.title {
+    font-size: 28px;
+    font-weight: bold;
+    margin-top: 100px;
+}
+
+
+
 
 /* Reports container */
 .reports-container {

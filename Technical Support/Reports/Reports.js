@@ -2,8 +2,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   
     // 🔁 Back button: navigates to the previous page
-    const backButton = document.querySelector(".back-button");
-    backButton?.addEventListener("click", () => window.history.back());
   
     // 🔁 Home buttons: redirect to the homepage (adjust link if needed)
     const homeSelectors = [".home-button", ".photo-label", ".home-section"];
