@@ -513,30 +513,28 @@ app.get('/api/entries/mine', authenticateToken, async (req, res) => {
     if (req.user.role === 'admin') {
       [entries] = await db.promise().query(`
         SELECT 
-          MIN(id) as id,
+          MIN(id) AS id,
           circuit_name,
           isp,
           location,
           ip,
           speed,
           MIN(start_date) AS start_date,
-          MAX(end_date) AS end_date,
-          user_id
+          MAX(end_date) AS end_date
         FROM entries
         GROUP BY circuit_name, isp, location, ip, speed
       `);
     } else {
       [entries] = await db.promise().query(`
         SELECT 
-          MIN(id) as id,
+          MIN(id) AS id,
           circuit_name,
           isp,
           location,
           ip,
           speed,
           MIN(start_date) AS start_date,
-          MAX(end_date) AS end_date,
-          user_id
+          MAX(end_date) AS end_date
         FROM entries
         WHERE user_id = ?
         GROUP BY circuit_name, isp, location, ip, speed
@@ -549,6 +547,7 @@ app.get('/api/entries/mine', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to load your entries' });
   }
 });
+
 
 
 app.get('/api/entries/shared-with-me', authenticateToken, async (req, res) => {
