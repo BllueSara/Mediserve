@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 
 :root {
   --primary: #3B82F6;
@@ -676,8 +676,7 @@ header {
   width: 20%; /* عمود STATUS */
 }
 
-=======
->>>>>>> 82f474ffb1d6a7c2136a71847f20c06295fa1c38
+
 :root {
   --primary: #3B82F6;
   --primary-dark: #2563EB;
@@ -1533,7 +1532,3 @@ header {
 [dir="rtl"] .upcoming-table svg {
   transform: scaleX(-1);
 }
-<<<<<<< HEAD
-
-=======
->>>>>>> 82f474ffb1d6a7c2136a71847f20c06295fa1c38
