@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 :root {
   --primary: #3B82F6;
   --primary-dark: #2563EB;
@@ -674,7 +674,7 @@ header {
 .device-table td:nth-child(3) {
   width: 20%; /* عمود STATUS */
 }
-=======
+
 :root {
   --primary: #3B82F6;
   --primary-dark: #2563EB;
@@ -1530,4 +1530,4 @@ header {
 [dir="rtl"] .upcoming-table svg {
   transform: scaleX(-1);
 }
->>>>>>> 96c824eaec832b1d136bf392ab5e2be0a7cf999a
+
