@@ -674,9 +674,13 @@ async function loadDevicesByOwnership() {
         headers: { 'Authorization': `Bearer ${localStorage.getItem("token")}` }
       });
       const data = await res.json();
-      // إضافة خاصية ownership لكل جهاز
-      const mineDevices = data.map(device => ({ ...device, ownership: 'mine' }));
-      allDevices = [...allDevices, ...mineDevices];
+
+      if (Array.isArray(data)) {
+        const mineDevices = data.map(device => ({ ...device, ownership: 'mine' }));
+        allDevices = [...allDevices, ...mineDevices];
+      } else {
+        appendToTerminal(`❌ Unexpected response for your devices: ${data.error || JSON.stringify(data)}`, true);
+      }
     } catch (err) {
       appendToTerminal(`❌ Failed to load your devices: ${err.message}`, true);
     }
@@ -688,9 +692,13 @@ async function loadDevicesByOwnership() {
         headers: { 'Authorization': `Bearer ${localStorage.getItem("token")}` }
       });
       const data = await res.json();
-      // إضافة خاصية ownership لكل جهاز
-      const sharedDevices = data.map(device => ({ ...device, ownership: 'shared' }));
-      allDevices = [...allDevices, ...sharedDevices];
+
+      if (Array.isArray(data)) {
+        const sharedDevices = data.map(device => ({ ...device, ownership: 'shared' }));
+        allDevices = [...allDevices, ...sharedDevices];
+      } else {
+        appendToTerminal(`❌ Unexpected response for shared devices: ${data.error || JSON.stringify(data)}`, true);
+      }
     } catch (err) {
       appendToTerminal(`❌ Failed to load shared devices: ${err.message}`, true);
     }
@@ -698,5 +706,6 @@ async function loadDevicesByOwnership() {
 
   filterDevices(); // ✅ يعرض حسب الفلتر المختار
 }
+
 
 
