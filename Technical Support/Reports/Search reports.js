@@ -68,15 +68,16 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.removeItem("reportStatusFilter");
   }
 });
+t = (key, fallback = '') => languageManager.translations[languageManager.currentLang]?.[key] || fallback || key;
 
 function loadReports(page = 1) {
-const token = localStorage.getItem('token');
-fetch(`http://localhost:5050/get-internal-reports`, {
+  const token = localStorage.getItem('token');
+  fetch(`http://localhost:5050/get-internal-reports`, {
     headers: {
-        "Authorization": `Bearer ${token}`
+      "Authorization": `Bearer ${token}`
     }
-})
-  .then(res => res.json())
+  })
+    .then(res => res.json())
     .then(data => {
       const container = document.getElementById("report-list");
       container.innerHTML = "";
@@ -118,7 +119,6 @@ fetch(`http://localhost:5050/get-internal-reports`, {
         return typeMatch && statusMatch && searchMatch && dateMatch && deviceTypeMatch;
       });
 
-      // ✅ Paginate the filtered results
       const reportsPerPage = 4;
       const totalReports = filtered.length;
       const totalPages = Math.ceil(totalReports / reportsPerPage);
@@ -126,7 +126,7 @@ fetch(`http://localhost:5050/get-internal-reports`, {
       const paginatedReports = filtered.slice(startIndex, startIndex + reportsPerPage);
 
       if (!paginatedReports.length) {
-        container.innerHTML = "<p>No matching reports found.</p>";
+        container.innerHTML = `<p>${t('no_matching_reports_found')}</p>`;
         return;
       }
 
@@ -147,23 +147,22 @@ fetch(`http://localhost:5050/get-internal-reports`, {
           card.innerHTML = `
             <div class="report-card-header">
               <img src="/icon/Report.png" alt="icon" />
-             <span>${report.report_type || "Maintenance Report"}</span>
-
+              <span>${report.report_type || t('maintenance_report')}</span>
               <select 
                 data-report-id="${report.id}" 
                 class="status-select ${getStatusClass(report.status)}">
-                <option value="Open" ${report.status === "Open" ? "selected" : ""}>Open</option>
-                <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>In Progress</option>
-                <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>Closed</option>
+                <option value="Open" ${report.status === "Open" ? "selected" : ""}>${t('open')}</option>
+                <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>${t('in_progress')}</option>
+                <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>${t('closed')}</option>
               </select>
             </div>
             <div class="report-details">
               <img src="/icon/desktop.png" alt="device" />
               <span>${formatDateTime(report.created_at)}</span>
             </div>
-            <p><strong>Device Type:</strong> ${report.device_type || "N/A"}</p>
-            <p><strong>Priority:</strong> ${report.priority || "N/A"}</p>
-            <p><strong>Status:</strong> ${report.status}</p>
+            <p><strong>${t('device_type')}:</strong> ${report.device_type || "N/A"}</p>
+            <p><strong>${t('priority')}:</strong> ${report.priority || "N/A"}</p>
+            <p><strong>${t('status')}:</strong> ${report.status}</p>
           `;
 
           container.appendChild(card);
@@ -186,74 +185,55 @@ fetch(`http://localhost:5050/get-internal-reports`, {
         const isRegular = report.maintenance_type === "Regular";
         const isTicketOnly = report.issue_summary?.includes("Ticket Created");
 
-        let maintenanceLabel = "";
-        let iconSrc = "";
+        let maintenanceLabel = t('general_maintenance');
+        let iconSrc = "/icon/maintenance.png";
 
         if (isInternalTicket) {
-          maintenanceLabel = "Internal Ticket";
+          maintenanceLabel = t('internal_ticket');
           iconSrc = "/icon/ticket.png";
         } else if (isTicketFromOtherType && isRegular) {
-          maintenanceLabel = "Ticket - Regular Maintenance";
+          maintenanceLabel = `${t('ticket')} - ${t('regular_maintenance')}`;
           iconSrc = "/icon/ticket.png";
         } else if (isTicketFromOtherType && !isRegular) {
-          maintenanceLabel = "Ticket - General Maintenance";
+          maintenanceLabel = `${t('ticket')} - ${t('general_maintenance')}`;
           iconSrc = "/icon/ticket.png";
         } else if (isRegular) {
-          maintenanceLabel = "Regular Maintenance";
+          maintenanceLabel = t('regular_maintenance');
           iconSrc = "/icon/Maintenance.png";
-        } else {
-          maintenanceLabel = "General Maintenance";
-          iconSrc = "/icon/maintenance.png";
         }
 
         let issueHtml = "";
         if (isTicketOnly) {
           issueHtml = `
             <div style="background:#e8f4ff;padding:10px;border-radius:6px">
-              <strong>Ticket Number:</strong> ${report.ticket_number}<br>
-              <strong>Device:</strong> ${report.device_name || "N/A"}<br>
-              <strong>Department:</strong> ${report.department_name || "N/A"}
+              <strong>${t('ticket_number')}:</strong> ${report.ticket_number}<br>
+              <strong>${t('device_name')}:</strong> ${report.device_name || "N/A"}<br>
+              <strong>${t('department')}:</strong> ${report.department_name || "N/A"}
             </div>
           `;
         } else if (isRegular) {
           let problemContent = report.problem_status || "";
-        
           let isArray = false;
           let checklistItems = [];
-        
+
           try {
             const parsed = JSON.parse(problemContent);
             if (Array.isArray(parsed)) {
               isArray = true;
               checklistItems = parsed;
             }
-          } catch (e) {
-            // 🔕 not an array, it's just a text
-          }
-        
+          } catch {}
+
           if (isArray && checklistItems.length) {
-            issueHtml = `
-              <ul style="margin-left: 20px;">
-                ${checklistItems.map(i => `<li>${i}</li>`).join("")}
-              </ul>
-            `;
+            issueHtml = `<ul style="margin-left: 20px;">${checklistItems.map(i => `<li>${i}</li>`).join("")}</ul>`;
           } else {
-            issueHtml = `
-              <div style="margin-left: 10px;">
-                ${problemContent || "No issue specified."}
-              </div>
-            `;
+            issueHtml = `<div style="margin-left: 10px;">${problemContent || t('no_specifications_found')}</div>`;
           }
-        
+
           if (report.full_description) {
-            issueHtml += `
-              <div style="margin-top:10px;background:#f2f2f2;padding:8px;border-radius:6px">
-                <strong>Notes:</strong><br>${report.full_description}
-              </div>
-            `;
+            issueHtml += `<div style="margin-top:10px;background:#f2f2f2;padding:8px;border-radius:6px"><strong>${t('notes')}:</strong><br>${report.full_description}</div>`;
           }
-        }
-        else {
+        } else {
           let issue = report.issue_summary || "";
           let diagnosis = report.full_description || "";
 
@@ -262,8 +242,8 @@ fetch(`http://localhost:5050/get-internal-reports`, {
 
           issueHtml = `
             <div class="report-issue-line">
-              ${issue ? `<span><strong>Selected Issue:</strong> ${issue}</span>` : ""}
-              ${diagnosis ? `<span><strong>Initial Diagnosis:</strong> ${diagnosis}</span>` : ""}
+              ${issue ? `<span><strong>${t('selected_issue')}:</strong> ${issue}</span>` : ""}
+              ${diagnosis ? `<span><strong>${t('initial_diagnosis')}:</strong> ${diagnosis}</span>` : ""}
             </div>
           `;
         }
@@ -276,19 +256,19 @@ fetch(`http://localhost:5050/get-internal-reports`, {
               data-report-id="${report.id}" 
               data-ticket-id="${report.ticket_id || ''}" 
               class="status-select ${getStatusClass(report.status)}">
-              <option value="Open" ${report.status === "Open" ? "selected" : ""}>Open</option>
-              <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>In Progress</option>
-              <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>Closed</option>
+              <option value="Open" ${report.status === "Open" ? "selected" : ""}>${t('open')}</option>
+              <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>${t('in_progress')}</option>
+              <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>${t('closed')}</option>
             </select>
           </div>
           <div class="report-details">
             <img src="/icon/desktop.png" alt="device" />
             <span>${formatDateTime(report.created_at)}</span>
           </div>
-          ${ticketNumber ? `<p><strong>Ticket Number:</strong> ${ticketNumber}</p>` : ""}
-          ${!isInternalTicket ? `<p><strong>Device:</strong> ${report.device_name || "N/A"}</p>` : ""}
-          ${!isInternalTicket ? `<p><strong>Department:</strong> ${report.department_name || "N/A"}</p>` : ""}
-          ${!isTicketOnly ? `<p><strong>Issue:</strong><br>${issueHtml}</p>` : ""}
+          ${ticketNumber ? `<p><strong>${t('ticket_number')}:</strong> ${ticketNumber}</p>` : ""}
+          ${!isInternalTicket ? `<p><strong>${t('device_name')}:</strong> ${report.device_name || "N/A"}</p>` : ""}
+          ${!isInternalTicket ? `<p><strong>${t('department')}:</strong> ${report.department_name || "N/A"}</p>` : ""}
+          ${!isTicketOnly ? `<p><strong>${t('issue')}:</strong><br>${issueHtml}</p>` : ""}
         `;
 
         container.appendChild(card);
@@ -310,10 +290,9 @@ fetch(`http://localhost:5050/get-internal-reports`, {
     })
     .catch(err => {
       console.error("❌ Error:", err);
-      document.getElementById("report-list").innerHTML = "<p>Error loading reports</p>";
+      document.getElementById("report-list").innerHTML = `<p>${t('error_loading_reports')}</p>`;
     });
 }
-
 
 
 
