@@ -651,3 +651,28 @@ textarea:focus {
   margin-left: 0;
   margin-right: 4px;
 }
+.device-edit-form {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+.device-edit-popup {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 300px;
+}
+.device-edit-popup input {
+  width: 100%;
+  margin: 5px 0 10px;
+  padding: 5px;
+}
+.popup-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
