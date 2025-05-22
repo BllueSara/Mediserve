@@ -34,7 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
   '#edit_items',
   '#delete_items',
   '#check_logs',
-  '#edit_permission'
+  '#edit_permission',
+  '#share_items'
 ].forEach(id => {
   const el = document.querySelector(id);
   if (el) {
@@ -70,10 +71,7 @@ async function loadUsers() {
   const container = document.querySelector('.sidebar');
 
   // إعادة بناء القائمة
-  container.innerHTML = `
-    <input type="text" placeholder="Search users..." class="w-full p-2 mb-2 border rounded" />
-    <button class="add-user" onclick="showAddUserModal()">+ Add New User</button>
-  `;
+
 
   users.forEach(user => {
     const item = document.createElement('div');
@@ -194,6 +192,7 @@ function updatePermissionsUI(permissions) {
   document.getElementById('delete_items').checked = !!permissions.delete_items;
   document.getElementById('check_logs').checked = !!permissions.check_logs;
   document.getElementById('edit_permission').checked = !!permissions.edit_permission;
+  document.getElementById('share_items').checked = !!permissions.share_items;
 }
 
 
@@ -208,6 +207,7 @@ async function savePermissions() {
       // الإضافية:
       add_items: document.getElementById('add_items')?.checked || false,
       edit_items: document.getElementById('edit_items')?.checked || false,
+      share_items: document.getElementById('share_items')?.checked || false,
       delete_items: document.getElementById('delete_items')?.checked || false,
       check_logs: document.getElementById('check_logs')?.checked || false,
       edit_permission: document.getElementById('edit_permission')?.checked || false,
@@ -259,42 +259,44 @@ async function toggleStatus(userId, currentStatus) {
 
   loadUserDetails(userId);
 }
-function showAddUserModal() {
-  const name = prompt("User name:");
-  if (name === null) return;
+function openUserModal() {
+  document.getElementById("userModal").style.display = "flex";
+  applyTranslations(); // ← يدعم الترجمة
+}
 
-  const email = prompt("Email:");
-  if (email === null) return;
+function closeUserModal() {
+  document.getElementById("userModal").style.display = "none";
+}
 
-  const password = prompt("Password:");
-  if (password === null) return;
-
-  const department = prompt("Department:");
-  if (department === null) return;
-
-  const employee_id = prompt("Employee ID:");
-  if (employee_id === null) return;
+function submitUser() {
+  const name = document.getElementById("modal_name").value.trim();
+  const email = document.getElementById("modal_email").value.trim();
+  const password = document.getElementById("modal_password").value.trim();
+  const department = document.getElementById("modal_department").value.trim();
+  const employee_id = document.getElementById("modal_employee_id").value.trim();
 
   if (!name || !email || !password) {
-    alert("Required fields missing");
+    alert(i18n("error.requiredFields"));
     return;
   }
 
-  fetch('http://localhost:4000/register', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  fetch("http://localhost:4000/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, email, password, department, employee_id })
   })
     .then(res => res.json())
     .then(data => {
-      alert("User created");
-      loadUsers();
+      alert(i18n("success.userCreated"));
+      closeUserModal();
+      // loadUsers();
     })
     .catch(err => {
-      alert("Error creating user");
+      alert(i18n("error.creationFailed"));
       console.error(err);
     });
 }
+
 
 async function resetUserPassword(userId) {
   const t = languageManager.translations[languageManager.currentLang];

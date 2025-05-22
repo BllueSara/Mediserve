@@ -2,10 +2,22 @@ const API_BASE_URL = 'http://localhost:3000/api';
 let selectedRowId = null;
 let continuousPingInterval = null;
 
-document.addEventListener('DOMContentLoaded', () => {
-  loadDevicesByOwnership();
+document.addEventListener('DOMContentLoaded', async () => {
+  // تحميل صلاحيات المستخدم أولًا
+  userPermissions = await checkUserPermissions();
+
+  // إظهار زر المشاركة فقط إذا لديه الصلاحية
+  if (userPermissions.share_items ) {
+    document.getElementById("shareBtn").style.display = "inline-block";
+  } else {
+    document.getElementById("shareBtn").style.display = "none";
+  }
+
+  // تحميل البيانات والتهيئة
+  await loadDevicesByOwnership();
   populateFilterKeyOptions();
 
+  // أحداث الواجهة
   document.getElementById('ownership-filter')?.addEventListener('change', async () => {
     await loadDevicesByOwnership();
     filterDevices();
@@ -260,12 +272,18 @@ function renderColumnLayout(devices) {
     row.dataset.rowId = rowId;
 
     // العمود الأول: الأزرار
-    const actionsTd = document.createElement("td");
-    actionsTd.innerHTML = `
-      <button class="edit-btn" onclick="openEditModal(${JSON.stringify(device).replace(/"/g, '&quot;')})">✏️</button>
-      <button class="delete-btn" onclick="deleteDevice('${device.id}', '${device.ip}')">🗑️</button>
-    `;
-    row.appendChild(actionsTd);
+const actionsTd = document.createElement("td");
+let actionsHTML = "";
+
+if (userPermissions.edit_items) {
+  actionsHTML += `<button class="edit-btn" onclick="openEditModal(${JSON.stringify(device).replace(/"/g, '&quot;')})">✏️</button>`;
+}
+if (userPermissions.delete_items) {
+  actionsHTML += `<button class="delete-btn" onclick="deleteDevice('${device.id}', '${device.ip}')">🗑️</button>`;
+}
+actionsTd.innerHTML = actionsHTML;
+row.appendChild(actionsTd);
+
 
     // باقي الأعمدة
     const values = [
@@ -420,12 +438,13 @@ function filterDevices() {
 
 
 
+t = (key, fallback = '') => languageManager.translations[languageManager.currentLang]?.[key] || fallback || key;
 
 
 async function populateFilterValues() {
   const key = document.getElementById('filter-key').value;
   const valueSelect = document.getElementById('filter-value');
-  valueSelect.innerHTML = '<option value="">Select value</option>';
+  valueSelect.innerHTML = `<option value="">${t('select_value')}</option>`;
 
   if (!key) return;
 
@@ -445,27 +464,24 @@ async function populateFilterValues() {
       valueSelect.appendChild(opt);
     });
   } catch (err) {
-    appendToTerminal(`❌ Failed to load filter values: ${err.message}`, true);
+    appendToTerminal(`❌ ${t('failed_to_load_filter_values')}: ${err.message}`, true);
   }
 }
-
-
 
 function populateFilterKeyOptions() {
   const filterKeySelect = document.getElementById('filter-key');
 
-  // الأعمدة المسموحة فقط (نفس أسماء الأعمدة في قاعدة البيانات)
+  // الأعمدة المسموحة فقط مع مفاتيح ترجمة
   const fields = [
-    { key: 'circuit_name', label: 'Circuit Name' },
-    { key: 'isp', label: 'ISP' },
-    { key: 'location', label: 'Location' },
-    { key: 'ip', label: 'IP Address' },
-    { key: 'speed', label: 'Circuit Speed' },
-    { key: 'start_date', label: 'Start Date' },
-    { key: 'end_date', label: 'End Date' }
+    { key: 'circuit_name', label: t('circuit_name') },
+    { key: 'isp', label: t('isp') },
+    { key: 'location', label: t('location') },
+    { key: 'ip', label: t('ip_address') },
+    { key: 'speed', label: t('circuit_speed') },
+    { key: 'start_date', label: t('start_date') },
+    { key: 'end_date', label: t('end_date') }
   ];
 
-  filterKeySelect.innerHTML = '<option value="">Filter by</option>';
 
   fields.forEach(field => {
     const opt = document.createElement('option');
@@ -474,6 +490,7 @@ function populateFilterKeyOptions() {
     filterKeySelect.appendChild(opt);
   });
 }
+
 
 
 
@@ -709,3 +726,51 @@ async function loadDevicesByOwnership() {
 
 
 
+  async function checkUserPermissions(userId) {
+  if (!userId) {
+    userId = localStorage.getItem("userId");
+  }
+
+  const userRole = localStorage.getItem("userRole"); // ← نجيب الدور من التخزين المحلي
+
+  // ✅ لو أدمن، نرجع كل الصلاحيات مفتوحة
+  if (userRole === "admin") {
+    return {
+      device_access: "all",
+      view_access: true,
+      full_access: true,
+      add_items: true,
+      edit_items: true,
+      delete_items: true,
+      check_logs: true,
+      edit_permission: true,
+      share_items: true
+    };
+  }
+
+  // ✅ باقي المستخدمين (عاديين) نجيب صلاحياتهم من السيرفر
+  try {
+    const response = await fetch(`http://localhost:4000/users/${userId}/with-permissions`);
+    if (!response.ok) throw new Error('Failed to fetch user permissions');
+
+    const userData = await response.json();
+    return {
+      device_access: userData.permissions?.device_access || 'none',
+      view_access: userData.permissions?.view_access || false,
+      full_access: userData.permissions?.full_access || false,
+      add_items: userData.permissions?.add_items || false,
+      edit_items: userData.permissions?.edit_items || false,
+      delete_items: userData.permissions?.delete_items || false,
+      check_logs: userData.permissions?.check_logs || false,
+      edit_permission: userData.permissions?.edit_permission || false,
+      share_items: userData.permissions?.share_items || false
+    };
+  } catch (error) {
+    console.error('Error checking permissions:', error);
+    return {
+      device_access: 'none',
+      view_access: false,
+      full_access: false
+    };
+  }
+}

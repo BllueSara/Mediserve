@@ -112,7 +112,8 @@ app.post('/register', async (req, res) => {
             edit_items: false,
             delete_items: false,
             check_logs: false,
-            edit_permission: false
+            edit_permission: false,
+            share_items: false
           };
 
        db.query(
@@ -125,8 +126,9 @@ app.post('/register', async (req, res) => {
     edit_items,
     delete_items,
     check_logs,
-    edit_permission
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    edit_permission,
+    share_items
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   [
     userId,
     defaultPermissions.device_access,
@@ -136,7 +138,8 @@ app.post('/register', async (req, res) => {
     defaultPermissions.edit_items,
     defaultPermissions.delete_items,
     defaultPermissions.check_logs,
-    defaultPermissions.edit_permission
+    defaultPermissions.edit_permission,
+    defaultPermissions.share_items
   ],
   (err) => {
     if (err) console.warn("❌ Failed to insert default permissions:", err);
@@ -306,7 +309,8 @@ app.put('/users/:id/permissions', authenticateToken, (req, res) => {
     edit_items,
     delete_items,
     check_logs,
-    edit_permission
+    edit_permission,
+    share_items
   } = req.body;
 
   const sql = `
@@ -319,9 +323,10 @@ app.put('/users/:id/permissions', authenticateToken, (req, res) => {
       edit_items,
       delete_items,
       check_logs,
-      edit_permission
+      edit_permission,
+      share_items
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON DUPLICATE KEY UPDATE
       device_access = VALUES(device_access),
       full_access = VALUES(full_access),
@@ -330,7 +335,8 @@ app.put('/users/:id/permissions', authenticateToken, (req, res) => {
       edit_items = VALUES(edit_items),
       delete_items = VALUES(delete_items),
       check_logs = VALUES(check_logs),
-      edit_permission = VALUES(edit_permission)
+      edit_permission = VALUES(edit_permission),
+      share_items = VALUES(share_items)
   `;
 
   const values = [
@@ -342,7 +348,8 @@ app.put('/users/:id/permissions', authenticateToken, (req, res) => {
     edit_items,
     delete_items,
     check_logs,
-    edit_permission
+    edit_permission,
+    share_items
   ];
 
   db.query(sql, values, (err) => {
@@ -404,7 +411,9 @@ app.get('/users/:id/permissions', authenticateToken, (req, res) => {
         edit_items: false,
         delete_items: false,
         check_logs: false,
-        edit_permission: false
+        edit_permission: false,
+        share_items: false
+
       });
     }
 
@@ -431,7 +440,8 @@ app.get('/users/:id/with-permissions', (req, res) => {
         edit_items,
         delete_items,
         check_logs,
-        edit_permission
+        edit_permission,
+        share_items
        FROM user_permissions WHERE user_id = ?`,
       [userId],
       (permErr, permResult) => {
@@ -447,7 +457,8 @@ app.get('/users/:id/with-permissions', (req, res) => {
           edit_items: false,
           delete_items: false,
           check_logs: false,
-          edit_permission: false
+          edit_permission: false,
+          share_items: false
         };
 
         if (permResult.length > 0) {

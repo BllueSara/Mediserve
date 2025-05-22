@@ -1153,6 +1153,16 @@ async function fetchDeviceTypes() {
       }
 
       data.deviceTypes.forEach((item) => {
+        const deviceType = item.DeviceType?.toLowerCase().trim();
+const isPCRelated = ["pc", "laptop", "desktop", "كمبيوتر", "لابتوب"].includes(deviceType);
+
+const allowedType =
+  permissions.device_access === 'all' ||
+  (permissions.device_access === 'pc' && isPCRelated) ||
+  permissions.device_access === deviceType;
+
+if (!allowedType) return;
+
         const row = document.createElement("div");
         row.className = "dropdown-option-row";
 

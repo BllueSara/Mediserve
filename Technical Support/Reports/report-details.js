@@ -11,8 +11,8 @@ let drawing = false;
 let userDrewOnCanvas = false;
 
 document.addEventListener("DOMContentLoaded", () => {
+  
   const saveBtn = document.querySelector(".save-btn");
-  const editBtn = document.querySelector(".edit-btn"); // ✅ حل المشكلة
 
   const reportId = new URLSearchParams(window.location.search).get("id");
   const reportType = new URLSearchParams(window.location.search).get("type");
@@ -744,5 +744,63 @@ document.getElementById("clearSignature").addEventListener("click", () => {
   uploadedSignature.src = "";
   uploadedSignature.style.display = "none";
 });
+
+});
+document.addEventListener("DOMContentLoaded",async () => {
+  const editBtn = document.querySelector(".edit-btn"); // ✅ حل المشكلة
+
+  async function checkUserPermissions(userId) {
+  if (!userId) {
+    userId = localStorage.getItem("userId");
+  }
+
+  const userRole = localStorage.getItem("userRole"); // ← نجيب الدور من التخزين المحلي
+
+  // ✅ لو أدمن، نرجع كل الصلاحيات مفتوحة
+  if (userRole === "admin") {
+    return {
+      device_access: "all",
+      view_access: true,
+      full_access: true,
+      add_items: true,
+      edit_items: true,
+      delete_items: true,
+      check_logs: true,
+      edit_permission: true
+    };
+  }
+
+  // ✅ باقي المستخدمين (عاديين) نجيب صلاحياتهم من السيرفر
+  try {
+    const response = await fetch(`http://localhost:4000/users/${userId}/with-permissions`);
+    if (!response.ok) throw new Error('Failed to fetch user permissions');
+
+    const userData = await response.json();
+    return {
+      device_access: userData.permissions?.device_access || 'none',
+      view_access: userData.permissions?.view_access || false,
+      full_access: userData.permissions?.full_access || false,
+      add_items: userData.permissions?.add_items || false,
+      edit_items: userData.permissions?.edit_items || false,
+      delete_items: userData.permissions?.delete_items || false,
+      check_logs: userData.permissions?.check_logs || false,
+      edit_permission: userData.permissions?.edit_permission || false
+    };
+  } catch (error) {
+    console.error('Error checking permissions:', error);
+    return {
+      device_access: 'none',
+      view_access: false,
+      full_access: false
+    };
+  }
+}
+  const permissions = await checkUserPermissions();
+
+  if (permissions.full_access || permissions.edit_items) {
+    editBtn.style.display = "inline-block"; // 👈 يظهر زر التعديل
+  } else {
+    editBtn.style.display = "none";
+  }
 
 });

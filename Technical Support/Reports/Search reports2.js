@@ -61,14 +61,13 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById(id)?.addEventListener("input", () => loadExternalReports(1));
     });
 });
+t = (key, fallback = '') => languageManager.translations[languageManager.currentLang]?.[key] || fallback || key;
 
 function loadExternalReports(page = 1) {
-  const token = localStorage.getItem('token');  // ✅ احصل على التوكن من localStorage
+  const token = localStorage.getItem('token');
 
   fetch(`http://localhost:5050/get-external-reports?page=${page}`, {
-    headers: {
-      'Authorization': `Bearer ${token}`  // ✅ أرسل التوكن في الهيدر
-    }
+    headers: { 'Authorization': `Bearer ${token}` }
   })
     .then(res => res.json())
     .then(data => {
@@ -85,11 +84,11 @@ function loadExternalReports(page = 1) {
       const filtered = data.filter(report => {
         const createdAt = new Date(report.created_at);
         const isTicket =
-        report.source === "external-new" ||
-        (report.source === "external-legacy" &&
-         report.issue_summary?.toLowerCase().includes("ticket") || 
-         report.full_description?.toLowerCase().includes("ticket"));
-              const isNew = report.source === "new";
+          report.source === "external-new" ||
+          (report.source === "external-legacy" &&
+           report.issue_summary?.toLowerCase().includes("ticket") || 
+           report.full_description?.toLowerCase().includes("ticket"));
+        const isNew = report.source === "new";
         const isExternalNew = report.source === "external-new";
         const isExternalLegacy = report.source === "external-legacy";
 
@@ -114,7 +113,6 @@ function loadExternalReports(page = 1) {
         return typeMatch && statusMatch && searchMatch && dateMatch && deviceMatch;
       });
 
-      // ✅ Pagination setup
       const reportsPerPage = 4;
       const totalReports = filtered.length;
       const totalPages = Math.ceil(totalReports / reportsPerPage);
@@ -122,7 +120,7 @@ function loadExternalReports(page = 1) {
       const paginatedReports = filtered.slice(startIndex, startIndex + reportsPerPage);
 
       if (!paginatedReports.length) {
-        container.innerHTML = "<p>No matching reports found.</p>";
+        container.innerHTML = `<p>${t("no_matching_reports_found")}</p>`;
         return;
       }
 
@@ -140,20 +138,20 @@ function loadExternalReports(page = 1) {
         if (isNew) {
           card.innerHTML = `
             <div class="report-card-header">
-              <span>New Maintenance Report</span>
+              <span>${t("new_report")}</span>
               <select class="status-select ${statusClass}">
-                <option value="Open" ${report.status === "Open" ? "selected" : ""}>Open</option>
-                <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>In Progress</option>
-                <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>Closed</option>
+                <option value="Open" ${report.status === "Open" ? "selected" : ""}>${t("open")}</option>
+                <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>${t("in_progress")}</option>
+                <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>${t("closed")}</option>
               </select>
             </div>
             <div class="report-details">
               <img src="/icon/desktop.png" alt="Device Icon" />
               <span>${formatDateTime(report.created_at)}</span>
             </div>
-            <p><strong>Device Type:</strong> ${report.device_type || "N/A"}</p>
-            <p><strong>Priority:</strong> ${report.priority || "N/A"}</p>
-            <p><strong>Status:</strong> ${report.status}</p>
+            <p><strong>${t("device_type")}:</strong> ${report.device_type || "N/A"}</p>
+            <p><strong>${t("priority")}:</strong> ${report.priority || "N/A"}</p>
+            <p><strong>${t("status")}:</strong> ${report.status}</p>
           `;
 
           card.addEventListener("click", e => {
@@ -178,41 +176,37 @@ function loadExternalReports(page = 1) {
 
         issueHtml = `
           <div class="report-issue-line">
-            ${initial ? `<span><strong>Initial Diagnosis:</strong> ${initial}</span>` : ""}
-            ${final ? `<span><strong>Final Diagnosis:</strong> ${final}</span>` : ""}
+            ${initial ? `<span><strong>${t("initial_diagnosis")}:</strong> ${initial}</span>` : ""}
+            ${final ? `<span><strong>${t("final_diagnosis")}:</strong> ${final}</span>` : ""}
           </div>
         `;
 
         const sourceLabel = isTicket
-        ? "External Maintenance Ticket"
-        : isExternalNew
-          ? "External Ticket"
-          : isExternalLegacy
-            ? "External Maintenance"
-            : "External Maintenance";
-      
+          ? t("external_maintenance_ticket")
+          : isExternalNew
+            ? t("external_ticket")
+            : t("external_maintenance");
 
         card.innerHTML = `
           <div class="report-card-header">
             <img src="/icon/${isTicket ? "ticket" : "Maintenance"}.png" alt="icon" />
             ${sourceLabel}
-<select 
-  class="status-select ${statusClass}"
-  data-report-id="${report.id}"
-  data-ticket-id="${report.ticket_id || ''}">              <option value="Open" ${report.status === "Open" ? "selected" : ""}>Open</option>
-              <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>In Progress</option>
-              <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>Closed</option>
+            <select 
+              class="status-select ${statusClass}"
+              data-report-id="${report.id}"
+              data-ticket-id="${report.ticket_id || ''}">
+              <option value="Open" ${report.status === "Open" ? "selected" : ""}>${t("open")}</option>
+              <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>${t("in_progress")}</option>
+              <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>${t("closed")}</option>
             </select>
           </div>
-
           <div class="report-details">
             <img src="/icon/desktop.png" alt="Device Icon" />
             <span>${formatDateTime(report.created_at)}</span>
           </div>
-
-          <p><strong>Ticket Number:</strong> ${report.ticket_number || "N/A"}</p>
-          <p><strong>Device:</strong> ${report.device_name || "N/A"}</p>
-          <p><strong>Department:</strong> ${report.department_name || "N/A"}</p>
+          <p><strong>${t("ticket_number")}:</strong> ${report.ticket_number || "N/A"}</p>
+          <p><strong>${t("device_name")}:</strong> ${report.device_name || "N/A"}</p>
+          <p><strong>${t("department")}:</strong> ${report.department_name || "N/A"}</p>
           ${issueHtml}
         `;
 
@@ -235,9 +229,10 @@ function loadExternalReports(page = 1) {
     })
     .catch(err => {
       console.error("❌ Error loading external reports:", err);
-      document.getElementById("report-list").innerHTML = "<p>Error loading reports.</p>";
+      document.getElementById("report-list").innerHTML = `<p>${t("error_loading_reports")}</p>`;
     });
 }
+
 
 
 function updatePagination(currentPage) {
