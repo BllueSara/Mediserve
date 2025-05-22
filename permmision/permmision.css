@@ -216,3 +216,78 @@
     background-color: #e0f2fe;
     border-color: #3DA9E0;
   }
+/* خلفية النافذة */
+.modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none; /* يظهر عند الفتح فقط */
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* محتوى النافذة */
+.modal-content {
+  background: #fff;
+  padding: 20px 25px;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.25);
+  font-family: Arial, sans-serif;
+  direction: ltr; /* غيّر إلى rtl عند تحميل اللغة العربية */
+}
+
+/* تنسيق العناوين والحقول */
+.modal-content h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 20px;
+  text-align: center;
+}
+
+.modal-content label {
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.modal-content input {
+  width: 100%;
+  padding: 8px;
+  font-size: 14px;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+/* أزرار */
+.modal-content button {
+  margin-top: 15px;
+  padding: 10px 15px;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  border-radius: 5px;
+}
+
+/* زر "إرسال" */
+.modal-content button:first-of-type {
+  background-color: #3DA9E0;
+  color: white;
+  margin-right: 10px;
+}
+
+/* زر "إلغاء" */
+.modal-content button:last-of-type {
+  background-color: #6c757d;
+  color: white;
+}
+
+/* دعم RTL */
+html[dir="rtl"] .modal-content {
+  direction: rtl;
+  text-align: right;
+}

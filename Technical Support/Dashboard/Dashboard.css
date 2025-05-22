@@ -13,6 +13,83 @@
   --gray: #6B7280;
   --gray-light: #E5E7EB;
 }
+:root {
+  --font-family: 'Tajawal', 'Arial',;
+}
+@media (max-width: 768px) {
+  .dashboard {
+    display: flex;
+    flex-direction: column;
+    
+  }
+
+  .dashboard-title {
+    font-size: 1.25rem;
+    text-align: center;
+    margin-top: 5rem;
+  }
+
+  .card,
+  .card1, .card2, .card3, .card4, .card5, .card6 {
+    margin: 0 auto 1.5rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .back-button, .Home-button {
+    top: 10px;
+    transform: none;
+    height: auto;
+  }
+
+  .back-button {
+    left: 10px;
+  }
+
+  .Home-button {
+    left: 50%;
+    
+  }
+
+/* MS Logo (left side) */
+.ms-logo {
+  position: absolute; /* Position absolutely */
+  left: 5px; /* Set left distance */
+  top: 10px; /* Set top distance */
+}
+
+.ms-logo img {
+  width: 120px; /* Set logo width */
+}
+
+/* Hospital Logo (right side) */
+.hospital-logo {
+  position: absolute; /* Position absolutely */
+  right: 40px; /* Set right distance */
+  top: 5px; /* Set top distance */
+}
+
+.hospital-logo img {
+  height: 20px; /* Set logo height */
+}
+
+  header {
+    padding-top: 1rem; /* مساحة إضافية لظهور الأزرار بوضوح */
+  }
+}
+
+.card1, .card2, .card3, .card4, .card5, .card6 {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto 1.5rem;
+  padding: 20px;
+  border-radius: 0.75rem;
+  background: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+              0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  overflow: hidden;
+}
 
 * {
   margin: 0;
@@ -27,6 +104,9 @@ body {
   min-height: 100vh;
   
   overflow-x: hidden;
+}
+.dashboard-title {
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
 }
 
 
@@ -517,33 +597,7 @@ header {
   transition: opacity 0.2s ease;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .dashboard {
-    grid-template-columns: 1fr;
-    padding: 0 1rem 1rem;
-  }
-  
-  header {
-    padding: 1rem;
-  }
-  
-  .ms-logo, .hospital-logo {
-    position: static;
-    margin-bottom: 1rem;
-  }
-  
-  .nav-buttons {
-    flex-direction: column;
-    gap: 1rem;
-    padding: 1rem;
-  }
-  
-  .back-button, .Home-button {
-    position: static;
-    transform: none;
-  }
-}
+
 
 
 
@@ -677,496 +731,6 @@ header {
 }
 
 
-:root {
-  --primary: #3B82F6;
-  --primary-dark: #2563EB;
-  --primary-light: #93C5FD;
-  --secondary: #10B981;
-  --danger: #EF4444;
-  --warning: #F59E0B;
-  --info: #06B6D4;
-  --dark: #1F2937;
-  --light: #F9FAFB;
-  --gray: #6B7280;
-  --gray-light: #E5E7EB;
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-body {
-  background-color: #FFFF;
-  color: var(--dark);
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 2rem;
-  position: relative;
-  z-index: 10;
-}
-.back-button, .Home-button {
-    position: absolute;
-    top: 20px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: fit-content;
-    height: 150px;
-}
-.back-button {
-    left: 20px;
-}
-.Home-button {
-    left: 50%;
-    transform: translateX(-50%);
-}
-.back-button a, .Home-button a {
-    text-decoration: none;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-.back-button a {
-    color: #4A5568;
-}
-.Home-button a {
-    color: #3BAAE0;
-}
-.back-icon, .Home-icon {
-    width: 20px;
-    height: 20px;
-}
-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    width: 100%;
-    position: relative;
-}
-.ms-logo {
-    position: absolute;
-    left: 5px;
-    top: 10px;
-}
-.ms-logo img {
-    width: 120px;
-}
-.hospital-logo {
-    position: absolute;
-    right: 40px;
-    top: 5px;
-}
-.hospital-logo img {
-    height: 50px;
-}
-.dashboard-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--dark);
-  margin: 6rem 0 1rem;
-  padding: 0 4rem;
-}
-
-.dashboard {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 1.5rem;
-  padding: 0 2rem 2rem;
-  max-width: 1600px;
-  margin: 0 auto;
-}
-
-.card1 {
-    background: white;
-    border-radius: 0.75rem;
-    padding: 20px; /* Increased padding */
-    width: 150%; /* Set a width */
-    max-width: 1500px; /* Maximum width */
-    margin: 0 auto; /* Center horizontally */
-    margin-right:100px ;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    position: relative; /* Changed from inherit to relative */
-    overflow: hidden;
-    margin-left: 20px;
-    
-}
-.card2 {
-    background: white;
-    border-radius: 0.75rem;
-    padding: 20px; /* Increased padding */
-    width: 150%; /* Set a width */
-    max-width: 2500px; /* Maximum width */
-    margin: 0 auto; /* Center horizontally */
-    margin-right:100px ;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    position: relative; /* Changed from inherit to relative */
-    overflow: hidden;
-    margin-left: 280px;
-    
-}
-.card3 {
-    background: white;
-    border-radius: 0.75rem;
-    padding: 20px; /* Increased padding */
-    width: 150%; /* Set a width */
-    max-width: 1500px; /* Maximum width */
-    margin: 0 auto; /* Center horizontally */
-    margin-right:100px ;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    position: relative; /* Changed from inherit to relative */
-    overflow: hidden;
-    margin-left: 20px;
-    
-}
-.card4 {
-    background: white;
-    border-radius: 0.75rem;
-    padding: 20px; /* Increased padding */
-    width: 150%; /* Set a width */
-    max-width: 2500px; /* Maximum width */
-    margin: 0 auto; /* Center horizontally */
-    margin-right:100px ;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    position: relative; /* Changed from inherit to relative */
-    overflow: hidden;
-    margin-left: 280px;
-    
-}
-
-.card5 {
-    background: white;
-    border-radius: 0.75rem;
-    padding: 20px; /* Increased padding */
-    width: 150%; /* Set a width */
-    max-width: 1500px; /* Maximum width */
-    margin: 0 auto; /* Center horizontally */
-    margin-right:100px ;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    position: relative; /* Changed from inherit to relative */
-    overflow: hidden;
-    margin-left: 20px;
-    
-}
-.card6 {
-    background: white;
-    border-radius: 0.75rem;
-    padding: 20px; /* Increased padding */
-    width: 150%; /* Set a width */
-    max-width: 2500px; /* Maximum width */
-    margin: 0 auto; /* Center horizontally */
-    margin-right:100px ;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    position: relative; /* Changed from inherit to relative */
-    overflow: hidden;
-    margin-left: 280px;
-    
-}
-
-.card {
-    background: white;
-    border-radius: 0.75rem;
-    padding: 20px; /* Increased padding */
-    width: 100%; /* Set a width */
-    max-width: 1000px; /* Maximum width */
-    margin: 0 auto; /* Center horizontally */
-    margin-right:100px ;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    position: relative; /* Changed from inherit to relative */
-    overflow: hidden;
-    margin-left: 300px;
-    
-}
-
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-}
-
-.card.full-width {
-    width: 97%; /* Adjusted for full-width */
-    max-width: 100%;
-    grid-column: 1 / -1;
-    margin-left: 40px;
-}
-
-/*
-.card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-  background: var(--primary);
-}
-*/
-
-.label {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--dark);
-  margin-bottom: 1.25rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.label::before {
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--primary);
-}
-
-.circle-group {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  gap: 1rem;
-  padding-left: 10px;
-  padding-right: 10px ;
-}
-
-.circle-item {
-  font-size: 100px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  transition: transform 0.2s ease;
-}
-
-.circle-item:hover {
-  transform: scale(1.05);
-}
-
-.circle-item canvas {
-  width: 80px !important;
-  height: 80px !important;
-}
-
-.status-label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--gray);
-}
-
-.device-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 0.75rem;
-}
-
-.device-box {
-  padding: 1rem;
-  border-radius: 0.5rem;
-  background: white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border-left: 4px solid var(--gray-light);
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-
-.device-box:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.device-box span {
-  display: inline-block;
-  margin-top: 0.5rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.device-box.normal {
-  border-left-color: var(--secondary);
-}
-
-.device-box.normal span {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--secondary);
-}
-
-.device-box.warning {
-  border-left-color: var(--warning);
-}
-
-.device-box.warning span {
-  background: rgba(245, 158, 11, 0.1);
-  color: var(--warning);
-}
-
-.device-box.critical {
-  border-left-color: var(--danger);
-}
-
-.device-box.critical span {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--danger);
-}
-
-.device-table, .upcoming-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: 0.875rem;
-}
-
-.device-table th, 
-.device-table td,
-.upcoming-table th,
-.upcoming-table td {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  border-bottom: 1px solid var(--gray-light);
-}
-
-.device-table th, .upcoming-table th {
-  font-weight: 600;
-  color: var(--dark);
-  background: var(--light);
-}
-
-.device-table tr:hover td, .upcoming-table tr:hover td {
-  background: var(--light);
-}
-
-.critical {
-  color: var(--danger);
-  font-weight: 600;
-}
-
-.warning {
-  color: var(--warning);
-  font-weight: 600;
-}
-
-.high {
-  color: var(--danger);
-  font-weight: 600;
-}
-
-.medium {
-  color: var(--warning);
-  font-weight: 600;
-}
-
-.low {
-  color: var(--secondary);
-  font-weight: 600;
-}
-
-.chart-wrapper {
-  width: 100%;
-  height: 250px;
-  position: relative;
-}
-
-.support-tickets-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1rem;
-  width: 100%;
-}
-
-.support-ticket {
-  background: #fff;
-  border-radius: 0.5rem;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease;
-}
-
-.support-ticket:hover {
-  transform: translateY(-2px);
-}
-
-.support-ticket div {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
-}
-
-.progress-bar {
-  height: 6px;
-  background: #F3F4F6;
-  border-radius: 3px;
-  overflow: hidden;
-  margin: 0.5rem 0;
-}
-
-.progress-bar div {
-  height: 100%;
-  transition: width 0.3s ease;
-}
-
-.delta-info {
-  font-size: 0.75rem;
-  color: #6B7280;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.delta-text {
-  font-weight: 500;
-}
-
-.delta-text.positive {
-  color: #10B981;
-}
-
-.delta-text.negative {
-  color: #EF4444;
-}
-
-.status-badge {
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.status-badge.open {
-  background-color: rgba(245, 158, 11, 0.1);
-  color: #F59E0B;
-}
-
-.status-badge.in_progress {
-  background-color: rgba(59, 130, 246, 0.1);
-  color: #3B82F6;
-}
-
-.status-badge.resolved {
-  background-color: rgba(16, 185, 129, 0.1);
-  color: #10B981;
-}
 
 [dir="rtl"] .support-ticket div {
   flex-direction: row-reverse;
@@ -1182,32 +746,7 @@ header {
 }
 
 /* Responsive adjustments */
-@media (max-width: 768px) {
-  .dashboard {
-    grid-template-columns: 1fr;
-    padding: 0 1rem 1rem;
-  }
-  
-  header {
-    padding: 1rem;
-  }
-  
-  .ms-logo, .hospital-logo {
-    position: static;
-    margin-bottom: 1rem;
-  }
-  
-  .nav-buttons {
-    flex-direction: column;
-    gap: 1rem;
-    padding: 1rem;
-  }
-  
-  .back-button, .Home-button {
-    position: static;
-    transform: none;
-  }
-}
+
 
 /* Enhanced Circular Chart Styles */
 .chart-container {

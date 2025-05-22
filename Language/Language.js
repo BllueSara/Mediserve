@@ -11,7 +11,7 @@ const languageManager = {
             'language': 'Language',
             'current_language': 'English',
             'english': 'English',
-            'arabic': 'عربي',
+            'arabic': 'Arabic',
             'back': 'Back',
 
             // Common
@@ -302,6 +302,8 @@ const languageManager = {
             'add_items': 'Add Items',
             'can_add_new': 'Can add new items',
             'edit_items': 'Edit Items',
+            'share_items': 'Share Items',
+            'can_share': 'Can share items',
             'can_modify': 'Can modify existing items',
             'delete_items': 'Delete Items',
             'can_remove': 'Can remove items',
@@ -465,6 +467,8 @@ const languageManager = {
             'save_ticket': 'Save Ticket',
 
             // Reports Pages
+            'issue': 'Issue',
+            'selected_issue': 'Selected Issue',
             'reports_dashboard': 'Reports Dashboard',
             'search_reports': 'Search reports...',
             'report_types': 'Report Types',
@@ -771,6 +775,8 @@ const languageManager = {
             'error_message': 'Something went wrong.',
         },
         ar: {
+            'issue': 'المشكلة',
+            'selected_issue': 'المشكلة المحددة',
             'department': 'الاقسام',
             'reporter': 'صاحب البلاغ',
             'model': 'الموديلات',
@@ -1101,7 +1107,8 @@ const languageManager = {
             'can_check_logs': 'يمكنه فحص السجلات',
             'edit_permission': 'تعديل الصلاحيات',
             'can_edit_permission': 'يمكنه تعديل الصلاحيات',
-
+            'share_items': 'مشاركة العناصر',
+            'can_share': 'يمكنه مشاركة العناصر',
             // Dashboard Page
             'server_status': 'حالة الخادم',
             'active_servers': 'الخوادم النشطة',

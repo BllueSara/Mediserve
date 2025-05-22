@@ -6,10 +6,15 @@ function goBack() {
 function goToHome() {
   window.location.href = "Home.html";
 }
-
+t = (key, fallback = '') => languageManager.translations[languageManager.currentLang]?.[key] || fallback || key;
+const fontFamily = getComputedStyle(document.documentElement).getPropertyValue('--font-family').trim();
 function drawLineChart(id, labels, internalData, externalData, routineData) {
   const ctx = document.getElementById(id);
   if (!ctx) return;
+
+  const fontFamily = getComputedStyle(document.documentElement)
+    .getPropertyValue('--font-family')
+    .trim() || 'Inter';
 
   new Chart(ctx, {
     type: 'line',
@@ -17,24 +22,24 @@ function drawLineChart(id, labels, internalData, externalData, routineData) {
       labels: labels,
       datasets: [
         {
-          label: 'Internal Maintenance',
+    label: t('internal_maintenance'),
           data: internalData,
           borderColor: '#3B82F6',
           backgroundColor: 'rgba(59, 130, 246, 0.1)',
           borderWidth: 3,
           pointBackgroundColor: '#3B82F6',
-          pointRadius: 0, // Hide points for cleaner look
+          pointRadius: 0,
           pointHoverRadius: 6,
-          tension: 0.4, // Increased tension for wavier lines
+          tension: 0.4,
           fill: {
             target: 'origin',
-            above: 'rgba(59, 130, 246, 0.05)' // Very light fill
+            above: 'rgba(59, 130, 246, 0.05)'
           },
-          borderJoinStyle: 'round', // Smoother line joints
-          borderCapStyle: 'round' // Rounded line ends
+          borderJoinStyle: 'round',
+          borderCapStyle: 'round'
         },
         {
-          label: 'External Maintenance',
+    label: t('external_maintenance'),
           data: externalData,
           borderColor: '#F59E0B',
           backgroundColor: 'rgba(245, 158, 11, 0.1)',
@@ -51,7 +56,7 @@ function drawLineChart(id, labels, internalData, externalData, routineData) {
           borderCapStyle: 'round'
         },
         {
-          label: 'Regular Maintenance',
+    label: t('regular_maintenance'),
           data: routineData,
           borderColor: '#8B5CF6',
           backgroundColor: 'rgba(139, 92, 246, 0.1)',
@@ -79,7 +84,7 @@ function drawLineChart(id, labels, internalData, externalData, routineData) {
             usePointStyle: true,
             padding: 20,
             font: {
-              family: 'Inter',
+              family: fontFamily,
               size: 12
             }
           }
@@ -91,10 +96,12 @@ function drawLineChart(id, labels, internalData, externalData, routineData) {
           backgroundColor: 'rgba(0, 0, 0, 0.8)',
           titleFont: {
             size: 14,
-            weight: 'bold'
+            weight: 'bold',
+            family: fontFamily
           },
           bodyFont: {
-            size: 12
+            size: 12,
+            family: fontFamily
           },
           padding: 12,
           cornerRadius: 6,
@@ -107,7 +114,7 @@ function drawLineChart(id, labels, internalData, externalData, routineData) {
       },
       scales: {
         y: {
-          beginAtZero: false, // Allow chart to start from actual data minimum
+          beginAtZero: false,
           min: Math.min(...[...internalData, ...externalData, ...routineData]) - 5,
           grid: {
             color: 'rgba(0, 0, 0, 0.05)',
@@ -115,11 +122,9 @@ function drawLineChart(id, labels, internalData, externalData, routineData) {
           },
           ticks: {
             font: {
-              family: 'Inter'
+              family: fontFamily
             },
-            callback: function (value) {
-              return value + '%'; // Add percentage sign to Y-axis
-            }
+            callback: value => value + '%'
           }
         },
         x: {
@@ -129,19 +134,20 @@ function drawLineChart(id, labels, internalData, externalData, routineData) {
           },
           ticks: {
             font: {
-              family: 'Inter'
+              family: fontFamily
             }
           }
         }
       },
       elements: {
         line: {
-          cubicInterpolationMode: 'monotone' // Smoother curves
+          cubicInterpolationMode: 'monotone'
         }
       }
     }
   });
 }
+
 
 // Custom chart plugins for enhanced interactivity
 Chart.register({
@@ -332,13 +338,17 @@ function drawBar(id, labels, internal, external) {
   const ctx = document.getElementById(id);
   if (!ctx) return;
 
+  const fontFamily = getComputedStyle(document.documentElement)
+    .getPropertyValue('--font-family')
+    .trim() || 'Inter';
+
   new Chart(ctx, {
     type: 'bar',
     data: {
       labels: labels,
       datasets: [
         {
-          label: 'Internal',
+          label: t('internal'),
           data: internal,
           backgroundColor: '#3B82F6',
           borderRadius: 4,
@@ -346,7 +356,7 @@ function drawBar(id, labels, internal, external) {
           hoverBackgroundColor: '#2563EB'
         },
         {
-          label: 'External',
+          label: t('external'),
           data: external,
           backgroundColor: '#F59E0B',
           borderRadius: 4,
@@ -365,7 +375,7 @@ function drawBar(id, labels, internal, external) {
             usePointStyle: true,
             padding: 20,
             font: {
-              family: 'Inter'
+              family: fontFamily
             }
           }
         },
@@ -374,10 +384,12 @@ function drawBar(id, labels, internal, external) {
           backgroundColor: 'rgba(0, 0, 0, 0.8)',
           titleFont: {
             size: 14,
-            weight: 'bold'
+            weight: 'bold',
+            family: fontFamily
           },
           bodyFont: {
-            size: 12
+            size: 12,
+            family: fontFamily
           },
           padding: 12,
           cornerRadius: 6
@@ -390,7 +402,7 @@ function drawBar(id, labels, internal, external) {
           },
           ticks: {
             font: {
-              family: 'Inter'
+              family: fontFamily
             }
           }
         },
@@ -398,7 +410,7 @@ function drawBar(id, labels, internal, external) {
           beginAtZero: true,
           ticks: {
             font: {
-              family: 'Inter'
+              family: fontFamily
             }
           },
           grid: {
@@ -410,15 +422,12 @@ function drawBar(id, labels, internal, external) {
         duration: 1000
       },
       onHover: (event, chartElement) => {
-        if (chartElement.length) {
-          ctx.style.cursor = 'pointer';
-        } else {
-          ctx.style.cursor = 'default';
-        }
+        ctx.style.cursor = chartElement.length ? 'pointer' : 'default';
       }
     }
   });
 }
+
 
 async function loadUpcomingMaintenance() {
   try {

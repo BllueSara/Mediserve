@@ -62,7 +62,7 @@
       <input type="text" data-i18n-placeholder="search_users" placeholder="Search users...">
 
 
-      <button class="add-user" data-i18n="add_new_user">+ Add New User</button>
+      <button class="add-user" data-i18n="add_new_user" onclick="openUserModal()">+ Add New User</button>
     </aside>
     <main class="main">
       <div class="profile-header">
@@ -202,11 +202,48 @@
         <span class="slider"></span>
       </label>
     </div>
+    <div class="permission-item">
+      <div class="permission-text">
+        <strong data-i18n="share_items">Share Items</strong>
+        <span data-i18n="can_share">Can share items</span>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="share_items">
+        <span class="slider"></span>
+      </label>
+    </div>
   </div>
 </div>
 
     </main>
   </div>
+  <!-- زر فتح النافذة -->
+
+<!-- النافذة المنبثقة -->
+<div id="userModal" class="modal" style="display: none;">
+  <div class="modal-content">
+
+    <label data-i18n="full_name">Full Name</label>
+    <input type="text" id="modal_name" data-i18n-placeholder="full_name" placeholder="Full Name" />
+
+    <label data-i18n="email">Email</label>
+    <input type="email" id="modal_email" data-i18n-placeholder="email" placeholder="Email" />
+
+    <label data-i18n="password">Password</label>
+    <input type="password" id="modal_password" data-i18n-placeholder="password" placeholder="Password" />
+
+    <label data-i18n="department">Department</label>
+    <input type="text" id="modal_department" data-i18n-placeholder="department" placeholder="Department" />
+
+    <label data-i18n="employee_id">Employee ID</label>
+    <input type="text" id="modal_employee_id" data-i18n-placeholder="employee_id" placeholder="Employee ID" />
+
+    <button onclick="submitUser()" data-i18n="add">Add</button>
+    <button onclick="closeUserModal()" data-i18n="cancel">Cancel</button>
+  </div>
+</div>
+
+
   <script src="/permmision/permmison.js"></script>
   <script src="/Language/Language.js"></script>
 </body>
