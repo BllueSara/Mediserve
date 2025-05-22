@@ -4837,10 +4837,20 @@ app.post("/external-ticket-with-file", upload.single("attachment"), authenticate
       ticket_id: ticketId
     });
 
-  } catch (err) {
-    console.error("❌ Server error:", err);
-    res.status(500).json({ error: "Unexpected server error" });
+ } catch (err) {
+  console.error("❌ Server error:", err);
+
+  // ✅ معالجة خطأ "Duplicate report_number"
+  if (err.code === 'ER_DUP_ENTRY' && err.sqlMessage.includes('report_number')) {
+    return res.status(400).json({
+      error: `The report number "${req.body.ticket_number}" is already in use. Please use a different one.`
+    });
   }
+
+  // ❌ خطأ عام
+  res.status(500).json({ error: "Unexpected server error" });
+}
+
 });
 
 const cron = require('node-cron');

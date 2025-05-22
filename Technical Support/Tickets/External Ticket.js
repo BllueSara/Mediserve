@@ -1623,24 +1623,34 @@ document.querySelector("form").addEventListener("submit", async function (e) {
 
   const token = localStorage.getItem('token');
 
-  try {
-    const response = await fetch("http://localhost:5050/external-ticket-with-file", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify(data)
-    });
+try {
+  const response = await fetch("http://localhost:5050/external-ticket-with-file", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  });
 
-    const result = await response.json();
+  const result = await response.json();
 
-    if (!response.ok) throw new Error(result.error || "Unknown error");
+  if (!response.ok) throw new Error(result.error || "Unknown error");
 
-    location.reload();
-  } catch (err) {
-    console.error("❌ Submission error:", err);
+  location.reload();
+} catch (err) {
+  console.error("❌ Submission error:", err);
+
+  // ✅ استخدم الرسالة التي أرسلها السيرفر
+  if (err.message.includes("already in use")) {
+    alert(err.message); // أو استخدم نص مخصص إذا تفضل
+  } else {
+    alert("❌ An error occurred while submitting the request. Please try again later.");
   }
+}
+
+
+
 });
 
 
