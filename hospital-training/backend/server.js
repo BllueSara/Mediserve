@@ -4446,7 +4446,155 @@ logActivity(userId, userName, "Edited", `Updated "${oldValue}" to "${newValue}" 
   }
 });
 
+app.post("/delete-device-specification", authenticateToken, async (req, res) => {
+  const { id } = req.body;
 
+  if (!id) {
+    return res.status(400).json({ error: "❌ Missing device ID" });
+  }
+const referencedTables = [
+  { table: "General_Maintenance", column: "device_id" },
+  { table: "Regular_Maintenance", column: "device_id" },
+  { table: "Maintenance_Reports", column: "device_id" },
+  { table: "New_Maintenance_Report", column: "device_id" }
+];
+
+
+  try {
+    // تحقق من الارتباط بالجداول
+    for (const ref of referencedTables) {
+      const [rows] = await db.promise().query(
+        `SELECT COUNT(*) AS count FROM ${ref.table} WHERE ${ref.column} = ?`,
+        [id]
+      );
+      if (rows[0].count > 0) {
+        return res.status(400).json({
+          error: `❌ Cannot delete device. It is referenced in table "${ref.table}"`
+        });
+      }
+    }
+
+    const [deviceInfo] = await db.promise().query(
+      `SELECT device_name, Serial_Number, Governmental_Number FROM Maintenance_Devices WHERE id = ?`,
+      [id]
+    );
+
+    if (!deviceInfo.length) {
+      return res.status(404).json({ error: "❌ Device not found" });
+    }
+
+    const [deleteResult] = await db.promise().query(
+      `DELETE FROM Maintenance_Devices WHERE id = ?`,
+      [id]
+    );
+
+    if (deleteResult.affectedRows === 0) {
+      return res.status(404).json({ error: "❌ Already deleted" });
+    }
+
+    const userId = req.user?.id;
+    const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
+    const userName = userRow[0]?.name || 'Unknown';
+
+    logActivity(userId, userName, "Deleted", `Deleted device ID ${id} (${deviceInfo[0].name})`);
+
+    res.json({ message: "✅ Device deleted successfully." });
+
+  } catch (err) {
+    console.error("❌ Delete device error:", err);
+    res.status(500).json({ error: "Server error during deletion." });
+  }
+});
+
+app.post("/update-device-specification", authenticateToken, async (req, res) => {
+  const { id, newName, newSerial, newGovNumber } = req.body;
+
+  if (!id || !newName || !newSerial || !newGovNumber) {
+    return res.status(400).json({ error: "❌ Missing required fields" });
+  }
+
+  try {
+    // ✅ تحديث الجدول الرئيسي
+    const [updateMain] = await db.promise().query(
+      `UPDATE Maintenance_Devices SET device_name = ?, Serial_Number = ?, Governmental_Number = ? WHERE id = ?`,
+      [newName.trim(), newSerial.trim(), newGovNumber.trim(), id]
+    );
+
+    if (updateMain.affectedRows === 0) {
+      return res.status(404).json({ error: "❌ Device not found" });
+    }
+
+    // ✅ الجداول المرتبطة
+    const relatedTables = [
+      {
+        table: "General_Maintenance",
+        fields: ["device_name", "serial_number", "governmental_number"]
+      },
+      {
+        table: "Regular_Maintenance",
+        fields: ["device_name", "serial_number", "governmental_number"]
+      },
+      {
+        table: "External_Maintenance",
+        fields: ["device_name", "serial_number", "governmental_number"]
+      },
+      {
+        table: "New_Maintenance_Report",
+        fields: ["device_name", "serial_number", "governmental_number"]
+      },
+      
+
+      {
+        table: "Internal_Tickets",
+        fields: ["device_name", "serial_number", "governmental_number"]
+      },
+      {
+        table: "External_Tickets",
+        fields: ["device_name", "serial_number", "governmental_number"]
+      }
+    ];
+
+    // ✅ تحديث كل جدول إذا يحتوي device_id
+    for (const { table, fields } of relatedTables) {
+      const [exists] = await db.promise().query(
+        `SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? AND COLUMN_NAME = 'device_id'`,
+        [table]
+      );
+
+      if (exists.length > 0) {
+        const query = `
+          UPDATE ${table}
+          SET ${fields[0]} = ?, ${fields[1]} = ?, ${fields[2]} = ?
+          WHERE device_id = ?
+        `;
+        await db.promise().query(query, [
+          newName.trim(),
+          newSerial.trim(),
+          newGovNumber.trim(),
+          id
+        ]);
+      }
+    }
+
+    // ✅ تسجيل اللوق
+    const userId = req.user?.id;
+    const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
+    const userName = userRow[0]?.name || 'Unknown';
+
+    logActivity(
+      userId,
+      userName,
+      "Edited",
+      `Updated device ID ${id} to name: ${newName}, serial: ${newSerial}, gov#: ${newGovNumber}`
+    );
+
+    res.json({ message: "✅ Device specification updated successfully." });
+
+  } catch (err) {
+    console.error("❌ Update device error:", err);
+    res.status(500).json({ error: "Server error during update." });
+  }
+});
 
 // ضروري تتأكد إن عندك body-parser أو express.json() مفعّل
 

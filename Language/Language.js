@@ -716,6 +716,7 @@ const languageManager = {
             'mine': "Mine",
             'shared_with_me': "Shared With Me",
             'filter_by': "Filter by",
+            'governmental_number': "Governmental Number",
             'select_value': "Select value",
             'actions': "Actions",
             'circuit_name': "Circuit Name",
@@ -777,6 +778,7 @@ const languageManager = {
         ar: {
             'issue': 'المشكلة',
             'selected_issue': 'المشكلة المحددة',
+            'governmental_number': 'الرقم الحكومي',
             'department': 'الاقسام',
             'reporter': 'صاحب البلاغ',
             'model': 'الموديلات',

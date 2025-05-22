@@ -1502,54 +1502,27 @@ function fetchDevicesBySection() {
 
 
 
-function fetchDeviceSpecsByTypeAndDepartment() {
+async function fetchDeviceSpecsByTypeAndDepartment() {
   const type = document.getElementById("device-type").value?.toLowerCase();
   const dept = document.getElementById("section").value;
   const optionsContainer = document.getElementById("device-spec-options");
   const displaySpan = document.getElementById("selected-device-spec");
   const hiddenInput = document.getElementById("device-spec");
 
-  if (type === "all-devices") {
-    fetch(`http://localhost:5050/all-devices-specs`)
-      .then(res => res.json())
-      .then(data => {
-        optionsContainer.innerHTML = "";
-
-        data.forEach(device => {
-          const text = `${device.name} | ${device.Serial_Number} | ${device.Governmental_Number} (${device.device_type})`;
-          const row = document.createElement("div");
-          row.className = "dropdown-option-row";
-          const optionText = document.createElement("div");
-          optionText.className = "dropdown-option-text";
-          optionText.textContent = text;
-          optionText.onclick = () => {
-            displaySpan.textContent = text;
-            hiddenInput.value = device.id;
-            cleanDropdownError(hiddenInput);
-
-            closeAllDropdowns();
-          };
-          row.appendChild(optionText);
-          optionsContainer.appendChild(row);
-        });
-      })
-      .catch(err => {
-        console.error("❌ Error fetching all device specs:", err);
-      });
-    return; // نوقف
-  }
-
-
   if (!type || !dept || !optionsContainer || !displaySpan || !hiddenInput) return;
+
+  // ✅ جلب الصلاحيات
+  const permissions = await checkUserPermissions();
 
   optionsContainer.innerHTML = "";
 
-  // + Add New Specification
+  const lang = languageManager.currentLang;
+  const t = languageManager.translations[lang];
+
+  // ✅ إضافة زر "Add New Specification" فقط إذا لديه صلاحية
   const addNewRow = document.createElement("div");
   addNewRow.className = "dropdown-option-row add-new-option";
-const lang = languageManager.currentLang;
-const t = languageManager.translations[lang];
-addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new']} ${t['device_specifications']}</div>`;
+  addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new']} ${t['device_specifications']}</div>`;
   addNewRow.onclick = () => {
     sessionStorage.setItem("lastDropdownOpened", "device-spec");
 
@@ -1562,8 +1535,35 @@ addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new']} ${t['
 
     closeAllDropdowns();
   };
-
   optionsContainer.appendChild(addNewRow);
+
+
+  if (type === "all-devices") {
+    fetch(`http://localhost:5050/all-devices-specs`)
+      .then(res => res.json())
+      .then(data => {
+        data.forEach(device => {
+          const text = `${device.name} | ${device.Serial_Number} | ${device.Governmental_Number} (${device.device_type})`;
+          const row = document.createElement("div");
+          row.className = "dropdown-option-row";
+          const optionText = document.createElement("div");
+          optionText.className = "dropdown-option-text";
+          optionText.textContent = text;
+          optionText.onclick = () => {
+            displaySpan.textContent = text;
+            hiddenInput.value = device.id;
+            cleanDropdownError(hiddenInput);
+            closeAllDropdowns();
+          };
+          row.appendChild(optionText);
+          optionsContainer.appendChild(row);
+        });
+      })
+      .catch(err => {
+        console.error("❌ Error fetching all device specs:", err);
+      });
+    return;
+  }
 
   fetch(`http://localhost:5050/devices/${type}/${encodeURIComponent(dept)}`)
     .then(res => res.json())
@@ -1571,7 +1571,7 @@ addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new']} ${t['
       if (!Array.isArray(data) || data.length === 0) {
         const noData = document.createElement("div");
         noData.className = "dropdown-option-row";
-        noData.innerHTML = `<div class="dropdown-option-text">No specifications found</div>`;
+        noData.innerHTML = `<div class="dropdown-option-text">${t['no_data_found'] || 'No specifications found'}</div>`;
         optionsContainer.appendChild(noData);
         return;
       }
@@ -1588,15 +1588,99 @@ addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new']} ${t['
           displaySpan.textContent = text;
           hiddenInput.value = device.id;
           cleanDropdownError(hiddenInput);
-
           closeAllDropdowns();
         };
 
         row.appendChild(optionText);
+
+        // ✅ أزرار تعديل وحذف إذا كان لديه الصلاحية
+        if (permissions.full_access || permissions.edit_items || permissions.delete_items) {
+          const icons = document.createElement("div");
+          icons.className = "dropdown-actions-icons";
+
+          if (permissions.full_access || permissions.edit_items) {
+            const editIcon = document.createElement("i");
+            editIcon.className = "fas fa-edit";
+            editIcon.title = t['edit'];
+                       editIcon.title = t['edit'];editIcon.onclick = (e) => {
+  e.stopPropagation();
+
+  // إغلاق كل dropdowns مفتوحة
+  closeAllDropdowns();
+
+  // إنشاء النافذة يدوياً (أو ممكن تستخدم modal جاهز)
+  const formContainer = document.createElement("div");
+  formContainer.className = "device-edit-form";
+
+  formContainer.innerHTML = `
+    <div class="device-edit-popup">
+      <h3>${t['edit']} ${t['device_specifications']}</h3>
+      <label>${t['device_name']}:</label>
+      <input type="text" id="edit-name" value="${device.name}" />
+      <label>${t['serial_number']}:</label>
+      <input type="text" id="edit-serial" value="${device.Serial_Number}" />
+      <label>${t['governmental_number']}:</label>
+      <input type="text" id="edit-gov" value="${device.Governmental_Number}" />
+      <div class="popup-buttons">
+        <button id="save-edit" class="btn-primary">${t['save'] || "Save"}</button>
+        <button id="cancel-edit" class="btn-secondary">${t['cancel'] || "Cancel"}</button>
+      </div>
+    </div>
+  `;
+
+  // إظهار النموذج
+  document.body.appendChild(formContainer);
+
+  // إغلاق النموذج
+  document.getElementById("cancel-edit").onclick = () => formContainer.remove();
+
+  // حفظ التعديل
+  document.getElementById("save-edit").onclick = () => {
+    const newName = document.getElementById("edit-name").value.trim();
+    const newSerial = document.getElementById("edit-serial").value.trim();
+    const newGovNumber = document.getElementById("edit-gov").value.trim();
+
+    if (!newName || !newSerial || !newGovNumber) {
+      alert(t['please_fill_all_fields'] || "❌ Please fill all fields.");
+      return;
+    }
+
+    editOption("device-spec", {
+      id: device.id,
+      newName,
+      newSerial,
+      newGovNumber,
+    });
+
+    formContainer.remove();
+  };
+
+
+            };
+            icons.appendChild(editIcon);
+          }
+
+          if (permissions.full_access || permissions.delete_items) {
+            const deleteIcon = document.createElement("i");
+            deleteIcon.className = "fas fa-trash";
+            deleteIcon.title = t['delete'];
+            deleteIcon.onclick = (e) => {
+              e.stopPropagation();
+              if (confirm(`${t['confirm_delete']} "${device.name}"?`)) {
+                deleteOption("device-spec", { id: device.id });
+
+              }
+            };
+            icons.appendChild(deleteIcon);
+          }
+
+          row.appendChild(icons);
+        }
+
         optionsContainer.appendChild(row);
       });
 
-      // ✅ Restore from sessionStorage
+      // ✅ استرجاع القيمة المحفوظة
       const saved = sessionStorage.getItem("device-spec");
       if (saved) {
         const match = data.find(d => d.id === saved);
@@ -1612,6 +1696,7 @@ addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new']} ${t['
       console.error("❌ Error fetching specs:", err);
     });
 }
+
 
 
 
@@ -1699,8 +1784,6 @@ function mapSelectIdToServerTarget(selectId) {
 
 
 
-
-
 function deleteOption(selectId, value, type = null) {
   const lang = languageManager.currentLang;
   const t = languageManager.translations[lang];
@@ -1710,14 +1793,24 @@ function deleteOption(selectId, value, type = null) {
     return;
   }
 
-  if (!confirm(`${t['confirm_delete']} "${value}"?`)) {
-    return;
-  }
 
-  fetch("http://localhost:5050/delete-option-complete", {
+
+  const isDeviceSpec = selectId === "device-spec";
+  const url = isDeviceSpec
+    ? "http://localhost:5050/delete-device-specification"
+    : "http://localhost:5050/delete-option-complete";
+
+  const body = isDeviceSpec
+    ? { id: value.id }
+    : { target: mapSelectIdToServerTarget(selectId), value, type };
+
+  fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
-    body: JSON.stringify({ target: mapSelectIdToServerTarget(selectId), value, type })
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${localStorage.getItem('token')}`
+    },
+    body: JSON.stringify(body)
   })
     .then(res => res.json())
     .then(result => {
@@ -1786,19 +1879,41 @@ function refreshDropdown(selectId) {
 }
 
 
-function editOption(selectId, oldValue, newValue, type = null) {
+function editOption(selectId, oldValue, newValue = null, type = null) {
   const lang = languageManager.currentLang;
   const t = languageManager.translations[lang];
 
-  if (!oldValue || !newValue) {
+  if (!oldValue || (!newValue && selectId !== "device-spec")) {
     alert(t['please_select_and_enter_valid_value']);
     return;
   }
 
-  fetch("http://localhost:5050/update-option-complete", {
+  const isDeviceSpec = selectId === "device-spec";
+  const url = isDeviceSpec
+    ? "http://localhost:5050/update-device-specification"
+    : "http://localhost:5050/update-option-complete";
+
+  const body = isDeviceSpec
+    ? {
+        id: oldValue.id,
+        newName: oldValue.newName,
+        newSerial: oldValue.newSerial,
+        newGovNumber: oldValue.newGovNumber
+      }
+    : {
+        target: mapSelectIdToServerTarget(selectId),
+        oldValue,
+        newValue,
+        type
+      };
+
+  fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
-    body: JSON.stringify({ target: mapSelectIdToServerTarget(selectId), oldValue, newValue, type })
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${localStorage.getItem('token')}`
+    },
+    body: JSON.stringify(body)
   })
     .then(res => res.json())
     .then(result => {
