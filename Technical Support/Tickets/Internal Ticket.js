@@ -1418,11 +1418,14 @@ if (!allowedType) return;
       }
 
       const savedDeviceType = sessionStorage.getItem("device-type");
-      if (savedDeviceType) {
-        selectedDisplay.textContent = savedDeviceType;
-        hiddenInput.value = savedDeviceType;
-        sessionStorage.removeItem("device-type");
-      }
+    if (savedDeviceType) {
+  selectedDisplay.textContent = savedDeviceType;
+  hiddenInput.value = savedDeviceType;
+  sessionStorage.removeItem("device-type");
+
+  // ✅ استدعِ مباشرة المشاكل بعد اختيار الجهاز الجديد
+  fetchProblemStatus(savedDeviceType.trim().toLowerCase());
+}
     })
     .catch(err => {
       console.error("❌ Failed to fetch device types:", err);
@@ -2523,8 +2526,11 @@ function saveNewModel() {
         return;
       }
 
-      sessionStorage.setItem("lastAddedModel", modelName);
-      fetchAndRenderModels(deviceType, `model-${deviceType}`);
+
+   sessionStorage.setItem(`model-${deviceType}`, modelName); // 👈 حفظ الاسم بمفتاح متوافق مع renderDropdownOptions
+fetchAndRenderModels(deviceType, `model-${deviceType}`);
+sessionStorage.setItem("spec-model", modelName); // 👈 للموديل داخل المواصفات
+
 
       const isSpecContext = sessionStorage.getItem("returnToPopup") === "true";
       if (isSpecContext) {
@@ -3259,124 +3265,21 @@ async function renderDropdownOptions({
     container.appendChild(row);
   });
 
-  // ✅ استرجاع القيمة المحفوظة
-  const saved = sessionStorage.getItem(storageKey || inputId);
-  if (saved) {
-    display.textContent = saved;
-    input.value = saved;
-    sessionStorage.removeItem(storageKey || inputId);
-  }
-
-  attachEditDeleteHandlers(containerId, t[labelKey] || labelKey);
-}
-async function renderDropdownIDs({
-  endpoint,
-  containerId,
-  displayId,
-  inputId,
-  labelKey,
-  itemKey, // ممكن تكون string أو دالة
-  storageKey,
-  onAddNew,
-  onEditOption,
-  onDeleteOption,
-  onSelectOption
-}) {
-  const permissions = await checkUserPermissions();
-  const res = await fetch(endpoint);
-  const data = await res.json();
-
-  const container = document.getElementById(containerId);
-  const display = document.getElementById(displayId);
-  const input = document.getElementById(inputId);
-  const lang = languageManager?.currentLang || 'en';
-  const t = languageManager?.translations?.[lang] || {};
-
-  if (!container || !display || !input) {
-    console.warn(`❌ عناصر الدروب داون ناقصة: ${containerId}, ${displayId}, ${inputId}`);
-    return;
-  }
-
-  container.innerHTML = "";
-
-  // ✅ زر الإضافة - فقط إذا كان عنده صلاحية
-  if ((permissions.full_access || permissions.add_items) && onAddNew) {
-    const addNewRow = document.createElement("div");
-    addNewRow.className = "dropdown-option-row add-new-option";
-    addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new'] || 'Add New'} ${t[labelKey] || labelKey}</div>`;
-    addNewRow.onclick = () => {
-      sessionStorage.setItem("lastDropdownOpened", inputId);
-      onAddNew();
-      closeAllDropdowns();
-    };
-    container.appendChild(addNewRow);
-  }
-
-  // ✅ العناصر
-  data.forEach(item => {
-    const value = typeof itemKey === 'function' ? itemKey(item) : item[itemKey];
-
-    const row = document.createElement("div");
-    row.className = "dropdown-option-row";
-
-    const text = document.createElement("div");
-    text.className = "dropdown-option-text";
-    text.textContent = value;
-    text.onclick = () => {
-      display.textContent = value;
-      input.value = item.id; // ← احفظ ID المهندس وليس الاسم
-      if (onSelectOption) onSelectOption(item);
-      cleanDropdownError(input);
-      closeAllDropdowns();
-    };
-
-
-    const icons = document.createElement("div");
-    icons.className = "dropdown-actions-icons";
-
-    // ✏️ تعديل
-    if (permissions.full_access || permissions.edit_items) {
-      const editIcon = document.createElement("i");
-      editIcon.className = "fas fa-edit";
-      editIcon.title = t['edit'] || "Edit";
-      editIcon.onclick = (e) => {
-        e.stopPropagation();
-        onEditOption?.(value);
-      };
-      icons.appendChild(editIcon);
-    }
-
-    // 🗑️ حذف
-    if (permissions.full_access || permissions.delete_items) {
-      const deleteIcon = document.createElement("i");
-      deleteIcon.className = "fas fa-trash";
-      deleteIcon.title = t['delete'] || "Delete";
-      deleteIcon.onclick = (e) => {
-        e.stopPropagation();
-        onDeleteOption?.(value);
-      };
-      icons.appendChild(deleteIcon);
-    }
-
-    row.appendChild(text);
-    row.appendChild(icons);
-    container.appendChild(row);
-  });
-
-  // ✅ استرجاع القيمة المحفوظة
 const saved = sessionStorage.getItem(storageKey || inputId);
 if (saved) {
-  const match = data.find(d => String(d.id) === saved || d.name === saved);
-  if (match) {
-    display.textContent = match.name;
-    input.value = match.id;
-  } else {
-    display.textContent = saved;
-    input.value = saved;
-  }
+  display.textContent = saved;
+  input.value = saved;
   sessionStorage.removeItem(storageKey || inputId);
-}
 
+  // ✅ فعّل الحدث تلقائيًا
+  const allOptions = container.querySelectorAll(".dropdown-option-text");
+  for (const option of allOptions) {
+    if (option.textContent.trim() === saved.trim()) {
+      option.click();
+      break;
+    }
+  }
+}
 
   attachEditDeleteHandlers(containerId, t[labelKey] || labelKey);
 }
