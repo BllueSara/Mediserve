@@ -1,9 +1,24 @@
-/* General body styling */
+/* خطوط عامة للصفحة */
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Arial', sans-serif;
   background-color: #f9fbfc;
   margin: 0;
   padding: 0;
+}
+:root[lang="ar"] {
+    --font-family: 'Tajawal', sans-serif;
+}
+
+:root[lang="en"] {
+    --font-family:  'Arial', sans-serif;
+}
+
+/* استخدم الخط المحلي فقط في العناصر المحددة بوضوح */
+.info-box,
+.info-title,
+.info-label,
+.info-value {
+  font-family: 'Tajawal', sans-serif;
 }
 
 /* Container for navigation buttons */
