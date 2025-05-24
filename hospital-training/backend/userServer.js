@@ -25,6 +25,28 @@ app.use(bodyParser.json());
 
 
 
+
+// Serve static files from all directories
+app.use(express.static(path.join(__dirname, 'Home')));
+app.use(express.static(path.join(__dirname, 'authintication')));
+app.use(express.static(path.join(__dirname, 'hospital-training')));
+app.use(express.static(path.join(__dirname, 'fonts')));
+app.use(express.static(path.join(__dirname, 'Language')));
+app.use(express.static(path.join(__dirname, 'network')));
+app.use(express.static(path.join(__dirname, 'permmision')));
+app.use(express.static(path.join(__dirname, 'icon')));
+app.use(express.static(path.join(__dirname, 'Technical Support')));
+app.use(express.static(path.join(__dirname, 'Notifications')));
+app.use(express.static(path.join(__dirname, 'profile')));
+app.use(express.static(path.join(__dirname, 'track')));
+
+// Default route
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'Home', 'Home.html'));
+});
+
+
+
 // مفتاح التوكن (مهم تحفظه بمكان آمن)
 const JWT_SECRET = 'super_secret_key_123';
 

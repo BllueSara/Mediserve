@@ -9,10 +9,10 @@ const JWT_SECRET = 'super_secret_key_123';
 
 app.use(express.json());
 app.use(cors());
-app.use(express.static(path.join(__dirname, "public")));
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.use(express.static(path.join(__dirname, "authintication")));
-app.use(express.static(path.join(__dirname, "Home")));
+app.use(express.static(path.join(__dirname)));
+
+
+
 
 
 app.get("/", (req, res) => {

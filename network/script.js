@@ -115,32 +115,80 @@ async function pingAllIPs() {
 }
 
 let continuousPingInterval = null;
+let pingTIndex = 0;
+let pingTActive = false;
+
 function startContinuousPing() {
-  const next = getFirstValidIP();
-  if (!next) return appendToTerminal('Please enter a valid IP for Ping -t.', true);
+  const inputs = document.querySelectorAll('.ip-input');
+  const validIPs = Array.from(inputs)
+    .map((input, index) => ({ ip: input.value.trim(), index }))
+    .filter(item => isValidIP(item.ip));
+
+  if (validIPs.length === 0) {
+    appendToTerminal('No valid IPs for Ping -t.', true);
+    return;
+  }
 
   if (continuousPingInterval) {
     clearInterval(continuousPingInterval);
     continuousPingInterval = null;
+    pingTActive = false;
     appendToTerminal('Ping -t stopped.');
     return;
   }
 
-  appendToTerminal(`Starting Ping -t to ${next.ip}...`);
+  let storedIndex = parseInt(localStorage.getItem("pingTIndex")) || 0;
+  const current = validIPs[storedIndex % validIPs.length];
+
+  appendToTerminal(`Starting Ping -t to ${current.ip}`);
+  pingTActive = true;
+
   continuousPingInterval = setInterval(async () => {
+    if (!pingTActive) return; // ← لا تطبع شي إذا المستخدم أوقف
+
     try {
       const response = await fetch(`${API_BASE_URL}/ping`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ip: next.ip })
+        body: JSON.stringify({ ip: current.ip })
       });
+
       const data = await response.json();
-      appendToTerminal(data.error || data.output, !!data.error);
+      const line = (data.output || '').split('\n').find(l => l.includes('time='));
+
+      if (!pingTActive) return; // ← double-check بعد await
+
+      if (line) {
+        const match = line.match(/time[=<](\d+\.?\d*)\s*ms/i);
+        const latency = match ? parseFloat(match[1]) : null;
+
+        let statusColor = '#2ecc71';
+        if (latency > 150) statusColor = '#e74c3c';
+        else if (latency > 50) statusColor = '#f1c40f';
+
+        const msg = `↪ ${line.trim()} (${latency} ms)`;
+        const div = document.createElement('div');
+        div.textContent = msg;
+        div.style.color = statusColor;
+
+        const terminal = document.getElementById('terminal-output');
+        terminal.appendChild(div);
+        terminal.scrollTop = terminal.scrollHeight;
+      } else {
+        appendToTerminal(data.output || 'No response', true);
+      }
     } catch (err) {
-      appendToTerminal(`Ping -t error: ${err.message}`, true);
+      if (pingTActive) {
+        appendToTerminal(`Ping -t error: ${err.message}`, true);
+      }
     }
   }, 2000);
+
+  const nextIndex = (storedIndex + 1) % validIPs.length;
+  localStorage.setItem("pingTIndex", nextIndex);
 }
+
+
 
 
 async function generateReport() {
@@ -168,7 +216,7 @@ async function generateReport() {
     };
 
     // تحقق أن كل الحقول فيها بيانات صالحة
-    const isValid = Object.values(row).every(val => val !== undefined && val !== null && val !== '');
+    const isValid = row.circuit && row.isp && row.location && isValidIP(row.ip);
     if (isValid) devices.push(row);
   }
 
@@ -295,8 +343,9 @@ async function saveAllIPs() {
     const hasAnyValue = Object.values(row).some(val => val);
 
     if (hasAnyValue) {
-      const isComplete = Object.values(row).every(val => val);
-      if (!isComplete) {
+      const isBasicValid = row.circuit && row.isp && row.location && isValidIP(row.ip);
+
+      if (!isBasicValid) {
         highlightMissingFieldsSmart(i, row);
         hasError = true;
       } else {
@@ -306,7 +355,7 @@ async function saveAllIPs() {
   }
 
   if (hasError) {
-    appendToTerminal('', true);
+    appendToTerminal('❌ Some fields are missing or invalid.', true);
     return;
   }
 
@@ -327,14 +376,26 @@ async function saveAllIPs() {
 
     const data = await res.json();
     if (data.success) {
-      appendToTerminal(`✅ Saved ${devices.length} devices to database.`);
-    } else {
-      appendToTerminal(data.error || '❌ Save failed.', true);
-    }
+      const savedCount = data.saved || 0;
+      const skippedCount = data.skipped || 0;
+    
+      if (savedCount > 0) {
+        appendToTerminal(``);
+      }
+    
+      if (skippedCount > 0) {
+        showCenterAlert(` ${skippedCount} duplicate record(s) were skipped.`);
+      }
+    
+      if (savedCount === 0 && skippedCount === 0) {
+        showCenterAlert('No new valid devices to save.');
+      }
+    }    
   } catch (err) {
-    appendToTerminal(`❌ Save error: ${err.message}`, true);
+    appendToTerminal(`Save error: ${err.message}`, true);
   }
 }
+
 
 
 
@@ -669,7 +730,8 @@ for (let i = 0; i < ips.length; i++) {
     start_date: startDates[i],
     end_date: endDates[i]
   };
-    if (Object.values(row).every(val => val?.trim?.())) devices.push(row);
+    const isBasicValid = row.circuit && row.isp && row.location && isValidIP(row.ip);
+    if (isBasicValid) devices.push(row);
 }
 
   const res = await fetch(`${API_BASE_URL}/share-entry`, {
@@ -742,3 +804,5 @@ for (let i = 0; i < ips.length; i++) {
     };
   }
 }
+
+

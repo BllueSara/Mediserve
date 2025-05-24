@@ -36,6 +36,9 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use(express.static(__dirname));
 
+
+
+
 const IP_REGEX = /^\d{1,3}(\.\d{1,3}){3}$/;
 
 function isValidIP(ip) {
@@ -128,6 +131,10 @@ app.post('/api/add-entry', authenticateToken, (req, res) => {
   const {
     circuit, isp, location, ip, speed, start_date, end_date
   } = req.body;
+
+  if (!circuit || !isp || !location || !ip || !isValidIP(ip)){
+    return res.status(400).json({error : 'Missing required fields'});
+  }
 
   db.query(`
     INSERT INTO entries (circuit_name, isp, location, ip, speed, start_date, end_date, user_id)
@@ -294,7 +301,7 @@ app.post('/api/report', authenticateToken, async (req, res) => {
     }
 
     const validDevices = devices.filter(d =>
-      d.circuit && d.isp && d.location && d.ip && d.speed && d.start_date && d.end_date
+     d.circuit && d.isp && d.location && d.ip
     );
 
     if (validDevices.length === 0) {
@@ -475,7 +482,6 @@ app.get('/api/users', authenticateToken, (req, res) => {
 
 
 
-
 app.post('/api/save', authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const { devices } = req.body;
@@ -484,24 +490,60 @@ app.post('/api/save', authenticateToken, async (req, res) => {
     return res.status(400).json({ error: 'No devices provided' });
   }
 
+  let savedCount = 0;
+  let skippedCount = 0;
+
   try {
-    const insertPromises = devices.map(device => {
-      return db.promise().query(`
-      INSERT INTO entries (circuit_name, isp, location, ip, speed, start_date, end_date, user_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
-        device.circuit, device.isp, device.location, device.ip,
-        device.speed, device.start_date, device.end_date, userId
-      ]);
-    });
+    const insertPromises = devices
+      .filter(d => d.ip && isValidIP(d.ip) && d.circuit && d.isp && d.location)
+      .map(async d => {
+        const [existing] = await db.promise().query(`
+          SELECT id FROM entries
+          WHERE circuit_name = ? AND isp = ? AND location = ? AND ip = ?
+            AND speed <=> ? AND start_date <=> ? AND end_date <=> ? AND user_id = ?
+          LIMIT 1
+        `, [
+          d.circuit,
+          d.isp,
+          d.location,
+          d.ip,
+          d.speed || null,
+          d.start_date || null,
+          d.end_date || null,
+          userId
+        ]);
+
+        if (existing.length > 0) {
+          skippedCount++;
+          return null;
+        }
+
+        await db.promise().query(`
+          INSERT INTO entries (circuit_name, isp, location, ip, speed, start_date, end_date, user_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          d.circuit,
+          d.isp,
+          d.location,
+          d.ip,
+          d.speed || null,
+          d.start_date || null,
+          d.end_date || null,
+          userId
+        ]);
+
+        savedCount++;
+      });
 
     await Promise.all(insertPromises);
-    res.json({ success: true });
+
+    res.json({ success: true, saved: savedCount, skipped: skippedCount });
   } catch (err) {
     console.error('❌ Save error:', err);
     res.status(500).json({ error: 'Failed to save entries' });
   }
 });
+
 
 
 
@@ -604,6 +646,7 @@ app.get('/api/distinct-values/:key', authenticateToken, async (req, res) => {
 });
 
 const cron = require('node-cron');
+const { error } = require('console');
 
 cron.schedule('02 * * * *', async () => {
   try {
@@ -656,6 +699,81 @@ cron.schedule('02 * * * *', async () => {
     console.error('❌ Error in contract expiry check:', err);
   }
 });
+
+
+// حفظ مجموعة أجهزة من Excel
+app.post('/api/entries/bulk', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const { devices } = req.body;
+
+  if (!Array.isArray(devices) || devices.length === 0) {
+    return res.status(400).json({ error: '❌ No devices provided' });
+  }
+
+  let savedCount = 0;
+  let skippedCount = 0;
+
+  try {
+    for (const d of devices) {
+      // تحقق من صحة IP
+      if (
+        !d.circuit_name || !d.isp || !d.location || !d.ip ||
+        !/^\d{1,3}(\.\d{1,3}){3}$/.test(d.ip) ||
+        !d.ip.split('.').every(part => parseInt(part) <= 255)
+      ) {
+        skippedCount++;
+        continue;
+      }
+
+      // تحقق من التكرار التام للمستخدم
+      const [existing] = await db.promise().query(`
+        SELECT id FROM entries
+        WHERE circuit_name = ? AND isp = ? AND location = ? AND ip = ?
+          AND speed <=> ? AND start_date <=> ? AND end_date <=> ? AND user_id = ?
+        LIMIT 1
+      `, [
+        d.circuit_name,
+        d.isp,
+        d.location,
+        d.ip,
+        d.speed || null,
+        d.start_date || null,
+        d.end_date || null,
+        userId
+      ]);
+
+      if (existing.length > 0) {
+        skippedCount++;
+        continue;
+      }
+
+      // إذا مو مكرر → نحفظه
+      await db.promise().query(`
+        INSERT INTO entries 
+          (circuit_name, isp, location, ip, speed, start_date, end_date, user_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        d.circuit_name,
+        d.isp,
+        d.location,
+        d.ip,
+        d.speed || null,
+        d.start_date || null,
+        d.end_date || null,
+        userId
+      ]);
+
+      savedCount++;
+    }
+
+    res.json({ success: true, saved: savedCount, skipped: skippedCount });
+  } catch (err) {
+    console.error('❌ Bulk insert error:', err.message);
+    res.status(500).json({ error: '❌ Failed to save devices' });
+  }
+});
+
+
 
 // Start server
 //const os = require('os');
