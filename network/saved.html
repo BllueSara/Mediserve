@@ -89,6 +89,10 @@
     <button class="cmd-btn step2" id="ping-btn" data-i18n="ping">Ping</button>
     <button class="cmd-btn step3" id="pingt-btn" data-i18n="ping_t">Ping -t</button>
     <button class="cmd-btn step4" id="traceroute-btn" data-i18n="traceroute">Traceroute</button>
+    <label for="excel-upload" class="cmd-btn step6" style="display: inline-block; cursor: pointer;" data-i18n="upload_excel">
+      Upload Excel
+   </label>
+   <input type="file" id="excel-upload" accept=".xlsx" style="display: none;" />
     <button class="cmd-btn step5" id="report-btn" data-i18n="generate_report">Generate Report</button>
     <button class="cmd-btn step6" id="shareBtn" data-i18n="share">Share</button>
   </section>
@@ -259,6 +263,8 @@ function goBack() {
     </script>
   <script src="/Language/Language.js"></script>
   <script src="saved.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
   
 </body>
 </html>
