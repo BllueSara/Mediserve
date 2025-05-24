@@ -249,19 +249,21 @@
 
         <!-- التفاصيل -->
         <div class="form-group">
-          <label data-i18n="report_details">Report Details</label>
-          <textarea data-i18n-placeholder="enter_description"
-            placeholder="Enter detailed description of the issue"></textarea>
-        </div>
-        <div class="form-group">
-          <label data-i18n="final_diagnosis">Final Diagnosis</label>
-          <textarea data-i18n-placeholder="enter_final_diagnosis"
-            placeholder="Enter final diagnosis after investigation"></textarea>
-        </div>
-        <div class="form-group">
-          <label data-i18n="other_description">Other Description</label>
-          <textarea data-i18n-placeholder="provide_additional_details"
-            placeholder="Please provide additional details if 'Other' is selected"></textarea>
+<!-- Report Details -->
+<label data-i18n="report_details">Report Details</label>
+<textarea id="issue_description" name="issue_description" data-i18n-placeholder="enter_description"
+  placeholder="Enter detailed description of the issue" required></textarea>
+
+<!-- Final Diagnosis -->
+<label data-i18n="final_diagnosis">Final Diagnosis</label>
+<textarea id="final_diagnosis" name="final_diagnosis" data-i18n-placeholder="enter_final_diagnosis"
+  placeholder="Enter final diagnosis after investigation"></textarea>
+
+<!-- Other Description -->
+<label data-i18n="other_description">Other Description</label>
+<textarea id="other_description" name="other_description" data-i18n-placeholder="provide_additional_details"
+  placeholder="Please provide additional details if 'Other' is selected"></textarea>
+
         </div>
 
         <!-- زر الحفظ -->

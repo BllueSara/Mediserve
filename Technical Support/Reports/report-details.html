@@ -14,14 +14,16 @@
   <!-- Linking external CSS file for styling -->
   <link rel="stylesheet" href="report-details.CSS" />
   <link rel="stylesheet" href="/Language/Language.css">
-  <style>
-    body {
-      font-family: var(--font-family);
-    }
-    h1, h2, h3, p, span, button, select, input, label {
-      font-family: var(--font-family);
-    }
-  </style>
+<style>
+
+
+  body,
+  h1, h2, h3, p, span, button, select, input, label,
+  .info-title, .info-label, .info-value {
+    font-family: var(--font-family) !important;
+  }
+</style>
+
 </head>
 <body>
 
@@ -106,9 +108,12 @@
     <div class="section-title" data-i18n="additional_notes">Additional Notes</div>
     <div class="note" id="note"></div>
   </div>
-  
- 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- ثانيًا: arabic reshaper + bidi -->
+<script src="https://cdn.jsdelivr.net/npm/arabic-reshaper@1.2.0/dist/arabic-reshaper.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bidijs@1.0.2/dist/bidi.min.js"></script>
+ 
   <script src="report-details.js"></script>
   <script src="/Language/Language.js"></script>
 
@@ -121,12 +126,18 @@
       <label><input type="checkbox" checked id="opt-note"> <span data-i18n="technical_notes">Technical Notes</span></label><br>
       <label><input type="checkbox" checked id="opt-signature"> <span data-i18n="signature">Signature</span></label><br>
       <label><input type="checkbox" checked id="opt-attachment"> <span data-i18n="attachment">Attachment</span></label><br>
+      <label for="pdf-lang" style="display: block; margin-bottom: 10px;">
+  <span data-i18n="report_language">Report Language:</span>
+  <select id="pdf-lang">
+    <option value="ar"> العربية</option>
+    <option value="en" selected>English</option>
+  </select>
+</label>
       <label><input type="checkbox" checked id="opt-specs"> <span data-i18n="device_specifications">Device Specs</span></label><br><br>
       <button id="generate-pdf-btn" data-i18n="generate_pdf">Generate PDF</button>
       <button onclick="document.getElementById('pdf-options-modal').style.display='none'" data-i18n="cancel">Cancel</button>
     </div>
   </div>
-  
 
 </body>
 </html>

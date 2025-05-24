@@ -3,12 +3,54 @@ function goBack() {
   window.history.back();
 }
 
+const { jsPDF } = window.jspdf;
+let fontsReady = false;
+let tajawalRegularBase64 = "";
+let tajawalBoldBase64 = "";
+
+const fetchFont = async (url) => {
+  const res = await fetch(url);
+  const blob = await res.blob();
+
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result.split(',')[1]; // فقط البايس64 بدون data:...
+      resolve(base64);
+    };
+    reader.readAsDataURL(blob);
+  });
+};
+
+const loadFonts = async () => {
+  tajawalRegularBase64 = await fetchFont("/fonts/Amiri-Regular.ttf");
+  tajawalBoldBase64 = await fetchFont("/fonts/Amiri-Bold.ttf");
+  fontsReady = true;
+};
+
+loadFonts();
+
+
+
+
+function fixEncoding(badText) {
+  try {
+    const bytes = new Uint8Array([...badText].map(ch => ch.charCodeAt(0)));
+    const decoder = new TextDecoder("utf-8");
+    return decoder.decode(bytes);
+  } catch {
+    return badText;
+  }
+}
+
+
 let reportData = null;
 
 const canvas = document.getElementById("signatureCanvas");
 const ctx = canvas.getContext("2d");
 let drawing = false;
 let userDrewOnCanvas = false;
+
 
 document.addEventListener("DOMContentLoaded", () => {
   
@@ -160,23 +202,49 @@ document.addEventListener("DOMContentLoaded", () => {
   }
  }
 
+let titlePrefix = "Maintenance";
+if (report.maintenance_type === "Regular") titlePrefix = "Regular Maintenance";
+else if (report.maintenance_type === "General") titlePrefix = "General Maintenance";
+else if (report.maintenance_type === "Internal") titlePrefix = "Internal Ticket";
+else if (report.maintenance_type === "External") titlePrefix = "External Maintenance";
+
+let ticketNum = report.ticket_number?.trim();
+if (!ticketNum) {
+  const fullText = `${report.full_description || ""} ${report.issue_summary || ""}`;
+  const match = fullText.match(/(?:Ticket Number:|Ticket\s+\()? *(TIC-\d+|INT-\d{8}-\d{3})/i);
+  if (match) {
+    ticketNum = match[1].trim();
+  }
+}
+
+const reportNum = report.report_number || report.request_number || "";
+const isTicketReport = reportNum.includes("-TICKET");
+
+// ✅ فقط لو فيه ticketNum نستخدمه، ولو فيه -TICKET نضيف "Ticket"
+let reportTitle = titlePrefix;
+if (ticketNum) {
+  reportTitle += ` #${ticketNum}`;
+  if (isTicketReport) {
+    reportTitle += `-Ticket`; // 🟢 أضف الكلمة فقط بدون رقم التقرير
+  }
+} else {
+  reportTitle += ` #${reportNum || report.id}`;
+}
+
+document.getElementById("report-title").textContent = reportTitle;
+
+
+document.getElementById("report-title").textContent = reportTitle;
+
+
+   
+document.getElementById("report-title").setAttribute("data-i18n", "report_title_key");
       
-      
-      let titlePrefix = "Maintenance";
-      if (report.maintenance_type === "Regular") titlePrefix = "Regular Maintenance";
-      else if (report.maintenance_type === "General") titlePrefix = "General Maintenance";
-      else if (report.maintenance_type === "Internal") titlePrefix = "Internal Ticket";
-      else if (report.maintenance_type === "External") titlePrefix = "External Maintenance "|| "External Maintenance Ticket";
-      
-      const reportTitle = ticketNumber
-        ? `${titlePrefix} #${ticketNumber}`
-        : `${titlePrefix} #${report.report_number || report.id}`;
-      
-      document.getElementById("report-title").textContent = reportTitle;
-      
-      
-      document.getElementById("report-id").textContent =
-        report.report_number || report.request_number || `MR-${report.id}`;
+document.getElementById("report-id").textContent =
+  report.maintenance_type === "Internal"
+    ? report.ticket_number || `INT-${report.id}`
+    : report.report_number || report.request_number || `MR-${report.id}`;
+
       document.getElementById("priority").textContent = isExternal ? "" : (report.priority || "");
       document.getElementById("device-type").textContent = report.device_type || "";
       if (report.maintenance_type === "Regular" ) {
@@ -184,7 +252,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }else if (  report.maintenance_type === "General") {
         document.getElementById("assigned-to").textContent = report.technician_name || "";
       } else if (report.maintenance_type === "Internal") {
-        document.getElementById("assigned-to").textContent = report.technician_name || "";
+        document.getElementById("assigned-to").textContent = report.technical_engineer || "";
       }
        else {
         document.getElementById("assigned-to").textContent = isExternal
@@ -204,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
       
       if (report.maintenance_type === "Regular") {
         document.getElementById("description").textContent =
-          report.problem_status || report.issue_summary || report.initial_diagnosis || "No description.";
+          report.problem_status || report.issue_summary || report.issue_summary || "No description.";
       }else {
         const problem = (report.problem_status || "").trim();
         const summary = (report.issue_summary || report.initial_diagnosis || "").trim();
@@ -245,62 +313,81 @@ document.addEventListener("DOMContentLoaded", () => {
       
       
       
-      if (report.maintenance_type === "General") {
-        const generalInfo = [
-          ["Customer Name", report.customer_name],
-          ["ID Number", report.id_number],
-          ["Ext Number", report.extension],
-          ["Initial Diagnosis", report.diagnosis_initial],
-          ["Final Diagnosis", report.diagnosis_final],
-          ["Floor", report.floor],
-        ];
-      
-        const generalHtml = generalInfo.map(([label, value]) =>
-          `<div class="info-row"><span class="info-label">${label}:</span><span class="info-value">${value || "N/A"}</span></div>`
-        ).join("");
-      
-        document.getElementById("note").innerHTML = `
-          <div class="info-box">
-            <div class="info-title">Additional Information:</div>
-            ${generalHtml}
+  if (report.maintenance_type === "General") {
+  const generalInfo = [
+    { label: "customer_name", text: "Customer Name", value: report.customer_name },
+    { label: "id_number", text: "ID Number", value: report.id_number },
+    { label: "ext_number", text: "Ext Number", value: report.extension },
+    { label: "initial_diagnosis", text: "Initial Diagnosis", value: report.diagnosis_initial },
+    { label: "final_diagnosis", text: "Final Diagnosis", value: report.diagnosis_final },
+    { label: "floor", text: "Floor", value: report.floor },
+  ];
+
+  const generalHtml = generalInfo.map(item =>
+    `<div class="info-row">
+      <span class="info-label" data-i18n="${item.label}">${item.text}:</span>
+      <span class="info-value">${item.value || "N/A"}</span>
+    </div>`
+  ).join("");
+
+  document.getElementById("note").innerHTML = `
+    <div class="info-box">
+      <div class="info-title" data-i18n="additional_information">Additional Information:</div>
+      ${generalHtml}
+    </div>
+  `;
+} else {
+  let noteHtml = `
+    <div class="info-box">
+      <div class="info-title" data-i18n="${isExternal ? 'final_diagnosis' : 'technical_notes'}">
+        ${isExternal ? "Final Diagnosis" : "Technical Team Notes"}:
+      </div>
+      <div class="info-row">
+        <span class="info-value">${report.full_description || report.final_diagnosis || "No notes."}</span>
+      </div>
+    </div>
+  `;
+
+  if (report.ticket_type) {
+    noteHtml += `
+      <div class="info-box" style="margin-top:10px;">
+        <div class="info-title" data-i18n="issue_summary">Issue Summary:</div>
+        <div class="info-row">
+          <span class="info-value">${report.issue_description}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  if (report.source === "external-legacy") {
+    if (report.final_diagnosis) {
+      noteHtml += `
+        <div class="info-box" style="margin-top:10px;">
+          <div class="info-title" data-i18n="final_diagnosis">Final Diagnosis:</div>
+          <div class="info-row">
+            <span class="info-value">${report.final_diagnosis}</span>
           </div>
-        `;
-      } else {
-        let noteHtml = `
-          <div class="info-box">
-            <div class="info-title">${isExternal ? "Final Diagnosis" : "Technical Team Note"}:</div>
-            <div class="info-row">
-              <span class="info-value">${report.full_description || report.final_diagnosis || "No notes."}</span>
-            </div>
+        </div>
+      `;
+    }
+
+    if (report.maintenance_manager) {
+      noteHtml += `
+        <div class="info-box" style="margin-top:10px;">
+          <div class="info-title" data-i18n="maintenance_manager">Maintenance Manager:</div>
+          <div class="info-row">
+            <span class="info-value">${report.maintenance_manager}</span>
           </div>
-        `;
-      
-        // ✅ إضافة box جديد إذا فيه ticket_type
-        if (report.ticket_type) {
-          noteHtml += `
-            <div class="info-box" style="margin-top:10px;">
-              <div class="info-title">Issue Summary:</div>
-              <div class="info-row">
-                <span class="info-value">${report.issue_description}</span>
-              </div>
-            </div>
-          `;
-        }
-      
-        // ✅ Box المانجر القديم
-        if (report.source === "external-legacy" && report.maintenance_manager) {
-          noteHtml += `
-            <div class="info-box" style="margin-top:10px;">
-              <div class="info-title">Maintenance Manager:</div>
-              <div class="info-row">
-                <span class="info-value">${report.maintenance_manager}</span>
-              </div>
-            </div>
-          `;
-        }
-      
-        document.getElementById("note").innerHTML = noteHtml;
-      }
+        </div>
+      `;
+    }
+  }
+
+  document.getElementById("note").innerHTML = noteHtml;
+  languageManager.applyLanguage();
+}
+
+
       
       
       
@@ -409,20 +496,107 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("❌ Error fetching report:", err);
     });
 
+function prepareArabic(text) {
+  try {
+    const reshaped = ArabicReshaper.reshape(text);
+    return bidi.getVisualString(reshaped);
+  } catch {
+    return text;
+  }
+}
+
+function getImageBase64(imgElement) {
+  const canvas = document.createElement("canvas");
+  canvas.width = imgElement.naturalWidth;
+  canvas.height = imgElement.naturalHeight;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(imgElement, 0, 0);
+  return canvas.toDataURL("image/png");
+}
+function waitForImagesToLoad(images) {
+  return Promise.all(
+    images.map(img => {
+      return new Promise(resolve => {
+        if (img.complete) resolve();
+        else img.onload = () => resolve();
+      });
+    })
+  );
+}
+
+
   // ⬇️ تحميل PDF
   document.querySelector(".download-btn")?.addEventListener("click", () => {
     document.getElementById("pdf-options-modal").style.display = "block";
-  });
-
-  document.getElementById("generate-pdf-btn")?.addEventListener("click", async () => {
-  document.getElementById("pdf-options-modal").style.display = "none";
-
+      const lang = document.getElementById("pdf-lang").value || "en"; // ← هنا فقط نحدد اللغة
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF("p", "mm", "a4", true);
+  doc.setFont(lang === "ar" ? "Amiri" : "helvetica", "normal"); 
+  });
+// ✅ دعم توليد PDF بلغتين (عربية / إنجليزية)
+
+document.getElementById("generate-pdf-btn")?.addEventListener("click", async () => {
+  document.getElementById("pdf-options-modal").style.display = "none";
+
+  const msLogoImg = document.querySelector(".ms-logo img");
+  const hospitalLogoImg = document.querySelector(".hospital-logo img");
+
+  await waitForImagesToLoad([msLogoImg, hospitalLogoImg]);
+
+  const { jsPDF } = window.jspdf;
+  const lang = document.getElementById("pdf-lang").value;
+  const isArabic = lang === "ar";
+
+  const doc = new jsPDF("p", "mm", "a4", true);
+
+if (isArabic) {
+  doc.addFileToVFS("Amiri-Regular.ttf", tajawalRegularBase64);
+  doc.addFont("Amiri-Regular.ttf", "Amiri", "normal");
+
+  doc.addFileToVFS("Amiri-Bold.ttf", tajawalBoldBase64);
+  doc.addFont("Amiri-Bold.ttf", "Amiri", "bold");
+
+  doc.setFont("Amiri", "normal");
+} else {
+  doc.setFont("helvetica", "bold");
+}
+
+
   const pageWidth = doc.internal.pageSize.getWidth();
+
+  const msBase64 = getImageBase64(msLogoImg);
+  const hospitalBase64 = getImageBase64(hospitalLogoImg);
+
+  doc.addImage(msBase64, "PNG", 3, 8, 25, 12);
+  doc.addImage(hospitalBase64, "PNG", pageWidth - 35, 8, 25, 12);
+
+  doc.setFontSize(14);
+
+
+
   let y = 40;
 
-  // التحقق من التحديد
+  const labels = {
+    en: { report: "Report", report_id: "Report ID", priority: "Priority", device_type: "Device Type", assigned_to: "Assigned To", department: "Department", category: "Category", attachment: "Attachment", description: "Description", technical_notes: "Technical Notes", signature: "Signature", specs: "Device Specifications" },
+    ar: { report: "تقرير", report_id: "رقم التقرير", priority: "الأولوية", device_type: "نوع الجهاز", assigned_to: "المسؤول", department: "القسم", category: "الفئة", attachment: "المرفق", description: "الوصف", technical_notes: "ملاحظات فنية", signature: "التوقيع", specs: "مواصفات الجهاز" }
+  };
+
+  const L = labels[lang];
+
+  doc.setFontSize(16);
+  let reportTitle = document.getElementById("report-title")?.textContent || L.report;
+  reportTitle = reportTitle.split("#")[0].trim();
+let titleText = isArabic
+  ? prepareArabic(`${reportTitle} :${L.report}`)
+  : `${L.report}: ${reportTitle}`;
+
+doc.text(titleText, pageWidth / 2, 20, { align: "center" });
+  doc.text(titleText, pageWidth / 2, 20, { align: "center" });
+  doc.setFontSize(12);
+
+  const attachmentName = reportData?.attachment_name || null;
+  const attachmentUrl = reportData?.attachment_path ? `http://localhost:5050/uploads/${reportData.attachment_path}` : null;
+
   const showPriority = document.getElementById("opt-priority").checked;
   const showDeviceType = document.getElementById("opt-device-type").checked;
   const showDescription = document.getElementById("opt-description").checked;
@@ -430,112 +604,128 @@ document.addEventListener("DOMContentLoaded", () => {
   const showSignature = document.getElementById("opt-signature").checked;
   const showAttachment = document.getElementById("opt-attachment").checked;
   const showSpecs = document.getElementById("opt-specs").checked;
+  const align = isArabic ? "right" : "left";
 
-  // رأس التقرير
-  doc.setFillColor(0, 90, 156);
-  doc.rect(0, 0, pageWidth, 30, "F");
-  doc.addImage("/icon/MS Logo.png", "PNG", 3, 8, 25, 12);
-  doc.addImage("/icon/hospital-logo.png", "PNG", pageWidth - 35, 8, 25, 12);
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold").setFontSize(16);
-  let reportTitle = document.getElementById("report-title")?.textContent || "Maintenance Report";
-  reportTitle = reportTitle.split("#")[0].trim();
-  doc.text(`Report: ${reportTitle}`, pageWidth / 2, 20, { align: "center" });
+  const xLabel = isArabic ? pageWidth - 15 : 15;
+  const xValue = isArabic ? pageWidth - 60 : 60;
 
-  // محتوى التقرير
-  doc.setTextColor(0, 0, 0).setFontSize(12);
-  const attachmentName = reportData?.attachment_name || null;
-  const attachmentUrl = reportData?.attachment_path ? `http://localhost:5050/uploads/${reportData.attachment_path}` : null;
+  const fields = [
+    [L.report_id, document.getElementById("report-id")?.textContent],
+    showPriority && [L.priority, document.getElementById("priority")?.textContent],
+    showDeviceType && [L.device_type, document.getElementById("device-type")?.textContent],
+    [L.assigned_to, document.getElementById("assigned-to")?.textContent],
+    [L.department, document.getElementById("department")?.textContent],
+    [L.category, document.getElementById("category")?.textContent]
+  ].filter(Boolean);
 
-  [
-    ["Report ID", document.getElementById("report-id")?.textContent],
-    showPriority && ["Priority", document.getElementById("priority")?.textContent],
-    showDeviceType && ["Device Type", document.getElementById("device-type")?.textContent],
-    ["Assigned To", document.getElementById("assigned-to")?.textContent],
-    ["Department", document.getElementById("department")?.textContent],
-    ["Category", document.getElementById("category")?.textContent]
-  ].filter(Boolean).forEach(([label, value]) => {
-    doc.text(`${label}:`, 15, y);
-    doc.text(value || "", 60, y);
-    y += 8;
-  });
+fields.forEach(([label, value]) => {
+  const labelText = isArabic ? prepareArabic(`${label}`) : `${label}:`;
+  const valueText = isArabic ? prepareArabic(value || "") : (value || "");
+  doc.setFont(isArabic ? "Amiri" : "helvetica", "bold").text(labelText, xLabel, y, { align });
+  doc.setFont(isArabic ? "Amiri" : "helvetica", "normal").text(valueText, xValue, y, { align });
+  y += 8;
+});
+
 
   if (showAttachment && attachmentName && attachmentUrl) {
-    doc.text("Attachment:", 15, y);
+    const label = isArabic ? prepareArabic(`${L.attachment}:`) : `${L.attachment}:`;
+    doc.setFont(isArabic ? "Amiri" : "helvetica", "bold").text(label, xLabel, y, { align });
     doc.setTextColor(0, 0, 255);
-    doc.textWithLink(attachmentName, 60, y, { url: attachmentUrl });
+    doc.textWithLink(attachmentName, xValue, y, { url: attachmentUrl, align });
     doc.setTextColor(0, 0, 0);
     y += 8;
   }
 
-  if (showDescription) {
-    y += 5;
-    doc.setFont("helvetica", "bold").text("Description:", 15, y);
-    y += 6;
-    doc.setFont("helvetica", "normal");
-    const lines = doc.splitTextToSize(document.getElementById("description")?.innerText || "", pageWidth - 30);
-    doc.text(lines, 15, y);
-    y += lines.length * 6 + 5;
-  }
+if (showDescription) {
+  y += 5;
+  const descLabel = isArabic ? prepareArabic(`${L.description}`) : `${L.description}:`;
+  doc.setFont(isArabic ? "Amiri" : "helvetica", "bold").text(descLabel, xLabel, y, { align });
 
-  if (showNote) {
-    doc.setFont("helvetica", "bold").text("Technical Notes:", 15, y);
-    y += 6;
-  
-    const noteElement = document.getElementById("note");
-    if (noteElement) {
-      const rows = Array.from(noteElement.querySelectorAll(".info-row"));
-      rows.forEach(row => {
-        const label = row.querySelector(".info-label")?.textContent || "";
-        const value = row.querySelector(".info-value")?.textContent || "";
-        const line = `${label} ${value}`;
-        const lines = doc.splitTextToSize(line, pageWidth - 30);
-        doc.setFont("helvetica", "normal").text(lines, 15, y);
-        y += lines.length * 6 + 2;
-      });
-    }
-    y += 5;
-  }
-  
+  y += 6;
+  const descText = document.getElementById("description")?.innerText || "";
+  const lines = doc.splitTextToSize(isArabic ? prepareArabic(descText) : descText, pageWidth - 30);
+  doc.setFont(isArabic ? "Amiri" : "helvetica", "normal").text(lines, xLabel, y, { align });
 
-  if (showSpecs) {
-    doc.setFont("helvetica", "bold").text("Device Specifications:", 15, y);
-    y += 6;
-    const specs = Array.from(document.querySelectorAll("#device-specs .spec-box"))
-      .map(el => el.innerText.replace(/[^\w\s:.-]/g, "").trim());
-    specs.forEach(spec => {
-      const lines = doc.splitTextToSize(spec, pageWidth - 30);
-      doc.text(lines, 15, y);
-      y += lines.length * 6 + 2;
+  y += lines.length * 6 + 5;
+}
+
+if (showNote) {
+  const noteLabel = isArabic ? prepareArabic(L.technical_notes) : L.technical_notes;
+  doc.setFont(isArabic ? "Amiri" : "helvetica", "bold").text(noteLabel, xLabel, y, { align });
+
+  y += 6;
+  const rows = Array.from(document.querySelectorAll("#note .info-row"));
+  rows.forEach(row => {
+    const label = row.querySelector(".info-label")?.textContent || "";
+    const value = row.querySelector(".info-value")?.textContent || "";
+    const line = isArabic ? prepareArabic(`${label} ${value}`) : `${label} ${value}`;
+    const lines = doc.splitTextToSize(line, pageWidth - 30);
+    doc.setFont(isArabic ? "Amiri" : "helvetica", "normal").text(lines, xLabel, y, { align });
+    y += lines.length * 6 + 2;
+  });
+  y += 5;
+}
+if (showSpecs) {
+  const specsTitle = isArabic ? prepareArabic(`${L.specs}`) : `${L.specs}:`;
+  doc.setFont(isArabic ? "Amiri" : "helvetica", "bold").text(specsTitle, xLabel, y, { align });
+  y += 8;
+
+  const specs = Array.from(document.querySelectorAll("#device-specs .spec-box"))
+    .map(el => el.innerText.replace(/[^\w\s:.-]/g, "").trim())
+    .filter(Boolean);
+
+  const colCount = 3;
+  const colWidth = (pageWidth - 30) / colCount;
+  let col = 0;
+  let startX = 15;
+
+  specs.forEach((spec) => {
+    const x = startX + (col * colWidth);
+    const lines = doc.splitTextToSize(isArabic ? prepareArabic(spec) : spec, colWidth);
+
+    lines.forEach((line, idx) => {
+      doc.setFont(isArabic ? "Amiri" : "helvetica", "normal").text(line, x, y + (idx * 5));
     });
-  }
 
-  y = Math.max(y + 20, 240);
-  doc.setFont("helvetica", "bold").text("Signature:", 20, y);
-  if (showSignature && reportData?.signature_path) {
-    try {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = `http://localhost:5050/${reportData.signature_path}`;
-      await new Promise((res, rej) => {
-        img.onload = res;
-        img.onerror = rej;
-      });
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      canvas.getContext("2d").drawImage(img, 0, 0);
-      const url = canvas.toDataURL("image/png");
-      doc.addImage(url, "PNG", 15, y + 5, 50, 25);
-    } catch (e) {
-      console.warn("⚠️ Signature not loaded", e);
+    col++;
+    if (col === colCount) {
+      col = 0;
+      y += lines.length * 5 + 2;
     }
+  });
+
+  if (col !== 0) y += 10;
+}
+y = Math.max(y + 20, 240);
+const signLabel = isArabic ? prepareArabic(`${L.signature}`) : `${L.signature}:`;
+doc.setFont(isArabic ? "Amiri" : "helvetica", "bold").text(signLabel, xLabel, y, { align });
+
+if (showSignature && reportData?.signature_path) {
+  try {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = `http://localhost:5050/${reportData.signature_path}`;
+    await new Promise((res, rej) => {
+      img.onload = res;
+      img.onerror = rej;
+    });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    canvas.getContext("2d").drawImage(img, 0, 0);
+    const url = canvas.toDataURL("image/png");
+    doc.addImage(url, "PNG", xLabel - 50, y + 5, 50, 25);
+  } catch (e) {
+    console.warn("⚠️ Signature not loaded", e);
   }
+}
 
   const [typeOnly, ticketPart] = reportTitle.split("#").map(p => p.trim());
   const fileName = ticketPart ? `${typeOnly} - ${ticketPart}` : typeOnly;
   doc.save(`${fileName}.pdf`);
-  });
+});
+
 
   // تفعيل التعديل
   document.querySelector(".edit-btn")?.addEventListener("click", () => {
@@ -594,7 +784,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ink_serial_number: null,
     };
     
-  
+
     // مواصفات الجهاز
   // مواصفات الجهاز
   document.querySelectorAll("#device-specs .spec-box").forEach(box => {
