@@ -2757,9 +2757,9 @@ document.querySelector("form").addEventListener("submit", function (e) {
   if (hasError) return;
 
   // ✅ اجمع البيانات يدويًا
+// ✅ اجمع البيانات يدويًا باستخدام name بدل placeholder
 const getValue = id => document.getElementById(id)?.value || "";
-const getInputByPlaceholder = placeholder =>
-  document.querySelector(`input[placeholder="${placeholder}"]`)?.value || "";
+const getValueByName = name => document.querySelector(`input[name="${name}"]`)?.value || "";
 
 const data = {
   DeviceType: getValue("device-type"),
@@ -2768,13 +2768,14 @@ const data = {
   Floor: getValue("floor"),
   ProblemType: getValue("device-type"),
   ProblemStatus: getValue("problem-status"),
-  InitialDiagnosis: getInputByPlaceholder("Enter initial diagnosis"),
-  FinalDiagnosis: getInputByPlaceholder("Enter final diagnosis"),
-  CustomerName: getInputByPlaceholder("Enter customer name"),
-  IDNumber: getInputByPlaceholder("Enter ID number"),
-  Extension: getInputByPlaceholder("Enter extension number"),
+  InitialDiagnosis: getValueByName("InitialDiagnosis"),
+  FinalDiagnosis: getValueByName("FinalDiagnosis"),
+  CustomerName: getValueByName("CustomerName"),
+  IDNumber: getValueByName("IDNumber"),
+  Extension: getValueByName("ExtNumber"),
   Technical: getValue("technical-status")
 };
+
 
 
   const token = localStorage.getItem("token");

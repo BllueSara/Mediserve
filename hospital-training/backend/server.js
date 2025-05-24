@@ -579,6 +579,22 @@ async function getUserNameById(id) {
   return res[0]?.name || null;
 }
 
+function formatNumber(prefix, number, suffix = "", digits = 4) {
+  return `${prefix}-${number.toString().padStart(digits, '0')}${suffix ? `-${suffix}` : ""}`;
+}
+async function generateNumber(type) {
+  const [row] = await queryAsync(`SELECT last_number FROM Ticket_Counters WHERE type = ?`, [type]);
+
+  if (!row) throw new Error(`No counter entry for type ${type}`);
+
+  const nextNumber = row.last_number + 1;
+
+  await queryAsync(`UPDATE Ticket_Counters SET last_number = ? WHERE type = ?`, [nextNumber, type]);
+
+  return nextNumber;
+}
+
+
 app.post("/submit-regular-maintenance", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const {
@@ -719,8 +735,9 @@ const displayDevice = isAllDevices
       'regular-maintenance'
     ]);
     
+const nextTicketId = await generateNumber("INT");
 
-    const ticketNumber = `TIC-${Date.now()}`;
+const ticketNumber = formatNumber("TIC", nextTicketId);
     const ticketRes = await queryAsync(`
       INSERT INTO Internal_Tickets (
         ticket_number, priority, department_id, issue_description, assigned_to, mac_address,ip_address, user_id
@@ -736,7 +753,7 @@ const displayDevice = isAllDevices
       userId
     ]);
     const ticketId = ticketRes.insertId;
-    const reportNumberTicket = `REP-${Date.now()}-TICKET`;
+const reportNumberTicket = formatNumber("REP", nextTicketId, "TICKET");
     await queryAsync(`
       INSERT INTO Maintenance_Reports (
         report_number, ticket_id, device_id,
@@ -747,7 +764,7 @@ const displayDevice = isAllDevices
       ticketId,
       deviceSpec,
       "Ticket Created",
-      `Ticket (${ticketNumber}) for device: ${deviceInfo.device_name} - Department: ${deviceInfo.department_name}`,
+ notes,
       "Open",
       "Regular",
       deviceInfo.mac_address,
@@ -763,7 +780,7 @@ const displayDevice = isAllDevices
       'internal-ticket-report'
     ]);
     
-    const reportNumberMain = `REP-${Date.now()}-MAIN`;
+const reportNumberMain = formatNumber("REP", nextTicketId, "MAIN");
     await queryAsync(`
       INSERT INTO Maintenance_Reports (
         report_number, ticket_id, device_id,
@@ -1282,14 +1299,16 @@ if (Array.isArray(problemStatus)) {
       deviceInfo.ink_serial_number,deviceInfo.scanner_type, userId
     ]);
 
-    const ticketNumber = `TIC-${Date.now()}`;
+const nextTicketId = await generateNumber("INT");
+
+const ticketNumber = formatNumber("TIC", nextTicketId);
     const ticketRes = await queryAsync(
       "INSERT INTO Internal_Tickets (ticket_number, priority, department_id, issue_description, assigned_to, mac_address,ip_address, user_id) VALUES (?, ?, ?, ?, ?, ?, ?,?)",
       [ticketNumber, "Medium", departmentId, problemStatus, technical, deviceInfo.mac_address,deviceInfo.ip_address, userId]
     );
     const ticketId = ticketRes.insertId;
 
-    const reportNumberMain = `REP-${Date.now()}-MAIN`;
+const reportNumberMain = formatNumber("REP", nextTicketId, "MAIN");
     await queryAsync(`
       INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address,ip_address, user_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)
@@ -1300,7 +1319,7 @@ if (Array.isArray(problemStatus)) {
       "Open", "General", deviceInfo.mac_address,deviceInfo.ip_address, userId
     ]);
 
-    const reportNumberTicket = `REP-${Date.now()}-TICKET`;
+const reportNumberTicket = formatNumber("REP", nextTicketId, "TICKET");
     await queryAsync(`
       INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address,ip_address, user_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)
@@ -1375,33 +1394,31 @@ app.get("/device-types", (req, res) => {
     res.json(result.map(row => row.device_type));
   });
 });
-
 app.get("/get-external-reports", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const userRole = req.user.role;
-const userName = await getUserNameById(userId);
+  const userName = await getUserNameById(userId);
 
   let externalSql = `
-SELECT 
-  MAX(id) AS id,
-  MAX(created_at) AS created_at,
-  NULL AS ticket_id,
-  MAX(ticket_number) AS ticket_number,
-  MAX(device_name) AS device_name,
-  MAX(department_name) AS department_name,
-  MAX(initial_diagnosis) AS issue_summary,
-  MAX(final_diagnosis) AS full_description,
-  MAX(status) AS status,
-  MAX(device_type) AS device_type,
-  NULL AS priority,
-  'external-legacy' AS source,
-  NULL AS attachment_name,
-  NULL AS attachment_path,
-  MAX(mac_address) AS mac_address,
-  MAX(ip_address) AS ip_address,
-  MAX(user_id) AS user_id   -- 👈 أضفه هنا
-FROM External_Maintenance
-
+    SELECT 
+      MAX(id) AS id,
+      MAX(created_at) AS created_at,
+      NULL AS ticket_id,
+      MAX(ticket_number) AS ticket_number,
+      MAX(device_name) AS device_name,
+      MAX(department_name) AS department_name,
+      MAX(initial_diagnosis) AS issue_summary,
+      MAX(final_diagnosis) AS full_description,
+      MAX(status) AS status,
+      MAX(device_type) AS device_type,
+      NULL AS priority,
+      'external-legacy' AS source,
+      NULL AS attachment_name,
+      NULL AS attachment_path,
+      MAX(mac_address) AS mac_address,
+      MAX(ip_address) AS ip_address,
+      MAX(user_id) AS user_id
+    FROM External_Maintenance
   `;
 
   let newSql = `
@@ -1423,7 +1440,6 @@ FROM External_Maintenance
       NULL AS mac_address,
       NULL AS ip_address,
       MAX(user_id) AS user_id
-
     FROM New_Maintenance_Report
   `;
 
@@ -1447,7 +1463,7 @@ FROM External_Maintenance
       MAX(md.ip_address) AS ip_address,
       MAX(mr.user_id) AS user_id
     FROM Maintenance_Reports mr
-    LEFT JOIN External_Tickets et ON mr.ticket_id = et.id
+    LEFT JOIN External_Tickets et ON mr.report_number = et.ticket_number
     LEFT JOIN Maintenance_Devices md ON mr.device_id = md.id
     LEFT JOIN Departments d ON md.department_id = d.id
     LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number
@@ -1456,29 +1472,36 @@ FROM External_Maintenance
     WHERE mr.maintenance_type = 'External'
   `;
 
-  // لو ليس admin → فلتر بالتقارير المملوكة للمستخدم فقط
-if (userRole !== 'admin') {
-  externalSql += `
-    WHERE user_id = ${db.escape(userId)} 
-    OR LOWER(reporter_name) LIKE CONCAT('%', LOWER(${db.escape(userName)}), '%')
-  `;
-  newSql += ` WHERE user_id = ${db.escape(userId)} `;
-  externalReportsSQL += `
-    AND (
-      mr.user_id = ${db.escape(userId)} 
-      OR LOWER(et.assigned_to) LIKE CONCAT('%', LOWER(${db.escape(userName)}), '%')
-    )
-  `;
-}
+  // إذا لم يكن المستخدم Admin، أضف فلاتر
+  if (userRole !== 'admin') {
+    externalSql += `
+      WHERE user_id = ${db.escape(userId)} 
+      OR LOWER(reporter_name) LIKE CONCAT('%', LOWER(${db.escape(userName)}), '%')
+    `;
 
+    newSql += ` WHERE user_id = ${db.escape(userId)} `;
 
+    // ✴️ ملاحظة: لا تكتب AND بعد GROUP BY → ضف الشروط قبل GROUP BY
+    externalReportsSQL += `
+      AND (
+        mr.user_id = ${db.escape(userId)} 
+        OR LOWER(et.assigned_to) LIKE CONCAT('%', LOWER(${db.escape(userName)}), '%')
+      )
+    `;
+  }
 
+  // أضف GROUP BY بعد كل فلترة
+  externalSql += ` GROUP BY id `;
+  newSql += ` GROUP BY id `;
+  externalReportsSQL += ` GROUP BY mr.id `;
+
+  // الصيغة النهائية الموحدة للاستعلام
   const combinedSql = `
-    (${externalSql} GROUP BY id)
+    (${externalSql})
     UNION ALL
-    (${externalReportsSQL} GROUP BY mr.id)
+    (${externalReportsSQL})
     UNION ALL
-    (${newSql} GROUP BY id)
+    (${newSql})
     ORDER BY created_at DESC
   `;
 
@@ -1976,8 +1999,8 @@ WHERE mr.id = ?
         issue_summary: report.issue_summary,
         full_description: report.full_description,
         issue_description: report.issue_description || "",
-        attachment_name: report.attachment_name || [],
-        attachment_path: report.attachment_path || [],
+        attachment_name: report.attachment_name || "",
+        attachment_path: report.attachment_path || "",
         signature_path: report.signature_path || "",
         created_at: report.created_at,
         report_type: report.report_type,
@@ -2675,10 +2698,10 @@ app.get('/regular-maintenance-summary-4months', authenticateToken, (req, res) =>
   });
 });
 
-app.get('/get-internal-reports', authenticateToken,async (req, res) => {
+app.get('/get-internal-reports', authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const userRole = req.user.role;
-  const userName = await getUserNameById(userId); // ✅ هذه هي
+  const userName = await getUserNameById(userId);
 
   let internalSql = `
     SELECT 
@@ -2702,8 +2725,7 @@ app.get('/get-internal-reports', authenticateToken,async (req, res) => {
       MAX(CASE WHEN R.maintenance_type = 'Regular' THEN NULL ELSE T.attachment_name END) AS attachment_name,
       MAX(CASE WHEN R.maintenance_type = 'Regular' THEN NULL ELSE T.attachment_path END) AS attachment_path,
       MAX(COALESCE(RM.problem_status, T.issue_description)) AS problem_status,
-      MAX(COALESCE(E.name, T.assigned_to)) AS technical_engineer
-      
+      MAX(CASE WHEN R.maintenance_type = 'Internal' THEN T.assigned_to ELSE E.name END) AS technical_engineer
     FROM Maintenance_Reports R
     LEFT JOIN Maintenance_Devices M ON R.device_id = M.id
     LEFT JOIN Departments D ON M.department_id = D.id
@@ -2714,17 +2736,6 @@ app.get('/get-internal-reports', authenticateToken,async (req, res) => {
     WHERE R.maintenance_type IN ('Regular', 'General', 'Internal')
   `;
 
-  if (userRole !== 'admin') {
-    internalSql += `
-      AND (
-        R.user_id = ?
-        OR LOWER(COALESCE(E.name, T.assigned_to)) = LOWER(?)
-      )
-    `;
-  }
-
-  internalSql += ` GROUP BY R.id `;
-
   let newSql = `
     SELECT 
       id, created_at, issue_summary, NULL AS full_description, status, device_id,
@@ -2734,12 +2745,27 @@ app.get('/get-internal-reports', authenticateToken,async (req, res) => {
     FROM New_Maintenance_Report
   `;
 
+  let params = [];
+
   if (userRole !== 'admin') {
+    internalSql += `
+      AND (
+        R.user_id = ?
+        OR EXISTS (
+          SELECT 1 FROM Engineers E2
+          JOIN Users U2 ON U2.name = E2.name
+          WHERE E2.id = RM.technical_engineer_id AND U2.id = ?
+        )
+        OR LOWER(T.assigned_to) = LOWER(?)
+      )
+    `;
     newSql += ` WHERE user_id = ? `;
+    params = [userId, userId, userName, userId];
   }
 
+  internalSql += ` GROUP BY R.id `;
+
   const combinedSql = `${internalSql} UNION ALL ${newSql} ORDER BY created_at DESC`;
-  const params = userRole === 'admin' ? [] : [userId, userName, userId];
 
   db.query(combinedSql, params, (err, results) => {
     if (err) {
@@ -2750,6 +2776,7 @@ app.get('/get-internal-reports', authenticateToken,async (req, res) => {
     res.json(results);
   });
 });
+
 
 const compareReadable = (label, oldVal, newVal, changes = []) => {
   const oldStr = (oldVal ?? "").toString().trim();
@@ -3649,208 +3676,221 @@ app.post("/edit-option-general", (req, res) => {
   });
 });
 
-async function generateTicketNumber(type) {
-  return new Promise((resolve, reject) => {
-    // نزيد الرقم بمقدار 1
-    db.query(
-      "UPDATE Ticket_Counters SET last_number = last_number + 1 WHERE type = ?",
-      [type],
-      (err) => {
-        if (err) return reject(err);
-
-        // نسترجع الرقم الجديد
-        db.query(
-          "SELECT last_number FROM Ticket_Counters WHERE type = ?",
-          [type],
-          (err, result) => {
-            if (err) return reject(err);
-            const number = String(result[0].last_number).padStart(6, "0");
-            const ticketNumber = `${type}-${number}`;
-            resolve(ticketNumber);
-          }
-        );
-      }
-    );
-  });
-}
+// 📦 Dependencies: Express, multer, custom authenticateToken middleware, queryAsync, getUserById, getUserNameById
 
 app.post("/internal-ticket-with-file", upload.single("attachment"), authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
-  try {
-    const {
-      report_number,
-      priority,
-      department_id,
-      device_id,
-      issue_description,
-      initial_diagnosis,
-      final_diagnosis,
-      other_description,
-      assigned_to,
-      status = 'Open',
-      ticket_type
-    } = req.body;
+  const {
+    report_number,
+    priority,
+    department_id,
+    device_id,
+    issue_description,
+    initial_diagnosis,
+    final_diagnosis,
+    other_description,
+    assigned_to,
+    status = 'Open',
+    ticket_type,
+    ticket_number
+  } = req.body;
 
-    const file = req.file;
-    const fileName = file ? file.filename : null;
-    const filePath = file ? file.path : null;
+  const file = req.file;
+  const fileName = file ? file.filename : null;
+  const filePath = file ? file.path : null;
 
-    const adminUser = await getUserById(userId);
-    const userName = await getUserNameById(userId);
+  const adminUser = await getUserById(userId);
+  const userName = await getUserNameById(userId);
 
-    let engineerName;
-    if (adminUser?.role === 'admin' && assigned_to) {
-      const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE id = ?`, [assigned_to]);
-      engineerName = techEngineerRes[0]?.name || userName;
-    } else {
-      engineerName = userName;
-    }
+  let engineerName;
+  if (adminUser?.role === 'admin' && assigned_to) {
+    const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE name = ?`, [assigned_to]);
+    engineerName = techEngineerRes[0]?.name || userName;
+  } else {
+    engineerName = userName;
+  }
 
-    const counterQuery = `SELECT last_number FROM Ticket_Counters WHERE type = 'INT'`;
-    db.query(counterQuery, (counterErr, counterResult) => {
-      if (counterErr) {
-        console.error("❌ Counter fetch error:", counterErr);
-        return res.status(500).json({ error: "Failed to generate ticket number" });
+  // ✅ Handle ticket number (use provided or auto-generate)
+  let newTicketNumber = ticket_number;
+
+  const proceedWithInsert = (generatedTicketNumber) => {
+    const insertTicketQuery = `
+      INSERT INTO Internal_Tickets (
+        ticket_number, priority, department_id, issue_description, 
+        assigned_to, status, attachment_name, attachment_path, ticket_type, user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    const ticketValues = [
+      generatedTicketNumber,
+      priority || "Medium",
+      department_id || null,
+      issue_description || '',
+      assigned_to || '',
+      status,
+      fileName,
+      filePath,
+      ticket_type || '',
+      userId
+    ];
+
+    db.query(insertTicketQuery, ticketValues, (ticketErr, ticketResult) => {
+      if (ticketErr) {
+        console.error("❌ Insert error (Internal_Tickets):", ticketErr);
+        return res.status(500).json({ error: "Failed to insert internal ticket" });
       }
 
-      let newNumber = counterResult[0].last_number + 1;
-      let today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      let newTicketNumber = `INT-${today}-${String(newNumber).padStart(3, '0')}`;
+      const ticketId = ticketResult.insertId;
 
-      const updateCounterQuery = `UPDATE Ticket_Counters SET last_number = ? WHERE type = 'INT'`;
-      db.query(updateCounterQuery, [newNumber], (updateErr) => {
-        if (updateErr) {
-          console.error("❌ Counter update error:", updateErr);
-          return res.status(500).json({ error: "Failed to update ticket counter" });
+      const insertReportQuery = `
+        INSERT INTO Maintenance_Reports (
+          report_number, ticket_id, device_id, issue_summary, full_description, 
+          status, maintenance_type, report_type, user_id
+        ) VALUES (?, ?, ?, ?, ?, ?, 'Internal', 'Incident', ?)
+      `;
+      const reportValues = [
+        report_number,
+        ticketId,
+        device_id || null,
+        initial_diagnosis || '',
+        final_diagnosis || other_description || '',
+        status,
+        userId
+      ];
+
+      db.query(insertReportQuery, reportValues, async (reportErr) => {
+        if (reportErr) {
+          console.error("❌ Insert error (Maintenance_Reports):", reportErr);
+          return res.status(500).json({ error: "Failed to insert maintenance report" });
         }
 
-        const insertTicketQuery = `
-          INSERT INTO Internal_Tickets (
-            ticket_number, priority, department_id, issue_description, 
-            assigned_to, status, attachment_name, attachment_path, ticket_type, user_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-        const ticketValues = [
-          newTicketNumber,
-          priority || "Medium",
-          department_id || null,
-          issue_description || '',
-          assigned_to || '',
-          status,
-          fileName,
-          filePath,
-          ticket_type || '',
-          userId
-        ];
+        await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+          userId,
+          `Internal ticket created: ${generatedTicketNumber} for ${ticket_type} by ${engineerName}`,
+          'internal-ticket'
+        ]);
 
-        db.query(insertTicketQuery, ticketValues, (ticketErr, ticketResult) => {
-          if (ticketErr) {
-            console.error("❌ Insert error (Internal_Tickets):", ticketErr);
-            return res.status(500).json({ error: "Failed to insert internal ticket" });
-          }
+        await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+          userId,
+          `Report created ${report_number} linked to ticket ${generatedTicketNumber} for ${ticket_type}`,
+          'internal-ticket-report'
+        ]);
 
-          const ticketId = ticketResult.insertId;
+let techUserId;
 
-          const insertReportQuery = `
-            INSERT INTO Maintenance_Reports (
-              report_number, ticket_id, device_id, issue_summary, full_description, 
-              status, maintenance_type, report_type, user_id
-            ) VALUES (?, ?, ?, ?, ?, ?, 'Internal', 'Incident', ?)
-          `;
-          const reportValues = [
-            report_number,
-            ticketId,
-            device_id || null,
-            initial_diagnosis || '',
-            final_diagnosis || other_description || '',
-            status,
-            userId
-          ];
-
-          db.query(insertReportQuery, reportValues, async (reportErr) => {
-            if (reportErr) {
-              console.error("❌ Insert error (Maintenance_Reports):", reportErr);
-              return res.status(500).json({ error: "Failed to insert maintenance report" });
-            }
-
-            await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-              userId,
-              `Internal ticket created: ${newTicketNumber} for ${ticket_type} by ${engineerName || 'N/A'}`,
-              'internal-ticket'
-            ]);
-
-            await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-              userId,
-              `Report created ${report_number} linked to ticket ${newTicketNumber} for ${ticket_type} by ${engineerName || 'N/A'}`,
-              'internal-ticket-report'
-            ]);
-
-if (assigned_to) {
+// ✅ لو القيمة رقم → اعتبرها user ID مباشرة
+if (!isNaN(assigned_to)) {
+  techUserId = parseInt(assigned_to);
+} else {
+  // ✅ لو اسم → نحاول نجيب ID من جدول Users
   const techUserRes = await queryAsync(`
-    SELECT u.id 
-    FROM Users u 
-    JOIN Engineers e ON u.name = e.name 
-    WHERE e.id = ?
-  `, [assigned_to]);
+    SELECT id FROM Users WHERE name = ?
+  `, [assigned_to.trim()]);
 
-  const techUserId = techUserRes[0]?.id;
+  techUserId = techUserRes[0]?.id;
 
-  if (techUserId) {
-    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-      techUserId,
-      `You have been assigned a new internal ticket ${newTicketNumber} by ${userName}`,
-      'technical-notification'
-    ]);
+
+
+          if (techUserId) {
+            await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+              techUserId,
+              `You have been assigned a new internal ticket ${generatedTicketNumber} by ${userName}`,
+              'technical-notification'
+            ]);
+          }
+        }
+
+        await queryAsync(`
+          INSERT INTO Activity_Logs (user_id, user_name, action, details)
+          VALUES (?, ?, ?, ?)
+        `, [
+          userId,
+          userName,
+          'Submitted Internal Ticket',
+          `Internal ticket submitted (${generatedTicketNumber}) with report (${report_number})`
+        ]);
+
+        res.status(201).json({
+          message: "✅ Internal ticket and report created",
+          ticket_number: generatedTicketNumber,
+          ticket_id: ticketId
+        });
+      });
+    });
+  };
+
+ if (!newTicketNumber) {
+  const counterQuery = `SELECT last_number FROM Ticket_Counters WHERE type = 'INT'`;
+
+  db.query(counterQuery, (counterErr, counterResult) => {
+    if (counterErr) {
+      console.error("❌ Counter fetch error:", counterErr);
+      return res.status(500).json({ error: "Failed to generate ticket number" });
+    }
+
+    if (!counterResult.length) {
+      return res.status(500).json({ error: "Ticket counter not initialized for type 'INT'" });
+    }
+
+    const currentNumber = counterResult[0].last_number;
+    const newNumber = currentNumber + 1;
+    newTicketNumber = `INT-${String(newNumber).padStart(3, '0')}`;
+
+    const updateCounterQuery = `UPDATE Ticket_Counters SET last_number = ? WHERE type = 'INT'`;
+
+    db.query(updateCounterQuery, [newNumber], (updateErr) => {
+      if (updateErr) {
+        console.error("❌ Counter update error:", updateErr);
+        return res.status(500).json({ error: "Failed to update ticket counter" });
+      }
+
+      // بعد تحديث العداد بنجاح، أنشئ التذكرة
+      proceedWithInsert(newTicketNumber);
+    });
+  });
+} else {
+  // مثال: INT-008 → ناخذ 8 ونزيده 1
+  const manualNumber = parseInt(ticket_number.split("-")[1]);
+
+  if (!isNaN(manualNumber)) {
+    const nextNumber = manualNumber + 1;
+    newTicketNumber = `INT-${String(nextNumber).padStart(3, '0')}`;
+
+    const updateCounterQuery = `
+      UPDATE Ticket_Counters 
+      SET last_number = GREATEST(last_number, ?) 
+      WHERE type = 'INT'
+    `;
+
+    db.query(updateCounterQuery, [nextNumber], (updateErr) => {
+      if (updateErr) {
+        console.error("❌ Counter update error:", updateErr);
+        return res.status(500).json({ error: "Failed to update ticket counter" });
+      }
+
+      // ✅ بعد تحديث العداد، أنشئ التذكرة برقم +1 من المستخدم
+      proceedWithInsert(newTicketNumber);
+    });
+  } else {
+    return res.status(400).json({ error: "Invalid manual ticket number format" });
   }
 }
 
 
-            // ✅ سجل في اللوق
-            await queryAsync(`
-              INSERT INTO Activity_Logs (user_id, user_name, action, details)
-              VALUES (?, ?, ?, ?)
-            `, [
-              userId,
-              userName,
-              'Submitted Internal Ticket',
-              `Internal ticket submitted (${newTicketNumber}) with report (${report_number}) for: ${ticket_type} | Priority: ${priority}`
-            ]);
-
-            res.status(201).json({
-              message: "✅ Internal ticket and report created",
-              ticket_number: newTicketNumber,
-              ticket_id: ticketId
-            });
-          });
-        });
-      });
-    });
-
-  } catch (err) {
-    console.error("❌ Server error:", err);
-    res.status(500).json({ error: "Unexpected server error" });
-  }
 });
 
 
 app.get("/generate-internal-ticket-number", async (req, res) => {
   try {
-    const getCounter = `SELECT last_number FROM Ticket_Counters WHERE type = 'INT'`;
-    db.query(getCounter, (err, result) => {
-      if (err) return res.status(500).json({ error: "Failed to get counter" });
-
-      let newNumber = result[0].last_number + 1;
-      let today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      let ticketNumber = `INT-${today}-${String(newNumber).padStart(3, '0')}`;
-
-      return res.json({ ticket_number: ticketNumber });
-    });
+    const [counterRes] = await queryAsync(`SELECT last_number FROM Ticket_Counters WHERE type = 'INT'`);
+    const ticketNumber = `INT-${String(counterRes.last_number).padStart(3, '0')}`;
+    return res.json({ ticket_number: ticketNumber });
   } catch (err) {
     console.error("❌ Ticket generation failed:", err);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 
 

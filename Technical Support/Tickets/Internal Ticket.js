@@ -240,13 +240,15 @@ document.querySelector("form").addEventListener("submit", function (e) {
   formData.append("initial_diagnosis", document.getElementById("problem-status").value);
   const priorityInput = form.querySelector('input[name="priority"]:checked');
   formData.append("priority", priorityInput ? priorityInput.value : '');
-  const issueDescription = form.querySelector('textarea[placeholder="Enter detailed description of the issue"]')?.value?.trim() || '';
-  const finalDiagnosis = form.querySelector('textarea[placeholder="Enter final diagnosis after investigation"]')?.value?.trim() || '';
-  const otherDescription = form.querySelector('textarea[placeholder="Please provide additional details if \'Other\' is selected"]')?.value?.trim() || '';
+const issueDescription = form.querySelector('#issue_description')?.value.trim() || '';
+const finalDiagnosis = form.querySelector('#final_diagnosis')?.value.trim() || '';
+const otherDescription = form.querySelector('#other_description')?.value.trim() || '';
 
-  formData.append("issue_description", issueDescription);
-  formData.append("final_diagnosis", finalDiagnosis);
-  formData.append("other_description", otherDescription);
+formData.append("issue_description", issueDescription);
+formData.append("final_diagnosis", finalDiagnosis);
+formData.append("other_description", otherDescription);
+
+formData.append("ticket_number", document.getElementById("ticket-number").value);
 
 
   const file = document.getElementById("upload-file")?.files[0];
@@ -1428,7 +1430,7 @@ if (!allowedType) return;
 }
 
 function fetchTechnicalStatus(callback) {
-  renderDropdownIDs({
+  renderDropdownOptions({
     endpoint: "http://localhost:5050/Technical",
     containerId: "technical-status-options",
     displayId: "selected-technical-status",
@@ -2971,9 +2973,7 @@ function initInputFieldValidation(formElement) {
 
 
 document.addEventListener("DOMContentLoaded", () => {
-  const dropdownConfigs = [
-    { id: "technical-status", endpoint: "/Technical", key: "name", labelKey: "technical" },
-  ];
+
 
 
   dropdownConfigs.forEach(config => {

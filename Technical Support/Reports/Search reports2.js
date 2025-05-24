@@ -131,7 +131,18 @@ function loadExternalReports(page = 1) {
         const isNew = report.source === "new";
         const isExternalNew = report.source === "external-new";
         const isExternalLegacy = report.source === "external-legacy";
-        const isTicket = report.issue_summary?.toLowerCase().includes("ticket created");
+const isTicket = isExternalNew && report.ticket_number;
+const isLegacy = isExternalLegacy;
+const isPlainExternalTicket = isExternalNew && !report.ticket_number;
+
+let sourceLabel = "";
+if (isTicket) {
+  sourceLabel = t("external_ticket"); // تذكرة صيانة خارجية
+} else if (isPlainExternalTicket) {
+  sourceLabel = t("external_maintenance_ticket"); // تذكرة خارجية فقط
+} else if (isLegacy) {
+  sourceLabel = t("external_maintenance"); // صيانة خارجية قديمة
+}
 
         const statusClass = getStatusClass(report.status);
 
@@ -170,45 +181,67 @@ function loadExternalReports(page = 1) {
           return;
         }
 
-        let issueHtml = "";
-        let initial = report.issue_summary?.trim();
-        let final = report.full_description?.trim();
+let issueHtml = "";
+let initial = report.issue_summary?.trim();
+let final = report.full_description?.trim();
 
-        issueHtml = `
-          <div class="report-issue-line">
-            ${initial ? `<span><strong>${t("initial_diagnosis")}:</strong> ${initial}</span>` : ""}
-            ${final ? `<span><strong>${t("final_diagnosis")}:</strong> ${final}</span>` : ""}
-          </div>
-        `;
+// تحقق: هل full_description فيها جملة إنشاء التذكرة؟
+const hasAutoTicketNote = /Ticket\s+\([^)]+\)\s+has\s+been\s+created\s+by\s+\([^)]+\)/i.test(final);
 
-        const sourceLabel = isTicket
-          ? t("external_maintenance_ticket")
-          : isExternalNew
-            ? t("external_ticket")
-            : t("external_maintenance");
+if (hasAutoTicketNote && report.ticket_number) {
+  // نحاول نلقى تقرير آخر بنفس ticket_number من غير نوع التذكرة (مثل legacy)
+  const originalReport = data.find(
+    r =>
+      r.ticket_number === report.ticket_number &&
+      r.source !== "external-new" &&
+      r.full_description &&
+      !/Ticket\s+\([^)]+\)\s+has\s+been\s+created\s+by\s+\([^)]+\)/i.test(r.full_description)
+  );
+  if (originalReport) {
+    final = originalReport.full_description.trim();
+  } else {
+    final = ""; // ما لقينا بديل
+  }
+}
 
-        card.innerHTML = `
-          <div class="report-card-header">
-            <img src="/icon/${isTicket ? "ticket" : "Maintenance"}.png" alt="icon" />
-            ${sourceLabel}
-            <select 
-              class="status-select ${statusClass}"
-              data-report-id="${report.id}"
-              data-ticket-id="${report.ticket_id || ''}">
-              <option value="Open" ${report.status === "Open" ? "selected" : ""}>${t("open")}</option>
-              <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>${t("in_progress")}</option>
-              <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>${t("closed")}</option>
-            </select>
-          </div>
-          <div class="report-details">
-            <img src="/icon/desktop.png" alt="Device Icon" />
-            <span>${formatDateTime(report.created_at)}</span>
-          </div>
-          <p><strong>${t("ticket_number")}:</strong> ${report.ticket_number || "N/A"}</p>
-          <p><strong>${t("device_name")}:</strong> ${report.device_name || "N/A"}</p>
-          <p><strong>${t("department")}:</strong> ${report.department_name || "N/A"}</p>
-          ${issueHtml}
-        `;
+// تفادي التكرار بين initial و final
+if (final && initial && final === initial) {
+  final = "";
+}
+
+issueHtml = `
+  <div class="report-issue-line">
+    ${initial ? `<span><strong>${t("initial_diagnosis")}:</strong> ${initial}</span>` : ""}
+    ${final ? `<span><strong>${t("final_diagnosis")}:</strong> ${final}</span>` : ""}
+  </div>
+`;
+
+
+
+
+card.innerHTML = `
+  <div class="report-card-header">
+    <img src="/icon/${isTicket ? "ticket" : "Maintenance"}.png" alt="icon" />
+    ${sourceLabel}
+    <select 
+      class="status-select ${statusClass}"
+      data-report-id="${report.id}"
+      data-ticket-id="${report.ticket_id || ''}">
+      <option value="Open" ${report.status === "Open" ? "selected" : ""}>${t("open")}</option>
+      <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>${t("in_progress")}</option>
+      <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>${t("closed")}</option>
+    </select>
+  </div>
+  <div class="report-details">
+    <img src="/icon/desktop.png" alt="Device Icon" />
+    <span>${formatDateTime(report.created_at)}</span>
+  </div>
+  <p><strong>${t("ticket_number")}:</strong> ${report.ticket_number ||'' }</p>
+  <p><strong>${t("device_name")}:</strong> ${report.device_name || "N/A"}</p>
+  <p><strong>${t("department")}:</strong> ${report.department_name || "N/A"}</p>
+  ${issueHtml}
+`;
+
 
         card.addEventListener("click", (e) => {
           if (e.target.closest("select")) return;

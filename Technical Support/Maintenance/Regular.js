@@ -2004,7 +2004,6 @@ async function submitRegularMaintenance(data) {
     }
 
     // ✅ نجاح العملية
-    alert(result.message);
     location.reload();  // إعادة تحميل الصفحة
 
   } catch (err) {

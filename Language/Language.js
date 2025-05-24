@@ -30,6 +30,12 @@ const languageManager = {
             'submit': 'Submit',
             'cancel': 'Cancel',
             'save_changes': 'Save Changes',
+            'technical_team_note': 'Technical Team Note',
+            'issue_summary': 'Issue Summary',
+            'no_matching_reports_found': 'No matching reports found',
+
+
+
 
             // Home Page
             'enterprise_solutions': 'Enterprise Technology Solutions',
@@ -509,6 +515,8 @@ const languageManager = {
             'upload_signature': 'Or Upload Signature Image',
             'clear_signature': 'Clear Signature',
             'submit_report': 'Submit Report',
+            'report_language': 'Report Language',
+            'select_language': 'Select Language',
 
             // Report Details Page
             'maintenance_report': 'Maintenance Report',
@@ -521,7 +529,7 @@ const languageManager = {
             'attachment': 'Attachment',
             'additional_notes': 'Additional Notes',
             'select_report_contents': 'Select Report Contents',
-            'technical_notes': 'Technical Notes',
+            'technical_notes': 'Technical  Note',
             'generate_pdf': 'Generate PDF',
             'cancel': 'Cancel',
             'technical_status': "Technical Status",
@@ -731,6 +739,7 @@ const languageManager = {
             'cancel': "Cancel",
             'edit_entry': "Edit Entry",
             'save': "Save",
+            'error_loading_reports': "Error loading reports",
 
             // Diagnostic Page
             'network_diagnostic_tool': "Network Diagnostic Tool",
@@ -774,6 +783,8 @@ const languageManager = {
             'reset_password': 'Reset Password',
             'enter_email_reset': 'Enter your email to reset your password',
             'error_message': 'Something went wrong.',
+
+            'external_maintenance_ticket': 'External maintenance ticket',
         },
         ar: {
             'issue': 'المشكلة',
@@ -1012,6 +1023,8 @@ const languageManager = {
             'repair': 'إصلاح',
             'installation': 'تركيب',
             'request_date': 'تاريخ الطلب',
+            'report_language': 'لغة التقرير',
+            'select_language': 'اختر اللغة',
 
             // Add Maintenance
             'priority': 'الأولوية',
@@ -1027,6 +1040,7 @@ const languageManager = {
             'completed': 'مكتمل',
             'date': 'التاريخ',
             'actions': 'الإجراءات',
+            'no_matching_reports_found' : 'لا يوجد تقارير مطابقة',
 
             // External Maintenance Details
             'fill_maintenance_details': 'يرجى ملء تفاصيل الصيانة أدناه',
@@ -1204,7 +1218,6 @@ const languageManager = {
             'enter_initial_diagnosis': 'أدخل التشخيص الأولي',
             'final_diagnosis': 'التشخيص النهائي',
             'enter_final_diagnosis': 'أدخل التشخيص النهائي',
-            'maintenance_manager': 'مدير الصيانة',
             'enter_manager_name': 'أدخل اسم المدير',
             'reporter_name': 'اسم صاحب البلاغ',
             'select_reporter': 'اختر صاحب البلاغ',
@@ -1323,7 +1336,7 @@ const languageManager = {
             'technical_notes': 'ملاحظات فنية',
             'generate_pdf': 'إنشاء PDF',
             'cancel': 'إلغاء',
-
+            'external_maintenance_ticket': 'تذكرة صيانة خارجية',
             // Device Specifications
             'device_name': 'اسم الجهاز',
             'serial_number': 'الرقم التسلسلي',
