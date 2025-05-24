@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   userPermissions = await checkUserPermissions();
 
   // إظهار زر المشاركة فقط إذا لديه الصلاحية
-  if (userPermissions.share_items ) {
+  if (userPermissions.share_items) {
     document.getElementById("shareBtn").style.display = "inline-block";
   } else {
     document.getElementById("shareBtn").style.display = "none";
@@ -52,14 +52,14 @@ function appendToTerminal(text, isError = false) {
 }
 
 async function pingSelectedDevice() {
-  if (!selectedRowId) return appendToTerminal('Please select a device.', true);
+  if (!selectedRowId) return appendToTerminal('❌ Please select a device.', true);
 
-  const ipElem = document.querySelector(`.data-cell[data-row-id="${selectedRowId}"] .device-ip`);
-  const ip = ipElem?.textContent.trim();
+  const ipCell = document.querySelector(`tr[data-row-id="${selectedRowId}"] .device-ip`);
+  const ip = ipCell?.textContent.trim();
 
-  if (!isValidIP(ip)) return appendToTerminal('Invalid IP address.', true);
+  if (!isValidIP(ip)) return appendToTerminal('❌ Invalid IP address.', true);
 
-  appendToTerminal(`Pinging ${ip}...`);
+  appendToTerminal(`📡 Pinging ${ip}...`);
   try {
     const res = await fetch(`${API_BASE_URL}/ping`, {
       method: 'POST',
@@ -67,13 +67,14 @@ async function pingSelectedDevice() {
       body: JSON.stringify({ ip })
     });
     const data = await res.json();
-    appendToTerminal(data.error || data.output, !!data.error);
-    updateRowStatus(selectedRowId, data);
+    appendToTerminal(data.output || data.error, !!data.error);
+    updateRowStatus(ipCell.closest('td'), data);
     updateStatusCounts();
   } catch (err) {
-    appendToTerminal(`Ping error: ${err.message}`, true);
+    appendToTerminal(`❌ Ping error: ${err.message}`, true);
   }
 }
+
 
 
 
@@ -119,38 +120,77 @@ async function pingAllDevices() {
 
 
 
+let pingTActive = false;
+
 function startContinuousPing() {
-  if (!selectedRowId) return appendToTerminal('Please select a device.', true);
+  if (!selectedRowId) {
+    appendToTerminal('Please select a device.', true);
+    return;
+  }
 
   const ipCell = document.querySelector(`.data-cell[data-row-id="${selectedRowId}"].ip-cell`);
   const ip = ipCell?.querySelector('.device-ip')?.textContent.trim();
 
-  if (!isValidIP(ip)) return appendToTerminal('Invalid IP address.', true);
+  if (!isValidIP(ip)) {
+    appendToTerminal('❌ Invalid IP address.', true);
+    return;
+  }
 
   if (continuousPingInterval) {
     clearInterval(continuousPingInterval);
     continuousPingInterval = null;
-    appendToTerminal('⛔ Stopped continuous ping.');
+    pingTActive = false;
+    appendToTerminal('Ping -t stopped.');
     return;
   }
 
-  appendToTerminal(`📶 Starting continuous ping to ${ip}...`);
+  pingTActive = true;
+  appendToTerminal(`Starting Ping -t to ${ip}...`);
+
   continuousPingInterval = setInterval(async () => {
+    if (!pingTActive) return;
+
     try {
-      const res = await fetch(`${API_BASE_URL}/ping`, {
+      const response = await fetch(`${API_BASE_URL}/ping`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ip })
       });
-      const data = await res.json();
-      appendToTerminal(data.error || data.output, !!data.error);
-      updateRowStatus(ipCell, data); // تحديث اللمبة بناءً على الخلية مباشرة
+
+      const data = await response.json();
+      const outputLine = (data.output || '').split('\n').find(line => line.includes('time='));
+
+      if (!pingTActive) return; // double check
+
+      if (outputLine) {
+        const match = outputLine.match(/time[=<](\d+\.?\d*)\s*ms/i);
+        const latency = match ? parseFloat(match[1]) : null;
+
+        let color = '#2ecc71';
+        if (latency > 150) color = '#e74c3c';
+        else if (latency > 50) color = '#f1c40f';
+
+        const div = document.createElement('div');
+        div.textContent = `↪ ${outputLine.trim()} (${latency} ms)`;
+        div.style.color = color;
+
+        const terminal = document.getElementById('terminal-output');
+        terminal.appendChild(div);
+        terminal.scrollTop = terminal.scrollHeight;
+      } else {
+        appendToTerminal(data.output || 'No response.', true);
+      }
+
+      updateRowStatus(ipCell, data);
       updateStatusCounts();
     } catch (err) {
-      appendToTerminal(`Ping error: ${err.message}`, true);
+      if (pingTActive) {
+        appendToTerminal(`❌ Ping error: ${err.message}`, true);
+      }
     }
   }, 2000);
 }
+
 
 
 async function generateReport() {
@@ -206,25 +246,26 @@ function updateRowStatus(cellOrRowId, data) {
   let ipCell = null;
 
   if (typeof cellOrRowId === 'string') {
-    ipCell = document.querySelector(`.data-cell[data-row-id="${cellOrRowId}"].ip-cell`);
+    ipCell = document.querySelector(`tr[data-row-id="${cellOrRowId}"] .ip-cell`);
   } else if (cellOrRowId instanceof Element) {
-    ipCell = cellOrRowId;
+    ipCell = cellOrRowId.closest('.ip-cell');
   }
 
-  const lamp = ipCell?.querySelector('.lamp');
+  const lamp = ipCell?.querySelector('.status-dot');
   if (!lamp) return;
 
   const output = data.output || '';
   const error = data.error || '';
 
-  if (data.status === 'error' || error || output.includes('100% packet loss') || output.includes('Request timed out')) {
-    lamp.className = 'lamp lamp-red';
+  if (error || output.includes('100% packet loss') || output.includes('Request timed out')) {
+    lamp.className = 'status-dot red';
   } else if (output.includes('0% packet loss')) {
-    lamp.className = 'lamp lamp-green';
+    lamp.className = 'status-dot green';
   } else {
-    lamp.className = 'lamp lamp-orange';
+    lamp.className = 'status-dot yellow';
   }
 }
+
 
 
 
@@ -271,40 +312,56 @@ function renderColumnLayout(devices) {
     const row = document.createElement("tr");
     row.dataset.rowId = rowId;
 
-    // العمود الأول: الأزرار
-const actionsTd = document.createElement("td");
-let actionsHTML = "";
+    // ✅ عند الضغط على الصف، يتم اختياره
+    row.addEventListener("click", () => {
+      selectedRowId = rowId;
+      document.querySelectorAll("tr").forEach(r => r.classList.remove("selected-row"));
+      row.classList.add("selected-row");
+    });
 
-if (userPermissions.edit_items) {
-  actionsHTML += `<button class="edit-btn" onclick="openEditModal(${JSON.stringify(device).replace(/"/g, '&quot;')})">✏️</button>`;
-}
-if (userPermissions.delete_items) {
-  actionsHTML += `<button class="delete-btn" onclick="deleteDevice('${device.id}', '${device.ip}')">🗑️</button>`;
-}
-actionsTd.innerHTML = actionsHTML;
-row.appendChild(actionsTd);
+    // أزرار التعديل والحذف
+    const actionsTd = document.createElement("td");
+    let actionsHTML = "";
 
+    if (userPermissions.edit_items) {
+      actionsHTML += `<button class="edit-btn" onclick="openEditModal(${JSON.stringify(device).replace(/"/g, '&quot;')})">✏️</button>`;
+    }
+    if (userPermissions.delete_items) {
+      actionsHTML += `<button class="delete-btn" onclick="deleteDevice('${device.id}', '${device.ip}')">🗑️</button>`;
+    }
+    actionsTd.innerHTML = actionsHTML;
+    row.appendChild(actionsTd);
 
-    // باقي الأعمدة
+    // الأعمدة المتبقية
     const values = [
       device.circuit_name || "—",
       device.isp || "—",
       device.location || "—",
-      `<span class="status-dot gray"></span> ${device.ip || "—"}`,
+      device.ip || "—",
       device.speed || "—",
       device.start_date?.split("T")[0] || "—",
       device.end_date?.split("T")[0] || "—"
     ];
 
-    values.forEach(val => {
+    values.forEach((val, colIndex) => {
       const td = document.createElement("td");
-      td.innerHTML = val;
+
+      // ✅ IP cell مع لمبة وكلاسات
+      if (colIndex === 3) {
+        td.classList.add("data-cell", "ip-cell");
+        td.dataset.rowId = rowId;
+        td.innerHTML = `<span class="status-dot gray lamp"></span> <span class="device-ip">${val}</span>`;
+      } else {
+        td.textContent = val;
+      }
+
       row.appendChild(td);
     });
 
     tableBody.appendChild(row);
   });
 }
+
 
 function selectDeviceRow(rowId) {
   selectedRowId = rowId;
@@ -553,25 +610,25 @@ function openSharePopup() {
   fetch(`${API_BASE_URL}/users`, {
     headers: { 'Authorization': `Bearer ${localStorage.getItem("token")}` }
   })
-  .then(res => res.json())
-  .then(users => {
-    const container = document.getElementById('userCheckboxContainer');
-    container.innerHTML = '';
+    .then(res => res.json())
+    .then(users => {
+      const container = document.getElementById('userCheckboxContainer');
+      container.innerHTML = '';
 
-    users.forEach(user => {
-      const label = document.createElement('label');
-      label.className = 'user-checkbox';
+      users.forEach(user => {
+        const label = document.createElement('label');
+        label.className = 'user-checkbox';
 
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.name = 'shareUsers';
-      checkbox.value = user.id;
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.name = 'shareUsers';
+        checkbox.value = user.id;
 
-      label.appendChild(checkbox);
-      label.appendChild(document.createTextNode(' ' + user.name));
-      container.appendChild(label);
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(' ' + user.name));
+        container.appendChild(label);
+      });
     });
-  });
 }
 
 function closeSharePopup() {
@@ -726,7 +783,7 @@ async function loadDevicesByOwnership() {
 
 
 
-  async function checkUserPermissions(userId) {
+async function checkUserPermissions(userId) {
   if (!userId) {
     userId = localStorage.getItem("userId");
   }
@@ -772,5 +829,71 @@ async function loadDevicesByOwnership() {
       view_access: false,
       full_access: false
     };
+  }
+}
+
+
+
+
+document.getElementById('excel-upload').addEventListener('change', handleExcelUpload);
+
+async function handleExcelUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async function (e) {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+    const newDevices = rows.map(row => ({
+      circuit_name: row['Circuit Name'] || '',
+      isp: row['ISP'] || '',
+      location: row['Location'] || '',
+      ip: row['IP Address'] || '',
+      speed: row['Speed'] || '',
+      start_date: formatInputDate(row['Start Date']),
+      end_date: formatInputDate(row['End Date'])
+    }));
+
+    // إرسال البيانات إلى السيرفر
+    try {
+      const res = await fetch(`${API_BASE_URL}/entries/bulk`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ devices: newDevices })
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Upload failed');
+      appendToTerminal(`✅ تم حفظ ${result.saved} جهاز`);
+      if (result.skipped > 0) {
+        appendToTerminal(`🔁 تم تجاهل ${result.skipped} جهاز مكرر`);
+      }
+
+      await loadDevicesByOwnership(); // إعادة تحميل البيانات من القاعدة
+    } catch (err) {
+      appendToTerminal(`❌ Upload error: ${err.message}`, true);
+    }
+  };
+
+  reader.readAsArrayBuffer(file);
+}
+
+
+function formatInputDate(dateStr) {
+  if (!dateStr) return '';
+  try {
+    const date = new Date(dateStr);
+    return date.toISOString().split('T')[0];
+  } catch {
+    return '';
   }
 }
