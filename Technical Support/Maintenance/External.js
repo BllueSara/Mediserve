@@ -2019,8 +2019,11 @@ function saveNewModel() {
         return;
       }
 
-      sessionStorage.setItem("lastAddedModel", modelName);
-      fetchAndRenderModels(deviceType, `model-${deviceType}`);
+
+   sessionStorage.setItem(`model-${deviceType}`, modelName); // 👈 حفظ الاسم بمفتاح متوافق مع renderDropdownOptions
+fetchAndRenderModels(deviceType, `model-${deviceType}`);
+sessionStorage.setItem("spec-model", modelName); // 👈 للموديل داخل المواصفات
+
 
       const isSpecContext = sessionStorage.getItem("returnToPopup") === "true";
       if (isSpecContext) {
@@ -2672,12 +2675,21 @@ async function renderDropdownOptions({
   });
 
   // ✅ استرجاع القيمة المحفوظة
-  const saved = sessionStorage.getItem(storageKey || inputId);
-  if (saved) {
-    display.textContent = saved;
-    input.value = saved;
-    sessionStorage.removeItem(storageKey || inputId);
+const saved = sessionStorage.getItem(storageKey || inputId);
+if (saved) {
+  display.textContent = saved;
+  input.value = saved;
+  sessionStorage.removeItem(storageKey || inputId);
+
+  // ✅ فعّل الحدث تلقائيًا
+  const allOptions = container.querySelectorAll(".dropdown-option-text");
+  for (const option of allOptions) {
+    if (option.textContent.trim() === saved.trim()) {
+      option.click();
+      break;
+    }
   }
+}
 
   attachEditDeleteHandlers(containerId, t[labelKey] || labelKey);
 }
