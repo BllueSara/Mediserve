@@ -9,11 +9,11 @@ const JWT_SECRET = 'super_secret_key_123';
 
 app.use(express.json());
 app.use(cors());
+
+// Serve static files from all directories
 app.use(express.static(path.join(__dirname)));
-
-
-
-
+app.use(express.static(path.join(__dirname, '..')));
+app.use(express.static(path.join(__dirname, '..', '..')));
 
 app.get("/", (req, res) => {
   res.send("🚀 Server is running!");
