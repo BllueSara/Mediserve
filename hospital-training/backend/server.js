@@ -409,11 +409,11 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
     deviceType = allowedTypes.includes(deviceType)
       ? deviceType.charAt(0).toUpperCase() + deviceType.slice(1)
       : deviceInfo.device_type;
-const engineerRes = await queryAsync(
-  `SELECT id FROM Engineers WHERE name = ?`,
-  [reporter_name]
-);
-const technicalEngineerId = engineerRes[0]?.id || null;
+    const engineerRes = await queryAsync(
+      `SELECT id FROM Engineers WHERE name = ?`,
+      [reporter_name]
+    );
+    const technicalEngineerId = engineerRes[0]?.id || null;
 
     const commonValues = [
       ticket_number, deviceType, device_specifications, section,
@@ -422,13 +422,13 @@ const technicalEngineerId = engineerRes[0]?.id || null;
       deviceInfo.serial_number, deviceInfo.governmental_number, deviceInfo.device_name,
       deviceInfo.department_name, deviceInfo.cpu_name, deviceInfo.ram_type, deviceInfo.os_name,
       deviceInfo.generation_number, deviceInfo.model_name, deviceInfo.drive_type, deviceInfo.ram_size,
-      deviceInfo.mac_address,deviceInfo.ip_address, deviceInfo.printer_type, deviceInfo.ink_type, deviceInfo.ink_serial_number,
+      deviceInfo.mac_address, deviceInfo.ip_address, deviceInfo.printer_type, deviceInfo.ink_type, deviceInfo.ink_serial_number,
       deviceInfo.scanner_type,
       userId
     ];
 
     // 1️⃣ إدخال التقرير الأساسي
- await queryAsync(`
+    await queryAsync(`
   INSERT INTO External_Maintenance (
     ticket_number, device_type, device_specifications, section,
     maintenance_manager, reporter_name,
@@ -439,11 +439,11 @@ const technicalEngineerId = engineerRes[0]?.id || null;
     mac_address, ip_address,
     printer_type, ink_type, ink_serial_number, scanner_type, user_id
   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-`, commonValues,technicalEngineerId);
+`, commonValues, technicalEngineerId);
 
 
     // 2️⃣ إدخال تلخيص التذكرة
-await queryAsync(`
+    await queryAsync(`
   INSERT INTO External_Maintenance (
     ticket_number, device_type, device_specifications, section,
     maintenance_manager, reporter_name,
@@ -455,16 +455,16 @@ await queryAsync(`
     printer_type, ink_type, ink_serial_number, scanner_type, user_id
   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `, [ // ✅ This must contain 26 values
-  ticket_number, deviceType, device_specifications, section,
-  maintenance_manager, reporter_name,
-  initial_diagnosis, `Ticket (${ticket_number}) has been created by (${userName})`,
-  deviceInfo.serial_number, deviceInfo.governmental_number, deviceInfo.device_name,
-  deviceInfo.department_name, deviceInfo.cpu_name, deviceInfo.ram_type, deviceInfo.os_name,
-  deviceInfo.generation_number, deviceInfo.model_name, deviceInfo.drive_type, deviceInfo.ram_size,
-  deviceInfo.mac_address, deviceInfo.ip_address, deviceInfo.printer_type, deviceInfo.ink_type,
-  deviceInfo.ink_serial_number, deviceInfo.scanner_type,
-  userId // ✅ Add this final value
-]);
+      ticket_number, deviceType, device_specifications, section,
+      maintenance_manager, reporter_name,
+      initial_diagnosis, `Ticket (${ticket_number}) has been created by (${userName})`,
+      deviceInfo.serial_number, deviceInfo.governmental_number, deviceInfo.device_name,
+      deviceInfo.department_name, deviceInfo.cpu_name, deviceInfo.ram_type, deviceInfo.os_name,
+      deviceInfo.generation_number, deviceInfo.model_name, deviceInfo.drive_type, deviceInfo.ram_size,
+      deviceInfo.mac_address, deviceInfo.ip_address, deviceInfo.printer_type, deviceInfo.ink_type,
+      deviceInfo.ink_serial_number, deviceInfo.scanner_type,
+      userId // ✅ Add this final value
+    ]);
 
 
     // 🛎️ إشعار 1: تقرير الصيانة
@@ -481,16 +481,16 @@ await queryAsync(`
       'external-ticket-report'
     ]);
 
-const reporterRes = await queryAsync(`SELECT id FROM users WHERE name = ?`, [reporter_name]);
-const reporterId = reporterRes[0]?.id;
+    const reporterRes = await queryAsync(`SELECT id FROM users WHERE name = ?`, [reporter_name]);
+    const reporterId = reporterRes[0]?.id;
 
-if (reporterId) {
-  await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-    reporterId,
-    `New external maintenance task assigned on ${deviceInfo.device_name} (${displayDevice}) by ${userName}`,
-    'external-maintenance-assigned'
-  ]);
-}
+    if (reporterId) {
+      await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+        reporterId,
+        `New external maintenance task assigned on ${deviceInfo.device_name} (${displayDevice}) by ${userName}`,
+        'external-maintenance-assigned'
+      ]);
+    }
 
     await queryAsync(`
       INSERT INTO Activity_Logs (user_id, user_name, action, details)
@@ -501,7 +501,7 @@ if (reporterId) {
       'Submitted External Maintenance',
       `Submitted external maintenance for a ${deviceInfo.device_type} | Device Name: ${deviceInfo.device_name} | Serial: ${deviceInfo.serial_number} | Governmental No.: ${deviceInfo.governmental_number}`
     ]);
-    
+
 
     res.json({ message: "✅ External maintenance, ticket summary, and notifications saved successfully." });
   } catch (error) {
@@ -608,13 +608,13 @@ app.post("/submit-regular-maintenance", authenticateToken, async (req, res) => {
     problem_status = "",
     technical_engineer_id = null
   } = req.body;
-// تنسيق عرض المشاكل للإشعارات
-let formattedProblemStatus = "No issues reported";
-if (Array.isArray(problem_status)) {
-  formattedProblemStatus = problem_status.length ? problem_status.join(", ") : formattedProblemStatus;
-} else if (typeof problem_status === "string" && problem_status.trim() !== "") {
-  formattedProblemStatus = problem_status;
-}
+  // تنسيق عرض المشاكل للإشعارات
+  let formattedProblemStatus = "No issues reported";
+  if (Array.isArray(problem_status)) {
+    formattedProblemStatus = problem_status.length ? problem_status.join(", ") : formattedProblemStatus;
+  } else if (typeof problem_status === "string" && problem_status.trim() !== "") {
+    formattedProblemStatus = problem_status;
+  }
 
   const adminUser = await getUserById(userId);
   const userName = await getUserNameById(userId);
@@ -630,24 +630,32 @@ if (Array.isArray(problem_status)) {
   const isAllDevices = (rawDeviceType && rawDeviceType.toLowerCase() === "all-devices");
 
 
+  let finalEngineerId = null;
+
+  if (technical_engineer_id && !isNaN(technical_engineer_id)) {
+    const parsed = parseInt(technical_engineer_id);
+    if (Number.isInteger(parsed)) {
+      finalEngineerId = parsed;
+    }
+  }
 
 
   try {
     const departmentRes = await queryAsync("SELECT id FROM Departments WHERE name = ?", [section]);
     const departmentId = departmentRes[0]?.id || null;
-// ✅ فحص إذا فيه صيانة مفتوحة لنفس الجهاز
-const existingOpenMaintenance = await queryAsync(`
+    // ✅ فحص إذا فيه صيانة مفتوحة لنفس الجهاز
+    const existingOpenMaintenance = await queryAsync(`
   SELECT id FROM Regular_Maintenance
   WHERE device_id = ? AND status = 'Open'
 `, [deviceSpec]);
 
-if (existingOpenMaintenance.length > 0) {
-  return res.status(400).json({
-    error: "❌ This device already has an active regular maintenance request."
-  });
-}
+    if (existingOpenMaintenance.length > 0) {
+      return res.status(400).json({
+        error: "❌ This device already has an active regular maintenance request."
+      });
+    }
 
-const deviceRes = await queryAsync(`
+    const deviceRes = await queryAsync(`
   SELECT md.*, COALESCE(pc.Computer_Name, pr.Printer_Name, sc.Scanner_Name, md.device_name) AS device_name,
          COALESCE(c.cpu_name, '') AS cpu_name,
          COALESCE(r.ram_type, '') AS ram_type,
@@ -687,9 +695,9 @@ const deviceRes = await queryAsync(`
     const deviceInfo = deviceRes[0];
     if (!deviceInfo) return res.status(404).json({ error: "Device not found" });
 
-const displayDevice = isAllDevices 
-  ? 'ALL DEVICES'
-  : `${deviceInfo.device_name} (${deviceInfo.device_type})`;
+    const displayDevice = isAllDevices
+      ? 'ALL DEVICES'
+      : `${deviceInfo.device_name} (${deviceInfo.device_type})`;
     const checklist = JSON.stringify(details);
     await queryAsync(`
   INSERT INTO Regular_Maintenance (
@@ -700,44 +708,44 @@ const displayDevice = isAllDevices
     scanner_type, user_id
   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?)
 `, [
-  deviceSpec,
-  rawDeviceType || deviceInfo.device_type,
-  date,
-  frequency,
-  checklist,
-  notes,
-  deviceInfo.serial_number,
-  deviceInfo.governmental_number,
-  deviceInfo.device_name,
-  deviceInfo.department_name,
-  deviceInfo.cpu_name,
-  deviceInfo.ram_type,
-  deviceInfo.ram_size || '',
-  deviceInfo.os_name,
-  deviceInfo.generation_number,
-  deviceInfo.model_name,
-  deviceInfo.drive_type,
-  "Open",
-  problem_status || "",
-  technical_engineer_id,
-  deviceInfo.mac_address,
-  deviceInfo.ip_address,
-  deviceInfo.printer_type,
-  deviceInfo.ink_type,
-  deviceInfo.ink_serial_number,
-  deviceInfo.scanner_type,
-  userId
-]);
+      deviceSpec,
+      rawDeviceType || deviceInfo.device_type,
+      date,
+      frequency,
+      checklist,
+      notes,
+      deviceInfo.serial_number,
+      deviceInfo.governmental_number,
+      deviceInfo.device_name,
+      deviceInfo.department_name,
+      deviceInfo.cpu_name,
+      deviceInfo.ram_type,
+      deviceInfo.ram_size || '',
+      deviceInfo.os_name,
+      deviceInfo.generation_number,
+      deviceInfo.model_name,
+      deviceInfo.drive_type,
+      "Open",
+      problem_status || "",
+      finalEngineerId,
+      deviceInfo.mac_address,
+      deviceInfo.ip_address,
+      deviceInfo.printer_type,
+      deviceInfo.ink_type,
+      deviceInfo.ink_serial_number,
+      deviceInfo.scanner_type,
+      userId
+    ]);
 
     await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
       userId,
       `Regular maintenance created for ${displayDevice} by engineer ${engineerName || 'N/A'} {${formattedProblemStatus}}`,
       'regular-maintenance'
     ]);
-    
-const nextTicketId = await generateNumber("INT");
 
-const ticketNumber = formatNumber("TIC", nextTicketId);
+    const nextTicketId = await generateNumber("INT");
+
+    const ticketNumber = formatNumber("TIC", nextTicketId);
     const ticketRes = await queryAsync(`
       INSERT INTO Internal_Tickets (
         ticket_number, priority, department_id, issue_description, assigned_to, mac_address,ip_address, user_id
@@ -747,13 +755,13 @@ const ticketNumber = formatNumber("TIC", nextTicketId);
       "Medium",
       departmentId,
       problem_status || "Regular Maintenance",
-      technical_engineer_id,
+      finalEngineerId,
       deviceInfo.mac_address,
       deviceInfo.ip_address,
       userId
     ]);
     const ticketId = ticketRes.insertId;
-const reportNumberTicket = formatNumber("REP", nextTicketId, "TICKET");
+    const reportNumberTicket = formatNumber("REP", nextTicketId, "TICKET");
     await queryAsync(`
       INSERT INTO Maintenance_Reports (
         report_number, ticket_id, device_id,
@@ -764,7 +772,7 @@ const reportNumberTicket = formatNumber("REP", nextTicketId, "TICKET");
       ticketId,
       deviceSpec,
       "Ticket Created",
- notes,
+      notes,
       "Open",
       "Regular",
       deviceInfo.mac_address,
@@ -779,8 +787,8 @@ const reportNumberTicket = formatNumber("REP", nextTicketId, "TICKET");
       `Report created ${ticketNumber} for ${displayDevice} by engineer ${engineerName || 'N/A'} (${formattedProblemStatus})`,
       'internal-ticket-report'
     ]);
-    
-const reportNumberMain = formatNumber("REP", nextTicketId, "MAIN");
+
+    const reportNumberMain = formatNumber("REP", nextTicketId, "MAIN");
     await queryAsync(`
       INSERT INTO Maintenance_Reports (
         report_number, ticket_id, device_id,
@@ -811,20 +819,20 @@ const reportNumberMain = formatNumber("REP", nextTicketId, "MAIN");
     const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE id = ?`, [technical_engineer_id]);
     const techEngineerName = techEngineerRes[0]?.name;
 
-if (techEngineerName) {
-  const techUserRes = await queryAsync(`SELECT id FROM Users WHERE name = ?`, [techEngineerName]);
-  const techUserId = techUserRes[0]?.id;
+    if (techEngineerName) {
+      const techUserRes = await queryAsync(`SELECT id FROM Users WHERE name = ?`, [techEngineerName]);
+      const techUserId = techUserRes[0]?.id;
 
-  if (techUserId) {
-    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-      techUserId,
-      `You have been assigned a new Regular maintenance task on ${displayDevice} by ${userName}`,
-      'technical-notification'
-    ]);
-  }
-}
+      if (techUserId) {
+        await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+          techUserId,
+          `You have been assigned a new Regular maintenance task on ${displayDevice} by ${userName}`,
+          'technical-notification'
+        ]);
+      }
+    }
 
-    
+
     await queryAsync(`
       INSERT INTO Activity_Logs (user_id, user_name, action, details)
       VALUES (?, ?, ?, ?)
@@ -834,7 +842,7 @@ if (techEngineerName) {
       'Submitted Regular Maintenance',
       `Submitted regular maintenance for a ${deviceInfo.device_type} | Device: ${deviceInfo.device_name} | Serial: ${deviceInfo.serial_number} | Governmental No.: ${deviceInfo.governmental_number}`
     ]);
-    
+
 
     res.json({ message: "✅ Regular maintenance, ticket, and reports created successfully." });
 
@@ -867,7 +875,7 @@ app.post("/add-popup-option", (req, res) => {
     "device-specification": { table: "Maintenance_Devices", column: "device_name" },
     "initial-diagnosis": { table: "ProblemStates_Pc", column: "problem_text" } // تقدر توسعها حسب نوع الجهاز
   };
-  
+
 
   const mapping = tableMap[target];
   if (!mapping) return res.status(400).json({ message: "Invalid target" });
@@ -883,7 +891,7 @@ app.post("/add-popup-option", (req, res) => {
     db.query(insertQuery, [value], (err) => {
       if (err) return res.status(500).json({ success: false, message: "❌ Insert error" });
 
-      
+
       res.json({ success: true });
     });
   });
@@ -1092,7 +1100,7 @@ app.post("/add-options-external", authenticateToken, (req, res) => {
           const logValues = [
             userId,
             userName,
-            `Added  '${table}'`
+            `Added '${table}'`,
             `Added '${value}' to '${table}'`
           ];
 
@@ -1207,13 +1215,13 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
     IDNumber: idNumber,
     Notes: notes = ""
   } = req.body;
-// تنسيق عرض المشاكل للإشعارات
-let formattedProblemStatus = "No issues reported";
-if (Array.isArray(problemStatus)) {
-  formattedProblemStatus = problemStatus.length ? problemStatus.join(", ") : formattedProblemStatus;
-} else if (typeof problemStatus === "string" && problemStatus.trim() !== "") {
-  formattedProblemStatus = problemStatus;
-}
+  // تنسيق عرض المشاكل للإشعارات
+  let formattedProblemStatus = "No issues reported";
+  if (Array.isArray(problemStatus)) {
+    formattedProblemStatus = problemStatus.length ? problemStatus.join(", ") : formattedProblemStatus;
+  } else if (typeof problemStatus === "string" && problemStatus.trim() !== "") {
+    formattedProblemStatus = problemStatus;
+  }
 
 
   const adminUser = await getUserById(userId);
@@ -1274,7 +1282,7 @@ if (Array.isArray(problemStatus)) {
     const deviceInfo = deviceRes[0];
     if (!deviceInfo) return res.status(404).json({ error: "❌ Device not found" });
 
-    const displayDevice = isAllDevices 
+    const displayDevice = isAllDevices
       ? 'ALL DEVICES'
       : `${deviceInfo.device_name} (${deviceInfo.device_type})`;
 
@@ -1295,20 +1303,20 @@ if (Array.isArray(problemStatus)) {
       technical, floor || "", extension || "", problemStatus || "", notes,
       deviceInfo.serial_number, deviceInfo.governmental_number, deviceInfo.device_name, deviceInfo.department_name,
       deviceInfo.cpu_name, deviceInfo.ram_type, deviceInfo.os_name, deviceInfo.generation_number, deviceInfo.model_name,
-      deviceInfo.drive_type, deviceInfo.ram_size, deviceInfo.mac_address,deviceInfo.ip_address, deviceInfo.printer_type, deviceInfo.ink_type,
-      deviceInfo.ink_serial_number,deviceInfo.scanner_type, userId
+      deviceInfo.drive_type, deviceInfo.ram_size, deviceInfo.mac_address, deviceInfo.ip_address, deviceInfo.printer_type, deviceInfo.ink_type,
+      deviceInfo.ink_serial_number, deviceInfo.scanner_type, userId
     ]);
 
-const nextTicketId = await generateNumber("INT");
+    const nextTicketId = await generateNumber("INT");
 
-const ticketNumber = formatNumber("TIC", nextTicketId);
+    const ticketNumber = formatNumber("TIC", nextTicketId);
     const ticketRes = await queryAsync(
       "INSERT INTO Internal_Tickets (ticket_number, priority, department_id, issue_description, assigned_to, mac_address,ip_address, user_id) VALUES (?, ?, ?, ?, ?, ?, ?,?)",
-      [ticketNumber, "Medium", departmentId, problemStatus, technical, deviceInfo.mac_address,deviceInfo.ip_address, userId]
+      [ticketNumber, "Medium", departmentId, problemStatus, technical, deviceInfo.mac_address, deviceInfo.ip_address, userId]
     );
     const ticketId = ticketRes.insertId;
 
-const reportNumberMain = formatNumber("REP", nextTicketId, "MAIN");
+    const reportNumberMain = formatNumber("REP", nextTicketId, "MAIN");
     await queryAsync(`
       INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address,ip_address, user_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)
@@ -1316,10 +1324,10 @@ const reportNumberMain = formatNumber("REP", nextTicketId, "MAIN");
       reportNumberMain, ticketId, deviceSpec,
       `Selected Issue: ${problemStatus}`,
       `Initial Diagnosis: ${initialDiagnosis}`,
-      "Open", "General", deviceInfo.mac_address,deviceInfo.ip_address, userId
+      "Open", "General", deviceInfo.mac_address, deviceInfo.ip_address, userId
     ]);
 
-const reportNumberTicket = formatNumber("REP", nextTicketId, "TICKET");
+    const reportNumberTicket = formatNumber("REP", nextTicketId, "TICKET");
     await queryAsync(`
       INSERT INTO Maintenance_Reports (report_number, ticket_id, device_id, issue_summary, full_description, status, maintenance_type, mac_address,ip_address, user_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)
@@ -1327,7 +1335,7 @@ const reportNumberTicket = formatNumber("REP", nextTicketId, "TICKET");
       reportNumberTicket, ticketId, deviceSpec,
       "Ticket Created",
       `Ticket (${ticketNumber}) for device: ${deviceInfo.device_name} - Department: ${deviceInfo.department_name}`,
-      "Open", "General", deviceInfo.mac_address,deviceInfo.ip_address, userId
+      "Open", "General", deviceInfo.mac_address, deviceInfo.ip_address, userId
     ]);
 
     await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
@@ -1351,18 +1359,18 @@ const reportNumberTicket = formatNumber("REP", nextTicketId, "TICKET");
     const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE name = ?`, [technical]);
     const techEngineerName = techEngineerRes[0]?.name;
 
-if (techEngineerName) {
-  const techUserRes = await queryAsync(`SELECT id FROM Users WHERE name = ?`, [techEngineerName]);
-  const techUserId = techUserRes[0]?.id;
+    if (techEngineerName) {
+      const techUserRes = await queryAsync(`SELECT id FROM Users WHERE name = ?`, [techEngineerName]);
+      const techUserId = techUserRes[0]?.id;
 
-  if (techUserId) {
-    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-      techUserId,
-      `You have been assigned a new General maintenance task on ${deviceInfo.device_name} (${displayDevice}) by ${userName}`,
-      'technical-notification'
-    ]);
-  }
-}
+      if (techUserId) {
+        await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+          techUserId,
+          `You have been assigned a new General maintenance task on ${deviceInfo.device_name} (${displayDevice}) by ${userName}`,
+          'technical-notification'
+        ]);
+      }
+    }
 
 
     await queryAsync(`
@@ -1979,7 +1987,7 @@ WHERE mr.id = ?
           return latest;
         }, result2[0]);
       }
-      
+
       return res.json({
         id: report.report_id,
         report_number: report.report_number,
@@ -2033,17 +2041,17 @@ WHERE mr.id = ?
         id_number: report.id_number || "N/A",
         source: "internal"
       });
-      
-      
+
+
     });
   }
 });
 
 
 // POST /add-options-device
-app.post("/add-options-add-device",authenticateToken, (req, res) => {
+app.post("/add-options-add-device", authenticateToken, (req, res) => {
   const { target, value } = req.body;
-    const userId = req.user?.id;
+  const userId = req.user?.id;
 
   if (!target || !value) {
     return res.status(400).json({ error: "❌ Missing target or value" });
@@ -2360,31 +2368,31 @@ app.post('/AddDevice/:type', authenticateToken, async (req, res) => {
     ]);
 
     console.log("✅ تم إدخال الجهاز في Maintenance_Devices بنجاح، ID:", result2.insertId);
-// ✅ إدخال لوق بعد نجاح إضافة الجهاز
-const userId = req.user?.id;
+    // ✅ إدخال لوق بعد نجاح إضافة الجهاز
+    const userId = req.user?.id;
 
-if (userId) {
-  db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
-    if (!errUser && resultUser.length > 0) {
-      const userName = resultUser[0].name;
+    if (userId) {
+      db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
+        if (!errUser && resultUser.length > 0) {
+          const userName = resultUser[0].name;
 
-      const logQuery = `
+          const logQuery = `
         INSERT INTO Activity_Logs (user_id, user_name, action, details)
         VALUES (?, ?, ?, ?)
       `;
-      const logValues = [
-        userId,
-        userName,
-        "Add Device",
-        `Added a new '${deviceType}' with serial '${Serial_Number}' to Maintenance_Devices`
-      ];
+          const logValues = [
+            userId,
+            userName,
+            "Add Device",
+            `Added a new '${deviceType}' with serial '${Serial_Number}' to Maintenance_Devices`
+          ];
 
-      db.query(logQuery, logValues, (logErr) => {
-        if (logErr) console.error("❌ Logging failed:", logErr);
+          db.query(logQuery, logValues, (logErr) => {
+            if (logErr) console.error("❌ Logging failed:", logErr);
+          });
+        }
       });
     }
-  });
-}
 
     res.json({
       message: `✅ تم حفظ بيانات الجهاز (${deviceType}) بنجاح`,
@@ -2558,7 +2566,7 @@ app.put("/update-report-status/:id", authenticateToken, async (req, res) => {
       FROM Maintenance_Devices 
       WHERE id = ?
     `, [reportData.device_id]);
-    
+
     const deviceName = deviceRes[0]?.device_name || "Unknown Device";
     const deviceType = deviceRes[0]?.device_type || "Unknown Type";
     const readableDevice = `${deviceName} (${deviceType})`;
@@ -2795,225 +2803,225 @@ const compareRefNameIfChanged = async (label, table, column, id, newName, change
   }
 };
 
-app.post("/update-report-full",authenticateToken, upload.fields([
+app.post("/update-report-full", authenticateToken, upload.fields([
   { name: "attachment", maxCount: 1 },
   { name: "signature", maxCount: 1 }
 ]), async (req, res) => {
-const updatedData = JSON.parse(req.body.data || "{}");
-const attachmentFile = req.files?.attachment?.[0] || null;
-const signatureRaw = req.files?.signature?.[0] || null;
-const signatureFile = signatureRaw && signatureRaw.size > 0 ? signatureRaw : null;
+  const updatedData = JSON.parse(req.body.data || "{}");
+  const attachmentFile = req.files?.attachment?.[0] || null;
+  const signatureRaw = req.files?.signature?.[0] || null;
+  const signatureFile = signatureRaw && signatureRaw.size > 0 ? signatureRaw : null;
 
-console.log("📩 Received update data:", updatedData);
-if (attachmentFile) {
-  console.log("📎 Received attachment file:", attachmentFile.originalname);
-}
-if (signatureFile) {
-  console.log("✍️ Received signature file:", signatureFile.originalname);
-}
+  console.log("📩 Received update data:", updatedData);
+  if (attachmentFile) {
+    console.log("📎 Received attachment file:", attachmentFile.originalname);
+  }
+  if (signatureFile) {
+    console.log("✍️ Received signature file:", signatureFile.originalname);
+  }
 
   const {
     id, issue_summary, full_description, priority, status, device_type,
     technical, department_name, category, source,
     device_id, device_name, serial_number, governmental_number,
     cpu_name, ram_type, ram_size, os_name, generation_number,
-    model_name, drive_type, mac_address,ip_address,
-    ink_type, ink_serial_number, printer_type,scanner_type
+    model_name, drive_type, mac_address, ip_address,
+    ink_type, ink_serial_number, printer_type, scanner_type
   } = updatedData;
-    const departmentId = await getId("Departments", "name", department_name);
-    const lowerType = device_type?.toLowerCase();
-    const isPC = lowerType === "pc";
-    const isPrinter = lowerType === "printer";
-    const isScanner = lowerType === "scanner";
+  const departmentId = await getId("Departments", "name", department_name);
+  const lowerType = device_type?.toLowerCase();
+  const isPC = lowerType === "pc";
+  const isPrinter = lowerType === "printer";
+  const isScanner = lowerType === "scanner";
 
-   // استخدم جدول Maintance_Device_Model في جميع الحالات
-    const modelId = await getModelId(device_type, model_name);
+  // استخدم جدول Maintance_Device_Model في جميع الحالات
+  const modelId = await getModelId(device_type, model_name);
 
 
-    let scanner_type_id = null;
-if (isScanner && scanner_type) {
-  scanner_type_id = await getId("Scanner_Types", "scanner_type", scanner_type);
-}
+  let scanner_type_id = null;
+  if (isScanner && scanner_type) {
+    scanner_type_id = await getId("Scanner_Types", "scanner_type", scanner_type);
+  }
 
   if (!source) {
     return res.status(400).json({ error: "Missing source type" });
   }
 
   try {// 🧠 سجل تغييرات شامل
-const changes = [];
+    const changes = [];
 
-// 🕵️‍♂️ جلب البيانات القديمة
-const [oldReportRows] = await db.promise().query(
-  `SELECT * FROM ${source === 'new' ? 'New_Maintenance_Report' : 'Maintenance_Reports'} WHERE id = ?`,
-  [id]
-);
-const reportOld = oldReportRows[0] || {};
-// 🎯 استخراج أسماء الملفات السابقة
-const oldAttachmentName = reportOld.attachment_name || null;
-const oldSignaturePath = reportOld.signature_path || null;
-
-
-// جلب بيانات Maintenance_Devices
-let [oldDeviceRows] = await db.promise().query(
-  `SELECT * FROM Maintenance_Devices WHERE serial_number = ? LIMIT 1`,
-  [serial_number]
-);
-const oldDevice = oldDeviceRows[0] || {};
-
-// جلب بيانات PC_info / Printer_info / Scanner_info
-let oldSpec = {};
-if (isPC) {
-  [[oldSpec]] = await db.promise().query(`SELECT * FROM PC_info WHERE Serial_Number = ?`, [serial_number]);
-} else if (isPrinter) {
-  [[oldSpec]] = await db.promise().query(`SELECT * FROM Printer_info WHERE Serial_Number = ?`, [serial_number]);
-} else if (isScanner) {
-  [[oldSpec]] = await db.promise().query(`SELECT * FROM Scanner_info WHERE Serial_Number = ?`, [serial_number]);
-}
-oldSpec = oldSpec || {};
-
-// ✅ مقارنات عامة
-compareReadable("Issue Summary", reportOld.issue_summary, issue_summary, changes);
-compareReadable("Description", reportOld.full_description || reportOld.details, full_description, changes);
-compareReadable("Priority", reportOld.priority, priority, changes);
-compareReadable("Status", reportOld.status, status, changes);
-compareReadable("Assigned To", reportOld.assigned_to || technical, technical, changes);
-compareReadable("Category", reportOld.report_type || category, category, changes);
-
-// ✅ بيانات نصية مباشرة
-compareReadable("Device Name", oldDevice.device_name, device_name, changes);
-compareReadable("Serial Number", oldDevice.serial_number, serial_number, changes);
-compareReadable("Governmental Number", oldDevice.governmental_number, governmental_number, changes);
-compareReadable("IP Address", oldDevice.ip_address, ip_address, changes);
-compareReadable("MAC Address", oldDevice.mac_address, mac_address, changes);
-
-// ✅ المواصفات - جلب الأسماء مباشرة من الجداول المرجعية
-
-// Model
-let modelNameOld = null;
-if (oldDevice.model_id) {
-  const [[row]] = await db.promise().query(`SELECT model_name FROM Maintance_Device_Model WHERE id = ?`, [oldDevice.model_id]);
-  modelNameOld = row?.model_name;
-}
-compareReadable("Model", modelNameOld, model_name, changes);
-
-// CPU
-let cpuNameOld = null;
-const oldCpuId = reportOld.cpu_id || oldSpec?.Processor_id;
-if (oldCpuId) {
-  const [[row]] = await db.promise().query(`SELECT cpu_name FROM CPU_Types WHERE id = ?`, [oldCpuId]);
-  cpuNameOld = row?.cpu_name;
-}
-compareReadable("Processor", cpuNameOld, cpu_name, changes);
-
-// RAM
-let ramNameOld = null;
-const oldRamId = reportOld.ram_id || oldSpec?.RAM_id;
-if (oldRamId) {
-  const [[row]] = await db.promise().query(`SELECT ram_type FROM RAM_Types WHERE id = ?`, [oldRamId]);
-  ramNameOld = row?.ram_type;
-}
-compareReadable("RAM", ramNameOld, ram_type, changes);
-
-// RAM Size
-let ramSizeOld = null;
-const oldRamSizeId = reportOld.ram_size_id || oldSpec?.RamSize_id;
-if (oldRamSizeId) {
-  const [[row]] = await db.promise().query(`SELECT ram_size FROM RAM_Sizes WHERE id = ?`, [oldRamSizeId]);
-  ramSizeOld = row?.ram_size;
-}
-compareReadable("RAM Size", ramSizeOld, ram_size, changes);
-
-// OS
-let osNameOld = null;
-const oldOsId = reportOld.os_id || oldSpec?.OS_id;
-if (oldOsId) {
-  const [[row]] = await db.promise().query(`SELECT os_name FROM OS_Types WHERE id = ?`, [oldOsId]);
-  osNameOld = row?.os_name;
-}
-compareReadable("OS", osNameOld, os_name, changes);
-
-// Generation
-let genOld = null;
-const oldGenId = reportOld.generation_id || oldSpec?.Generation_id;
-if (oldGenId) {
-  const [[row]] = await db.promise().query(`SELECT generation_number FROM Processor_Generations WHERE id = ?`, [oldGenId]);
-  genOld = row?.generation_number;
-}
-compareReadable("Generation", genOld, generation_number, changes);
-
-// Drive Type
-let driveOld = null;
-const oldDriveId = reportOld.drive_id || oldSpec?.Drive_id;
-if (oldDriveId) {
-  const [[row]] = await db.promise().query(`SELECT drive_type FROM Hard_Drive_Types WHERE id = ?`, [oldDriveId]);
-  driveOld = row?.drive_type;
-}
-compareReadable("Drive Type", driveOld, drive_type, changes);
-
-// ✅ الطابعة
-let inkOld = null;
-if (oldDevice.ink_type) {
-  const [[row]] = await db.promise().query(`SELECT ink_type FROM Ink_Types WHERE id = ?`, [oldDevice.ink_type]);
-  inkOld = row?.ink_type;
-}
-compareReadable("Ink Type", inkOld, ink_type, changes);
-
-let inkSerialOld = null;
-if (oldDevice.ink_serial_number) {
-  const [[row]] = await db.promise().query(`SELECT serial_number FROM Ink_Serials WHERE id = ?`, [oldDevice.ink_serial_number]);
-  inkSerialOld = row?.serial_number;
-}
-compareReadable("Ink Serial", inkSerialOld, ink_serial_number, changes);
-
-let printerTypeOld = null;
-if (oldDevice.printer_type) {
-  const [[row]] = await db.promise().query(`SELECT printer_type FROM Printer_Types WHERE id = ?`, [oldDevice.printer_type]);
-  printerTypeOld = row?.printer_type;
-}
-compareReadable("Printer Type", printerTypeOld, printer_type, changes);
-
-// ✅ الماسح
-let scannerTypeOld = null;
-if (oldDevice.scanner_type_id) {
-  const [[row]] = await db.promise().query(`SELECT scanner_type FROM Scanner_Types WHERE id = ?`, [oldDevice.scanner_type_id]);
-  scannerTypeOld = row?.scanner_type;
-}
-compareReadable("Scanner Type", scannerTypeOld, scanner_type, changes);
-
-// ✅ القسم
-let deptOld = null;
-if (oldDevice.department_id) {
-  const [[row]] = await db.promise().query(`SELECT name FROM Departments WHERE id = ?`, [oldDevice.department_id]);
-  deptOld = row?.name;
-}
-compareReadable("Department", deptOld, department_name, changes);
-
-if (attachmentFile && attachmentFile.originalname !== oldAttachmentName) {
-  changes.push(`📎 New attachment uploaded: ${attachmentFile.originalname}`);
-}
-
-if (signatureFile) {
-  const newSigPath = `uploads/${signatureFile.filename}`;
-  if (newSigPath !== oldSignaturePath) {
-    changes.push(`✍️ New signature uploaded`);
-  }
-}
+    // 🕵️‍♂️ جلب البيانات القديمة
+    const [oldReportRows] = await db.promise().query(
+      `SELECT * FROM ${source === 'new' ? 'New_Maintenance_Report' : 'Maintenance_Reports'} WHERE id = ?`,
+      [id]
+    );
+    const reportOld = oldReportRows[0] || {};
+    // 🎯 استخراج أسماء الملفات السابقة
+    const oldAttachmentName = reportOld.attachment_name || null;
+    const oldSignaturePath = reportOld.signature_path || null;
 
 
+    // جلب بيانات Maintenance_Devices
+    let [oldDeviceRows] = await db.promise().query(
+      `SELECT * FROM Maintenance_Devices WHERE serial_number = ? LIMIT 1`,
+      [serial_number]
+    );
+    const oldDevice = oldDeviceRows[0] || {};
 
-// ✅ سجل إذا في تغييرات
-if (changes.length > 0) {
-  const userId = req.user?.id;
-  const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
-  const userName = userRow[0]?.name || 'Unknown';
+    // جلب بيانات PC_info / Printer_info / Scanner_info
+    let oldSpec = {};
+    if (isPC) {
+      [[oldSpec]] = await db.promise().query(`SELECT * FROM PC_info WHERE Serial_Number = ?`, [serial_number]);
+    } else if (isPrinter) {
+      [[oldSpec]] = await db.promise().query(`SELECT * FROM Printer_info WHERE Serial_Number = ?`, [serial_number]);
+    } else if (isScanner) {
+      [[oldSpec]] = await db.promise().query(`SELECT * FROM Scanner_info WHERE Serial_Number = ?`, [serial_number]);
+    }
+    oldSpec = oldSpec || {};
 
-  logActivity(
-    userId,
-    userName,
-    "Edited",
-    `Updated report ID ${id}:\n${changes.join("\n")}`
-  );
-}
+    // ✅ مقارنات عامة
+    compareReadable("Issue Summary", reportOld.issue_summary, issue_summary, changes);
+    compareReadable("Description", reportOld.full_description || reportOld.details, full_description, changes);
+    compareReadable("Priority", reportOld.priority, priority, changes);
+    compareReadable("Status", reportOld.status, status, changes);
+    compareReadable("Assigned To", reportOld.assigned_to || technical, technical, changes);
+    compareReadable("Category", reportOld.report_type || category, category, changes);
+
+    // ✅ بيانات نصية مباشرة
+    compareReadable("Device Name", oldDevice.device_name, device_name, changes);
+    compareReadable("Serial Number", oldDevice.serial_number, serial_number, changes);
+    compareReadable("Governmental Number", oldDevice.governmental_number, governmental_number, changes);
+    compareReadable("IP Address", oldDevice.ip_address, ip_address, changes);
+    compareReadable("MAC Address", oldDevice.mac_address, mac_address, changes);
+
+    // ✅ المواصفات - جلب الأسماء مباشرة من الجداول المرجعية
+
+    // Model
+    let modelNameOld = null;
+    if (oldDevice.model_id) {
+      const [[row]] = await db.promise().query(`SELECT model_name FROM Maintance_Device_Model WHERE id = ?`, [oldDevice.model_id]);
+      modelNameOld = row?.model_name;
+    }
+    compareReadable("Model", modelNameOld, model_name, changes);
+
+    // CPU
+    let cpuNameOld = null;
+    const oldCpuId = reportOld.cpu_id || oldSpec?.Processor_id;
+    if (oldCpuId) {
+      const [[row]] = await db.promise().query(`SELECT cpu_name FROM CPU_Types WHERE id = ?`, [oldCpuId]);
+      cpuNameOld = row?.cpu_name;
+    }
+    compareReadable("Processor", cpuNameOld, cpu_name, changes);
+
+    // RAM
+    let ramNameOld = null;
+    const oldRamId = reportOld.ram_id || oldSpec?.RAM_id;
+    if (oldRamId) {
+      const [[row]] = await db.promise().query(`SELECT ram_type FROM RAM_Types WHERE id = ?`, [oldRamId]);
+      ramNameOld = row?.ram_type;
+    }
+    compareReadable("RAM", ramNameOld, ram_type, changes);
+
+    // RAM Size
+    let ramSizeOld = null;
+    const oldRamSizeId = reportOld.ram_size_id || oldSpec?.RamSize_id;
+    if (oldRamSizeId) {
+      const [[row]] = await db.promise().query(`SELECT ram_size FROM RAM_Sizes WHERE id = ?`, [oldRamSizeId]);
+      ramSizeOld = row?.ram_size;
+    }
+    compareReadable("RAM Size", ramSizeOld, ram_size, changes);
+
+    // OS
+    let osNameOld = null;
+    const oldOsId = reportOld.os_id || oldSpec?.OS_id;
+    if (oldOsId) {
+      const [[row]] = await db.promise().query(`SELECT os_name FROM OS_Types WHERE id = ?`, [oldOsId]);
+      osNameOld = row?.os_name;
+    }
+    compareReadable("OS", osNameOld, os_name, changes);
+
+    // Generation
+    let genOld = null;
+    const oldGenId = reportOld.generation_id || oldSpec?.Generation_id;
+    if (oldGenId) {
+      const [[row]] = await db.promise().query(`SELECT generation_number FROM Processor_Generations WHERE id = ?`, [oldGenId]);
+      genOld = row?.generation_number;
+    }
+    compareReadable("Generation", genOld, generation_number, changes);
+
+    // Drive Type
+    let driveOld = null;
+    const oldDriveId = reportOld.drive_id || oldSpec?.Drive_id;
+    if (oldDriveId) {
+      const [[row]] = await db.promise().query(`SELECT drive_type FROM Hard_Drive_Types WHERE id = ?`, [oldDriveId]);
+      driveOld = row?.drive_type;
+    }
+    compareReadable("Drive Type", driveOld, drive_type, changes);
+
+    // ✅ الطابعة
+    let inkOld = null;
+    if (oldDevice.ink_type) {
+      const [[row]] = await db.promise().query(`SELECT ink_type FROM Ink_Types WHERE id = ?`, [oldDevice.ink_type]);
+      inkOld = row?.ink_type;
+    }
+    compareReadable("Ink Type", inkOld, ink_type, changes);
+
+    let inkSerialOld = null;
+    if (oldDevice.ink_serial_number) {
+      const [[row]] = await db.promise().query(`SELECT serial_number FROM Ink_Serials WHERE id = ?`, [oldDevice.ink_serial_number]);
+      inkSerialOld = row?.serial_number;
+    }
+    compareReadable("Ink Serial", inkSerialOld, ink_serial_number, changes);
+
+    let printerTypeOld = null;
+    if (oldDevice.printer_type) {
+      const [[row]] = await db.promise().query(`SELECT printer_type FROM Printer_Types WHERE id = ?`, [oldDevice.printer_type]);
+      printerTypeOld = row?.printer_type;
+    }
+    compareReadable("Printer Type", printerTypeOld, printer_type, changes);
+
+    // ✅ الماسح
+    let scannerTypeOld = null;
+    if (oldDevice.scanner_type_id) {
+      const [[row]] = await db.promise().query(`SELECT scanner_type FROM Scanner_Types WHERE id = ?`, [oldDevice.scanner_type_id]);
+      scannerTypeOld = row?.scanner_type;
+    }
+    compareReadable("Scanner Type", scannerTypeOld, scanner_type, changes);
+
+    // ✅ القسم
+    let deptOld = null;
+    if (oldDevice.department_id) {
+      const [[row]] = await db.promise().query(`SELECT name FROM Departments WHERE id = ?`, [oldDevice.department_id]);
+      deptOld = row?.name;
+    }
+    compareReadable("Department", deptOld, department_name, changes);
+
+    if (attachmentFile && attachmentFile.originalname !== oldAttachmentName) {
+      changes.push(`📎 New attachment uploaded: ${attachmentFile.originalname}`);
+    }
+
+    if (signatureFile) {
+      const newSigPath = `uploads/${signatureFile.filename}`;
+      if (newSigPath !== oldSignaturePath) {
+        changes.push(`✍️ New signature uploaded`);
+      }
+    }
+
+
+
+    // ✅ سجل إذا في تغييرات
+    if (changes.length > 0) {
+      const userId = req.user?.id;
+      const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
+      const userName = userRow[0]?.name || 'Unknown';
+
+      logActivity(
+        userId,
+        userName,
+        "Edited",
+        `Updated report ID ${id}:\n${changes.join("\n")}`
+      );
+    }
 
 
 
@@ -3072,41 +3080,41 @@ if (changes.length > 0) {
       await db.promise().query(updateSql, values);
     }
     if (source === "internal") {
-// 👇 جلب التوقيع القديم قبل التحديث
-const [[reportRow]] = await db.promise().query(
-  `SELECT signature_path, attachment_name, attachment_path FROM Maintenance_Reports WHERE id = ?`,
-  [id]
-);
+      // 👇 جلب التوقيع القديم قبل التحديث
+      const [[reportRow]] = await db.promise().query(
+        `SELECT signature_path, attachment_name, attachment_path FROM Maintenance_Reports WHERE id = ?`,
+        [id]
+      );
 
-if (!reportRow) {
-  return res.status(404).json({ error: "Report not found" });
-}
+      if (!reportRow) {
+        return res.status(404).json({ error: "Report not found" });
+      }
 
-const attachmentNameToUse = attachmentFile?.originalname || reportRow.attachment_name;
-const attachmentPathToUse = attachmentFile ? `uploads/${attachmentFile.filename}` : reportRow.attachment_path;
+      const attachmentNameToUse = attachmentFile?.originalname || reportRow.attachment_name;
+      const attachmentPathToUse = attachmentFile ? `uploads/${attachmentFile.filename}` : reportRow.attachment_path;
 
-const signaturePathToUse = signatureFile
-  ? `uploads/${signatureFile.filename}`
-  : reportRow.signature_path;
+      const signaturePathToUse = signatureFile
+        ? `uploads/${signatureFile.filename}`
+        : reportRow.signature_path;
 
-const updateReportSql = `
+      const updateReportSql = `
   UPDATE Maintenance_Reports 
   SET issue_summary = ?, full_description = ?, status = ?, report_type = ?,
       attachment_name = ?, attachment_path = ?, signature_path = ?
   WHERE id = ?`;
 
-const reportValues = [
-  issue_summary,
-  full_description,
-  status,
-  category,
-  attachmentNameToUse,
-  attachmentPathToUse,
-  signaturePathToUse,
-  id
-];
+      const reportValues = [
+        issue_summary,
+        full_description,
+        status,
+        category,
+        attachmentNameToUse,
+        attachmentPathToUse,
+        signaturePathToUse,
+        id
+      ];
 
-await db.promise().query(updateReportSql, reportValues);
+      await db.promise().query(updateReportSql, reportValues);
 
 
 
@@ -3141,7 +3149,7 @@ await db.promise().query(updateReportSql, reportValues);
         values.push(modelId);
       }
       if (isPC) {
-        updates.push("cpu_id = ?", "ram_id = ?", "os_id = ?", "generation_id = ?", "drive_id = ?", "ram_size_id = ?", "mac_address = ?","ip_address = ?");
+        updates.push("cpu_id = ?", "ram_id = ?", "os_id = ?", "generation_id = ?", "drive_id = ?", "ram_size_id = ?", "mac_address = ?", "ip_address = ?");
         values.push(cpuId, ramId, osId, generationId, driveId, ramSizeId, mac_address, ip_address);
       }
       if (isPrinter) {
@@ -3163,7 +3171,7 @@ await db.promise().query(updateReportSql, reportValues);
         UPDATE PC_info
         SET Processor_id = ?, RAM_id = ?, RamSize_id = ?, OS_id = ?, Generation_id = ?, Drive_id = ?, Mac_Address = ? ,Ip_Address = ?
         WHERE Serial_Number = ?
-      `, [cpuId, ramId, ramSizeId, osId, generationId, driveId, mac_address,ip_address, serial_number]);
+      `, [cpuId, ramId, ramSizeId, osId, generationId, driveId, mac_address, ip_address, serial_number]);
     }
 
     // تحديث Printer_info
@@ -3188,11 +3196,11 @@ await db.promise().query(updateReportSql, reportValues);
     const sharedParams = [
       device_name, serial_number, governmental_number, department_name,
       model_name, cpu_name, ram_type, os_name, generation_number, drive_type,
-      ram_size, ink_type, ink_serial_number, printer_type, mac_address,ip_address,scanner_type
+      ram_size, ink_type, ink_serial_number, printer_type, mac_address, ip_address, scanner_type
     ];
 
     if (actualDeviceId) {
-await db.promise().query(`
+      await db.promise().query(`
   UPDATE General_Maintenance 
   SET device_name = ?, serial_number = ?, governmental_number = ?, department_name = ?, 
       model_name = ?, cpu_name = ?, ram_type = ?, os_name = ?, generation_number = ?, 
@@ -3200,7 +3208,7 @@ await db.promise().query(`
       mac_address = ?,ip_address = ?, scanner_type = ? 
   WHERE device_id = ?
 `, [...sharedParams, actualDeviceId]);
-await db.promise().query(`
+      await db.promise().query(`
   UPDATE Regular_Maintenance 
   SET device_name = ?, serial_number = ?, governmental_number = ?, department_name = ?, 
       model_name = ?, cpu_name = ?, ram_type = ?, ram_size = ?, os_name = ?, 
@@ -3208,7 +3216,7 @@ await db.promise().query(`
       printer_type = ?, mac_address = ?,ip_address = ?, scanner_type = ? 
   WHERE device_id = ?
 `, [...sharedParams, actualDeviceId]);
-await db.promise().query(`
+      await db.promise().query(`
   UPDATE External_Maintenance 
   SET device_name = ?, governmental_number = ?, department_name = ?, 
       model_name = ?, cpu_name = ?, ram_type = ?, ram_size = ?, os_name = ?, 
@@ -3776,18 +3784,18 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), authenticate
           'internal-ticket-report'
         ]);
 
-let techUserId;
+        let techUserId;
 
-// ✅ لو القيمة رقم → اعتبرها user ID مباشرة
-if (!isNaN(assigned_to)) {
-  techUserId = parseInt(assigned_to);
-} else {
-  // ✅ لو اسم → نحاول نجيب ID من جدول Users
-  const techUserRes = await queryAsync(`
+        // ✅ لو القيمة رقم → اعتبرها user ID مباشرة
+        if (!isNaN(assigned_to)) {
+          techUserId = parseInt(assigned_to);
+        } else {
+          // ✅ لو اسم → نحاول نجيب ID من جدول Users
+          const techUserRes = await queryAsync(`
     SELECT id FROM Users WHERE name = ?
   `, [assigned_to.trim()]);
 
-  techUserId = techUserRes[0]?.id;
+          techUserId = techUserRes[0]?.id;
 
 
 
@@ -3819,62 +3827,62 @@ if (!isNaN(assigned_to)) {
     });
   };
 
- if (!newTicketNumber) {
-  const counterQuery = `SELECT last_number FROM Ticket_Counters WHERE type = 'INT'`;
+  if (!newTicketNumber) {
+    const counterQuery = `SELECT last_number FROM Ticket_Counters WHERE type = 'INT'`;
 
-  db.query(counterQuery, (counterErr, counterResult) => {
-    if (counterErr) {
-      console.error("❌ Counter fetch error:", counterErr);
-      return res.status(500).json({ error: "Failed to generate ticket number" });
-    }
-
-    if (!counterResult.length) {
-      return res.status(500).json({ error: "Ticket counter not initialized for type 'INT'" });
-    }
-
-    const currentNumber = counterResult[0].last_number;
-    const newNumber = currentNumber + 1;
-    newTicketNumber = `INT-${String(newNumber).padStart(3, '0')}`;
-
-    const updateCounterQuery = `UPDATE Ticket_Counters SET last_number = ? WHERE type = 'INT'`;
-
-    db.query(updateCounterQuery, [newNumber], (updateErr) => {
-      if (updateErr) {
-        console.error("❌ Counter update error:", updateErr);
-        return res.status(500).json({ error: "Failed to update ticket counter" });
+    db.query(counterQuery, (counterErr, counterResult) => {
+      if (counterErr) {
+        console.error("❌ Counter fetch error:", counterErr);
+        return res.status(500).json({ error: "Failed to generate ticket number" });
       }
 
-      // بعد تحديث العداد بنجاح، أنشئ التذكرة
-      proceedWithInsert(newTicketNumber);
+      if (!counterResult.length) {
+        return res.status(500).json({ error: "Ticket counter not initialized for type 'INT'" });
+      }
+
+      const currentNumber = counterResult[0].last_number;
+      const newNumber = currentNumber + 1;
+      newTicketNumber = `INT-${String(newNumber).padStart(3, '0')}`;
+
+      const updateCounterQuery = `UPDATE Ticket_Counters SET last_number = ? WHERE type = 'INT'`;
+
+      db.query(updateCounterQuery, [newNumber], (updateErr) => {
+        if (updateErr) {
+          console.error("❌ Counter update error:", updateErr);
+          return res.status(500).json({ error: "Failed to update ticket counter" });
+        }
+
+        // بعد تحديث العداد بنجاح، أنشئ التذكرة
+        proceedWithInsert(newTicketNumber);
+      });
     });
-  });
-} else {
-  // مثال: INT-008 → ناخذ 8 ونزيده 1
-  const manualNumber = parseInt(ticket_number.split("-")[1]);
+  } else {
+    // مثال: INT-008 → ناخذ 8 ونزيده 1
+    const manualNumber = parseInt(ticket_number.split("-")[1]);
 
-  if (!isNaN(manualNumber)) {
-    const nextNumber = manualNumber + 1;
-    newTicketNumber = `INT-${String(nextNumber).padStart(3, '0')}`;
+    if (!isNaN(manualNumber)) {
+      const nextNumber = manualNumber + 1;
+      newTicketNumber = `INT-${String(nextNumber).padStart(3, '0')}`;
 
-    const updateCounterQuery = `
+      const updateCounterQuery = `
       UPDATE Ticket_Counters 
       SET last_number = GREATEST(last_number, ?) 
       WHERE type = 'INT'
     `;
 
-    db.query(updateCounterQuery, [nextNumber], (updateErr) => {
-      if (updateErr) {
-        console.error("❌ Counter update error:", updateErr);
-        return res.status(500).json({ error: "Failed to update ticket counter" });
-      }
+      db.query(updateCounterQuery, [nextNumber], (updateErr) => {
+        if (updateErr) {
+          console.error("❌ Counter update error:", updateErr);
+          return res.status(500).json({ error: "Failed to update ticket counter" });
+        }
 
-      // ✅ بعد تحديث العداد، أنشئ التذكرة برقم +1 من المستخدم
-      proceedWithInsert(newTicketNumber);
-    });
-  } else {
-    return res.status(400).json({ error: "Invalid manual ticket number format" });
+        // ✅ بعد تحديث العداد، أنشئ التذكرة برقم +1 من المستخدم
+        proceedWithInsert(newTicketNumber);
+      });
+    } else {
+      return res.status(400).json({ error: "Invalid manual ticket number format" });
+    }
   }
-}
 
 
 });
@@ -3905,11 +3913,11 @@ app.get("/ticket-types", (req, res) => {
   });
 });
 
-app.post("/submit-new-report",authenticateToken, upload.fields([
+app.post("/submit-new-report", authenticateToken, upload.fields([
   { name: "attachment", maxCount: 1 },
   { name: "signature", maxCount: 1 }
 ]), async (req, res) => {
-  const userId = req.user.id;    
+  const userId = req.user.id;
 
   const {
     report_type,
@@ -3928,9 +3936,9 @@ app.post("/submit-new-report",authenticateToken, upload.fields([
     model_name,
     drive_type,
     mac_address,
-    ip_address,   
-    printer_type,   
-    ink_type        
+    ip_address,
+    printer_type,
+    ink_type
   } = req.body;
 
   const attachment = req.files?.attachment?.[0] || null;
@@ -4004,7 +4012,7 @@ app.post("/submit-new-report",authenticateToken, upload.fields([
       'Submitted New Maintenance Report',
       `New report for ${device_type} | Device Name: ${device_name || 'N/A'} | Serial: ${serial_number || 'N/A'} | Department: ${department_name || 'N/A'}`
     ]);
-    
+
 
     res.json({ message: "✅ Report saved successfully with printer type and ink type" });
 
@@ -4055,38 +4063,38 @@ app.post("/delete-option-complete", authenticateToken, async (req, res) => {
 
   const deleteMap = {
     "ink-type": {
-  table: "Ink_Types",
-  column: "ink_type",
-  referencedTables: [
-    { table: "Printer_info", column: "InkType_id" },
-    { table: "General_Maintenance", column: "ink_type" },
-    { table: "Regular_Maintenance", column: "ink_type" },
-    { table: "External_Maintenance", column: "ink_type" },
-    { table: "New_Maintenance_Report", column: "ink_type" }
-  ]
-},
-"scanner-type": {
-  table: "Scanner_Types",
-  column: "scanner_type",
-  referencedTables: [
-    { table: "General_Maintenance", column: "scanner_type" },
-    { table: "Regular_Maintenance", column: "scanner_type" },
-    { table: "External_Maintenance", column: "scanner_type" },
-    { table: "New_Maintenance_Report", column: "scanner_type" }
-  ]
-}
-,
-"printer-type": {
-  table: "Printer_Types",
-  column: "printer_type",
-  referencedTables: [
-    { table: "Printer_info", column: "PrinterType_id" },
-    { table: "General_Maintenance", column: "printer_type" },
-    { table: "Regular_Maintenance", column: "printer_type" },
-    { table: "External_Maintenance", column: "printer_type" },
-    { table: "New_Maintenance_Report", column: "printer_type" }
-  ]
-},
+      table: "Ink_Types",
+      column: "ink_type",
+      referencedTables: [
+        { table: "Printer_info", column: "InkType_id" },
+        { table: "General_Maintenance", column: "ink_type" },
+        { table: "Regular_Maintenance", column: "ink_type" },
+        { table: "External_Maintenance", column: "ink_type" },
+        { table: "New_Maintenance_Report", column: "ink_type" }
+      ]
+    },
+    "scanner-type": {
+      table: "Scanner_Types",
+      column: "scanner_type",
+      referencedTables: [
+        { table: "General_Maintenance", column: "scanner_type" },
+        { table: "Regular_Maintenance", column: "scanner_type" },
+        { table: "External_Maintenance", column: "scanner_type" },
+        { table: "New_Maintenance_Report", column: "scanner_type" }
+      ]
+    }
+    ,
+    "printer-type": {
+      table: "Printer_Types",
+      column: "printer_type",
+      referencedTables: [
+        { table: "Printer_info", column: "PrinterType_id" },
+        { table: "General_Maintenance", column: "printer_type" },
+        { table: "Regular_Maintenance", column: "printer_type" },
+        { table: "External_Maintenance", column: "printer_type" },
+        { table: "New_Maintenance_Report", column: "printer_type" }
+      ]
+    },
 
     "section": {
       table: "Departments",
@@ -4171,9 +4179,9 @@ app.post("/delete-option-complete", authenticateToken, async (req, res) => {
     },
     "model": {
       table: type === "pc" ? "PC_Model"
-           : type === "printer" ? "Printer_Model"
-           : type === "scanner" ? "Scanner_Model"
-           : "Maintance_Device_Model",
+        : type === "printer" ? "Printer_Model"
+          : type === "scanner" ? "Scanner_Model"
+            : "Maintance_Device_Model",
       column: "model_name",
       referencedTables: [
         { table: "PC_info", column: "Model_id" },
@@ -4214,7 +4222,7 @@ app.post("/delete-option-complete", authenticateToken, async (req, res) => {
       referencedTables: []
     }
   };
-  
+
 
   const mapping = deleteMap[target];
   if (!mapping) return res.status(400).json({ error: "❌ Invalid target field" });
@@ -4273,11 +4281,11 @@ app.post("/delete-option-complete", authenticateToken, async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: "❌ Value not found or already deleted." });
     }
-const userId = req.user?.id;
-const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
-const userName = userRow[0]?.name || 'Unknown';
+    const userId = req.user?.id;
+    const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
+    const userName = userRow[0]?.name || 'Unknown';
 
-logActivity(userId, userName, "Deleted", `Deleted "${value}" from ${mapping.table}`);
+    logActivity(userId, userName, "Deleted", `Deleted "${value}" from ${mapping.table}`);
 
     res.json({ message: `✅ "${value}" deleted successfully.` });
 
@@ -4301,38 +4309,38 @@ app.post("/update-option-complete", authenticateToken, async (req, res) => {
 
   const updateMap = {
     "ink-type": {
-  table: "Ink_Types",
-  column: "ink_type",
-  propagate: [
-    { table: "Printer_info", column: "InkType_id" },
-    { table: "General_Maintenance", column: "ink_type" },
-    { table: "Regular_Maintenance", column: "ink_type" },
-    { table: "External_Maintenance", column: "ink_type" },
-    { table: "New_Maintenance_Report", column: "ink_type" }
-  ]
-},
+      table: "Ink_Types",
+      column: "ink_type",
+      propagate: [
+        { table: "Printer_info", column: "InkType_id" },
+        { table: "General_Maintenance", column: "ink_type" },
+        { table: "Regular_Maintenance", column: "ink_type" },
+        { table: "External_Maintenance", column: "ink_type" },
+        { table: "New_Maintenance_Report", column: "ink_type" }
+      ]
+    },
 
-"printer-type": {
-  table: "Printer_Types",
-  column: "printer_type",
-  propagate: [
-    { table: "Printer_info", column: "PrinterType_id" },
-    { table: "General_Maintenance", column: "printer_type" },
-    { table: "Regular_Maintenance", column: "printer_type" },
-    { table: "External_Maintenance", column: "printer_type" },
-    { table: "New_Maintenance_Report", column: "printer_type" }
-  ]
-},
-"scanner-type": {
-  table: "Scanner_Types",
-  column: "scanner_type",
-  propagate: [
-    { table: "General_Maintenance", column: "scanner_type" },
-    { table: "Regular_Maintenance", column: "scanner_type" },
-    { table: "External_Maintenance", column: "scanner_type" },
-    { table: "New_Maintenance_Report", column: "scanner_type" }
-  ]
-},
+    "printer-type": {
+      table: "Printer_Types",
+      column: "printer_type",
+      propagate: [
+        { table: "Printer_info", column: "PrinterType_id" },
+        { table: "General_Maintenance", column: "printer_type" },
+        { table: "Regular_Maintenance", column: "printer_type" },
+        { table: "External_Maintenance", column: "printer_type" },
+        { table: "New_Maintenance_Report", column: "printer_type" }
+      ]
+    },
+    "scanner-type": {
+      table: "Scanner_Types",
+      column: "scanner_type",
+      propagate: [
+        { table: "General_Maintenance", column: "scanner_type" },
+        { table: "Regular_Maintenance", column: "scanner_type" },
+        { table: "External_Maintenance", column: "scanner_type" },
+        { table: "New_Maintenance_Report", column: "scanner_type" }
+      ]
+    },
 
 
     "section": {
@@ -4364,29 +4372,29 @@ app.post("/update-option-complete", authenticateToken, async (req, res) => {
     "ram-size-select": { table: "RAM_Sizes", column: "ram_size", propagate: [] },
     "model": {
       table: type === "pc" ? "PC_Model"
-           : type === "printer" ? "Printer_Model"
-           : type === "scanner" ? "Scanner_Model"
-           : "Maintance_Device_Model",
+        : type === "printer" ? "Printer_Model"
+          : type === "scanner" ? "Scanner_Model"
+            : "Maintance_Device_Model",
       column: "model_name",
       propagate: []
     },
-    "floor": { 
-      table: "floors", 
+    "floor": {
+      table: "floors",
       column: "FloorNum",
       propagate: [
         { table: "General_Maintenance", column: "floor" }
       ]
     },
-    "problem-status": { 
-      table: "problem_status", 
+    "problem-status": {
+      table: "problem_status",
       column: "status_name",
       propagate: [
         { table: "General_Maintenance", column: "problem_status" },
         { table: "Regular_Maintenance", column: "problem_status" }
       ]
     },
-    "technical": { 
-      table: "Engineers", 
+    "technical": {
+      table: "Engineers",
       column: "name",
       propagate: []
     }
@@ -4402,18 +4410,18 @@ app.post("/update-option-complete", authenticateToken, async (req, res) => {
     if (target === "section") {
       // ✅ نجيب ID القديم
       const [oldDept] = await connection.query(`SELECT id FROM Departments WHERE TRIM(name) = ?`, [oldValue.trim()]);
-    
+
       if (!oldDept.length) {
         throw new Error("Old Department not found");
       }
-    
+
       const oldDeptId = oldDept[0].id;
-    
+
       // ✅ نحدث الجداول المرتبطة
       for (const { table, column } of mapping.propagate) {
         if (column === "department_id") {
           // department_id هو رقم، ما يتغير، فلا تحديث هنا فعلياً على الرقم
-          continue; 
+          continue;
         } else {
           // تحديث أسماء الأقسام في الجداول الثانية
           await connection.query(
@@ -4422,14 +4430,14 @@ app.post("/update-option-complete", authenticateToken, async (req, res) => {
           );
         }
       }
-    
+
       // ✅ نحدث اسم القسم نفسه
       await connection.query(
         `UPDATE ${mapping.table} SET ${mapping.column} = ? WHERE id = ?`,
         [newValue.trim(), oldDeptId]
       );
     }
-     else if (target === "problem-type") {
+    else if (target === "problem-type") {
       // ✅ إضافة جديدة لو كانت مشكلة جهاز
       const [newExists] = await connection.query(
         `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ?`,
@@ -4471,11 +4479,11 @@ app.post("/update-option-complete", authenticateToken, async (req, res) => {
     }
 
     await connection.query('COMMIT');
-const userId = req.user?.id;
-const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
-const userName = userRow[0]?.name || 'Unknown';
+    const userId = req.user?.id;
+    const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
+    const userName = userRow[0]?.name || 'Unknown';
 
-logActivity(userId, userName, "Edited", `Updated "${oldValue}" to "${newValue}" in ${mapping.table}`);
+    logActivity(userId, userName, "Edited", `Updated "${oldValue}" to "${newValue}" in ${mapping.table}`);
 
     res.json({ message: "✅ Option updated everywhere correctly!" });
 
@@ -4492,12 +4500,12 @@ app.post("/delete-device-specification", authenticateToken, async (req, res) => 
   if (!id) {
     return res.status(400).json({ error: "❌ Missing device ID" });
   }
-const referencedTables = [
-  { table: "General_Maintenance", column: "device_id" },
-  { table: "Regular_Maintenance", column: "device_id" },
-  { table: "Maintenance_Reports", column: "device_id" },
-  { table: "New_Maintenance_Report", column: "device_id" }
-];
+  const referencedTables = [
+    { table: "General_Maintenance", column: "device_id" },
+    { table: "Regular_Maintenance", column: "device_id" },
+    { table: "Maintenance_Reports", column: "device_id" },
+    { table: "New_Maintenance_Report", column: "device_id" }
+  ];
 
 
   try {
@@ -4582,7 +4590,7 @@ app.post("/update-device-specification", authenticateToken, async (req, res) => 
         table: "New_Maintenance_Report",
         fields: ["device_name", "serial_number", "governmental_number"]
       },
-      
+
 
       {
         table: "Internal_Tickets",
@@ -4795,7 +4803,7 @@ app.post("/external-ticket-with-file", upload.single("attachment"), authenticate
 
     const userName = await getUserNameById(userId);
 
-  
+
     const insertTicketQuery = `
       INSERT INTO External_Tickets (
         ticket_number,
@@ -4877,19 +4885,19 @@ app.post("/external-ticket-with-file", upload.single("attachment"), authenticate
       ticket_id: ticketId
     });
 
- } catch (err) {
-  console.error("❌ Server error:", err);
+  } catch (err) {
+    console.error("❌ Server error:", err);
 
-  // ✅ معالجة خطأ "Duplicate report_number"
-  if (err.code === 'ER_DUP_ENTRY' && err.sqlMessage.includes('report_number')) {
-    return res.status(400).json({
-      error: `The report number "${req.body.ticket_number}" is already in use. Please use a different one.`
-    });
+    // ✅ معالجة خطأ "Duplicate report_number"
+    if (err.code === 'ER_DUP_ENTRY' && err.sqlMessage.includes('report_number')) {
+      return res.status(400).json({
+        error: `The report number "${req.body.ticket_number}" is already in use. Please use a different one.`
+      });
+    }
+
+    // ❌ خطأ عام
+    res.status(500).json({ error: "Unexpected server error" });
   }
-
-  // ❌ خطأ عام
-  res.status(500).json({ error: "Unexpected server error" });
-}
 
 });
 
