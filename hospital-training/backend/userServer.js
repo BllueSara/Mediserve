@@ -1,4 +1,4 @@
- const express = require('express');
+const express = require('express');
 const db = require("./db");
 const bodyParser = require('body-parser');
 const bcrypt = require('bcryptjs');
@@ -23,22 +23,10 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-
-
-
 // Serve static files from all directories
-app.use(express.static(path.join(__dirname, 'Home')));
-app.use(express.static(path.join(__dirname, 'authintication')));
-app.use(express.static(path.join(__dirname, 'hospital-training')));
-app.use(express.static(path.join(__dirname, 'fonts')));
-app.use(express.static(path.join(__dirname, 'Language')));
-app.use(express.static(path.join(__dirname, 'network')));
-app.use(express.static(path.join(__dirname, 'permmision')));
-app.use(express.static(path.join(__dirname, 'icon')));
-app.use(express.static(path.join(__dirname, 'Technical Support')));
-app.use(express.static(path.join(__dirname, 'Notifications')));
-app.use(express.static(path.join(__dirname, 'profile')));
-app.use(express.static(path.join(__dirname, 'track')));
+app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname, '..')));
+app.use(express.static(path.join(__dirname, '..', '..')));
 
 // Default route
 app.get('/', (req, res) => {
