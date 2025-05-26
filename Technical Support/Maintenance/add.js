@@ -21,17 +21,23 @@ async function renderDropdownOptions({
   displayId,
   inputId,
   labelKey,
-  itemKey,
+  itemKey, // ممكن تكون string أو دالة
   storageKey,
   onAddNew,
   onEditOption,
   onDeleteOption,
-  onSelectOption
+  onSelectOption,
+      transformData // ← أضف هذا
+
 }) {
   const permissions = await checkUserPermissions();
   const res = await fetch(endpoint);
-  const data = await res.json();
+let data = await res.json();
 
+// ✅ دعم التحويل (الترجمة)
+if (typeof transformData === "function") {
+  data = transformData(data);
+}
   const container = document.getElementById(containerId);
   const display = document.getElementById(displayId);
   const input = document.getElementById(inputId);
@@ -58,21 +64,36 @@ async function renderDropdownOptions({
     container.appendChild(addNewRow);
   }
 
-  // ✅ البيانات
+  // ✅ العناصر
   data.forEach(item => {
-    const row = document.createElement("div");
-    row.className = "dropdown-option-row";
+const value = typeof itemKey === 'function' ? itemKey(item) : item[itemKey];
+const displayText = typeof value === 'object' ? value.name : value;
+const actualValue = typeof value === 'object' ? value.name : value;
 
-    const text = document.createElement("div");
-    text.className = "dropdown-option-text";
-    text.textContent = item[itemKey];
-    text.onclick = () => {
-      display.textContent = item[itemKey];
-      input.value = item[itemKey];
-      if (onSelectOption) onSelectOption(item[itemKey]);
-      cleanDropdownError(input);
-      closeAllDropdowns();
-    };
+const row = document.createElement("div");
+row.className = "dropdown-option-row";
+
+const text = document.createElement("div");
+text.className = "dropdown-option-text";
+text.textContent = displayText;
+
+
+text.onclick = () => {
+  display.textContent = displayText;
+
+  // إذا كان العنصر خاص بـ technical-status → احفظ ID فقط
+
+    input.value = actualValue; // الاسم العادي
+
+
+  if (onSelectOption) onSelectOption(actualValue, item);
+
+  cleanDropdownError(input);
+  closeAllDropdowns();
+};
+
+
+
 
     const icons = document.createElement("div");
     icons.className = "dropdown-actions-icons";
@@ -84,7 +105,7 @@ async function renderDropdownOptions({
       editIcon.title = t['edit'] || "Edit";
       editIcon.onclick = (e) => {
         e.stopPropagation();
-        onEditOption?.(item[itemKey]);
+        onEditOption?.(value);
       };
       icons.appendChild(editIcon);
     }
@@ -96,7 +117,7 @@ async function renderDropdownOptions({
       deleteIcon.title = t['delete'] || "Delete";
       deleteIcon.onclick = (e) => {
         e.stopPropagation();
-        onDeleteOption?.(item[itemKey]);
+        onDeleteOption?.(value);
       };
       icons.appendChild(deleteIcon);
     }
@@ -109,19 +130,22 @@ async function renderDropdownOptions({
   // ✅ استرجاع القيمة المحفوظة
 const saved = sessionStorage.getItem(storageKey || inputId);
 if (saved) {
-  display.textContent = saved;
-  input.value = saved;
-  sessionStorage.removeItem(storageKey || inputId);
-
-  // ✅ فعّل الحدث تلقائيًا
-  const allOptions = container.querySelectorAll(".dropdown-option-text");
-  for (const option of allOptions) {
-    if (option.textContent.trim() === saved.trim()) {
-      option.click();
+  const allRows = container.querySelectorAll(".dropdown-option-row");
+  for (const row of allRows) {
+    const textEl = row.querySelector(".dropdown-option-text");
+    if (textEl?.textContent?.trim() === saved.trim()) {
+      textEl.click();  // ← هذا ينفذ الكود اللي يحفظ dataset.id
       break;
     }
   }
+
+  sessionStorage.removeItem(storageKey || inputId);
 }
+
+
+
+
+
 
   attachEditDeleteHandlers(containerId, t[labelKey] || labelKey);
 }
@@ -470,6 +494,7 @@ function closePopup() {
   }
 }
 
+
 function savePCSpec() {
   const data = new FormData(popupForm);
   const deviceData = {};
@@ -525,7 +550,7 @@ function savePCSpec() {
     }
   });
 
-  if (hasError) return;
+  if (hasError) return ;
 
   const deviceType = document.getElementById("device-type").value.toLowerCase();
 
@@ -534,7 +559,10 @@ function savePCSpec() {
     delete deviceData["ip-address"];
 
   }
+const departmentName = sessionStorage.getItem("original-department");
+deviceData.department = departmentName;
 
+console.log("📤 البيانات المرسلة إلى السيرفر:", deviceData);
   fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
@@ -566,9 +594,41 @@ function savePCSpec() {
             }
           }
         } else {
-          console.error("⚠️ خطأ غير متوقع:", result.error);
+    // ✅ هنا نعرض رسالة السيرفر تحت الحقل الصحيح
+
+    // تحديد الحقل المناسب حسب نوع الخطأ
+    if (result.error.includes("IP")) {
+      const ipInput = popupForm.querySelector('[name="ip-address"]');
+      if (ipInput) {
+        ipInput.classList.add("input-error");
+
+        // إزالة أي رسالة موجودة مسبقًا
+        const oldMsg = ipInput.nextElementSibling;
+        if (!oldMsg || !oldMsg.classList.contains("input-error-message")) {
+          const msg = document.createElement("div");
+          msg.className = "input-error-message";
+          msg.textContent = result.error;
+          ipInput.insertAdjacentElement("afterend", msg);
         }
-        return;
+      }
+    } else if (result.error.includes("MAC")) {
+      const macInput = popupForm.querySelector('[name="mac-address"]');
+      if (macInput) {
+        macInput.classList.add("input-error");
+
+        const oldMsg = macInput.nextElementSibling;
+        if (!oldMsg || !oldMsg.classList.contains("input-error-message")) {
+          const msg = document.createElement("div");
+          msg.className = "input-error-message";
+          msg.textContent = result.error;
+          macInput.insertAdjacentElement("afterend", msg);
+        }
+      }
+    } else {
+      alert(result.error); // ← fallback
+    }
+  }
+  return;
       }
 
       // ✅ تم الحفظ بنجاح
@@ -591,6 +651,7 @@ function savePCSpec() {
       console.error("❌ خطأ أثناء الاتصال بالسيرفر:", err);
     });
 }
+
 
 function fetchScannerTypes() {
   renderDropdownOptions({
@@ -674,8 +735,6 @@ function fetchInkTypes() {
   });
 }
 
-
-
 function fetchDepartments(selectId = "department") {
   renderDropdownOptions({
     endpoint: "http://localhost:5050/Departments",
@@ -685,6 +744,26 @@ function fetchDepartments(selectId = "department") {
     labelKey: "section",
     itemKey: "name",
     storageKey: selectId,
+
+    // ✅ ترجم كل عنصر بعد ما يجي من API
+transformData: (items) => {
+  return items.map(item => {
+    const originalName = item.name?.trim();
+    const translated = translateDepartmentName(originalName);
+    
+
+    return {
+      ...item,
+      originalSection: originalName,        // ← نحفظ الاسم الحقيقي
+      section: translated,                  // ← نعرض الترجمة
+      name: translated                      // ← نعرض الترجمة أيضًا (لو الدروب داون يستخدم name)
+    };
+  });
+},
+
+
+
+
     onAddNew: () => {
       sessionStorage.setItem("lastDepartmentSelectId", selectId);
       ["spec-name", "spec-serial", "spec-ministry", "spec-model", selectId].forEach(id => {
@@ -705,11 +784,18 @@ function fetchDepartments(selectId = "department") {
         deleteOption("section", val, "Department");
       }
     },
-    onSelectOption: () => {
-      fetchDeviceSpecsByTypeAndDepartment();
-    }
+onSelectOption: (originalValue, fullItem) => {
+  const englishName = fullItem.originalSection || originalValue;
+  sessionStorage.setItem("original-department", englishName);
+  console.log("📤 القسم المحفوظ للإرسال:", englishName);
+  fetchDeviceSpecsByTypeAndDepartment();
+}
+
+
+
   });
 }
+
 
 
 function saveNewSection() {
@@ -1178,22 +1264,30 @@ async function fetchDeviceTypes() {
         const text = document.createElement("div");
         text.className = "dropdown-option-text";
         text.textContent = item.DeviceType;
-        text.onclick = () => {
-          selectedDisplay.textContent = item.DeviceType;
-          hiddenInput.value = item.DeviceType;
+text.onclick = () => {
+  selectedDisplay.textContent = item.DeviceType;
+  hiddenInput.value = item.DeviceType;
 
-          const specDisplay = document.getElementById("selected-device-spec");
-          const specInput = document.getElementById("device-spec");
-          if (specDisplay && specInput) {
-            specDisplay.textContent = translations['select_specification'];
-            specInput.value = "";
-            cleanDropdownError(specInput);
-          }
+  const specDisplay = document.getElementById("selected-device-spec");
+  const specInput = document.getElementById("device-spec");
+  if (specDisplay && specInput) {
+    specDisplay.textContent = translations['select_specification'];
+    specInput.value = "";
+    cleanDropdownError(specInput);
+  }
 
-          cleanDropdownError(hiddenInput);
-          closeAllDropdowns();
-          fetchDeviceSpecsByTypeAndDepartment();
-        };
+  cleanDropdownError(hiddenInput);
+  closeAllDropdowns();
+
+  const type = item.DeviceType.trim().toLowerCase();
+  const sectionDropdown = document.getElementById("section");
+  const dept = sectionDropdown?.value;
+
+  if (type && dept) {
+    fetchDeviceSpecsByTypeAndDepartment();
+  }
+
+};
         row.appendChild(text);
         container.appendChild(row);
         // إضافة أيقونات التعديل والحذف فقط إذا كان لديه صلاحية كاملة
@@ -1299,7 +1393,7 @@ document.addEventListener(" ", () => {
 
 function fetchDevicesBySection() {
   const type = document.getElementById("device-type").value.toLowerCase();
-  const department = document.getElementById("section").value;
+  const department = document.getElementById("original-section").value;
 
   if (!type || !department) {
     return;
@@ -1322,20 +1416,28 @@ function fetchDevicesBySection() {
     .catch(err => console.error("❌ Error fetching device specs:", err));
 }
 
-
 async function fetchDeviceSpecsByTypeAndDepartment() {
-  const type = document.getElementById("device-type").value?.toLowerCase();
-  const dept = document.getElementById("section").value;
+ const type = document.getElementById("device-type")?.value?.toLowerCase();
+  const deptName = sessionStorage.getItem("original-department"); // ← نضمن إنها بالإنجليزي
+
+
+  if (!type || !deptName) {
+    console.warn("❌ النوع أو اسم القسم غير متوفر");
+    return;
+  }
+
+  console.log("📤 القسم المرسل فعليًا:", deptName);
   const optionsContainer = document.getElementById("device-spec-options");
   const displaySpan = document.getElementById("selected-device-spec");
   const hiddenInput = document.getElementById("device-spec");
 
-  if (!type || !dept || !optionsContainer || !displaySpan || !hiddenInput) return;
+  if (!type || !deptName || !optionsContainer || !displaySpan || !hiddenInput) return;
 
   // ✅ جلب الصلاحيات
   const permissions = await checkUserPermissions();
 
   optionsContainer.innerHTML = "";
+  
 
   const lang = languageManager.currentLang;
   const t = languageManager.translations[lang];
@@ -1386,7 +1488,7 @@ async function fetchDeviceSpecsByTypeAndDepartment() {
     return;
   }
 
-  fetch(`http://localhost:5050/devices/${type}/${encodeURIComponent(dept)}`)
+  fetch(`http://localhost:5050/devices/${type}/${encodeURIComponent(deptName)}`)
     .then(res => res.json())
     .then(data => {
       if (!Array.isArray(data) || data.length === 0) {
@@ -1422,7 +1524,8 @@ async function fetchDeviceSpecsByTypeAndDepartment() {
           if (permissions.full_access || permissions.edit_items) {
             const editIcon = document.createElement("i");
             editIcon.className = "fas fa-edit";
-            editIcon.title = t['edit'];editIcon.onclick = (e) => {
+            editIcon.title = t['edit'];
+                       editIcon.title = t['edit'];editIcon.onclick = (e) => {
   e.stopPropagation();
 
   // إغلاق كل dropdowns مفتوحة
@@ -1516,7 +1619,6 @@ async function fetchDeviceSpecsByTypeAndDepartment() {
       console.error("❌ Error fetching specs:", err);
     });
 }
-
 
 
 
@@ -1662,6 +1764,13 @@ document.querySelector("form").addEventListener("submit", function (e) {
       console.error("❌ Submission error:", err);
     }
   }
+  const departmentEnglish = sessionStorage.getItem("original-department");
+if (departmentEnglish) {
+  data.section = departmentEnglish;
+  console.log("✅ القسم المرسل فعليًا:", departmentEnglish);
+} else {
+  console.warn("❌ لم يتم العثور على original-department في sessionStorage");
+}
   submitNewDevice(data);
 });
 
@@ -2310,7 +2419,7 @@ function saveDeviceSpecification() {
     "device-name": document.getElementById("spec-name").value.trim(),
     model: document.getElementById("spec-model").value.trim(),
     serial: document.getElementById("spec-serial").value.trim(),
-    department: document.getElementById("spec-department").value.trim()
+department: sessionStorage.getItem("original-department") || document.getElementById("spec-department").value.trim()
   };
 
   fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
