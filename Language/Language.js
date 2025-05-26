@@ -787,6 +787,15 @@ const languageManager = {
             'error_message': 'Something went wrong.',
 'error_loading_reports': "Error loading reports",
             'external_maintenance_ticket': 'External maintenance ticket',
+            'ping_t_auto': "Ping -t Auto",
+            'show_reports': "Show Reports",
+            'select_duration': "Select Duration",
+            '6_hours': "6 Hours",
+            '8_hours': "8 Hours",
+            'view_reports': "View Reports",
+            'view_manage_ping_reports': "View and manage saved ping reports",
+            'ping_reports_title': "Ping Reports",
+            'loading_reports': "Loading reports...",
         },
         ar: {
             'issue': 'المشكلة',
@@ -1268,11 +1277,6 @@ const languageManager = {
             'initial_diagnosis': 'التشخيص الأولي',
             'select_initial_diagnosis': 'اختر التشخيص الأولي',
             'search_problem_status': 'ابحث عن نوع المشكلة...',
-            'add_new_report_status': "إضافة حالة تقرير",
-            'add_new_ticket_type': "إضافة نوع التذكرة",
-            'report_status': "حالة التقرير",
-            'ticket_type': "نوع التذكرة",
-
 
             // External Ticket Page
             'external_ticket': 'تذكرة خارجية',
@@ -1389,7 +1393,6 @@ const languageManager = {
             'add_new_model': "إضافة موديل جديد",
             'add_new_report_status': "Add New Report Status",
             'add_new_ticket_type': "Add New Ticket Type",
-
 
 
             // Placeholders
@@ -1562,6 +1565,15 @@ const languageManager = {
             'reset_password': 'إعادة تعيين كلمة المرور',
             'enter_email_reset': 'أدخل بريدك الإلكتروني لإعادة تعيين كلمة المرور',
             'error_message': 'حدث خطأ ما.',
+            'ping_t_auto': "اختبار مستمر تلقائي",
+            'show_reports': "عرض التقارير",
+            'select_duration': "اختر المدة",
+            '6_hours': "6 ساعات",
+            '8_hours': "8 ساعات",
+            'view_reports': "عرض التقارير",
+            'view_manage_ping_reports': "عرض وإدارة تقارير البنق",
+            'ping_reports_title': "Ping Reports",
+            'loading_reports': "Loading reports...",
         }
     },
      description: {

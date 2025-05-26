@@ -135,8 +135,8 @@ app.post('/api/add-entry', authenticateToken, (req, res) => {
     circuit, isp, location, ip, speed, start_date, end_date
   } = req.body;
 
-  if (!circuit || !isp || !location || !ip || !isValidIP(ip)){
-    return res.status(400).json({error : 'Missing required fields'});
+  if (!circuit || !isp || !location || !ip || !isValidIP(ip)) {
+    return res.status(400).json({ error: 'Missing required fields' });
   }
 
   db.query(`
@@ -304,7 +304,7 @@ app.post('/api/report', authenticateToken, async (req, res) => {
     }
 
     const validDevices = devices.filter(d =>
-     d.circuit && d.isp && d.location && d.ip
+      d.circuit && d.isp && d.location && d.ip
     );
 
     if (validDevices.length === 0) {
@@ -348,7 +348,7 @@ app.post('/api/report', authenticateToken, async (req, res) => {
       { header: 'Contract End', key: 'end_date', width: 18 }
     ];
 
-    worksheet.addRows(rows); 
+    worksheet.addRows(rows);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename=network_report.xlsx');
@@ -668,7 +668,7 @@ cron.schedule('02 * * * *', async () => {
 
       for (let entry of entries) {
         const message = `Contract for circuit "${entry.circuit_name}" (IP: ${entry.ip}) will expire in ${interval.label}`;
-        
+
         // تحقق إذا الإشعار تم مسبقًا
         const [existingNotif] = await db.promise().query(`
           SELECT id FROM Notifications
@@ -777,16 +777,347 @@ app.post('/api/entries/bulk', authenticateToken, async (req, res) => {
 });
 
 
+// route to ctreat report 
+app.post('/api/reports/create', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const { devices, type = 'normal' } = req.body;
+
+  if (!Array.isArray(devices) || devices.length === 0) {
+    return res.status(400).json({ error: '❌ No devices provided' });
+  }
+
+  try {
+    const conn = db.promise();
+
+    const now = new Date();
+    const timestamp = now.toLocaleString('en-US', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit',
+      hour12: true
+    }).replace(',', '');
+    const title = `Network Report - ${timestamp}`;
+
+    // نحدد نوع التقرير
+    const [reportRes] = await conn.query(`
+      INSERT INTO Reports (user_id, title, report_type) VALUES (?, ?, ?)
+    `, [userId, title, type]);
+
+    const reportId = reportRes.insertId;
+
+    const insertPromises = devices.map(d => {
+      const commonFields = [
+        reportId,
+        d.ip,
+        d.circuit,
+        d.isp,
+        d.location,
+        d.speed || null,
+        d.start_date || null,
+        d.end_date || null
+      ];
+
+      // إذا كان auto → نحفظ النتائج التفصيلية
+      if (type === 'auto') {
+        return conn.query(`
+          INSERT INTO Report_Results 
+            (report_id, ip, circuit, isp, location, speed, start_date, end_date, latency, packetLoss, timeouts, status, output, timestamp)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          ...commonFields,
+          d.latency || null,
+          d.packetLoss || null,
+          d.timeouts || null,
+          d.status || null,
+          d.output || '',
+          new Date()
+        ]);
+      } else {
+        // نوع normal → نحفظ فقط الحقول المطلوبة + status
+        return conn.query(`
+          INSERT INTO Report_Results 
+            (report_id, ip, circuit, isp, location, speed, start_date, end_date, status, timestamp)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          ...commonFields,
+          d.status || null,
+          new Date()
+        ]);
+      }
+    });
+
+    await Promise.all(insertPromises);
+
+    res.json({ success: true, report_id: reportId });
+  } catch (err) {
+    console.error("❌ Failed to create report:", err.message);
+    res.status(500).json({ error: '❌ Could not save report' });
+  }
+});
+
+
+
+
+// يجيب التقارير حسب اليوزر 
+app.get('/api/reports/mine' , authenticateToken,  async(req,res) => {
+  const userId = req.user.id;
+  const isAdmin = req.user.role === "admin";
+
+  try{
+   const [reports] = await db.promise().query(`
+    SELECT 
+      r.id AS report_id, 
+      r.created_at,
+      u.name AS owner_name,
+      COUNT(rr.id) AS device_count
+    FROM Reports r
+    LEFT JOIN Report_Results rr ON r.id = rr.report_id
+    LEFT JOIN users u ON r.user_id = u.id
+    ${isAdmin ? '' : 'WHERE r.user_id = ?'}
+    GROUP BY r.id
+    ORDER BY r.created_at DESC
+  `, isAdmin ? [] : [userId]);
+
+  res.json(reports);
+  } catch (err) {
+    console.error("❌ Failed to fetch reports:", err.message);
+    res.status(500).json({ error: '❌ Could not fetch reports' });
+  }
+});
+
+
+// detalis reports
+app.get('/api/reports/:id', authenticateToken, async (req, res) => {
+  const reportId = req.params.id;
+  const userId = req.user.id;
+  const isAdmin = req.user.role === 'admin';
+
+  try {
+    // نجيب معلومات التقرير
+    const [[reportInfo]] = await db.promise().query(
+      `SELECT user_id, title, created_at, report_type FROM Reports WHERE id = ?`,
+      [reportId]
+    );
+    
+
+    if (!reportInfo) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+
+    const isOwner = reportInfo.user_id === userId;
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // نجيب النتائج المرتبطة
+    const [results] = await db.promise().query(
+      `SELECT * FROM Report_Results WHERE report_id = ? ORDER BY timestamp ASC`, 
+      [reportId]
+    );
+
+    // نرجع معلومات متكاملة
+    res.json({
+      title: reportInfo.title,
+      type: reportInfo.report_type || 'normal', // <-- هنا التغيير الصحيح
+      created_at: reportInfo.created_at,
+      results
+    });
+
+  } catch (err) {
+    console.error("❌ Error loading report details:", err.message);
+    res.status(500).json({ error: '❌ Could not load report details' });
+  }
+});
+
+
+
+app.get('/api/reports/:id/download', authenticateToken, async (req, res) => {
+  const reportId = req.params.id;
+  const userId = req.user.id;
+  const isAdmin = req.user.role === 'admin';
+
+  try {
+    // تحقق من ملكية التقرير أو صلاحية الأدمن
+    const [[reportInfo]] = await db.promise().query(
+      `SELECT user_id, title, report_type FROM Reports WHERE id = ?`,
+      [reportId]
+    );
+
+    if (!reportInfo) return res.status(404).json({ error: '❌ Report not found' });
+
+    const isOwner = reportInfo.user_id === userId;
+    if (!isOwner && !isAdmin) return res.status(403).json({ error: '❌ Forbidden' });
+
+    const [results] = await db.promise().query(
+      `SELECT * FROM Report_Results WHERE report_id = ? ORDER BY timestamp ASC`,
+      [reportId]
+    );
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Report');
+
+    const isAuto = reportInfo.report_type === 'auto';
+
+    // اختر الأعمدة بناءً على نوع التقرير
+    sheet.columns = isAuto
+      ? [
+          { header: 'IP', key: 'ip', width: 20 },
+          { header: 'Status', key: 'status', width: 15 },
+          { header: 'Latency (ms)', key: 'latency', width: 15 },
+          { header: 'Packet Loss (%)', key: 'packetLoss', width: 18 },
+          { header: 'Timeouts', key: 'timeouts', width: 12 },
+          { header: 'Timestamp', key: 'timestamp', width: 25 },
+          { header: 'Output', key: 'output', width: 60 }
+        ]
+      : [
+          { header: 'Circuit Name', key: 'circuit', width: 25 },
+          { header: 'ISP', key: 'isp', width: 20 },
+          { header: 'Location', key: 'location', width: 20 },
+          { header: 'IP Address', key: 'ip', width: 20 },
+          { header: 'Circuit Speed', key: 'speed', width: 20 },
+          { header: 'Start Contract', key: 'start_date', width: 18 },
+          { header: 'End Contract', key: 'end_date', width: 18 },
+          { header: 'Status', key: 'status', width: 15 }
+        ];
+
+    // أضف البيانات للصفوف
+    results.forEach(row => {
+      sheet.addRow({
+        ip: row.ip,
+        status: row.status,
+        latency: row.latency,
+        packetLoss: row.packetLoss,
+        timeouts: row.timeouts,
+        timestamp: row.timestamp,
+        output: row.output,
+        circuit: row.circuit,
+        isp: row.isp,
+        location: row.location,
+        speed: row.speed,
+        start_date: row.start_date?.toISOString?.().split('T')[0] || '',
+        end_date: row.end_date?.toISOString?.().split('T')[0] || ''
+      });
+    });
+
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${reportInfo.title.replace(/\s+/g, '_')}.xlsx"`
+    );
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err){
+    console.error('❌ Error generating Excel report:', err.message);
+    res.status(500).json({ error: '❌ Could not generate report file' });
+  }
+});
+
+
+
+// Auto Ping Endpoint (بدون تخزين مؤقت، مجرد تشغيل مؤقت لمدة معينة)
+app.post('/api/auto-ping/start', authenticateToken, async (req, res) => {
+  const { ips, duration_hours } = req.body;
+
+  if (!Array.isArray(ips) || ips.length === 0 || !duration_hours) {
+    return res.status(400).json({ error: '❌ Missing IPs or duration' });
+  }
+
+  const userId = req.user.id;
+  const durationMs = duration_hours * 60 * 60 * 1000;
+  const endTime = Date.now() + durationMs;
+  const isWindows = process.platform === 'win32';
+
+  const formatPingOutput = (output) => {
+    const latencyMatch = output.match(/time[=<](\d+\.?\d*)\s*ms/i);
+    const lossMatch = output.match(/(\d+)%\s*packet loss/i);
+    const timeouts = (output.match(/Request timed out/gi) || []).length;
+
+    return {
+      latency: latencyMatch ? parseFloat(latencyMatch[1]) : null,
+      packetLoss: lossMatch ? parseFloat(lossMatch[1]) : 0,
+      timeouts,
+      status: output.includes('100% packet loss') || timeouts > 0 ? 'failed'
+            : (lossMatch && parseFloat(lossMatch[1]) > 0) || (latencyMatch && parseFloat(latencyMatch[1]) > 50)
+              ? 'unstable'
+              : 'active'
+    };
+  };
+
+  for (const ip of ips) {
+    if (!isValidIP(ip)) continue;
+
+    const interval = setInterval(async () => {
+      if (Date.now() >= endTime) {
+        clearInterval(interval);
+        return;
+      }
+
+      const cmd = isWindows ? `ping -n 1 ${ip}` : `ping -c 1 ${ip}`;
+      exec(cmd, async (err, stdout, stderr) => {
+        const output = stdout || stderr || err?.message || 'No response';
+        const parsed = formatPingOutput(output);
+
+        // تخزين النتيجة
+        try {
+          await db.promise().query(`
+            INSERT INTO Report_Results 
+              (report_id, ip, latency, packetLoss, timeouts, status, output, timestamp, user_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            null, ip,
+            parsed.latency, parsed.packetLoss, parsed.timeouts,
+            parsed.status, output,
+            new Date(), userId
+          ]);
+        } catch (dbErr) {
+          console.error(`❌ DB Insert failed for ${ip}:`, dbErr.message);
+        }
+
+        console.log(`[${new Date().toISOString()}] [${ip}] ${parsed.status} (${parsed.latency}ms, ${parsed.packetLoss}% loss)`);
+      });
+    }, 60 * 1000); // كل دقيقة
+  }
+
+  res.json({ success: true, message: `✅ Auto ping started for ${ips.length} IP(s) for ${duration_hours} hour(s)` });
+});
+
+// في ملف السيرفر backend مثل network.js أو userServer.js
+app.get('/api/auto-ping/results', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const [rows] = await db.promise().query(`
+      SELECT ip, latency, packetLoss, timeouts, status, timestamp
+      FROM Report_Results
+      WHERE report_id IN (
+        SELECT id FROM Reports WHERE user_id = ? AND report_type = 'auto'
+      )
+      ORDER BY timestamp DESC
+      LIMIT 100
+    `, [userId]);
+
+    res.json(rows); // ✅ لازم يرجّع Array لأن front-end يتوقع كذا
+  } catch (err) {
+    console.error('❌ Auto Ping Results Error:', err.message);
+    res.status(500).json({ error: '❌ Could not fetch auto ping results' });
+  }
+});
+
+
+
 
 // Start server
 //const os = require('os');
 //const ip = Object.values(os.networkInterfaces()).flat().find(i => i.family === 'IPv4' && !i.internal).address;
 
 //app.listen(PORT, ip, () => {
-  //console.log(`Server running at http://${ip}:${PORT}`);
+//console.log(`Server running at http://${ip}:${PORT}`);
 //});
 
 
-  // تشغيل السيرفر
-  app.listen(3000, () => console.log('🚀 userServer.js running on http://localhost:3000'));
+// تشغيل السيرفر
+app.listen(3000, () => console.log('🚀 userServer.js running on http://localhost:3000'));
 
