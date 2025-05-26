@@ -31,6 +31,14 @@ const loadFonts = async () => {
 loadFonts();
 
 
+function normalizeKey(str) {
+  return str
+    .toLowerCase()
+    .replace(/[“”"']/g, "")     // حذف علامات التنصيص
+    .replace(/[^\w\s]/g, "")     // حذف الرموز
+    .replace(/\s+/g, " ")        // توحيد المسافات
+    .trim();
+}
 
 
 function fixEncoding(badText) {
@@ -69,6 +77,24 @@ document.addEventListener("DOMContentLoaded", () => {
       
 
       reportData = report;
+      const lang = languageManager.currentLang; // ar أو en
+
+const normalizeKey = (text) => {
+  return text.replace(/[^\w\s]/gi, "").toLowerCase().trim();
+};
+
+const rawPriority = report.priority || "Medium";
+const rawType = report.device_type || "";
+const rawDept = report.department_name || "";
+const rawCategory = report.maintenance_type === "Regular" ? "Regular" :
+  report.maintenance_type === "General" ? "General" :
+  report.maintenance_type === "Internal" ? (report.ticket_type || "Internal") :
+  report.maintenance_type === "External" ? "External" : "";
+
+const translatedPriority = translations.priority?.[rawPriority]?.[lang] || rawPriority;
+const translatedType = translations.deviceType?.[normalizeKey(rawType)]?.[lang] || rawType;
+const translatedDept = translations.departments?.[rawDept]?.[lang] || rawDept;
+const translatedCategory = translations.category?.[rawCategory]?.[lang] || rawCategory;
               const attachmentSection = document.getElementById("attachment-section");
 
         // ✅ عرض المرفق إذا موجود
@@ -207,7 +233,7 @@ if (report.maintenance_type === "Regular") titlePrefix = "Regular Maintenance";
 else if (report.maintenance_type === "General") titlePrefix = "General Maintenance";
 else if (report.maintenance_type === "Internal") titlePrefix = "Internal Ticket";
 else if (report.maintenance_type === "External") titlePrefix = "External Maintenance";
-
+const translatedTitle = translations.titleType?.[titlePrefix]?.[lang] || titlePrefix;
 let ticketNum = report.ticket_number?.trim();
 if (!ticketNum) {
   const fullText = `${report.full_description || ""} ${report.issue_summary || ""}`;
@@ -219,22 +245,23 @@ if (!ticketNum) {
 
 const reportNum = report.report_number || report.request_number || "";
 const isTicketReport = reportNum.includes("-TICKET");
+const translatedTicket = translations.titleType?.["Ticket"]?.[lang] || "Ticket";
 
-// ✅ فقط لو فيه ticketNum نستخدمه، ولو فيه -TICKET نضيف "Ticket"
-let reportTitle = titlePrefix;
-if (ticketNum) {
-  reportTitle += ` #${ticketNum}`;
-  if (isTicketReport) {
-    reportTitle += `-Ticket`; // 🟢 أضف الكلمة فقط بدون رقم التقرير
-  }
-} else {
-  reportTitle += ` #${reportNum || report.id}`;
+let finalNumber = ticketNum || reportNum || report.id;
+
+// إذا كانت -TICKET موجودة، نحذفها من الرقم قبل العرض
+if (isTicketReport && finalNumber.includes("-TICKET")) {
+  finalNumber = finalNumber.replace("-TICKET", "");
+}
+
+// نركب العنوان النهائي
+let reportTitle = `${translatedTitle} #${finalNumber}`;
+if (isTicketReport) {
+  reportTitle += ` - ${translatedTicket}`; // مثال: " - تذكرة"
 }
 
 document.getElementById("report-title").textContent = reportTitle;
 
-
-document.getElementById("report-title").textContent = reportTitle;
 
 
    
@@ -245,8 +272,8 @@ document.getElementById("report-id").textContent =
     ? report.ticket_number || `INT-${report.id}`
     : report.report_number || report.request_number || `MR-${report.id}`;
 
-      document.getElementById("priority").textContent = isExternal ? "" : (report.priority || "");
-      document.getElementById("device-type").textContent = report.device_type || "";
+      document.getElementById("priority").textContent = isExternal ? "" : (translatedPriority|| "");
+      document.getElementById("device-type").textContent = translatedType || "";
       if (report.maintenance_type === "Regular" ) {
         document.getElementById("assigned-to").textContent = report.technical_engineer || "";
       }else if (  report.maintenance_type === "General") {
@@ -260,83 +287,128 @@ document.getElementById("report-id").textContent =
           : (report.assigned_to || report.reporter_name || report.technical_engineer);
       }
       
-      document.getElementById("department").textContent = report.department_name || "";
-      document.getElementById("category").textContent =
-      isExternal ? "External" :
-      report.maintenance_type === "Regular" ? "Regular" :
-      report.maintenance_type === "Internal" ? (report.ticket_type || "Internal") :
-      (report.maintenance_type || "");
+      document.getElementById("department").textContent = translatedDept || "";
+
+
+document.getElementById("category").textContent = translatedCategory;
     
           document.getElementById("report-status").textContent = report.status || "Pending";
       document.getElementById("submitted-date").textContent = `Submitted on ${new Date(report.created_at).toLocaleString()}`;
+     const problem = (report.problem_status || "").trim();
+const summary = (report.issue_summary || report.initial_diagnosis || "").trim();
+
+let descriptionHtml = "";
+
+if (isInternalTicket) {
+  descriptionHtml = summary || "No description.";
+} else {
+  const normalizedProblem = problem.toLowerCase();
+  const normalizedSummary = summary.toLowerCase();
+
+  if (problem && summary) {
+    if (normalizedSummary.includes(normalizedProblem)) {
+      descriptionHtml = summary;
+    } else if (normalizedProblem.includes(normalizedSummary)) {
+      descriptionHtml = problem;
+    } else {
+      descriptionHtml = `${summary}<br>${problem}`;
+    }
+  } else if (problem) {
+    descriptionHtml = problem;
+  } else if (summary) {
+    descriptionHtml = summary;
+  } else {
+    descriptionHtml = "No description.";
+  }
+}
+// ✅ فقط لـ General: استخدم issue_summary فقط
+// ✅ فقط لـ General: استخدم issue_description أولاً
+if (report.maintenance_type === "General") {
+  descriptionHtml = report.issue_description || report.issue_summary || "No description.";
+}
+
+// ✅ معالجة وصف "Regular" بنفس الطريقة
+if (report.maintenance_type === "Regular") {
+  descriptionHtml = report.problem_status || report.issue_summary || "No description.";
+}
+
+// 🧼 تنظيف النصوص
+descriptionHtml = descriptionHtml.replace(/^Selected Issue:\s*/i, "").trim();
+
+let items = [];
+try {
+  const parsed = JSON.parse(descriptionHtml);
+  if (Array.isArray(parsed)) {
+    items = parsed;
+  } else {
+    throw new Error("Not array");
+  }
+} catch {
+  items = descriptionHtml
+    .replace(/^\[|\]$/g, "")
+    .split(/[\n,،]+/)
+    .map(s => s.replace(/^["“”']?|["“”']?$/g, "").trim())
+    .filter(Boolean);
+}
+
+// ✅ الترجمة
+const translated = items.map(text => {
+  const dict = translations.description || {};
+  const cleanedText = text
+    .replace(/[“”]/g, '"') // ← تحويل علامات الاقتباس الذكية إلى العادية
+    .trim();
+
+  const found = Object.keys(dict).find(key => key.trim() === cleanedText);
+  return `- ${found ? dict[found][lang] : text}`;
+}).join("<br>");
+
+
+// ✅ عرض
+const descEl = document.getElementById("description");
+descEl.innerHTML = translated || "No description.";
+descEl.style.textAlign = lang === 'ar' ? 'right' : 'left';
+    
       
-      if (report.maintenance_type === "Regular") {
-        document.getElementById("description").textContent =
-          report.problem_status || report.issue_summary || report.issue_summary || "No description.";
-      }else {
-        const problem = (report.problem_status || "").trim();
-        const summary = (report.issue_summary || report.initial_diagnosis || "").trim();
-        const isInternalTicket = report.maintenance_type === "Internal";
       
-        let descriptionHtml = "";
-      
-        // لو Internal Ticket → اعرض فقط problem_status
-        if (isInternalTicket) {
-          descriptionHtml = summary || "No description.";
-        } 
-        else {
-          const normalizedProblem = problem.toLowerCase();
-          const normalizedSummary = summary.toLowerCase();
-      
-          if (problem && summary) {
-            if (normalizedSummary.includes(normalizedProblem)) {
-              descriptionHtml = summary;
-            } else if (normalizedProblem.includes(normalizedSummary)) {
-              descriptionHtml = problem;
-            } else {
-              descriptionHtml = `${summary}<br>${problem}`;
-            }
-          } 
-          else if (problem) {
-            descriptionHtml = problem;
-          } 
-          else if (summary) {
-            descriptionHtml = summary;
-          } 
-          else {
-            descriptionHtml = "No description.";
-          }
-        }
-      
-        document.getElementById("description").innerHTML = descriptionHtml;
-      }
-      
-      
-      
-  if (report.maintenance_type === "General") {
+if (report.maintenance_type === "General") {
   const generalInfo = [
-    { label: "customer_name", text: "Customer Name", value: report.customer_name },
-    { label: "id_number", text: "ID Number", value: report.id_number },
-    { label: "ext_number", text: "Ext Number", value: report.extension },
-    { label: "initial_diagnosis", text: "Initial Diagnosis", value: report.diagnosis_initial },
-    { label: "final_diagnosis", text: "Final Diagnosis", value: report.diagnosis_final },
-    { label: "floor", text: "Floor", value: report.floor },
+    { label: "Customer Name", value: report.customer_name, i18n: "customer_name" },
+    { label: "ID Number", value: report.id_number, i18n: "id_number" },
+    { label: "Ext Number", value: report.extension, i18n: "ext_number" },
+    { label: "Initial Diagnosis", value: report.diagnosis_initial, i18n: "initial_diagnosis" },
+    { label: "Final Diagnosis", value: report.diagnosis_final, i18n: "final_diagnosis" },
+    { label: "Floor", value: report.floor, i18n: "floor" },
   ];
 
-  const generalHtml = generalInfo.map(item =>
-    `<div class="info-row">
-      <span class="info-label" data-i18n="${item.label}">${item.text}:</span>
-      <span class="info-value">${item.value || "N/A"}</span>
-    </div>`
-  ).join("");
+  const generalHtml = generalInfo.map(item => {
+    const lang = languageManager.currentLang;
+    const translationsMap = languageManager.translations?.[lang] || {};
+    const translatedLabel = translationsMap[item.i18n] || item.label;
+
+    return `
+      <div class="info-row">
+        <span class="info-label" data-i18n="${item.i18n}">${translatedLabel}</span>
+        <span class="info-value">${item.value || "N/A"}</span>
+      </div>
+    `;
+  }).join("");
 
   document.getElementById("note").innerHTML = `
     <div class="info-box">
-      <div class="info-title" data-i18n="additional_information">Additional Information:</div>
+      <div class="info-title" data-i18n="additional_information">Additional Information</div>
       ${generalHtml}
     </div>
   `;
-} else {
+  document.getElementById("note").innerHTML = `
+  <div class="info-box">
+    <div class="info-title" data-i18n="additional_information">Additional Information</div>
+    ${generalHtml}
+  </div>
+`;
+languageManager.applyLanguage(); // ← هذا يخلّي الترجمة تشتغل
+
+}
+else {
   let noteHtml = `
     <div class="info-box">
       <div class="info-title" data-i18n="${isExternal ? 'final_diagnosis' : 'technical_notes'}">
@@ -534,7 +606,8 @@ const translations = {
     "External Ticket": { en: "External Ticket", ar: "تذكرة خارجية" },
     "Regular Maintenance": { en: "Regular Maintenance", ar: "صيانة دورية" },
     "General Maintenance": { en: "General Maintenance", ar: "صيانة عامة" },
-    "External Maintenance": { en: "External Maintenance", ar: "صيانة خارجية" }
+    "External Maintenance": { en: "External Maintenance", ar: "صيانة خارجية" },
+      "Ticket": { en: "Ticket", ar: "تذكرة" } // ← هذا السطر مهم"
   },
   priority: {
     "High": { en: "High", ar: "عالية" },
@@ -544,7 +617,8 @@ const translations = {
   deviceType: {
   "pc": { en: "pc", ar: "جهاز كمبيوتر" },
    "Printer": { en: "Printer", ar: "طابعة" },
-   "Scanner": { en: "Scanner", ar: "ماسح ضوئي" }
+   "Scanner": { en: "Scanner", ar: "ماسح ضوئي" },
+   "scanner": { en: "Scanner", ar: "ماسح ضوئي" }
   },
 departments: {
   "Laboratory Department": { en: "Laboratory Department", ar: "قسم المختبر" },
@@ -593,7 +667,94 @@ departments: {
   "Archive Department": { en: "Archive Department", ar: "قسم الأرشيف" },
   "General Services Administration": { en: "General Services Administration", ar: "إدارة الخدمات العامة" },
   "Blood Bank Department": { en: "Blood Bank Department", ar: "قسم بنك الدم" },
-  "Surgical Operations Department": { en: "Surgical Operations Department", ar: "قسم العمليات الجراحية" }
+  "Surgical Operations Department": { en: "Surgical Operations Department", ar: "قسم العمليات الجراحية" },
+   "Procurement Administration": { en: "Procurement Administration", ar: "إدارة المشتريات" },
+  "Transportation Department": { en: "Transportation Department", ar: "قسم النقل" },
+  "Health Education Department": { en: "Health Education Department", ar: "قسم التوعية الصحية" },
+  "Patient Experience Administration": { en: "Patient Experience Administration", ar: "إدارة تجربة المريض" },
+  "Investment Administration": { en: "Investment Administration", ar: "إدارة الاستثمار" },
+  "Internal Medicine Department": { en: "Internal Medicine Department", ar: "قسم الباطنة" },
+  "Inventory Control Administration": { en: "Inventory Control Administration", ar: "إدارة مراقبة المخزون" },
+  "Conservative Treatment Department": { en: "Conservative Treatment Department", ar: "قسم العلاج التحفظي" },
+  "Emergency Nursing": { en: "Emergency Nursing", ar: "تمريض الطوارئ" },
+  "Central Sterilization Department": { en: "Central Sterilization Department", ar: "قسم التعقيم المركزي" },
+  "Internal Audit Department": { en: "Internal Audit Department", ar: "قسم التدقيق الداخلي" },
+  "Dental Assistants Department": { en: "Dental Assistants Department", ar: "قسم مساعدي الأسنان" },
+  "Endodontics Department": { en: "Endodontics Department", ar: "قسم علاج جذور الأسنان" },
+  "Periodontology and Gum Surgery Department": { en: "Periodontology and Gum Surgery Department", ar: "قسم أمراض اللثة وجراحة اللثة" },
+  "Payroll and Entitlements Department": { en: "Payroll and Entitlements Department", ar: "قسم الرواتب والمستحقات" },
+  "Executive Administration for Medical Services": { en: "Executive Administration for Medical Services", ar: "الإدارة التنفيذية للخدمات الطبية" },
+  "Home Psychiatry Department": { en: "Home Psychiatry Department", ar: "قسم الطب النفسي المنزلي" },
+  "Security Services Nursing": { en: "Security Services Nursing", ar: "تمريض الخدمات الأمنية" },
+  "Pharmacy Department": { en: "Pharmacy Department", ar: "قسم الصيدلية" },
+  "Outpatient Clinics": { en: "Outpatient Clinics", ar: "العيادات الخارجية" },
+  "Infection Control Department": { en: "Infection Control Department", ar: "قسم مكافحة العدوى" },
+  "Public Health Department": { en: "Public Health Department", ar: "قسم الصحة العامة" },
+  "Internal Medicine Nursing (Women’s Ward)": { en: "Internal Medicine Nursing (Women’s Ward)", ar: "تمريض الباطنة (قسم النساء)" },
+  "Human Resources Operations Department": { en: "Human Resources Operations Department", ar: "إدارة عمليات الموارد البشرية" },
+  "Patient Affairs Administration": { en: "Patient Affairs Administration", ar: "إدارة شؤون المرضى" },
+  "Medical Secretary Department": { en: "Medical Secretary Department", ar: "قسم السكرتارية الطبية" },
+  "Information Release Department": { en: "Information Release Department", ar: "قسم الإفصاح عن المعلومات" },
+  "Social Services Department": { en: "Social Services Department", ar: "قسم الخدمة الاجتماعية" },
+  "Jobs and Recruitment Department": { en: "Jobs and Recruitment Department", ar: "قسم التوظيف والاستقطاب" },
+  "Dental Center": { en: "Dental Center", ar: "مركز الأسنان" },
+  "Dermatology Department": { en: "Dermatology Department", ar: "قسم الأمراض الجلدية" },
+  "Admissions Office": { en: "Admissions Office", ar: "مكتب الدخول" },
+  "Orthopedics Department": { en: "Orthopedics Department", ar: "قسم العظام" },
+  "Medical Statistics Department": { en: "Medical Statistics Department", ar: "قسم الإحصاء الطبي" },
+  "Financial Planning and Control Administration": { en: "Financial Planning and Control Administration", ar: "إدارة التخطيط والرقابة المالية" },
+  "Human Resources Planning Administration": { en: "Human Resources Planning Administration", ar: "إدارة تخطيط الموارد البشرية" },
+  "Telemedicine Administration": { en: "Telemedicine Administration", ar: "إدارة الطب الاتصالي" },
+  "Health Information Management": { en: "Health Information Management", ar: "إدارة المعلومات الصحية" },
+  "Nephrology Nursing": { en: "Nephrology Nursing", ar: "تمريض الكلى" },
+  "Home Healthcare Nursing": { en: "Home Healthcare Nursing", ar: "تمريض الرعاية الصحية المنزلية" },
+  "Medical Records Department": { en: "Medical Records Department", ar: "قسم السجلات الطبية" },
+  "Safety Department": { en: "Safety Department", ar: "قسم السلامة" },
+  "Executive Administration for Human Resources": { en: "Executive Administration for Human Resources", ar: "الإدارة التنفيذية للموارد البشرية" },
+  "Prosthodontics Department": { en: "Prosthodontics Department", ar: "قسم تركيبات الأسنان" },
+  "Surgical Nursing (Women’s Ward)": { en: "Surgical Nursing (Women’s Ward)", ar: "تمريض الجراحة (قسم النساء)" },
+  "Quality and Patient Safety Administration": { en: "Quality and Patient Safety Administration", ar: "إدارة الجودة وسلامة المرضى" },
+  "Executive Administration for Financial and Administrative Affairs": { en: "Executive Administration for Financial and Administrative Affairs", ar: "الإدارة التنفيذية للشؤون المالية والإدارية" },
+  "Operating Room Nursing": { en: "Operating Room Nursing", ar: "تمريض غرف العمليات" },
+  "Information Technology Administration": { en: "Information Technology Administration", ar: "إدارة تقنية المعلومات" },
+  "Compliance Department": { en: "Compliance Department", ar: "قسم الالتزام" },
+  "Ophthalmology and Optometry Unit": { en: "Ophthalmology and Optometry Unit", ar: "وحدة طب وجراحة العيون والبصريات" },
+  "Attendance Monitoring Administration": { en: "Attendance Monitoring Administration", ar: "إدارة متابعة الحضور" },
+  "Emergency Department": { en: "Emergency Department", ar: "قسم الطوارئ" },
+  "Human Resources Services Administration": { en: "Human Resources Services Administration", ar: "إدارة خدمات الموارد البشرية" },
+  "Medical Maintenance Department": { en: "Medical Maintenance Department", ar: "قسم الصيانة الطبية" },
+  "Government Relations Department": { en: "Government Relations Department", ar: "قسم العلاقات الحكومية" },
+  "Finance Office": { en: "Finance Office", ar: "مكتب المالية" },
+  "Orthopedic Nursing (Women’s Ward)": { en: "Orthopedic Nursing (Women’s Ward)", ar: "تمريض العظام (قسم النساء)" },
+  "Housing Department": { en: "Housing Department", ar: "قسم الإسكان" },
+  "Vascular Surgery Department": { en: "Vascular Surgery Department", ar: "قسم جراحة الأوعية الدموية" },
+  "Anesthesiology Department": { en: "Anesthesiology Department", ar: "قسم التخدير" },
+  "Executive Director’s Office": { en: "Executive Director’s Office", ar: "مكتب المدير التنفيذي" },
+  "Human Resources Development Administration": { en: "Human Resources Development Administration", ar: "إدارة تطوير الموارد البشرية" },
+  "Admissions and Healthcare Access Support Administration": { en: "Admissions and Healthcare Access Support Administration", ar: "إدارة القبول ودعم الوصول للرعاية الصحية" },
+  "Internal Communication Administration": { en: "Internal Communication Administration", ar: "إدارة الاتصال الداخلي" },
+  "Nephrology Department": { en: "Nephrology Department", ar: "قسم أمراض الكلى" },
+  "Medical Documentation Department": { en: "Medical Documentation Department", ar: "قسم التوثيق الطبي" },
+  "Neurosurgery Department": { en: "Neurosurgery Department", ar: "قسم جراحة الأعصاب" },
+  "Endocrinology Department": { en: "Endocrinology Department", ar: "قسم الغدد الصماء" },
+  "Ambulance Transportation Department": { en: "Ambulance Transportation Department", ar: "قسم النقل بالإسعاف" },
+  "Religious Awareness and Spiritual Support Administration": { en: "Religious Awareness and Spiritual Support Administration", ar: "إدارة التوعية الدينية والدعم الروحي" },
+  "Neurology Department": { en: "Neurology Department", ar: "قسم الأعصاب" },
+  "Neurosurgery Nursing": { en: "Neurosurgery Nursing", ar: "تمريض جراحة الأعصاب" },
+  "Occupational Health Clinic": { en: "Occupational Health Clinic", ar: "عيادة الصحة المهنية" },
+  "Pediatric Dentistry Department": { en: "Pediatric Dentistry Department", ar: "قسم أسنان الأطفال" },
+  "Otorhinolaryngology (ENT) Department": { en: "Otorhinolaryngology (ENT) Department", ar: "قسم الأنف والأذن والحنجرة" },
+  "Strategic Planning and Transformation Administration": { en: "Strategic Planning and Transformation Administration", ar: "إدارة التخطيط الاستراتيجي والتحول" },
+  "Emergency Planning and Preparedness Unit": { en: "Emergency Planning and Preparedness Unit", ar: "وحدة التخطيط للطوارئ والاستعداد" },
+  "Clinical Nutrition Department": { en: "Clinical Nutrition Department", ar: "قسم التغذية العلاجية" },
+  "Celiac Disease Center": { en: "Celiac Disease Center", ar: "مركز مرض السيلياك" },
+  "Respiratory Therapy Department": { en: "Respiratory Therapy Department", ar: "قسم العلاج التنفسي" },
+  "Orthodontics Department": { en: "Orthodontics Department", ar: "قسم تقويم الأسنان" },
+  "Communication, Public Relations, and Health Media Administration": { en: "Communication, Public Relations, and Health Media Administration", ar: "إدارة التواصل والعلاقات العامة والإعلام الصحي" },
+  "Geriatrics and Elderly Care Center": { en: "Geriatrics and Elderly Care Center", ar: "مركز طب ورعاية المسنين" },
+  "Medical Coding Department": { en: "Medical Coding Department", ar: "قسم الترميز الطبي" },
+  "Executive Administration": { en: "Executive Administration", ar: "الإدارة التنفيذية" },
+  "Prisons Department": { en: "Prisons Department", ar: "قسم السجون" },
 },
 
   category: {
@@ -602,10 +763,10 @@ departments: {
     'Regular': { en: "Regular ", ar: "صيانة دورية" },
     'Regular Maintenance': { en: "Regular Maintenance", ar: "صيانة دورية" },
 "External Maintenance": { en: "External Maintenance", ar: "صيانة خارجية" },
-
+"Incident / Report": { en: "Incident / Report", ar: "بلاغ داخلي / بلاغ عادي" },
 "Incident": { en: "Incident", ar: "بلاغ داخلي / بلاغ عادي" },
-"FollowUp": { en: "FollowUp", ar: "متابعة" },
-"Modification": { en: "Modification", ar: "طلب تعديل" },
+"Follow-Up": { en: "FollowUp", ar: "متابعة" },
+"Modification Request": { en: "Modification", ar: "طلب تعديل" },
 "Other": { en: "Other", ar: "أي نوع آخر" }
   },
   
@@ -628,6 +789,102 @@ departments: {
     "Flickering or flashing screen": { en: "Flickering or flashing screen", ar: "وميض أو اهتزاز في الشاشة" },
     "Mouse not working": { en: "Mouse not working", ar: "الماوس لا يعمل" },
     "Keyboard not working": { en: "Keyboard not working", ar: "الكيبورد لا يعمل" },
+      "Mouse pointer moves on its own": {
+    en: "Mouse pointer moves on its own",
+    ar: "مؤشر الماوس يتحرك من تلقاء نفسه"
+  },
+  "No sound from speakers/headphones": {
+    en: "No sound from speakers/headphones",
+    ar: "لا يوجد صوت من السماعات أو سماعات الرأس"
+  },
+  "Sound is crackling or distorted": {
+    en: "Sound is crackling or distorted",
+    ar: "الصوت مشوش أو متقطع"
+  },
+  "Microphone not working": {
+    en: "Microphone not working",
+    ar: "الميكروفون لا يعمل"
+  },
+  "Wi-Fi keeps disconnecting": {
+    en: "Wi-Fi keeps disconnecting",
+    ar: "الواي فاي ينقطع باستمرار"
+  },
+  "No internet even when connected": {
+  en: "No internet even when connected",
+  ar: "لا يوجد إنترنت رغم الاتصال"
+},
+"Can’t connect to Wi-Fi (wrong password/error)": {
+  en: "Can’t connect to Wi-Fi (wrong password/error)",
+  ar: "لا يمكن الاتصال بالواي فاي (كلمة مرور خاطئة أو خطأ)"
+},
+"Web pages load very slowly": {
+  en: "Web pages load very slowly",
+  ar: "صفحات الإنترنت تفتح ببطء شديد"
+},
+"Deleted a file by accident (need recovery)": {
+  en: "Deleted a file by accident (need recovery)",
+  ar: "تم حذف ملف عن طريق الخطأ (يحتاج استرجاع)"
+},
+"“Disk full” error (out of storage space)": {
+  en: "“Disk full” error (out of storage space)",
+  ar: "رسالة \"امتلاء القرص\" (لا توجد مساحة تخزين)"
+},
+"Application Problem (Apps not working)": {
+  en: "Application Problem (Apps not working)",
+  ar: "مشكلة في التطبيقات (لا تعمل)"
+},
+"Program won’t install/uninstall": {
+  en: "Program won’t install/uninstall",
+  ar: "لا يمكن تثبيت أو إزالة البرنامج"
+},
+"“Not responding” errors (frozen apps)": {
+  en: "“Not responding” errors (frozen apps)",
+  ar: "أخطاء \"لا يستجيب\" (البرامج مجمدة)"
+},
+"Pop-up ads/viruses (suspicious programs)": {
+  en: "Pop-up ads/viruses (suspicious programs)",
+  ar: "نوافذ منبثقة / فيروسات (برامج مشبوهة)"
+},
+"Windows/Mac update failed": {
+  en: "Windows/Mac update failed",
+  ar: "فشل تحديث النظام (ويندوز أو ماك)"
+},
+"Microsoft Office needs activation / Not working": {
+  en: "Microsoft Office needs activation / Not working",
+  ar: "أوفيس يحتاج تفعيل / لا يعمل"
+},
+"Windows needs activation / Not working": {
+  en: "Windows needs activation / Not working",
+  ar: "ويندوز يحتاج تفعيل / لا يعمل"
+},
+"Forgot password (can’t sign in)": {
+  en: "Forgot password (can’t sign in)",
+  ar: "نسيت كلمة المرور (لا يمكن تسجيل الدخول)"
+},
+"“Your account is locked” message": {
+  en: "“Your account is locked” message",
+  ar: "رسالة \"تم قفل حسابك\""
+},
+"Wrong username/password (but it’s correct)": {
+  en: "Wrong username/password (but it’s correct)",
+  ar: "اسم المستخدم أو كلمة المرور غير صحيحة (رغم أنها صحيحة)"
+},
+"Can’t open a file (unsupported format)": {
+  en: "Can’t open a file (unsupported format)",
+  ar: "لا يمكن فتح الملف (صيغة غير مدعومة)"
+},
+"Date/time keeps resetting to wrong value": {
+  en: "Date/time keeps resetting to wrong value",
+  ar: "التاريخ أو الوقت يعيد التعيين لقيمة خاطئة"
+},
+"Takes too long to shut down": {
+  en: "Takes too long to shut down",
+  ar: "يستغرق وقتًا طويلاً عند الإغلاق"
+},
+"Cables not connected / Need replacement": {
+  en: "Cables not connected / Need replacement",
+  ar: "الأسلاك غير متصلة أو تحتاج استبدال"
+},
 
     "Printer is not responding": { en: "Printer is not responding", ar: "الطابعة لا تستجيب" },
     "Printer is not detected": { en: "Printer is not detected", ar: "الطابعة غير مكتشفة" },
@@ -665,6 +922,10 @@ departments: {
     "Scanned image is weird or cut off": { en: "Scanned image is weird or cut off", ar: "الصورة الممسوحة غير مكتملة أو مقطوعة" },
     "Scanned documents come out blurry": { en: "Scanned documents come out blurry", ar: "المستندات الممسوحة غير واضحة" },
     "The pages are blank / empty": { en: "The pages are blank / empty", ar: "الصفحات فارغة / لا تحتوي على محتوى" },
+"Spooler errors (print jobs stuck in queue)": {
+  en: "Spooler errors (print jobs stuck in queue)",
+  ar: "أخطاء في خدمة الطباعة (الطباعة عالقة)"
+},
 
     "Scanner won’t turn on (no lights/noise)": { en: "Scanner won’t turn on (no lights/noise)", ar: "الماسح لا يعمل (لا أضواء أو صوت)" },
     "Scanner not detected": { en: "Scanner not detected", ar: "الماسح غير مكتشف" },
@@ -925,7 +1186,7 @@ const xLabel = isArabic ? pageWidth - 15 : 15;
     "First Floor": { en: "First Floor", ar: "الدور الأول" },
     "Second Floor": { en: "Second Floor", ar: "الدور الثاني" },
     "Third Floor": { en: "Third Floor", ar: "الدور الثالث" },
-    "Fourth Floor": { en: "Fourth Floor", ar: "الدور الرابع" },
+    "Forth Floor": { en: "Fourth Floor", ar: "الدور الرابع" },
     "Fifth Floor": { en: "Fifth Floor", ar: "الدور الخامس" },
     "Sixth Floor": { en: "Sixth Floor", ar: "الدور السادس" },
     "Seventh Floor": { en: "Seventh Floor", ar: "الدور السابع" },
