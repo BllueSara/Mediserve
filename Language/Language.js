@@ -13,6 +13,7 @@ const languageManager = {
             'english': 'English',
             'arabic': 'Arabic',
             'back': 'Back',
+            'additional_information': 'Additional Information',
 
             // Common
             'welcome': 'Welcome',
@@ -256,6 +257,7 @@ const languageManager = {
             'final_diagnosis': 'Final Diagnosis',
             'enter_final_diagnosis': 'Enter final diagnosis',
             'submit_form': 'Submit Form',
+            'issue_summary': 'Issue Summary',
 
             // Add Maintenance Details
             'enter_device_name': 'Enter device name',
@@ -854,6 +856,8 @@ const languageManager = {
             'submit': 'إرسال',
             'cancel': 'إلغاء',
             'save_changes': 'حفظ التغييرات',
+            'issue_summary': 'ملخص المشكلة',
+            'additional_information': 'معلومات اضافية',
 
             // Home Page
             'enterprise_solutions': 'حلول تكنولوجيا المؤسسات',
@@ -1571,9 +1575,413 @@ const languageManager = {
             'loading_reports': "Loading reports...",
         }
     },
+departments: {
+  "Laboratory Department": { en: "Laboratory Department", ar: "قسم المختبر" },
+  "Internal Medicine Nursing (Men's Ward)": { en: "Internal Medicine Nursing (Men's Ward)", ar: "تمريض الباطنة (قسم الرجال)" },
+  "Intensive Care Unit (ICU) Nursing": { en: "Intensive Care Unit (ICU) Nursing", ar: "تمريض العناية المركزة" },
+  "Nursing Services Administration": { en: "Nursing Services Administration", ar: "إدارة خدمات التمريض" },
+  "Daily Procedures Unit Nursing": { en: "Daily Procedures Unit Nursing", ar: "تمريض وحدة الإجراءات اليومية" },
+  "Pulmonology Department": { en: "Pulmonology Department", ar: "قسم الأمراض الصدرية" },
+  "General Surgery Department": { en: "General Surgery Department", ar: "قسم الجراحة العامة" },
+  "Medical Supply Department": { en: "Medical Supply Department", ar: "قسم الإمداد الطبي" },
+  "Medical Rehabilitation and Physiotherapy": { en: "Medical Rehabilitation and Physiotherapy", ar: "قسم التأهيل والعلاج الطبيعي" },
+  "Bed Management Administration": { en: "Bed Management Administration", ar: "إدارة تنسيق الأسرة" },
+  "Outpatient Clinics": { en: "Outpatient Clinics", ar: "العيادات الخارجية" },
+  "Emergency Department": { en: "Emergency Department", ar: "قسم الطوارئ" },
+  "Academic Affairs, Training, and Medical Education Administration": {
+    en: "Academic Affairs, Training, and Medical Education Administration",
+    ar: "إدارة الشؤون الأكاديمية والتدريب والتعليم الطبي"
+  },
+  "Endoscopy and Gastroenterology Department": { en: "Endoscopy and Gastroenterology Department", ar: "قسم التنظير والجهاز الهضمي" },
+  "Health Economics Administration": { en: "Health Economics Administration", ar: "إدارة الاقتصاد الصحي" },
+  "On-Call Supervisors' Office": { en: "On-Call Supervisors' Office", ar: "مكتب المشرفين المناوبين" },
+  "Outpatient Clinics Nursing": { en: "Outpatient Clinics Nursing", ar: "تمريض العيادات الخارجية" },
+  "Legal Affairs Department": { en: "Legal Affairs Department", ar: "قسم الشؤون القانونية" },
+  "General Maintenance Department": { en: "General Maintenance Department", ar: "قسم الصيانة العامة" },
+  "Finance and Accounting Administration": { en: "Finance and Accounting Administration", ar: "إدارة المالية والمحاسبة" },
+  "Records, Archives, and Administrative Communications Department": {
+    en: "Records, Archives, and Administrative Communications Department",
+    ar: "قسم السجلات والأرشيف والمراسلات الإدارية"
+  },
+  "Nutrition Services Administration": { en: "Nutrition Services Administration", ar: "إدارة خدمات التغذية" },
+  "Mental Health Department": { en: "Mental Health Department", ar: "قسم الصحة النفسية" },
+  "Mortality Department": { en: "Mortality Department", ar: "قسم الوفيات" },
+  "Psychiatric Nursing": { en: "Psychiatric Nursing", ar: "تمريض الطب النفسي" },
+  "Orthopedic Nursing (Men’s Ward)": { en: "Orthopedic Nursing (Men’s Ward)", ar: "تمريض العظام (قسم الرجال)" },
+  "Psychiatric Clinics Nursing": { en: "Psychiatric Clinics Nursing", ar: "تمريض العيادات النفسية" },
+  "Diagnostic Radiology Department": { en: "Diagnostic Radiology Department", ar: "قسم الأشعة التشخيصية" },
+  "Endoscopy Nursing": { en: "Endoscopy Nursing", ar: "تمريض التنظير" },
+  "Home Healthcare Department": { en: "Home Healthcare Department", ar: "قسم الرعاية الصحية المنزلية" },
+  "Telephone Exchange Department": { en: "Telephone Exchange Department", ar: "قسم سنترال الهاتف" },
+  "Facilities and Support Services Administration": { en: "Facilities and Support Services Administration", ar: "إدارة المرافق والخدمات المساندة" },
+  "Urology Department": { en: "Urology Department", ar: "قسم المسالك البولية" },
+  "Surgical Nursing (Men’s Ward)": { en: "Surgical Nursing (Men’s Ward)", ar: "تمريض الجراحة (قسم الرجال)" },
+  "Facilities and Maintenance Administration": { en: "Facilities and Maintenance Administration", ar: "إدارة المرافق والصيانة" },
+  "Warehouse Department": { en: "Warehouse Department", ar: "قسم المستودعات" },
+  "Security Department": { en: "Security Department", ar: "قسم الأمن" },
+  "Archive Department": { en: "Archive Department", ar: "قسم الأرشيف" },
+  "General Services Administration": { en: "General Services Administration", ar: "إدارة الخدمات العامة" },
+  "Blood Bank Department": { en: "Blood Bank Department", ar: "قسم بنك الدم" },
+  "Surgical Operations Department": { en: "Surgical Operations Department", ar: "قسم العمليات الجراحية" },
+   "Procurement Administration": { en: "Procurement Administration", ar: "إدارة المشتريات" },
+  "Transportation Department": { en: "Transportation Department", ar: "قسم النقل" },
+  "Health Education Department": { en: "Health Education Department", ar: "قسم التوعية الصحية" },
+  "Patient Experience Administration": { en: "Patient Experience Administration", ar: "إدارة تجربة المريض" },
+  "Investment Administration": { en: "Investment Administration", ar: "إدارة الاستثمار" },
+  "Internal Medicine Department": { en: "Internal Medicine Department", ar: "قسم الباطنة" },
+  "Inventory Control Administration": { en: "Inventory Control Administration", ar: "إدارة مراقبة المخزون" },
+  "Conservative Treatment Department": { en: "Conservative Treatment Department", ar: "قسم العلاج التحفظي" },
+  "Emergency Nursing": { en: "Emergency Nursing", ar: "تمريض الطوارئ" },
+  "Central Sterilization Department": { en: "Central Sterilization Department", ar: "قسم التعقيم المركزي" },
+  "Internal Audit Department": { en: "Internal Audit Department", ar: "قسم التدقيق الداخلي" },
+  "Dental Assistants Department": { en: "Dental Assistants Department", ar: "قسم مساعدي الأسنان" },
+  "Endodontics Department": { en: "Endodontics Department", ar: "قسم علاج جذور الأسنان" },
+  "Periodontology and Gum Surgery Department": { en: "Periodontology and Gum Surgery Department", ar: "قسم أمراض اللثة وجراحة اللثة" },
+  "Payroll and Entitlements Department": { en: "Payroll and Entitlements Department", ar: "قسم الرواتب والمستحقات" },
+  "Executive Administration for Medical Services": { en: "Executive Administration for Medical Services", ar: "الإدارة التنفيذية للخدمات الطبية" },
+  "Home Psychiatry Department": { en: "Home Psychiatry Department", ar: "قسم الطب النفسي المنزلي" },
+  "Security Services Nursing": { en: "Security Services Nursing", ar: "تمريض الخدمات الأمنية" },
+  "Pharmacy Department": { en: "Pharmacy Department", ar: "قسم الصيدلية" },
+  "Outpatient Clinics": { en: "Outpatient Clinics", ar: "العيادات الخارجية" },
+  "Infection Control Department": { en: "Infection Control Department", ar: "قسم مكافحة العدوى" },
+  "Public Health Department": { en: "Public Health Department", ar: "قسم الصحة العامة" },
+  "Internal Medicine Nursing (Women’s Ward)": { en: "Internal Medicine Nursing (Women’s Ward)", ar: "تمريض الباطنة (قسم النساء)" },
+  "Human Resources Operations Department": { en: "Human Resources Operations Department", ar: "إدارة عمليات الموارد البشرية" },
+  "Patient Affairs Administration": { en: "Patient Affairs Administration", ar: "إدارة شؤون المرضى" },
+  "Medical Secretary Department": { en: "Medical Secretary Department", ar: "قسم السكرتارية الطبية" },
+  "Information Release Department": { en: "Information Release Department", ar: "قسم الإفصاح عن المعلومات" },
+  "Social Services Department": { en: "Social Services Department", ar: "قسم الخدمة الاجتماعية" },
+  "Jobs and Recruitment Department": { en: "Jobs and Recruitment Department", ar: "قسم التوظيف والاستقطاب" },
+  "Dental Center": { en: "Dental Center", ar: "مركز الأسنان" },
+  "Dermatology Department": { en: "Dermatology Department", ar: "قسم الأمراض الجلدية" },
+  "Admissions Office": { en: "Admissions Office", ar: "مكتب الدخول" },
+  "Orthopedics Department": { en: "Orthopedics Department", ar: "قسم العظام" },
+  "Medical Statistics Department": { en: "Medical Statistics Department", ar: "قسم الإحصاء الطبي" },
+  "Financial Planning and Control Administration": { en: "Financial Planning and Control Administration", ar: "إدارة التخطيط والرقابة المالية" },
+  "Human Resources Planning Administration": { en: "Human Resources Planning Administration", ar: "إدارة تخطيط الموارد البشرية" },
+  "Telemedicine Administration": { en: "Telemedicine Administration", ar: "إدارة الطب الاتصالي" },
+  "Health Information Management": { en: "Health Information Management", ar: "إدارة المعلومات الصحية" },
+  "Nephrology Nursing": { en: "Nephrology Nursing", ar: "تمريض الكلى" },
+  "Home Healthcare Nursing": { en: "Home Healthcare Nursing", ar: "تمريض الرعاية الصحية المنزلية" },
+  "Medical Records Department": { en: "Medical Records Department", ar: "قسم السجلات الطبية" },
+  "Safety Department": { en: "Safety Department", ar: "قسم السلامة" },
+  "Executive Administration for Human Resources": { en: "Executive Administration for Human Resources", ar: "الإدارة التنفيذية للموارد البشرية" },
+  "Prosthodontics Department": { en: "Prosthodontics Department", ar: "قسم تركيبات الأسنان" },
+  "Surgical Nursing (Women’s Ward)": { en: "Surgical Nursing (Women’s Ward)", ar: "تمريض الجراحة (قسم النساء)" },
+  "Quality and Patient Safety Administration": { en: "Quality and Patient Safety Administration", ar: "إدارة الجودة وسلامة المرضى" },
+  "Executive Administration for Financial and Administrative Affairs": { en: "Executive Administration for Financial and Administrative Affairs", ar: "الإدارة التنفيذية للشؤون المالية والإدارية" },
+  "Operating Room Nursing": { en: "Operating Room Nursing", ar: "تمريض غرف العمليات" },
+  "Information Technology Administration": { en: "Information Technology Administration", ar: "إدارة تقنية المعلومات" },
+  "Compliance Department": { en: "Compliance Department", ar: "قسم الالتزام" },
+  "Ophthalmology and Optometry Unit": { en: "Ophthalmology and Optometry Unit", ar: "وحدة طب وجراحة العيون والبصريات" },
+  "Attendance Monitoring Administration": { en: "Attendance Monitoring Administration", ar: "إدارة متابعة الحضور" },
+  "Emergency Department": { en: "Emergency Department", ar: "قسم الطوارئ" },
+  "Human Resources Services Administration": { en: "Human Resources Services Administration", ar: "إدارة خدمات الموارد البشرية" },
+  "Medical Maintenance Department": { en: "Medical Maintenance Department", ar: "قسم الصيانة الطبية" },
+  "Government Relations Department": { en: "Government Relations Department", ar: "قسم العلاقات الحكومية" },
+  "Finance Office": { en: "Finance Office", ar: "مكتب المالية" },
+  "Orthopedic Nursing (Women’s Ward)": { en: "Orthopedic Nursing (Women’s Ward)", ar: "تمريض العظام (قسم النساء)" },
+  "Housing Department": { en: "Housing Department", ar: "قسم الإسكان" },
+  "Vascular Surgery Department": { en: "Vascular Surgery Department", ar: "قسم جراحة الأوعية الدموية" },
+  "Anesthesiology Department": { en: "Anesthesiology Department", ar: "قسم التخدير" },
+  "Executive Director’s Office": { en: "Executive Director’s Office", ar: "مكتب المدير التنفيذي" },
+  "Human Resources Development Administration": { en: "Human Resources Development Administration", ar: "إدارة تطوير الموارد البشرية" },
+  "Admissions and Healthcare Access Support Administration": { en: "Admissions and Healthcare Access Support Administration", ar: "إدارة القبول ودعم الوصول للرعاية الصحية" },
+  "Internal Communication Administration": { en: "Internal Communication Administration", ar: "إدارة الاتصال الداخلي" },
+  "Nephrology Department": { en: "Nephrology Department", ar: "قسم أمراض الكلى" },
+  "Medical Documentation Department": { en: "Medical Documentation Department", ar: "قسم التوثيق الطبي" },
+  "Neurosurgery Department": { en: "Neurosurgery Department", ar: "قسم جراحة الأعصاب" },
+  "Endocrinology Department": { en: "Endocrinology Department", ar: "قسم الغدد الصماء" },
+  "Ambulance Transportation Department": { en: "Ambulance Transportation Department", ar: "قسم النقل بالإسعاف" },
+  "Religious Awareness and Spiritual Support Administration": { en: "Religious Awareness and Spiritual Support Administration", ar: "إدارة التوعية الدينية والدعم الروحي" },
+  "Neurology Department": { en: "Neurology Department", ar: "قسم الأعصاب" },
+  "Neurosurgery Nursing": { en: "Neurosurgery Nursing", ar: "تمريض جراحة الأعصاب" },
+  "Occupational Health Clinic": { en: "Occupational Health Clinic", ar: "عيادة الصحة المهنية" },
+  "Pediatric Dentistry Department": { en: "Pediatric Dentistry Department", ar: "قسم أسنان الأطفال" },
+  "Otorhinolaryngology (ENT) Department": { en: "Otorhinolaryngology (ENT) Department", ar: "قسم الأنف والأذن والحنجرة" },
+  "Strategic Planning and Transformation Administration": { en: "Strategic Planning and Transformation Administration", ar: "إدارة التخطيط الاستراتيجي والتحول" },
+  "Emergency Planning and Preparedness Unit": { en: "Emergency Planning and Preparedness Unit", ar: "وحدة التخطيط للطوارئ والاستعداد" },
+  "Clinical Nutrition Department": { en: "Clinical Nutrition Department", ar: "قسم التغذية العلاجية" },
+  "Celiac Disease Center": { en: "Celiac Disease Center", ar: "مركز مرض السيلياك" },
+  "Respiratory Therapy Department": { en: "Respiratory Therapy Department", ar: "قسم العلاج التنفسي" },
+  "Orthodontics Department": { en: "Orthodontics Department", ar: "قسم تقويم الأسنان" },
+  "Communication, Public Relations, and Health Media Administration": { en: "Communication, Public Relations, and Health Media Administration", ar: "إدارة التواصل والعلاقات العامة والإعلام الصحي" },
+  "Geriatrics and Elderly Care Center": { en: "Geriatrics and Elderly Care Center", ar: "مركز طب ورعاية المسنين" },
+  "Medical Coding Department": { en: "Medical Coding Department", ar: "قسم الترميز الطبي" },
+  "Executive Administration": { en: "Executive Administration", ar: "الإدارة التنفيذية" },
+  "Prisons Department": { en: "Prisons Department", ar: "قسم السجون" },
+},
+    floors : {
+    "Basement 2": { en: "Basement 2", ar: "القبو الثاني" },
+    "Basement 1": { en: "Basement 1", ar: "القبو الأول" },
+    "Below Ground": { en: "Below Ground", ar: "تحت الأرض" },
+    "Ground Level": { en: "Ground Level", ar: "الدور الأرضي" },
+    "First Floor": { en: "First Floor", ar: "الدور الأول" },
+    "Second Floor": { en: "Second Floor", ar: "الدور الثاني" },
+    "Third Floor": { en: "Third Floor", ar: "الدور الثالث" },
+    "Forth Floor": { en: "Fourth Floor", ar: "الدور الرابع" },
+    "Fifth Floor": { en: "Fifth Floor", ar: "الدور الخامس" },
+    "Sixth Floor": { en: "Sixth Floor", ar: "الدور السادس" },
+    "Seventh Floor": { en: "Seventh Floor", ar: "الدور السابع" },
+    "Eighth Floor": { en: "Eighth Floor", ar: "الدور الثامن" },
+    "Ninth Floor": { en: "Ninth Floor", ar: "الدور التاسع" },
+    "Tenth Floor": { en: "Tenth Floor", ar: "الدور العاشر" },
+    "Rooftop": { en: "Rooftop", ar: "السطح" },
+    "Parking": { en: "Parking", ar: "مواقف السيارات" }
+  },
+  
+  problemStatuses: {
+PC: {
+  "Computer won’t turn on at all (no lights/sound)": {
+    en: "Computer won’t turn on at all (no lights/sound)",
+    ar: "الكمبيوتر لا يعمل إطلاقًا (لا أضواء/أصوات)"
+  },
+  "Turns on but screen stays black": {
+    en: "Turns on but screen stays black",
+    ar: "يعمل ولكن تبقى الشاشة سوداء"
+  },
+  "Black screen / Blue screen with white error text (crashes suddenly)": {
+    en: "Black screen / Blue screen with white error text (crashes suddenly)",
+    ar: "شاشة سوداء أو زرقاء برسالة خطأ (يتعطل فجأة)"
+  },
+  "Stuck on loading screen (Windows/macOS won’t start)": {
+    en: "Stuck on loading screen (Windows/macOS won’t start)",
+    ar: "عالق في شاشة التحميل (ويندوز/ماك لا يقلع)"
+  },
+  "Monitor says \"No Signal\"": {
+    en: "Monitor says \"No Signal\"",
+    ar: "الشاشة تعرض \"لا يوجد إشارة\""
+  },
+  "Blank Screen but computer is on": {
+    en: "Blank Screen but computer is on",
+    ar: "شاشة فارغة ولكن الكمبيوتر يعمل"
+  },
+  "Randomly shuts down or restarts": {
+    en: "Randomly shuts down or restarts",
+    ar: "يغلق أو يعيد التشغيل عشوائيًا"
+  },
+  "Computer makes weird noises (beeping, grinding)": {
+    en: "Computer makes weird noises (beeping, grinding)",
+    ar: "الكمبيوتر يصدر أصواتًا غريبة (صفير، طحن)"
+  },
+  "External hard drive not recognized": {
+    en: "External hard drive not recognized",
+    ar: "الهارد الخارجي غير معرّف"
+  },
+  "Mouse/keyboard disconnects randomly (wireless)": {
+    en: "Mouse/keyboard disconnects randomly (wireless)",
+    ar: "الماوس أو الكيبورد يفصل بشكل عشوائي (لاسلكي)"
+  },
+  "USB port not connecting / not charging": {
+    en: "USB port not connecting / not charging",
+    ar: "منفذ USB لا يعمل / لا يشحن"
+  },
+  "Extremely slow (takes a long time to open files/apps)": {
+    en: "Extremely slow (takes a long time to open files/apps)",
+    ar: "بطئ شديد (يتأخر في فتح الملفات/البرامج)"
+  },
+  "Freezes or gets stuck (mouse/keyboard stop working)": {
+    en: "Freezes or gets stuck (mouse/keyboard stop working)",
+    ar: "يتجمد أو يتوقف عن الاستجابة (الماوس/الكيبورد لا يعمل)"
+  },
+  "Programs keep crashing/closing unexpectedly": {
+    en: "Programs keep crashing/closing unexpectedly",
+    ar: "البرامج تغلق فجأة أو تتعطل باستمرار"
+  },
+  "Wrong colors (too dark, Inverted colors)": {
+    en: "Wrong colors (too dark, Inverted colors)",
+    ar: "ألوان غير صحيحة (غامقة جدًا، معكوسة)"
+  },
+  "Flickering or flashing screen": {
+    en: "Flickering or flashing screen",
+    ar: "وميض أو اهتزاز في الشاشة"
+  },
+  "Mouse not working": {
+    en: "Mouse not working",
+    ar: "الماوس لا يعمل"
+  },
+  "Keyboard not working": {
+    en: "Keyboard not working",
+    ar: "الكيبورد لا يعمل"
+  },
+  "Mouse pointer moves on its own": {
+    en: "Mouse pointer moves on its own",
+    ar: "مؤشر الماوس يتحرك من تلقاء نفسه"
+  },
+  "No sound from speakers/headphones": {
+    en: "No sound from speakers/headphones",
+    ar: "لا يوجد صوت من السماعات أو سماعات الرأس"
+  },
+  "Sound is crackling or distorted": {
+    en: "Sound is crackling or distorted",
+    ar: "الصوت مشوش أو متقطع"
+  },
+  "Microphone not working": {
+    en: "Microphone not working",
+    ar: "الميكروفون لا يعمل"
+  },
+  "Wi-Fi keeps disconnecting": {
+    en: "Wi-Fi keeps disconnecting",
+    ar: "الواي فاي ينقطع باستمرار"
+  },
+  "No internet even when connected": {
+  en: "No internet even when connected",
+  ar: "لا يوجد إنترنت رغم الاتصال"
+},
+"Can’t connect to Wi-Fi (wrong password/error)": {
+  en: "Can’t connect to Wi-Fi (wrong password/error)",
+  ar: "لا يمكن الاتصال بالواي فاي (كلمة مرور خاطئة أو خطأ)"
+},
+"Web pages load very slowly": {
+  en: "Web pages load very slowly",
+  ar: "صفحات الإنترنت تفتح ببطء شديد"
+},
+"Deleted a file by accident (need recovery)": {
+  en: "Deleted a file by accident (need recovery)",
+  ar: "تم حذف ملف عن طريق الخطأ (يحتاج استرجاع)"
+},
+"“Disk full” error (out of storage space)": {
+  en: "“Disk full” error (out of storage space)",
+  ar: "رسالة \"امتلاء القرص\" (لا توجد مساحة تخزين)"
+},
+"Application Problem (Apps not working)": {
+  en: "Application Problem (Apps not working)",
+  ar: "مشكلة في التطبيقات (لا تعمل)"
+},
+"Program won’t install/uninstall": {
+  en: "Program won’t install/uninstall",
+  ar: "لا يمكن تثبيت أو إزالة البرنامج"
+},
+"“Not responding” errors (frozen apps)": {
+  en: "“Not responding” errors (frozen apps)",
+  ar: "أخطاء \"لا يستجيب\" (البرامج مجمدة)"
+},
+"Pop-up ads/viruses (suspicious programs)": {
+  en: "Pop-up ads/viruses (suspicious programs)",
+  ar: "نوافذ منبثقة / فيروسات (برامج مشبوهة)"
+},
+"Windows/Mac update failed": {
+  en: "Windows/Mac update failed",
+  ar: "فشل تحديث النظام (ويندوز أو ماك)"
+},
+"Microsoft Office needs activation / Not working": {
+  en: "Microsoft Office needs activation / Not working",
+  ar: "أوفيس يحتاج تفعيل / لا يعمل"
+},
+"Windows needs activation / Not working": {
+  en: "Windows needs activation / Not working",
+  ar: "ويندوز يحتاج تفعيل / لا يعمل"
+},
+"Forgot password (can’t sign in)": {
+  en: "Forgot password (can’t sign in)",
+  ar: "نسيت كلمة المرور (لا يمكن تسجيل الدخول)"
+},
+"“Your account is locked” message": {
+  en: "“Your account is locked” message",
+  ar: "رسالة \"تم قفل حسابك\""
+},
+"Wrong username/password (but it’s correct)": {
+  en: "Wrong username/password (but it’s correct)",
+  ar: "اسم المستخدم أو كلمة المرور غير صحيحة (رغم أنها صحيحة)"
+},
+"Can’t open a file (unsupported format)": {
+  en: "Can’t open a file (unsupported format)",
+  ar: "لا يمكن فتح الملف (صيغة غير مدعومة)"
+},
+"Date/time keeps resetting to wrong value": {
+  en: "Date/time keeps resetting to wrong value",
+  ar: "التاريخ أو الوقت يعيد التعيين لقيمة خاطئة"
+},
+"Takes too long to shut down": {
+  en: "Takes too long to shut down",
+  ar: "يستغرق وقتًا طويلاً عند الإغلاق"
+},
+"Cables not connected / Need replacement": {
+  en: "Cables not connected / Need replacement",
+  ar: "الأسلاك غير متصلة أو تحتاج استبدال"
+}
 
-    // Initialize language
-    init() {
+},
+
+
+    Printer: {
+      "Printer is not responding": { en: "Printer is not responding", ar: "الطابعة لا تستجيب" },
+      "Printer is not detected": { en: "Printer is not detected", ar: "الطابعة غير مكتشفة" },
+      "Printer says \"offline\" when it’s plugged in": { en: "Printer says \"offline\" when it’s plugged in", ar: "الطابعة تظهر غير متصلة رغم توصيلها" },
+      "Printer driver error pops up": { en: "Printer driver error pops up", ar: "ظهور خطأ تعريف الطابعة" },
+      "Printer turns on but screen is blank": { en: "Printer turns on but screen is blank", ar: "الطابعة تعمل ولكن الشاشة فارغة" },
+      "Printer keeps restarting": { en: "Printer keeps restarting", ar: "الطابعة تعيد التشغيل باستمرار" },
+      "Printer makes loud grinding noises": { en: "Printer makes loud grinding noises", ar: "الطابعة تصدر أصوات طحن عالية" },
+      "Printer disconnects (USB cable not working)": { en: "Printer disconnects (USB cable not working)", ar: "الطابعة تفصل (كابل USB لا يعمل)" },
+      "Wi-Fi printer won’t connect to network": { en: "Wi-Fi printer won’t connect to network", ar: "الطابعة اللاسلكية لا تتصل بالشبكة" },
+      "Printer works for one computer but not another": { en: "Printer works for one computer but not another", ar: "الطابعة تعمل على جهاز ولا تعمل على آخر" },
+      "Can’t find printer in the list of devices": { en: "Can’t find printer in the list of devices", ar: "لا يمكن العثور على الطابعة في قائمة الأجهزة" },
+      "Random error message (e.g., \"Error 0x000001\")": { en: "Random error message (e.g., \"Error 0x000001\")", ar: "رسالة خطأ عشوائية (مثل: Error 0x000001)" },
+      "Print jobs stuck in queue (nothing comes out)": { en: "Print jobs stuck in queue (nothing comes out)", ar: "أوامر الطباعة عالقة (لا شيء يُطبع)" },
+      "Printer is turned on but does nothing": { en: "Printer is turned on but does nothing", ar: "الطابعة تعمل لكنها لا تطبع" },
+      "Printer won’t print black (only color works)": { en: "Printer won’t print black (only color works)", ar: "الطابعة لا تطبع بالأسود (تطبع ألوان فقط)" },
+      "Printer won’t print colors (only black works)": { en: "Printer won’t print colors (only black works)", ar: "الطابعة لا تطبع ألوان (تطبع أسود فقط)" },
+      "Ink not recognized (error even after replacing)": { en: "Ink not recognized (error even after replacing)", ar: "الحبر غير معروف (حتى بعد الاستبدال)" },
+      "Printer says \"low ink\" but cartridge is new": { en: "Printer says \"low ink\" but cartridge is new", ar: "الطابعة تظهر أن الحبر منخفض رغم أنه جديد" },
+      "Printer says \"out of paper\" but tray is full": { en: "Printer says \"out of paper\" but tray is full", ar: "الطابعة تقول أن الورق ناقص رغم امتلاء الصينية" },
+      "Paper keeps jamming / Feeding Issues": { en: "Paper keeps jamming / Feeding Issues", ar: "الورق ينحشر باستمرار / مشاكل في السحب" },
+      "Printer pulls multiple sheets at once": { en: "Printer pulls multiple sheets at once", ar: "الطابعة تسحب أكثر من ورقة في وقت واحد" },
+      "Paper comes out wrinkled or crumpled": { en: "Paper comes out wrinkled or crumpled", ar: "الورق يخرج مجعد أو مكرمش" },
+      "Ink smears when touched": { en: "Ink smears when touched", ar: "الحبر يتلطخ عند اللمس" },
+      "Print too faint or faded": { en: "Print too faint or faded", ar: "الطباعة باهتة جدًا" },
+      "Streaks or lines on printed pages": { en: "Streaks or lines on printed pages", ar: "خطوط على الصفحات المطبوعة" },
+      "Spots or smudges on prints": { en: "Spots or smudges on prints", ar: "بقع أو لطخات على المطبوعات" },
+      "Colors look wrong (e.g., green instead of blue)": { en: "Colors look wrong (e.g., green instead of blue)", ar: "ألوان غير صحيحة (مثل: أخضر بدل أزرق)" },
+      "Wrong colors in prints": { en: "Wrong colors in prints", ar: "ألوان غير صحيحة في الطباعة" },
+      "Black ink prints as blank/gray": { en: "Black ink prints as blank/gray", ar: "الحبر الأسود يُطبع رمادي أو لا يُطبع" },
+      "Cartridge alignment problems": { en: "Cartridge alignment problems", ar: "مشاكل في محاذاة الخراطيش" },
+      "Slow printing speed": { en: "Slow printing speed", ar: "سرعة طباعة بطيئة" },
+            "Scanner won’t scan (no response)": { en: "Scanner won’t scan (no response)", ar: "الماسح لا يستجيب" },
+      "Scanned image is weird or cut off": { en: "Scanned image is weird or cut off", ar: "الصورة الممسوحة غير مكتملة أو مقطوعة" },
+      "Scanned documents come out blurry": { en: "Scanned documents come out blurry", ar: "المستندات الممسوحة غير واضحة" },
+      "The pages are blank / empty": { en: "The pages are blank / empty", ar: "الصفحات فارغة / لا تحتوي على محتوى" },
+      "Spooler errors (print jobs stuck in queue)": {
+  en: "Spooler errors (print jobs stuck in queue)",
+  ar: "أخطاء في خدمة الطباعة (الطباعة عالقة)"
+}
+
+    },
+
+    Scanner: {
+      "Scanner won’t scan (no response)": { en: "Scanner won’t scan (no response)", ar: "الماسح لا يستجيب" },
+      "Scanned image is weird or cut off": { en: "Scanned image is weird or cut off", ar: "الصورة الممسوحة غير مكتملة أو مقطوعة" },
+      "Scanned documents come out blurry": { en: "Scanned documents come out blurry", ar: "المستندات الممسوحة غير واضحة" },
+      "The pages are blank / empty": { en: "The pages are blank / empty", ar: "الصفحات فارغة / لا تحتوي على محتوى" },
+      "Scanner won’t turn on (no lights/noise)": { en: "Scanner won’t turn on (no lights/noise)", ar: "الماسح لا يعمل (لا أضواء أو صوت)" },
+      "Scanner not detected": { en: "Scanner not detected", ar: "الماسح غير مكتشف" },
+      "\"Driver not found\" error": { en: "\"Driver not found\" error", ar: "خطأ \"لم يتم العثور على التعريف\"" },
+      "Scanner not showing up in the list": { en: "Scanner not showing up in the list", ar: "الماسح لا يظهر في القائمة" },
+      "Scanner makes loud grinding noises": { en: "Scanner makes loud grinding noises", ar: "الماسح يصدر أصوات طحن عالية" },
+      "Scanner light flickers or stays off": { en: "Scanner light flickers or stays off", ar: "ضوء الماسح يومض أو لا يعمل" },
+      "Scanner makes noise but doesn’t scan": { en: "Scanner makes noise but doesn’t scan", ar: "الماسح يصدر صوتًا لكنه لا يعمل" },
+      "Scanner is busy error (even when not in use)": { en: "Scanner is busy error (even when not in use)", ar: "خطأ: الماسح مشغول (حتى عند عدم الاستخدام)" },
+      "Scanner won’t grab the paper (no movement)": { en: "Scanner won’t grab the paper (no movement)", ar: "الماسح لا يسحب الورق (لا حركة)" },
+      "Paper jams while scanning": { en: "Paper jams while scanning", ar: "الورق ينحشر أثناء المسح" },
+      "Paper gets stuck or crumpled": { en: "Paper gets stuck or crumpled", ar: "الورق يتعطل أو يتكرمش" },
+      "Scanner pulls multiple pages at once": { en: "Scanner pulls multiple pages at once", ar: "الماسح يسحب عدة صفحات دفعة واحدة" },
+      "Printer works but scanner doesn’t": { en: "Printer works but scanner doesn’t", ar: "الطابعة تعمل ولكن الماسح لا يعمل" },
+      "Scanner disconnects randomly (USB/Wi-Fi)": { en: "Scanner disconnects randomly (USB/Wi-Fi)", ar: "الماسح ينفصل عشوائيًا (USB/واي فاي)" },
+      "Scanning software freezes or crashes": { en: "Scanning software freezes or crashes", ar: "برنامج المسح يتجمد أو يتعطل" },
+      "Scanner button does nothing (on all-in-one machines)": { en: "Scanner button does nothing (on all-in-one machines)", ar: "زر الماسح لا يستجيب (في الأجهزة متعددة الوظائف)" },
+      "Scanned document saves as blank/black": { en: "Scanned document saves as blank/black", ar: "المستند الممسوح يُحفظ فارغًا أو أسود" },
+      "Only scans part of the page (cuts off edges)": { en: "Only scans part of the page (cuts off edges)", ar: "يمسح جزءًا من الصفحة فقط (يقطع الحواف)" },
+      "Scanned file won’t save": { en: "Scanned file won’t save", ar: "الملف الممسوح لا يُحفظ" },
+      "File format is wrong (e.g., saves as .BMP instead of .PDF)": { en: "File format is wrong (e.g., saves as .BMP instead of .PDF)", ar: "صيغة الملف غير صحيحة (مثل: .BMP بدلاً من .PDF)" },
+      "Scanned image is blurry": { en: "Scanned image is blurry", ar: "الصورة الممسوحة غير واضحة" },
+      "Dark or faded scans (too light/too dark)": { en: "Dark or faded scans (too light/too dark)", ar: "الصور الممسوحة باهتة جدًا أو مظلمة" },
+      "Lines or streaks on scanned documents": { en: "Lines or streaks on scanned documents", ar: "خطوط أو شرائط على المستندات الممسوحة" },
+      "Colors look wrong (e.g., red looks pink)": { en: "Colors look wrong (e.g., red looks pink)", ar: "ألوان غير صحيحة (مثلاً الأحمر يبدو وردي)" },
+      "Black & white scans come out gray": { en: "Black & white scans come out gray", ar: "المسح بالأبيض والأسود يظهر رمادي" },
+      "Scanning takes forever (unusually slow)": { en: "Scanning takes forever (unusually slow)", ar: "المسح يستغرق وقتًا طويلاً بشكل غير طبيعي" }
+    }
+  },
+
+      init() {
         // Load saved language preference or default to English
         this.currentLang = localStorage.getItem('language') || 'en';
         this.applyLanguage();
@@ -1644,3 +2052,68 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+function translateDepartmentName(name) {
+  const lang = languageManager.currentLang || 'en';
+  const cleanName = name?.trim().replace(/[’']/g, "'");
+  return languageManager.departments[cleanName]?.[lang] || cleanName;
+}
+function translateFloorName(name) {
+  const lang = languageManager.currentLang || 'en';
+  const clean = name?.trim();
+  return languageManager.floors?.[clean]?.[lang] || clean;
+}
+
+function translateProblemText(deviceType, text) {
+  const lang = languageManager.currentLang || 'en';
+
+  // تنظيف النص لتوحيد الصيغة
+  const clean = text?.trim()
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/\s+/g, ' ') // توحيد المسافات
+    .replace(/ /g, '');   // إزالة المسافات غير المرئية
+
+  const normalizedType = mapDeviceType(deviceType);
+  const deviceProblems = languageManager.problemStatuses?.[normalizedType];
+
+  // إذا لقى تطابق دقيق يرجع الترجمة
+  if (deviceProblems && deviceProblems[clean]) {
+    return deviceProblems[clean][lang] || clean;
+  }
+
+  // إذا ما لقى تطابق دقيق، يحاول يقارن تطابق تقريبي
+  if (deviceProblems) {
+    const foundKey = Object.keys(deviceProblems).find(k =>
+      k.trim()
+        .replace(/[‘’]/g, "'")
+        .replace(/[“”]/g, '"')
+        .replace(/\s+/g, ' ')
+        .replace(/ /g, '') === clean
+    );
+
+    if (foundKey) {
+      return deviceProblems[foundKey][lang] || foundKey;
+    }
+  }
+
+  // fallback
+  return text;
+}
+
+
+
+function normalizeDeviceType(type) {
+  if (!type) return "";
+  return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+}
+function mapDeviceType(deviceType) {
+  const map = {
+    pc: "PC",              // ← هنا التغيير
+    computer: "PC",        // ← كل ما يجي باسم computer أو pc يصير "PC"
+    printer: "Printer",
+    scanner: "Scanner"
+  };
+
+  const key = deviceType?.toLowerCase().trim();
+  return map[key] || deviceType;
+}

@@ -1334,7 +1334,7 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
     `, [
       reportNumberTicket, ticketId, deviceSpec,
       "Ticket Created",
-      `Ticket (${ticketNumber}) for device: ${deviceInfo.device_name} - Department: ${deviceInfo.department_name}`,
+      `Initial Diagnosis: ${initialDiagnosis}`,
       "Open", "General", deviceInfo.mac_address, deviceInfo.ip_address, userId
     ]);
 
@@ -2181,7 +2181,16 @@ app.post('/AddDevice/:type', authenticateToken, async (req, res) => {
   const Device_Name = req.body["device-name"] || req.body["pc-name"] || null;
   const Mac_Address = req.body["mac-address"] || null;
   const Ip_Address = req.body["ip-address"] || null;
+const isValidMac = (mac) => /^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$/i.test(mac);
+const isValidIp = (ip) => /^((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(\.|$)){4}$/.test(ip);
 
+if (Ip_Address && !isValidIp(Ip_Address)) {
+  return res.status(400).json({ error: " عنوان IP غير صالح. مثال صحيح: 192.168.1.1" });
+}
+
+if (Mac_Address && !isValidMac(Mac_Address)) {
+  return res.status(400).json({ error: " عنوان MAC غير صالح. مثال صحيح: 00:1A:2B:3C:4D:5E" });
+}
   const Printer_Type = req.body["printer-type"] || null;
   const Ink_Type = req.body["ink-type"] || null;
   const Ink_Serial_Number = req.body["ink-serial-number"] || null;
