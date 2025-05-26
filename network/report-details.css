@@ -1,0 +1,48 @@
+body,
+h1, h2, h3, p, span, button, select, input,
+.dropdown-toggle, .dropdown-option-text, .dropdown-search,
+label {
+    font-family: var(--font-family) !important;
+}
+
+::placeholder,
+input::placeholder,
+textarea::placeholder,
+input::-webkit-input-placeholder,
+input::-moz-placeholder,
+input:-ms-input-placeholder,
+input::-ms-input-placeholder {
+    font-family: var(--font-family) !important;
+}
+
+ /* Add specific styles for details page layout */
+.details-container {
+    max-width: 1000px;
+    margin: 140px auto 40px;
+    padding: 0 20px;
+    text-align: left; /* Align content to the left */
+}
+
+.details-container h1 {
+    text-align: center; /* Center the main title */
+    margin-bottom: 20px;
+}
+
+#reportDetailsTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+#reportDetailsTable th,
+#reportDetailsTable td {
+    border: 1px solid #e2e8f0;
+    padding: 10px;
+    text-align: left;
+}
+
+#reportDetailsTable th {
+    background-color: #f0f4f8;
+    font-weight: bold;
+}
+
