@@ -109,82 +109,224 @@ async function pingAllIPs() {
   }
 }
 
-let continuousPingInterval = null;
-let pingTIndex = 0;
-let pingTActive = false;
+// Stores interval IDs for fetching results, keyed by IP address
+let fetchResultsIntervals = {}; 
+// Stores client-side state of active persistent pings, keyed by IP address
+let activePersistentPingsClient = {}; 
+// Index for determining which IP the "Ping -t" button currently targets
+// Using a more distinct name to avoid confusion with other local 'pingTIndex' variables if any.
+let pingTIndexGlobal = 0; 
 
-function startContinuousPing() {
+
+async function fetchAndDisplayPersistentPingResults(ipAddress) {
+  if (!ipAddress || !isValidIP(ipAddress)) {
+    // appendToTerminal(`Cannot fetch results: Invalid IP ${ipAddress}`, true); // Silent return is okay
+    return;
+  }
+  
+  const token = localStorage.getItem("token");
+  if (!token) {
+    // appendToTerminal(`Cannot fetch results for ${ipAddress}: No token.`, true); // Silent is okay
+    // Critical: If no token, stop trying to fetch for this IP.
+    if (fetchResultsIntervals[ipAddress]) {
+        clearInterval(fetchResultsIntervals[ipAddress]);
+        delete fetchResultsIntervals[ipAddress];
+    }
+    activePersistentPingsClient[ipAddress] = false;
+    const currentSelectedIp = getCurrentSelectedIpForPingT();
+    if (currentSelectedIp === ipAddress) {
+        updatePingTButtonText(false);
+    }
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/ping-t/results?ip=${ipAddress}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      // appendToTerminal(`Error fetching results for ${ipAddress}: ${errorData.error || response.statusText}`, true);
+      // If token is invalid or IP not found for persistent ping, stop interval.
+      if (response.status === 401 || response.status === 403 || response.status === 404) {
+        if (fetchResultsIntervals[ipAddress]) {
+          clearInterval(fetchResultsIntervals[ipAddress]);
+          delete fetchResultsIntervals[ipAddress];
+        }
+        activePersistentPingsClient[ipAddress] = false;
+        const currentSelectedIp = getCurrentSelectedIpForPingT();
+        if (currentSelectedIp === ipAddress) {
+            updatePingTButtonText(false);
+        }
+      }
+      return;
+    }
+
+    const results = await response.json();
+    if (!results || results.length === 0) {
+      // appendToTerminal(`No new results for ${ipAddress}.`, false); // Can be silent
+      return;
+    }
+
+    appendToTerminal(`--- Results for ${ipAddress} at ${new Date().toLocaleTimeString()} ---`);
+    results.forEach(result => {
+      const latency = result.latency;
+      let statusColor = '#2ecc71'; // green for success
+      let displayText = `IP: ${result.ip}, Status: ${result.status}`;
+
+      if (result.status === 'failed') {
+        statusColor = '#e74c3c'; // red
+        displayText += `, Output: ${result.output ? result.output.split('\n')[0] : 'N/A'}`;
+      } else if (result.status === 'unstable') {
+        statusColor = '#f1c40f'; // yellow
+        displayText += `, Latency: ${latency || 'N/A'}ms, Loss: ${result.packetLoss || 0}%`;
+      } else { // active
+         displayText += `, Latency: ${latency || 'N/A'}ms, Loss: ${result.packetLoss || 0}%`;
+      }
+      
+      const div = document.createElement('div');
+      div.textContent = displayText;
+      div.style.color = statusColor;
+      const terminal = document.getElementById('terminal-output');
+      terminal.appendChild(div);
+      terminal.scrollTop = terminal.scrollHeight;
+    });
+
+  } catch (err) {
+    // appendToTerminal(`Error fetching results for ${ipAddress}: ${err.message}`, true); // Can be silent
+    // Potentially stop interval on network errors too, to prevent spam.
+    if (fetchResultsIntervals[ipAddress]) {
+        clearInterval(fetchResultsIntervals[ipAddress]);
+        delete fetchResultsIntervals[ipAddress];
+    }
+    activePersistentPingsClient[ipAddress] = false;
+    const currentSelectedIp = getCurrentSelectedIpForPingT();
+    if (currentSelectedIp === ipAddress) {
+        updatePingTButtonText(false);
+    }
+  }
+}
+
+function getCurrentSelectedIpForPingT() {
   const inputs = document.querySelectorAll('.ip-input');
   const validIPs = Array.from(inputs)
-    .map((input, index) => ({ ip: input.value.trim(), index }))
-    .filter(item => isValidIP(item.ip));
+    .map(input => input.value.trim())
+    .filter(ip => isValidIP(ip));
 
   if (validIPs.length === 0) {
-    appendToTerminal('No valid IPs for Ping -t.', true);
+    return null;
+  }
+  // Use the global pingTIndexGlobal
+  pingTIndexGlobal = parseInt(localStorage.getItem("pingTIndexGlobal")) || 0;
+  return validIPs[pingTIndexGlobal % validIPs.length];
+}
+
+function updatePingTButtonText(isPinging) {
+    const pingTButton = document.getElementById('pingt-btn');
+    if (pingTButton) {
+        pingTButton.textContent = isPinging ? 'Stop Persistent Ping' : 'Start Persistent Ping';
+    }
+}
+
+async function startContinuousPing() { // This function is now for Persistent Ping
+  const currentIpToPing = getCurrentSelectedIpForPingT();
+
+  if (!currentIpToPing) {
+    appendToTerminal('No valid IP selected for Persistent Ping.', true);
     return;
   }
 
-  if (continuousPingInterval) {
-    clearInterval(continuousPingInterval);
-    continuousPingInterval = null;
-    pingTActive = false;
-    appendToTerminal('Ping -t stopped.');
+  const token = localStorage.getItem("token");
+  if (!token) {
+    appendToTerminal('Authentication token not found. Please log in.', true);
     return;
   }
 
-  let storedIndex = parseInt(localStorage.getItem("pingTIndex")) || 0;
-  const current = validIPs[storedIndex % validIPs.length];
-
-  appendToTerminal(`Starting Ping -t to ${current.ip}`);
-  pingTActive = true;
-
-  continuousPingInterval = setInterval(async () => {
-    if (!pingTActive) return; // ← لا تطبع شي إذا المستخدم أوقف
-
+  if (activePersistentPingsClient[currentIpToPing]) {
+    // Action: Stop persistent ping
+    appendToTerminal(`Attempting to stop persistent ping for ${currentIpToPing}...`);
     try {
-      const response = await fetch(`${API_BASE_URL}/ping`, {
+      const response = await fetch(`${API_BASE_URL}/ping-t/stop`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ip: current.ip })
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ ip: currentIpToPing })
       });
 
       const data = await response.json();
-      const line = (data.output || '').split('\n').find(l => l.includes('time='));
-
-      if (!pingTActive) return; // ← double-check بعد await
-
-      if (line) {
-        const match = line.match(/time[=<](\d+\.?\d*)\s*ms/i);
-        const latency = match ? parseFloat(match[1]) : null;
-
-        let statusColor = '#2ecc71';
-        if (latency > 150) statusColor = '#e74c3c';
-        else if (latency > 50) statusColor = '#f1c40f';
-
-        const msg = `↪ ${line.trim()} (${latency} ms)`;
-        const div = document.createElement('div');
-        div.textContent = msg;
-        div.style.color = statusColor;
-
-        const terminal = document.getElementById('terminal-output');
-        terminal.appendChild(div);
-        terminal.scrollTop = terminal.scrollHeight;
+      if (response.ok && data.success) {
+        appendToTerminal(`Persistent ping stopped for ${currentIpToPing}.`);
+        if (fetchResultsIntervals[currentIpToPing]) {
+          clearInterval(fetchResultsIntervals[currentIpToPing]);
+          delete fetchResultsIntervals[currentIpToPing];
+        }
+        activePersistentPingsClient[currentIpToPing] = false;
+        updatePingTButtonText(false);
       } else {
-        appendToTerminal(data.output || 'No response', true);
+        appendToTerminal(`Failed to stop persistent ping for ${currentIpToPing}: ${data.error || 'Unknown error'}`, true);
       }
     } catch (err) {
-      if (pingTActive) {
-        appendToTerminal(`Ping -t error: ${err.message}`, true);
-      }
+      appendToTerminal(`Error stopping persistent ping for ${currentIpToPing}: ${err.message}`, true);
     }
-  }, 2000);
+  } else {
+    // Action: Start persistent ping
+    appendToTerminal(`Attempting to start persistent ping for ${currentIpToPing}...`);
+    try {
+      const response = await fetch(`${API_BASE_URL}/ping-t/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ ip: currentIpToPing })
+      });
 
-  const nextIndex = (storedIndex + 1) % validIPs.length;
-  localStorage.setItem("pingTIndex", nextIndex);
+      const data = await response.json();
+      if (response.ok && data.success) {
+        appendToTerminal(`Persistent ping started for ${currentIpToPing}. Fetching results...`);
+        activePersistentPingsClient[currentIpToPing] = true;
+        updatePingTButtonText(true);
+        fetchAndDisplayPersistentPingResults(currentIpToPing); // Fetch immediately
+        if (fetchResultsIntervals[currentIpToPing]) { 
+            clearInterval(fetchResultsIntervals[currentIpToPing]);
+        }
+        fetchResultsIntervals[currentIpToPing] = setInterval(() => {
+          fetchAndDisplayPersistentPingResults(currentIpToPing);
+        }, 5000); 
+      } else {
+        appendToTerminal(`Failed to start persistent ping for ${currentIpToPing}: ${data.error || 'Backend error'}`, true);
+         // If backend says it's already running (e.g. from another session/browser), update client state
+        if (data.error && data.error.toLowerCase().includes("already running")) {
+            activePersistentPingsClient[currentIpToPing] = true;
+            updatePingTButtonText(true);
+             if (fetchResultsIntervals[currentIpToPing]) { 
+                clearInterval(fetchResultsIntervals[currentIpToPing]);
+            }
+            fetchResultsIntervals[currentIpToPing] = setInterval(() => {
+              fetchAndDisplayPersistentPingResults(currentIpToPing);
+            }, 5000);
+        }
+      }
+    } catch (err) {
+      appendToTerminal(`Error starting persistent ping for ${currentIpToPing}: ${err.message}`, true);
+    }
+  }
+  // Advance and save pingTIndexGlobal for the *next* targeted IP
+  const inputs = document.querySelectorAll('.ip-input');
+  const validIPs = Array.from(inputs).map(input => input.value.trim()).filter(ip => isValidIP(ip));
+  if (validIPs.length > 0) {
+      pingTIndexGlobal = parseInt(localStorage.getItem("pingTIndexGlobal")) || 0;
+      const nextIndex = (pingTIndexGlobal + 1) % validIPs.length;
+      localStorage.setItem("pingTIndexGlobal", nextIndex);
+  }
 }
-
-
-
 
 async function generateReport() {
   const devices = collectValidDevices();
@@ -244,9 +386,11 @@ async function generateReport() {
       devices: results
     };
 
-    // 🔥 إذا كنا في وضع Ping -t → أرسل النوع auto
-    if (pingTActive) {
-      payload.type = 'auto';
+    // Check if the report is for an actively persistent-pinged IP
+    const currentIpForPingT = getCurrentSelectedIpForPingT();
+    if (currentIpForPingT && activePersistentPingsClient[currentIpForPingT]) {
+      payload.type = 'auto'; // Mark as 'auto' if generated while persistent ping is active for the selected IP
+      appendToTerminal(`Report type 'auto' because persistent ping is active for ${currentIpForPingT}.`);
     }
 
     const res = await fetch(`${API_BASE_URL}/reports/create`, {
@@ -515,9 +659,65 @@ document.addEventListener('DOMContentLoaded',async () => {
   } else {
     document.getElementById("shareBtn").style.display = "none";
   }
+
+  const token = localStorage.getItem("token");
+  pingTIndexGlobal = parseInt(localStorage.getItem("pingTIndexGlobal")) || 0; // Load global index
+
+  // Page Load Logic for Persistent Pings
+  if (token) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/ping-t/status`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        const activePings = await response.json();
+        const currentSelectedIpOnLoad = getCurrentSelectedIpForPingT(); // Get it once for this scope
+        
+        activePings.forEach(ping => {
+          if (ping.status === 'running' && isValidIP(ping.ip_address)) {
+            appendToTerminal(`Persistent ping for ${ping.ip_address} is active (from backend). Fetching results...`);
+            activePersistentPingsClient[ping.ip_address] = true;
+            fetchAndDisplayPersistentPingResults(ping.ip_address); // Fetch immediately
+            
+            if (fetchResultsIntervals[ping.ip_address]) { // Clear existing interval if any (e.g. from previous state)
+                clearInterval(fetchResultsIntervals[ping.ip_address]);
+            }
+            fetchResultsIntervals[ping.ip_address] = setInterval(() => {
+              fetchAndDisplayPersistentPingResults(ping.ip_address);
+            }, 5000); // Fetch results every 5 seconds
+
+            if (ping.ip_address === currentSelectedIpOnLoad) {
+              updatePingTButtonText(true); // Update button if this is the currently selected IP
+            }
+          }
+        });
+        // After checking all pings from backend, ensure button for current IP is correctly set
+        // This handles case where current IP was NOT in backend's list, so it should be "Start"
+        if (currentSelectedIpOnLoad && !activePersistentPingsClient[currentSelectedIpOnLoad]) {
+            updatePingTButtonText(false);
+        } else if (!currentSelectedIpOnLoad) {
+            updatePingTButtonText(false); // No valid IP selected
+        }
+
+      } else {
+        const errorData = await response.json();
+        appendToTerminal(`Error fetching persistent ping status: ${errorData.error || response.statusText}`, true);
+      }
+    } catch (err) {
+      appendToTerminal(`Error fetching persistent ping status on page load: ${err.message}`, true);
+    }
+  } else {
+    appendToTerminal("No token found, persistent ping status check skipped.", false);
+    updatePingTButtonText(false); // No token, so cannot be pinging
+  }
+  
   document.getElementById('ping-btn')?.addEventListener('click', pingSelectedIP);
   document.getElementById('pingall-btn')?.addEventListener('click', pingAllIPs);
-  document.getElementById('pingt-btn')?.addEventListener('click', startContinuousPing);
+  document.getElementById('pingt-btn')?.addEventListener('click', startContinuousPing); // Correctly calls the modified function
   document.getElementById('report-btn')?.addEventListener('click', generateReport);
   document.getElementById('traceroute-btn')?.addEventListener('click', tracerouteSelectedIP);
   document.getElementById('saveBtn')?.addEventListener('click', saveAllIPs);
