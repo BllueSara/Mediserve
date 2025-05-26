@@ -1334,7 +1334,7 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
     `, [
       reportNumberTicket, ticketId, deviceSpec,
       "Ticket Created",
-      `Ticket (${ticketNumber}) for device: ${deviceInfo.device_name} - Department: ${deviceInfo.department_name}`,
+      `Initial Diagnosis: ${initialDiagnosis}`,
       "Open", "General", deviceInfo.mac_address, deviceInfo.ip_address, userId
     ]);
 
