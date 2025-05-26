@@ -13,6 +13,7 @@ const languageManager = {
             'english': 'English',
             'arabic': 'Arabic',
             'back': 'Back',
+            'additional_information': 'Additional Information',
 
             // Common
             'welcome': 'Welcome',
@@ -256,6 +257,7 @@ const languageManager = {
             'final_diagnosis': 'Final Diagnosis',
             'enter_final_diagnosis': 'Enter final diagnosis',
             'submit_form': 'Submit Form',
+            'issue_summary': 'Issue Summary',
 
             // Add Maintenance Details
             'enter_device_name': 'Enter device name',
@@ -845,6 +847,8 @@ const languageManager = {
             'submit': 'إرسال',
             'cancel': 'إلغاء',
             'save_changes': 'حفظ التغييرات',
+            'issue_summary': 'ملخص المشكلة',
+            'additional_information': 'معلومات اضافية',
 
             // Home Page
             'enterprise_solutions': 'حلول تكنولوجيا المؤسسات',
