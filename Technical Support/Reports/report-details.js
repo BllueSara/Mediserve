@@ -31,6 +31,14 @@ const loadFonts = async () => {
 loadFonts();
 
 
+function normalizeKey(str) {
+  return str
+    .toLowerCase()
+    .replace(/[“”"']/g, "")     // حذف علامات التنصيص
+    .replace(/[^\w\s]/g, "")     // حذف الرموز
+    .replace(/\s+/g, " ")        // توحيد المسافات
+    .trim();
+}
 
 
 function fixEncoding(badText) {
@@ -69,6 +77,24 @@ document.addEventListener("DOMContentLoaded", () => {
       
 
       reportData = report;
+      const lang = languageManager.currentLang; // ar أو en
+
+const normalizeKey = (text) => {
+  return text.replace(/[^\w\s]/gi, "").toLowerCase().trim();
+};
+
+const rawPriority = report.priority || "Medium";
+const rawType = report.device_type || "";
+const rawDept = report.department_name || "";
+const rawCategory = report.maintenance_type === "Regular" ? "Regular" :
+  report.maintenance_type === "General" ? "General" :
+  report.maintenance_type === "Internal" ? (report.ticket_type || "Internal") :
+  report.maintenance_type === "External" ? "External" : "";
+
+const translatedPriority = translations.priority?.[rawPriority]?.[lang] || rawPriority;
+const translatedType = translations.deviceType?.[normalizeKey(rawType)]?.[lang] || rawType;
+const translatedDept = translations.departments?.[rawDept]?.[lang] || rawDept;
+const translatedCategory = translations.category?.[rawCategory]?.[lang] || rawCategory;
               const attachmentSection = document.getElementById("attachment-section");
 
         // ✅ عرض المرفق إذا موجود
@@ -207,7 +233,7 @@ if (report.maintenance_type === "Regular") titlePrefix = "Regular Maintenance";
 else if (report.maintenance_type === "General") titlePrefix = "General Maintenance";
 else if (report.maintenance_type === "Internal") titlePrefix = "Internal Ticket";
 else if (report.maintenance_type === "External") titlePrefix = "External Maintenance";
-
+const translatedTitle = translations.titleType?.[titlePrefix]?.[lang] || titlePrefix;
 let ticketNum = report.ticket_number?.trim();
 if (!ticketNum) {
   const fullText = `${report.full_description || ""} ${report.issue_summary || ""}`;
@@ -219,22 +245,23 @@ if (!ticketNum) {
 
 const reportNum = report.report_number || report.request_number || "";
 const isTicketReport = reportNum.includes("-TICKET");
+const translatedTicket = translations.titleType?.["Ticket"]?.[lang] || "Ticket";
 
-// ✅ فقط لو فيه ticketNum نستخدمه، ولو فيه -TICKET نضيف "Ticket"
-let reportTitle = titlePrefix;
-if (ticketNum) {
-  reportTitle += ` #${ticketNum}`;
-  if (isTicketReport) {
-    reportTitle += `-Ticket`; // 🟢 أضف الكلمة فقط بدون رقم التقرير
-  }
-} else {
-  reportTitle += ` #${reportNum || report.id}`;
+let finalNumber = ticketNum || reportNum || report.id;
+
+// إذا كانت -TICKET موجودة، نحذفها من الرقم قبل العرض
+if (isTicketReport && finalNumber.includes("-TICKET")) {
+  finalNumber = finalNumber.replace("-TICKET", "");
+}
+
+// نركب العنوان النهائي
+let reportTitle = `${translatedTitle} #${finalNumber}`;
+if (isTicketReport) {
+  reportTitle += ` - ${translatedTicket}`; // مثال: " - تذكرة"
 }
 
 document.getElementById("report-title").textContent = reportTitle;
 
-
-document.getElementById("report-title").textContent = reportTitle;
 
 
    
@@ -245,8 +272,8 @@ document.getElementById("report-id").textContent =
     ? report.ticket_number || `INT-${report.id}`
     : report.report_number || report.request_number || `MR-${report.id}`;
 
-      document.getElementById("priority").textContent = isExternal ? "" : (report.priority || "");
-      document.getElementById("device-type").textContent = report.device_type || "";
+      document.getElementById("priority").textContent = isExternal ? "" : (translatedPriority|| "");
+      document.getElementById("device-type").textContent = translatedType || "";
       if (report.maintenance_type === "Regular" ) {
         document.getElementById("assigned-to").textContent = report.technical_engineer || "";
       }else if (  report.maintenance_type === "General") {
@@ -260,83 +287,128 @@ document.getElementById("report-id").textContent =
           : (report.assigned_to || report.reporter_name || report.technical_engineer);
       }
       
-      document.getElementById("department").textContent = report.department_name || "";
-      document.getElementById("category").textContent =
-      isExternal ? "External" :
-      report.maintenance_type === "Regular" ? "Regular" :
-      report.maintenance_type === "Internal" ? (report.ticket_type || "Internal") :
-      (report.maintenance_type || "");
+      document.getElementById("department").textContent = translatedDept || "";
+
+
+document.getElementById("category").textContent = translatedCategory;
     
           document.getElementById("report-status").textContent = report.status || "Pending";
       document.getElementById("submitted-date").textContent = `Submitted on ${new Date(report.created_at).toLocaleString()}`;
+     const problem = (report.problem_status || "").trim();
+const summary = (report.issue_summary || report.initial_diagnosis || "").trim();
+
+let descriptionHtml = "";
+
+if (isInternalTicket) {
+  descriptionHtml = summary || "No description.";
+} else {
+  const normalizedProblem = problem.toLowerCase();
+  const normalizedSummary = summary.toLowerCase();
+
+  if (problem && summary) {
+    if (normalizedSummary.includes(normalizedProblem)) {
+      descriptionHtml = summary;
+    } else if (normalizedProblem.includes(normalizedSummary)) {
+      descriptionHtml = problem;
+    } else {
+      descriptionHtml = `${summary}<br>${problem}`;
+    }
+  } else if (problem) {
+    descriptionHtml = problem;
+  } else if (summary) {
+    descriptionHtml = summary;
+  } else {
+    descriptionHtml = "No description.";
+  }
+}
+// ✅ فقط لـ General: استخدم issue_summary فقط
+// ✅ فقط لـ General: استخدم issue_description أولاً
+if (report.maintenance_type === "General") {
+  descriptionHtml = report.issue_description || report.issue_summary || "No description.";
+}
+
+// ✅ معالجة وصف "Regular" بنفس الطريقة
+if (report.maintenance_type === "Regular") {
+  descriptionHtml = report.problem_status || report.issue_summary || "No description.";
+}
+
+// 🧼 تنظيف النصوص
+descriptionHtml = descriptionHtml.replace(/^Selected Issue:\s*/i, "").trim();
+
+let items = [];
+try {
+  const parsed = JSON.parse(descriptionHtml);
+  if (Array.isArray(parsed)) {
+    items = parsed;
+  } else {
+    throw new Error("Not array");
+  }
+} catch {
+  items = descriptionHtml
+    .replace(/^\[|\]$/g, "")
+    .split(/[\n,،]+/)
+    .map(s => s.replace(/^["“”']?|["“”']?$/g, "").trim())
+    .filter(Boolean);
+}
+
+// ✅ الترجمة
+const translated = items.map(text => {
+  const dict = translations.description || {};
+  const cleanedText = text
+    .replace(/[“”]/g, '"') // ← تحويل علامات الاقتباس الذكية إلى العادية
+    .trim();
+
+  const found = Object.keys(dict).find(key => key.trim() === cleanedText);
+  return `- ${found ? dict[found][lang] : text}`;
+}).join("<br>");
+
+
+// ✅ عرض
+const descEl = document.getElementById("description");
+descEl.innerHTML = translated || "No description.";
+descEl.style.textAlign = lang === 'ar' ? 'right' : 'left';
+    
       
-      if (report.maintenance_type === "Regular") {
-        document.getElementById("description").textContent =
-          report.problem_status || report.issue_summary || report.issue_summary || "No description.";
-      }else {
-        const problem = (report.problem_status || "").trim();
-        const summary = (report.issue_summary || report.initial_diagnosis || "").trim();
-        const isInternalTicket = report.maintenance_type === "Internal";
       
-        let descriptionHtml = "";
-      
-        // لو Internal Ticket → اعرض فقط problem_status
-        if (isInternalTicket) {
-          descriptionHtml = summary || "No description.";
-        } 
-        else {
-          const normalizedProblem = problem.toLowerCase();
-          const normalizedSummary = summary.toLowerCase();
-      
-          if (problem && summary) {
-            if (normalizedSummary.includes(normalizedProblem)) {
-              descriptionHtml = summary;
-            } else if (normalizedProblem.includes(normalizedSummary)) {
-              descriptionHtml = problem;
-            } else {
-              descriptionHtml = `${summary}<br>${problem}`;
-            }
-          } 
-          else if (problem) {
-            descriptionHtml = problem;
-          } 
-          else if (summary) {
-            descriptionHtml = summary;
-          } 
-          else {
-            descriptionHtml = "No description.";
-          }
-        }
-      
-        document.getElementById("description").innerHTML = descriptionHtml;
-      }
-      
-      
-      
-  if (report.maintenance_type === "General") {
+if (report.maintenance_type === "General") {
   const generalInfo = [
-    { label: "customer_name", text: "Customer Name", value: report.customer_name },
-    { label: "id_number", text: "ID Number", value: report.id_number },
-    { label: "ext_number", text: "Ext Number", value: report.extension },
-    { label: "initial_diagnosis", text: "Initial Diagnosis", value: report.diagnosis_initial },
-    { label: "final_diagnosis", text: "Final Diagnosis", value: report.diagnosis_final },
-    { label: "floor", text: "Floor", value: report.floor },
+    { label: "Customer Name", value: report.customer_name, i18n: "customer_name" },
+    { label: "ID Number", value: report.id_number, i18n: "id_number" },
+    { label: "Ext Number", value: report.extension, i18n: "ext_number" },
+    { label: "Initial Diagnosis", value: report.diagnosis_initial, i18n: "initial_diagnosis" },
+    { label: "Final Diagnosis", value: report.diagnosis_final, i18n: "final_diagnosis" },
+    { label: "Floor", value: report.floor, i18n: "floor" },
   ];
 
-  const generalHtml = generalInfo.map(item =>
-    `<div class="info-row">
-      <span class="info-label" data-i18n="${item.label}">${item.text}:</span>
-      <span class="info-value">${item.value || "N/A"}</span>
-    </div>`
-  ).join("");
+  const generalHtml = generalInfo.map(item => {
+    const lang = languageManager.currentLang;
+    const translationsMap = languageManager.translations?.[lang] || {};
+    const translatedLabel = translationsMap[item.i18n] || item.label;
+
+    return `
+      <div class="info-row">
+        <span class="info-label" data-i18n="${item.i18n}">${translatedLabel}</span>
+        <span class="info-value">${item.value || "N/A"}</span>
+      </div>
+    `;
+  }).join("");
 
   document.getElementById("note").innerHTML = `
     <div class="info-box">
-      <div class="info-title" data-i18n="additional_information">Additional Information:</div>
+      <div class="info-title" data-i18n="additional_information">Additional Information</div>
       ${generalHtml}
     </div>
   `;
-} else {
+  document.getElementById("note").innerHTML = `
+  <div class="info-box">
+    <div class="info-title" data-i18n="additional_information">Additional Information</div>
+    ${generalHtml}
+  </div>
+`;
+languageManager.applyLanguage(); // ← هذا يخلّي الترجمة تشتغل
+
+}
+else {
   let noteHtml = `
     <div class="info-box">
       <div class="info-title" data-i18n="${isExternal ? 'final_diagnosis' : 'technical_notes'}">
@@ -534,7 +606,8 @@ const translations = {
     "External Ticket": { en: "External Ticket", ar: "تذكرة خارجية" },
     "Regular Maintenance": { en: "Regular Maintenance", ar: "صيانة دورية" },
     "General Maintenance": { en: "General Maintenance", ar: "صيانة عامة" },
-    "External Maintenance": { en: "External Maintenance", ar: "صيانة خارجية" }
+    "External Maintenance": { en: "External Maintenance", ar: "صيانة خارجية" },
+      "Ticket": { en: "Ticket", ar: "تذكرة" } // ← هذا السطر مهم"
   },
   priority: {
     "High": { en: "High", ar: "عالية" },
@@ -544,7 +617,8 @@ const translations = {
   deviceType: {
   "pc": { en: "pc", ar: "جهاز كمبيوتر" },
    "Printer": { en: "Printer", ar: "طابعة" },
-   "Scanner": { en: "Scanner", ar: "ماسح ضوئي" }
+   "Scanner": { en: "Scanner", ar: "ماسح ضوئي" },
+   "scanner": { en: "Scanner", ar: "ماسح ضوئي" }
   },
 departments: {
   "Laboratory Department": { en: "Laboratory Department", ar: "قسم المختبر" },
@@ -689,10 +763,10 @@ departments: {
     'Regular': { en: "Regular ", ar: "صيانة دورية" },
     'Regular Maintenance': { en: "Regular Maintenance", ar: "صيانة دورية" },
 "External Maintenance": { en: "External Maintenance", ar: "صيانة خارجية" },
-
+"Incident / Report": { en: "Incident / Report", ar: "بلاغ داخلي / بلاغ عادي" },
 "Incident": { en: "Incident", ar: "بلاغ داخلي / بلاغ عادي" },
-"FollowUp": { en: "FollowUp", ar: "متابعة" },
-"Modification": { en: "Modification", ar: "طلب تعديل" },
+"Follow-Up": { en: "FollowUp", ar: "متابعة" },
+"Modification Request": { en: "Modification", ar: "طلب تعديل" },
 "Other": { en: "Other", ar: "أي نوع آخر" }
   },
   
