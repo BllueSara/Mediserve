@@ -8,11 +8,6 @@ function handleSelection(type) {
 
 
 
-
-
-
-
-
 const API_BASE_URL = 'http://localhost:3000/api';
 
 function isValidIP(ip) {
@@ -192,71 +187,139 @@ function startContinuousPing() {
 
 
 async function generateReport() {
-  const form = document.getElementById('deviceForm');
-
-  const circuits = Array.from(form.querySelectorAll('input[name="Circuit[]"]')).map(i => i.value.trim());
-  const isps = Array.from(form.querySelectorAll('input[name="ISP[]"]')).map(i => i.value.trim());
-  const locations = Array.from(form.querySelectorAll('input[name="Location[]"]')).map(i => i.value.trim());
-  const ips = Array.from(form.querySelectorAll('input[name="ip[]"]')).map(i => i.value.trim());
-  const speeds = Array.from(form.querySelectorAll('input[name="speed[]"]')).map(i => i.value.trim());
-  const startDates = Array.from(form.querySelectorAll('input[name="start[]"]')).map(i => i.value);
-  const endDates = Array.from(form.querySelectorAll('input[name="end[]"]')).map(i => i.value);
-
-  const devices = [];
-
-  for (let i = 0; i < ips.length; i++) {
-    const row = {
-      circuit: circuits[i],
-      isp: isps[i],
-      location: locations[i],
-      ip: ips[i],
-      speed: speeds[i],
-      start_date: startDates[i],
-      end_date: endDates[i]
-    };
-
-    // تحقق أن كل الحقول فيها بيانات صالحة
-    const isValid = row.circuit && row.isp && row.location && isValidIP(row.ip);
-    if (isValid) devices.push(row);
-  }
-
+  const devices = collectValidDevices();
   if (!devices.length) {
     appendToTerminal("❌ No valid rows to include in the report.", true);
     return;
   }
 
+  appendToTerminal(`🚀 Running ping tests on ${devices.length} devices...`);
+
+  const results = [];
+
+  for (let d of devices) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/ping`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip: d.ip })
+      });
+
+      const data = await response.json();
+      const output = data.output || '';
+      const latency = extractLatency(output);
+      const packetLoss = extractPacketLoss(output);
+      const timeouts = extractTimeouts(output);
+
+      let status = 'active';
+      if (data.error || output.includes("100% packet loss") || timeouts > 0) {
+        status = 'failed';
+      } else if (packetLoss > 0 || latency > 50) {
+        status = 'unstable';
+      }
+
+      results.push({
+        ...d,
+        latency,
+        packetLoss,
+        timeouts,
+        status,
+        output
+      });
+
+    } catch (err) {
+      results.push({
+        ...d,
+        latency: 0,
+        packetLoss: 100,
+        timeouts: 4,
+        status: 'failed',
+        output: err.message
+      });
+    }
+  }
+
   try {
-    const response = await fetch(`${API_BASE_URL}/report`, {
+    const payload = {
+      devices: results
+    };
+
+    // 🔥 إذا كنا في وضع Ping -t → أرسل النوع auto
+    if (pingTActive) {
+      payload.type = 'auto';
+    }
+
+    const res = await fetch(`${API_BASE_URL}/reports/create`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem("token")}`
       },
-      body: JSON.stringify({ devices })
+      body: JSON.stringify(payload)
     });
 
-    if (!response.ok) {
-      const err = await response.json();
-      appendToTerminal(`❌ Report error: ${err.error}`, true);
-      return;
+    const data = await res.json();
+    if (data.success) {
+      appendToTerminal(`✅ Report saved (ID: ${data.report_id})`);
+    } else {
+      appendToTerminal(`❌ Failed to save report: ${data.error || 'Unknown error'}`, true);
     }
-
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'network_report.xlsx';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    appendToTerminal('✅ Report downloaded successfully.');
-  } catch (error) {
-    appendToTerminal(`❌ Report error: ${error.message}`, true);
+  } catch (err) {
+    appendToTerminal(`❌ Report error: ${err.message}`, true);
   }
 }
 
+
+
+
+
+
+function extractLatency(output = '') {
+  const match = output.match(/time[=<](\d+\.?\d*)\s*ms/i);
+  return match ? parseFloat(match[1]) : 0;
+}
+
+function extractPacketLoss(output = '') {
+  const match = output.match(/(\d+)%\s*packet loss/i);
+  return match ? parseFloat(match[1]) : 0;
+}
+
+function extractTimeouts(output = '') {
+  const timeoutMatches = output.match(/Request timed out/gi) || [];
+  return timeoutMatches.length;
+}
+
+
+
+function collectValidDevices() {
+  const form = document.getElementById('deviceForm');
+
+  const circuits = [...form.querySelectorAll('input[name="Circuit[]"]')].map(i => i.value.trim());
+  const isps = [...form.querySelectorAll('input[name="ISP[]"]')].map(i => i.value.trim());
+  const locations = [...form.querySelectorAll('input[name="Location[]"]')].map(i => i.value.trim());
+  const ips = [...form.querySelectorAll('input[name="ip[]"]')].map(i => i.value.trim());
+  const speeds = [...form.querySelectorAll('input[name="speed[]"]')].map(i => i.value.trim());
+  const startDates = [...form.querySelectorAll('input[name="start[]"]')].map(i => i.value);
+  const endDates = [...form.querySelectorAll('input[name="end[]"]')].map(i => i.value);
+
+  const devices = [];
+
+  for (let i = 0; i < ips.length; i++) {
+    if (circuits[i] && isps[i] && locations[i] && isValidIP(ips[i])) {
+      devices.push({
+        circuit: circuits[i],
+        isp: isps[i],
+        location: locations[i],
+        ip: ips[i],
+        speed: speeds[i] || null,
+        start_date: startDates[i] || null,
+        end_date: endDates[i] || null
+      });
+    }
+  }
+
+  return devices;
+}
 
 
 
@@ -803,6 +866,11 @@ for (let i = 0; i < ips.length; i++) {
       full_access: false
     };
   }
+}
+
+// Function to handle the selection of the Reports option
+function handleReportsSelection() {
+  window.location.href = 'reports.html';
 }
 
 

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="report_details">Report Details</title>
+    <link rel="stylesheet" href="reports.css"> 
+    <link rel="stylesheet" href="report-details.css"> <!-- Link to reports.css for common styles -->
+    <link rel="stylesheet" href="/Language/Language.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal&display=swap" rel="stylesheet">
+  
+       
+</head>
+<body>
+    <!-- Header -->
+    <div class="nav-buttons">
+        <div class="back-button">
+             <a href="reports.html">
+                <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> <span data-i18n="back">Back</span>
+             </a>
+        </div>
+        <div class="Home-button">
+            <a href="../../Home/Home.html">
+                <img src="/icon/Home.png" alt="Home Icon" class="Home-icon"> <span data-i18n="home">Home</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Header (Logos) - Using reports.css styles -->
+     <header>
+        <div class="ms-logo">
+            <img src="/icon/MS Logo.png" alt="MS Logo">
+        </div>
+        <div class="hospital-logo">
+            <img src="/icon/hospital-logo.png" alt="King Abdulaziz Hospital">
+        </div>
+    </header>
+
+    <main class="details-container">
+        <h1 data-i18n="report_details_for">Report Details for <span id="ipAddress"></span></h1>
+        
+        <table id="reportDetailsTable">
+            <thead id="reportDetailsHead">
+                <!-- Will be filled dynamically by JS -->
+            </thead>
+            <tbody id="reportDetailsBody">
+                <!-- Data rows inserted here -->
+            </tbody>
+        </table>
+        
+    </main>
+
+    <script src="/Language/Language.js"></script>
+    <script src="report-details.js"></script> <!-- We will create this file next -->
+</body>
+</html> 
