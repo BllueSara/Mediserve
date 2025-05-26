@@ -11,6 +11,8 @@ const execAsync = promisify(exec);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+let activePersistentPings = {};
+
 const JWT_SECRET = 'super_secret_key_123';
 const jwt = require('jsonwebtoken');
 
@@ -68,6 +70,60 @@ app.post('/api/ping', async (req, res) => {
       error: 'Ping failed',
       status: 'error'
     });
+  }
+});
+
+app.get('/api/ping-t/results', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const { ip } = req.query;
+
+  if (!ip) {
+    return res.status(400).json({ error: 'IP address is required in query parameters' });
+  }
+
+  if (!isValidIP(ip)) {
+    return res.status(400).json({ error: 'Invalid IP address provided' });
+  }
+
+  try {
+    const [rows] = await db.promise().query(
+      `SELECT ip, latency, packetLoss, timeouts, status, output, timestamp 
+       FROM Report_Results 
+       WHERE user_id = ? AND ip = ? AND is_persistent_ping = TRUE 
+       ORDER BY timestamp DESC 
+       LIMIT 20`,
+      [userId, ip]
+    );
+    res.json(rows);
+
+  } catch (error) {
+    console.error('Error fetching persistent ping results:', error);
+    res.status(500).json({ error: 'Failed to fetch persistent ping results', details: error.message });
+  }
+});
+
+app.get('/api/ping-t/status', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const { ip } = req.query; // Optional IP from query parameter
+
+  try {
+    let query = "SELECT ip_address, status, started_at FROM Persistent_Pings WHERE user_id = ? AND status = 'running'";
+    const params = [userId];
+
+    if (ip) {
+      if (!isValidIP(ip)) {
+        return res.status(400).json({ error: 'Invalid IP address provided in query' });
+      }
+      query += " AND ip_address = ?";
+      params.push(ip);
+    }
+
+    const [rows] = await db.promise().query(query, params);
+    res.json(rows);
+
+  } catch (error) {
+    console.error('Error fetching persistent ping status:', error);
+    res.status(500).json({ error: 'Failed to fetch persistent ping status', details: error.message });
   }
 });
 
@@ -1119,5 +1175,199 @@ app.get('/api/auto-ping/results', authenticateToken, async (req, res) => {
 
 
 // تشغيل السيرفر
+
+// Helper function to parse ping output (adapted from /api/auto-ping/start)
+const formatPersistentPingOutput = (output) => {
+  const latencyMatch = output.match(/time(?:[=<])?(\d+\.?\d*)\s*ms/i);
+  const lossMatch = output.match(/(\d+)%\s*packet loss/i);
+  const timeouts = (output.match(/Request timed out/gi) || []).length;
+  const isWindows = process.platform === 'win32';
+  let packetsTransmitted = 0;
+  let packetsReceived = 0;
+
+  if (isWindows) {
+    const sentMatch = output.match(/Sent = (\d+)/);
+    const receivedMatch = output.match(/Received = (\d+)/);
+    if (sentMatch) packetsTransmitted = parseInt(sentMatch[1]);
+    if (receivedMatch) packetsReceived = parseInt(receivedMatch[1]);
+  } else { // macOS / Linux
+    const summaryMatch = output.match(/(\d+) packets transmitted, (\d+) received/i);
+    if (summaryMatch) {
+      packetsTransmitted = parseInt(summaryMatch[1]);
+      packetsReceived = parseInt(summaryMatch[2]);
+    }
+  }
+
+  let status = 'active';
+  if (lossMatch && parseFloat(lossMatch[1]) === 100) {
+    status = 'failed';
+  } else if (timeouts > 0 && packetsReceived === 0) {
+    status = 'failed';
+  } else if ((lossMatch && parseFloat(lossMatch[1]) > 0) || (latencyMatch && parseFloat(latencyMatch[1]) > 100) || timeouts > 0) {
+    status = 'unstable';
+  }
+
+
+  return {
+    latency: latencyMatch ? parseFloat(latencyMatch[1]) : null,
+    packetLoss: lossMatch ? parseFloat(lossMatch[1]) : (packetsTransmitted > 0 ? ((packetsTransmitted - packetsReceived) / packetsTransmitted) * 100 : 0),
+    timeouts,
+    status
+  };
+};
+
+
+// Persistent Ping Endpoints
+app.post('/api/ping-t/start', authenticateToken, async (req, res) => {
+  const { ip } = req.body;
+  const userId = req.user.id;
+
+  if (!ip || !isValidIP(ip)) {
+    return res.status(400).json({ error: 'Invalid IP address' });
+  }
+
+  const pingKey = `${userId}_${ip}`;
+
+  try {
+    // Check if a ping is already running for this IP and user
+    const [existingPings] = await db.promise().query(
+      "SELECT id FROM Persistent_Pings WHERE user_id = ? AND ip_address = ? AND status = 'running'",
+      [userId, ip]
+    );
+
+    if (existingPings.length > 0 || activePersistentPings[pingKey]) {
+      return res.status(400).json({ error: `Persistent ping is already running for ${ip}` });
+    }
+
+    // Insert or update Persistent_Pings table
+    const [existingStoppedPing] = await db.promise().query(
+      "SELECT id FROM Persistent_Pings WHERE user_id = ? AND ip_address = ? AND status = 'stopped'",
+      [userId, ip]
+    );
+
+    let persistentPingId;
+    if (existingStoppedPing.length > 0) {
+      persistentPingId = existingStoppedPing[0].id;
+      await db.promise().query(
+        "UPDATE Persistent_Pings SET status = 'running', started_at = NOW() WHERE id = ?",
+        [persistentPingId]
+      );
+    } else {
+      const [insertResult] = await db.promise().query(
+        "INSERT INTO Persistent_Pings (user_id, ip_address, status, started_at) VALUES (?, ?, 'running', NOW())",
+        [userId, ip]
+      );
+      persistentPingId = insertResult.insertId;
+    }
+
+    const isWindows = process.platform === 'win32';
+    const command = isWindows ? `ping -n 1 ${ip}` : `ping -c 1 ${ip}`; // Ping once
+
+    const intervalId = setInterval(async () => {
+      try {
+        const { stdout, stderr } = await execAsync(command);
+        const output = stdout || stderr || 'No response from ping';
+        const parsedResult = formatPersistentPingOutput(output);
+
+        await db.promise().query(
+          `INSERT INTO Report_Results 
+            (ip, latency, packetLoss, timeouts, status, output, timestamp, user_id, is_persistent_ping, persistent_ping_id) 
+           VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, TRUE, ?)`,
+          [
+            ip,
+            parsedResult.latency,
+            parsedResult.packetLoss,
+            parsedResult.timeouts,
+            parsedResult.status,
+            output,
+            userId,
+            persistentPingId // Link to the entry in Persistent_Pings
+          ]
+        );
+      } catch (pingError) {
+        const errorOutput = pingError.stdout || pingError.stderr || pingError.message;
+        const parsedResult = formatPersistentPingOutput(errorOutput);
+        await db.promise().query(
+          `INSERT INTO Report_Results 
+            (ip, latency, packetLoss, timeouts, status, output, timestamp, user_id, is_persistent_ping, persistent_ping_id) 
+           VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, TRUE, ?)`,
+          [
+            ip,
+            parsedResult.latency,
+            parsedResult.packetLoss,
+            parsedResult.timeouts,
+            'failed', // Mark as failed on error
+            errorOutput,
+            userId,
+            persistentPingId
+          ]
+        );
+        console.error(`Persistent Ping Error for ${ip} (User ${userId}):`, errorOutput);
+      }
+    }, 5000); // Ping every 5 seconds
+
+    activePersistentPings[pingKey] = intervalId;
+
+    res.json({ success: true, message: `Persistent ping started for ${ip}` });
+
+  } catch (error) {
+    console.error('Error starting persistent ping:', error);
+    res.status(500).json({ error: 'Failed to start persistent ping', details: error.message });
+  }
+});
+
+app.post('/api/ping-t/stop', authenticateToken, async (req, res) => {
+  const { ip } = req.body;
+  const userId = req.user.id;
+
+  if (!ip || !isValidIP(ip)) {
+    return res.status(400).json({ error: 'Invalid IP address' });
+  }
+
+  const pingKey = `${userId}_${ip}`;
+
+  try {
+    const intervalId = activePersistentPings[pingKey];
+
+    if (!intervalId) {
+      // Check if it was running in DB but not in memory (e.g. after server restart)
+      const [existingPings] = await db.promise().query(
+        "SELECT id FROM Persistent_Pings WHERE user_id = ? AND ip_address = ? AND status = 'running'",
+        [userId, ip]
+      );
+      if (existingPings.length > 0) {
+        // If it was running, update DB but can't clear interval if not in memory
+         await db.promise().query(
+          "UPDATE Persistent_Pings SET status = 'stopped' WHERE user_id = ? AND ip_address = ? AND status = 'running'",
+          [userId, ip]
+        );
+        return res.json({ success: true, message: `Persistent ping for ${ip} was marked as stopped in DB. Was not actively running in this session.` });
+      }
+      return res.status(404).json({ error: `No active persistent ping found for ${ip}` });
+    }
+
+    clearInterval(intervalId);
+    delete activePersistentPings[pingKey];
+
+    // Update Persistent_Pings table
+    const [updateResult] = await db.promise().query(
+      "UPDATE Persistent_Pings SET status = 'stopped' WHERE user_id = ? AND ip_address = ? AND status = 'running'",
+      [userId, ip]
+    );
+
+    if (updateResult.affectedRows === 0) {
+        // This case might happen if the ping was stopped by another request or if DB state is inconsistent
+        console.warn(`No 'running' persistent ping found in DB to update for ${ip} and user ${userId}, but was active in memory.`);
+    }
+
+    res.json({ success: true, message: `Persistent ping stopped for ${ip}` });
+
+  } catch (error) {
+    console.error('Error stopping persistent ping:', error);
+    res.status(500).json({ error: 'Failed to stop persistent ping', details: error.message });
+  }
+});
+
+
 app.listen(3000, () => console.log('🚀 userServer.js running on http://localhost:3000'));
 
