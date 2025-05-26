@@ -1,0 +1,403 @@
+/* reports.css */
+
+/* Reset and base styles */
+body,
+html {
+  height: auto;
+  min-height: 100vh;
+
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  background-color: white;
+  text-align: center;
+}
+
+
+
+/* Back and Home buttons */
+.back-button, 
+.Home-button {
+    position: absolute; /* Position the buttons absolutely */
+    top: 20px; /* Place buttons near the top */
+    display: flex; /* Use flexbox for alignment */
+    align-items: center; /* Align icons and text */
+    gap: 8px; /* Space between icon and text */
+    width: fit-content; /* Adjust width based on content */
+    height: 150px; /* Set button height */
+}
+
+/* Back button (left side) */
+.back-button {
+    left: 20px; /* Align to left */
+} 
+
+/* Home button (centered) */
+.Home-button {
+    left: 50%; /* Center horizontally */
+    transform: translateX(-50%); /* Adjust centering */
+}
+
+/* Button links */
+.back-button a,
+.Home-button a {
+    text-decoration: none; /* Remove default underline */
+    font-size: 14px; /* Set font size */
+    display: flex; /* Use flexbox for alignment */
+    align-items: center; /* Align icon and text */
+    gap: 5px; /* Space between icon and text */
+}
+
+/* Button text colors */
+.back-button a {
+    color: #4A5568; /* Gray color for back button */
+}
+
+.Home-button a {
+    color: #3BAAE0; /* Blue color for home button */
+}
+
+/* Icons for Back and Home buttons */
+.back-icon, 
+.Home-icon {
+    width: 20px; /* Set icon width */
+    height: 20px; /* Set icon height */
+}
+
+/* Header - Make it flow with content */
+header {
+    display: flex; /* Use flexbox */
+    justify-content: space-between; /* Align elements to edges */
+    align-items: center; /* Center elements vertically */
+    padding: 20px; /* Add padding */
+    width: 100%; /* Full width */
+    position: relative; /* Relative positioning */
+}
+
+/* MS Logo */
+.ms-logo {
+  position: absolute;
+  left: 5px;
+  top: 10px;
+}
+
+.ms-logo img {
+  width: 120px;
+}
+
+/* Hospital Logo */
+.hospital-logo {
+  position: absolute;
+  right: 40px;
+  top: 5px;
+}
+
+.hospital-logo img {
+  height: 50px;
+}
+/* Main content */
+.reports-container {
+    max-width: 1200px;
+    margin: 80px auto 40px; /* Adjust top margin to account for fixed nav only */
+    padding: 0 20px;
+}
+
+.page-title {
+    text-align: center;
+    color: #1a202c;
+    margin-bottom: 40px;
+    font-size: 32px;
+    font-weight: 700;
+}
+
+/* Filter section */
+.filter-section {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 30px;
+    padding: 15px 20px;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-section input[type="text"],
+.filter-section .date-filter-group input[type="date"] {
+    flex: 1;
+    padding: 10px 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 15px;
+    color: #4A5568;
+    min-width: 150px;
+}
+
+.filter-section .date-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 250px;
+}
+
+.filter-section .date-filter-group label {
+    color: #4A5568;
+    font-weight: 500;
+    font-size: 15px;
+    width: auto;
+}
+
+.filter-section input::placeholder {
+    color: #A0AEC0;
+}
+
+.filter-section span {
+    color: #4A5568;
+    font-weight: 500;
+}
+
+/* Reports list */
+.reports-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 0;
+}
+
+.report-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+}
+
+.report-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-color: #3BAAE0;
+}
+
+.report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f0f4f8;
+}
+
+.report-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #2D3748;
+}
+
+.report-date {
+    font-size: 14px;
+    color: #718096;
+    background: none;
+    padding: 0;
+    border-radius: 0;
+}
+
+/* Restore styles for info section */
+.report-info {
+    margin-bottom: 15px;
+    display: block;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 6px 10px;
+    background: #f8fafc;
+    border-radius: 6px;
+    transition: background-color 0.3s ease;
+}
+
+.info-item:hover {
+    background: #f0f4f8;
+}
+
+.info-label {
+    color: #4A5568;
+    font-weight: 500;
+    font-size: 13px;
+}
+
+.info-value {
+    color: #2D3748;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+/* Status colors */
+.info-value.status-active {
+    color: #10B981;
+}
+
+.info-value.status-failed {
+    color: #EF4444;
+}
+
+.info-value.status-unstable {
+    color: #F59E0B;
+}
+
+.report-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    justify-content: flex-start;
+}
+
+.action-button {
+    flex: 1;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.view-button {
+    background-color: #3BAAE0;
+    color: white;
+}
+
+.view-button:hover {
+    background-color: #2B8AC0;
+    transform: translateY(-2px);
+}
+
+.download-button {
+    background-color: #f0f4f8;
+    color: #4A5568;
+}
+
+.download-button:hover {
+    background-color: #e2e8f0;
+    transform: translateY(-2px);
+}
+
+/* No reports message */
+.no-reports {
+    text-align: center;
+    color: #718096;
+    font-size: 16px;
+    padding: 30px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    margin-top: 20px;
+}
+
+.no-reports svg {
+    margin-bottom: 15px;
+    color: #A0AEC0;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .filter-section {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .filter-section input[type="text"],
+    .filter-section .date-filter-group {
+        width: 100%;
+        min-width: auto;
+    }
+
+     .filter-section .date-filter-group {
+         flex-direction: row;
+         align-items: center;
+         gap: 10px;
+         justify-content: space-between;
+     }
+
+     .filter-section .date-filter-group label {
+         width: auto;
+     }
+
+      .filter-section input[type="date"] {
+         flex: 1;
+         width: auto;
+      }
+
+    .reports-container {
+        margin-top: 120px;
+    }
+
+    .page-title {
+        font-size: 22px;
+    }
+
+     .report-card {
+         padding: 15px;
+     }
+
+     .action-button {
+         padding: 8px 12px;
+         font-size: 13px;
+     }
+
+     .report-header {
+         margin-bottom: 10px;
+         padding-bottom: 8px;
+     }
+
+     .report-title {
+         font-size: 16px;
+     }
+
+     .report-date {
+         font-size: 12px;
+     }
+
+     .report-info {
+         margin-bottom: 10px;
+     }
+
+     .info-item {
+         padding: 4px 8px;
+         margin-bottom: 6px;
+     }
+
+     .info-label, .info-value {
+         font-size: 12px;
+     }
+
+      .report-actions {
+         margin-top: 10px;
+     }
+}
+
+@media (max-width: 480px) {
+    .nav-buttons {
+        padding: 0 10px;
+    }
+
+    .back-button a, .Home-button a {
+        padding: 8px 16px;
+    }
+
+     header {
+         padding: 10px 15px;
+     }
+} 

@@ -2,6 +2,7 @@ const API_BASE_URL = 'http://localhost:3000/api';
 let selectedRowId = null;
 let continuousPingInterval = null;
 
+
 document.addEventListener('DOMContentLoaded', async () => {
   // تحميل صلاحيات المستخدم أولًا
   userPermissions = await checkUserPermissions();
@@ -16,6 +17,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // تحميل البيانات والتهيئة
   await loadDevicesByOwnership();
   populateFilterKeyOptions();
+  await fetchAutoPingResults(); // ✅ يعرض النتائج السابقة بعد الدخول
+
 
   // أحداث الواجهة
   document.getElementById('ownership-filter')?.addEventListener('change', async () => {
@@ -26,6 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('ping-btn')?.addEventListener('click', pingSelectedDevice);
   document.getElementById('pingall-btn')?.addEventListener('click', pingAllDevices);
   document.getElementById('pingt-btn')?.addEventListener('click', startContinuousPing);
+  document.getElementById('pingt-auto-btn')?.addEventListener('click', startAutoPing);
   document.getElementById('traceroute-btn')?.addEventListener('click', tracerouteSelectedDevice);
   document.getElementById('report-btn')?.addEventListener('click', generateReport);
   document.getElementById('saveBtn')?.addEventListener('click', saveAllIPs);
@@ -33,6 +37,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('filter-key')?.addEventListener('change', populateFilterValues);
   document.getElementById('filter-value')?.addEventListener('change', filterDevices);
   document.getElementById('shareBtn')?.addEventListener('click', openSharePopup);
+
+ 
+
+  // ** هذا هو الجزء الذي يجب أن يتم ربطه بالزر الموجود بالفعل في HTML **
+  // ** تأكد من إزالة أي كود آخر يحاول إنشاء زر "show-reports-btn" جديد **
+  const showReportsBtn = document.getElementById('show-reports-btn');
+  if(showReportsBtn) {
+      showReportsBtn.addEventListener('click', showReports);
+  }
+
+  // Check if auto ping was active before page reload
+
+
+  // Add event listeners for the new duration selection buttons
+  const confirmModalBtn = document.getElementById('modal-confirm-duration-btn');
+  const cancelModalBtn = document.getElementById('modal-cancel-duration-btn');
+
+  if(confirmModalBtn) confirmModalBtn.addEventListener('click', handleConfirmDuration);
+  if(cancelModalBtn) cancelModalBtn.addEventListener('click', handleCancelDuration);
 });
 
 
@@ -75,9 +98,6 @@ async function pingSelectedDevice() {
   }
 }
 
-
-
-
 async function tracerouteSelectedDevice() {
   if (!selectedRowId) return appendToTerminal('Please select a device.', true);
 
@@ -100,7 +120,6 @@ async function tracerouteSelectedDevice() {
   }
 }
 
-
 async function pingAllDevices() {
   const ipElems = document.querySelectorAll('.device-ip');
   const ips = Array.from(ipElems)
@@ -115,10 +134,6 @@ async function pingAllDevices() {
   appendToTerminal(`⏳ Pinging ${ips.length} devices...`);
   await runPingForIPs(ips);
 }
-
-
-
-
 
 let pingTActive = false;
 
@@ -191,8 +206,6 @@ function startContinuousPing() {
   }, 2000);
 }
 
-
-
 async function generateReport() {
   const devices = allDevices.map(device => ({
     circuit: device.circuit_name || '',
@@ -200,8 +213,8 @@ async function generateReport() {
     location: device.location || '',
     ip: device.ip || '',
     speed: device.speed || '',
-    start_date: device.start_date || '',
-    end_date: device.end_date || ''
+    start_date: formatReportDate(device.start_date),
+    end_date: formatReportDate(device.end_date)
   })).filter(device => isValidIP(device.ip));
 
   if (devices.length === 0) {
@@ -209,38 +222,108 @@ async function generateReport() {
     return;
   }
 
+  appendToTerminal(`🚀 Running ping tests on ${devices.length} devices...`);
+
+  const results = [];
+
+  for (let d of devices) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/ping`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip: d.ip })
+      });
+
+      const data = await response.json();
+      const output = data.output || '';
+      const latency = extractLatency(output);
+      const packetLoss = extractPacketLoss(output);
+      const timeouts = extractTimeouts(output);
+
+      let status = 'active';
+      if (data.error || output.includes("100% packet loss") || timeouts > 0) {
+        status = 'failed';
+      } else if (packetLoss > 0 || latency > 50) {
+        status = 'unstable';
+      }
+
+      results.push({
+        ...d,
+        latency,
+        packetLoss,
+        timeouts,
+        status,
+        output
+      });
+
+    } catch (err) {
+      results.push({
+        ...d,
+        latency: 0,
+        packetLoss: 100,
+        timeouts: 4,
+        status: 'failed',
+        output: err.message
+      });
+    }
+  }
+
   try {
-    const res = await fetch(`${API_BASE_URL}/report`, {
+    const payload = {
+      devices: results
+    };
+
+    const res = await fetch(`${API_BASE_URL}/reports/create`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem("token")}`
       },
-      body: JSON.stringify({ devices })
+      body: JSON.stringify(payload)
     });
 
-    if (!res.ok) throw new Error('Report generation failed');
-
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'network_report.xlsx';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    appendToTerminal('✅ Report downloaded successfully.');
+    const data = await res.json();
+    if (data.success) {
+      appendToTerminal(`✅ Report saved (ID: ${data.report_id})`);
+    } else {
+      appendToTerminal(`❌ Failed to save report: ${data.error || 'Unknown error'}`, true);
+    }
   } catch (err) {
     appendToTerminal(`❌ Report error: ${err.message}`, true);
   }
 }
 
+// Helper functions for extracting metrics from ping output
+function extractLatency(output = '') {
+  const match = output.match(/time[=<](\d+\.?\d*)\s*ms/i);
+  return match ? parseFloat(match[1]) : 0;
+}
 
+function extractPacketLoss(output = '') {
+  const match = output.match(/(\d+)%\s*packet loss/i);
+  return match ? parseFloat(match[1]) : 0;
+}
 
+function extractTimeouts(output = '') {
+  const timeoutMatches = output.match(/Request timed out/gi) || [];
+  return timeoutMatches.length;
+}
 
-
+// Helper function to format dates to YYYY-MM-DD
+function formatReportDate(dateStr) {
+  if (!dateStr) return null; // Use null for empty dates
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date)) return null;
+    // Get UTC date components to avoid timezone issues
+    const year = date.getUTCFullYear();
+    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+    const day = date.getUTCDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  } catch {
+    return null;
+  }
+}
 
 function updateRowStatus(cellOrRowId, data) {
   let ipCell = null;
@@ -266,11 +349,6 @@ function updateRowStatus(cellOrRowId, data) {
   }
 }
 
-
-
-
-
-
 function updateStatusCounts() {
   const lamps = document.querySelectorAll('.lamp');
   let total = 0, active = 0, failed = 0, unstable = 0;
@@ -291,17 +369,7 @@ function updateStatusCounts() {
   document.getElementById('unstable-count').textContent = unstable;
 }
 
-
-
-
-
-
-
-
-
 let allDevices = [];
-
-
 
 function renderColumnLayout(devices) {
   const tableBody = document.getElementById("devices-body");
@@ -362,7 +430,6 @@ function renderColumnLayout(devices) {
   });
 }
 
-
 function selectDeviceRow(rowId) {
   selectedRowId = rowId;
   selectedRow = null;
@@ -398,9 +465,6 @@ function closeEditModal() {
   modal.classList.remove('show');
   modal.classList.add('hidden');
 }
-
-
-
 
 async function submitEdit() {
   const id = document.getElementById('edit-id').value;
@@ -460,7 +524,6 @@ async function deleteDevice(id, ip) {
   }
 }
 
-
 function filterDevices() {
   const search = document.getElementById('search-input').value.toLowerCase();
   const key = document.getElementById('filter-key').value;
@@ -492,11 +555,7 @@ function filterDevices() {
   renderColumnLayout(filtered);
 }
 
-
-
-
 t = (key, fallback = '') => languageManager.translations[languageManager.currentLang]?.[key] || fallback || key;
-
 
 async function populateFilterValues() {
   const key = document.getElementById('filter-key').value;
@@ -548,10 +607,6 @@ function populateFilterKeyOptions() {
   });
 }
 
-
-
-
-
 function handleGroupSelect(selectElement) {
   const value = selectElement.value;
   const input = document.getElementById('custom-group-count');
@@ -574,14 +629,6 @@ function handleEnterKey(event) {
   }
 }
 
-
-
-
-
-
-
-
-
 function updateCombinedDeviceView() {
   // إزالة التكرارات (لو بنفس IP مثلاً)
   const unique = [];
@@ -597,8 +644,6 @@ function updateCombinedDeviceView() {
 
   renderColumnLayout(unique);
 }
-
-
 
 function openSharePopup() {
   const popup = document.getElementById('sharePopup');
@@ -682,8 +727,6 @@ async function handleShareConfirm() {
   }
 }
 
-
-
 function runPingGroup(count) {
   const ipElems = document.querySelectorAll('.device-ip');
   const ips = [];
@@ -704,8 +747,6 @@ function runPingGroup(count) {
   appendToTerminal(`⏳ Pinging ${ips.length} devices...`);
   runPingForIPs(ips);
 }
-
-
 
 async function runPingForIPs(ips) {
   try {
@@ -734,9 +775,6 @@ async function runPingForIPs(ips) {
     appendToTerminal(`❌ Ping error: ${err.message}`, true);
   }
 }
-
-
-
 
 async function loadDevicesByOwnership() {
   const ownership = document.getElementById('ownership-filter')?.value || 'all';
@@ -780,8 +818,6 @@ async function loadDevicesByOwnership() {
 
   filterDevices(); // ✅ يعرض حسب الفلتر المختار
 }
-
-
 
 async function checkUserPermissions(userId) {
   if (!userId) {
@@ -831,9 +867,6 @@ async function checkUserPermissions(userId) {
     };
   }
 }
-
-
-
 
 document.getElementById('excel-upload').addEventListener('change', handleExcelUpload);
 
@@ -887,7 +920,6 @@ async function handleExcelUpload(event) {
   reader.readAsArrayBuffer(file);
 }
 
-
 function formatInputDate(dateStr) {
   if (!dateStr) return '';
   try {
@@ -897,3 +929,180 @@ function formatInputDate(dateStr) {
     return '';
   }
 }
+
+function startAutoPing() {
+  let ips = [];
+  
+  // Check if a device is selected
+  if (selectedRowId) {
+    const ipCell = document.querySelector(`tr[data-row-id="${selectedRowId}"] .device-ip`);
+    const ip = ipCell?.textContent.trim();
+    if (isValidIP(ip)) {
+      ips = [ip];
+    }
+  } else {
+    // If no device is selected, get all IPs
+    ips = Array.from(document.querySelectorAll('.device-ip'))
+      .map(el => el.textContent.trim())
+      .filter(ip => isValidIP(ip));
+  }
+
+  if (!ips.length) {
+    appendToTerminal('❌ No valid IPs found.', true);
+    return;
+  }
+
+
+
+  // ** Show duration selection section **
+  document.getElementById('autoPingDurationModal').classList.remove('hidden');
+
+  // ** The actual ping logic will be moved to a new function triggered by the confirm button **
+}
+
+function handleConfirmDuration() {
+  const durationInput = document.getElementById('auto-ping-duration-hours');
+  const hours = parseInt(durationInput.value);
+
+  if (isNaN(hours) || hours < 1 || hours > 24) {
+    appendToTerminal('❌ Invalid duration selected. Please enter between 1 to 24 hours.', true);
+    document.getElementById('autoPingDurationModal').classList.add('hidden');
+    return;
+  }
+
+  // إخفاء المودال
+  document.getElementById('autoPingDurationModal').classList.add('hidden');
+
+  let ips = [];
+
+  if (selectedRowId) {
+    const ipCell = document.querySelector(`tr[data-row-id="${selectedRowId}"] .device-ip`);
+    const ip = ipCell?.textContent.trim();
+    if (isValidIP(ip)) {
+      ips = [ip];
+    }
+  } else {
+    ips = Array.from(document.querySelectorAll('.device-ip'))
+      .map(el => el.textContent.trim())
+      .filter(ip => isValidIP(ip));
+  }
+
+  if (!ips.length) {
+    appendToTerminal('❌ No valid IPs found.', true);
+    return;
+  }
+
+  // إرسال الطلب للسيرفر
+  fetch(`${API_BASE_URL}/auto-ping/start`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem("token")}`
+    },
+    body: JSON.stringify({
+      ips,
+      duration_hours: hours
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      appendToTerminal(`✅ Auto Ping started for ${ips.length} IPs for ${hours} hour(s).`);
+    } else {
+      appendToTerminal(`❌ Failed to start auto ping: ${data.error || 'Unknown error'}`, true);
+    }
+  })
+  .catch(err => {
+    appendToTerminal(`❌ Error starting auto ping: ${err.message}`, true);
+  });
+}
+
+
+
+
+// ** New function to handle canceling duration selection **
+function handleCancelDuration() {
+  document.getElementById('autoPingDurationModal').classList.add('hidden');
+  appendToTerminal('Auto Ping duration selection cancelled.');
+}
+
+
+
+
+
+
+
+function getConnectionStatus(status, latency, packetLoss) {
+  if (status === 'failed' || packetLoss === 100) return 'Disconnected';
+  if (packetLoss > 0) return 'Unstable';
+  if (latency > 150) return 'High Latency';
+  if (latency > 50) return 'Medium Latency';
+  return 'Good';
+}
+
+function getDetailedStatus(result) {
+  let details = [];
+  
+  if (result.status === 'failed') {
+    details.push('Device not responding');
+  }
+  
+  if (result.packetLoss !== '0%') {
+    details.push(`Packet loss: ${result.packetLoss}`);
+  }
+  
+  if (result.timeouts !== '0') {
+    details.push(`${result.timeouts} timeouts occurred`);
+  }
+  
+  if (result.latency > 150) {
+    details.push('High latency detected');
+  } else if (result.latency > 50) {
+    details.push('Medium latency detected');
+  }
+  
+  return details.join(', ') || 'Connection stable';
+}
+
+// Add event listener for the "Show Reports" button
+document.addEventListener('DOMContentLoaded', () => {
+    const showReportsBtn = document.getElementById('show-reports-btn');
+    if (showReportsBtn) {
+        showReportsBtn.addEventListener('click', () => {
+            // Navigate to the reports page
+            window.location.href = 'reports.html';
+        });
+    }
+});
+
+
+async function fetchAutoPingResults() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auto-ping/results`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    });
+
+    const data = await res.json();
+
+    // تحقق أن الرد عبارة عن مصفوفة
+    if (!Array.isArray(data)) {
+      const errorMessage = data?.error || '❌ Unexpected server response.';
+      appendToTerminal(errorMessage, true);
+      return;
+    }
+
+    data.forEach(result => {
+      const div = document.createElement('div');
+      div.textContent = `↪ ${result.ip} - ${result.status} (${result.latency}ms, ${result.packetLoss}% loss)`;
+      div.style.color =
+        result.status === 'failed' ? '#e74c3c' :
+        result.status === 'unstable' ? '#f1c40f' : '#2ecc71';
+      document.getElementById('terminal-output').appendChild(div);
+    });
+
+  } catch (err) {
+    appendToTerminal(`❌ Auto ping result error: ${err.message}`, true);
+  }
+}
+
+

@@ -88,16 +88,16 @@
     <button class="cmd-btn step1" id="pingall-btn" data-i18n="ping_all">Ping All</button>
     <button class="cmd-btn step2" id="ping-btn" data-i18n="ping">Ping</button>
     <button class="cmd-btn step3" id="pingt-btn" data-i18n="ping_t">Ping -t</button>
+    <button class="cmd-btn step3" id="pingt-auto-btn" data-i18n="ping_t_auto">Ping -t Auto</button>
     <button class="cmd-btn step4" id="traceroute-btn" data-i18n="traceroute">Traceroute</button>
     <label for="excel-upload" class="cmd-btn step6" style="display: inline-block; cursor: pointer;" data-i18n="upload_excel">
       Upload Excel
    </label>
    <input type="file" id="excel-upload" accept=".xlsx" style="display: none;" />
-    <button class="cmd-btn step5" id="report-btn" data-i18n="generate_report">Generate Report</button>
+    <button class="cmd-btn step3" id="report-btn" data-i18n="generate_report">Generate Report</button>
     <button class="cmd-btn step6" id="shareBtn" data-i18n="share">Share</button>
   </section>
   
-
   <!-- Terminal Output Box -->
   <section class="terminal-section">
     <div class="terminal-box" id="terminal-box">
@@ -265,6 +265,17 @@ function goBack() {
   <script src="saved.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
-  
+  <!-- Auto Ping Duration Modal -->
+  <div id="autoPingDurationModal" class="popup hidden">
+    <div class="popup-content">
+      <h3 data-i18n="select_duration">Select Duration</h3>
+      <div class="popup-buttons" style="margin-top: 20px;">
+        <input type="number" id="auto-ping-duration-hours" min="1" value="1" placeholder="Enter hours" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
+        <button id="modal-confirm-duration-btn" data-i18n="start">Start</button>
+        <button id="modal-cancel-duration-btn" data-i18n="cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
