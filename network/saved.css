@@ -729,7 +729,6 @@ cmd-btn {
 
 
 .data-cell {
-  background-color: #f3f4f6;
   border-radius: 6px;
   padding: 8px 12px;
   margin: 6px 0;
@@ -738,12 +737,7 @@ cmd-btn {
   cursor: pointer;
 }
 
-.ip-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
+
 
 .selected-row {
   background-color: #dbeafe !important;
