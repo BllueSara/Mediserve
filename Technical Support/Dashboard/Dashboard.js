@@ -6,6 +6,10 @@ function goBack() {
 function goToHome() {
   window.location.href = "Home.html";
 }
+
+function goToMireDetails(){
+  window.location.href = "details.html";
+}
 t = (key, fallback = '') => languageManager.translations[languageManager.currentLang]?.[key] || fallback || key;
 const fontFamily = getComputedStyle(document.documentElement).getPropertyValue('--font-family').trim();
 function drawLineChart(id, labels, internalData, externalData, routineData) {
