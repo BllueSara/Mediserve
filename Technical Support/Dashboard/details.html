@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Device Management Dashboard</title>
+    <link rel="stylesheet" href="details.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+   <!-- Navigation buttons section (Back & Home) -->
+  <div class="nav-buttons">
+    <!-- Back button -->
+    <div class="back-button">
+      <a href="#" onclick="goBack()">
+        <img src="/icon/Back.png" alt="Back Icon" class="back-icon" /> <span data-i18n="back">Back</span>
+      </a>
+    </div>
+    <!-- Home button -->
+    <div class="Home-button">
+      <a href="../../Home/Home.html">
+        <img src="/icon/Home.png" alt="Home Icon" class="Home-icon" /> <span data-i18n="home">Home</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Header section (Logos) -->
+  <header>
+    <!-- MS logo -->
+    <div class="ms-logo"><img src="/icon/MS Logo.png" alt="MS Logo" /></div>
+    <!-- Hospital logo -->
+    <div class="hospital-logo"><img src="/icon/hospital-logo.png" alt="King Abdulaziz Hospital" /></div>
+  </header>
+
+    <div class="dashboard-container">
+        <!-- Remove the old header -->
+        <!--
+        <header class="dashboard-header">
+            <h1>IT Device Management Dashboard</h1>
+            <div class="header-actions">
+                <div class="search-bar">
+                    <input type="text" placeholder="Search devices...">
+                    <i class="fas fa-search"></i>
+                </div>
+                <button class="export-btn">
+                    <i class="fas fa-download"></i>
+                    Export Report
+                </button>
+            </div>
+        </header>
+        -->
+
+        <!-- Overview Cards -->
+        <section class="overview-cards">
+            <div class="card">
+                <div class="card-info">
+                    <div class="card-title">Total Devices</div>
+                    <div class="card-value">847</div>
+                </div>
+                <i class="fas fa-desktop card-icon"></i>
+            </div>
+            <div class="card">
+                 <div class="card-info">
+                    <div class="card-title">Total PCs</div>
+                    <div class="card-value">612</div>
+                 </div>
+                <i class="fas fa-laptop card-icon"></i>
+            </div>
+            <div class="card">
+                 <div class="card-info">
+                    <div class="card-title">Total Scanners</div>
+                    <div class="card-value">124</div>
+                 </div>
+                <i class="fas fa-scanner card-icon"></i>
+            </div>
+            <div class="card">
+                <div class="card-info">
+                    <div class="card-title">Total Printers</div>
+                    <div class="card-value">111</div>
+                </div>
+                <i class="fas fa-print card-icon"></i>
+            </div>
+        </section>
+
+        <!-- Placeholder for Charts and Filters -->
+        <section class="main-content-grid">
+            <div class="charts-section">
+                <div class="chart-card">
+                    <h2>Device RAM Distribution</h2>
+                    <canvas id="ramDistributionChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h2>CPU Generation Overview</h2>
+                    <canvas id="cpuGenerationChart"></canvas>
+                </div>
+            </div>
+            <div class="sidebar">
+                <div class="outdated-os-section">
+                    <h2><i class="fas fa-exclamation-triangle"></i> Outdated OS Versions</h2>
+                    <div class="os-list">
+                        <div class="os-item">
+                            <span>Windows 7</span>
+                            <span class="device-count">45 devices</span>
+                        </div>
+                        <div class="os-item outdated">
+                            <span>Windows 8</span>
+                            <span class="device-count">28 devices</span>
+                        </div>
+                        <div class="os-item">
+                            <span>Windows 8.1</span>
+                            <span class="device-count">15 devices</span>
+                        </div>
+                         <div class="os-item">
+                            <span>Windows 10</span>
+                            <span class="device-count">12 devices</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="filters-section">
+                    <h2>Filters</h2>
+                    <div class="filter-dropdown">
+                        <label for="department-filter">Filter by Department</label>
+                        <select id="department-filter">
+                            <option value="">All</option>
+                        </select>
+                    </div>
+                    <div class="filter-dropdown">
+                        <label for="cpu-filter">Filter by CPU Gen</label>
+                        <select id="cpu-filter">
+                             <option value="">All</option>
+                        </select>
+                    </div>
+                    <div class="filter-dropdown">
+                        <label for="os-filter">Filter by OS Version</label>
+                        <select id="os-filter">
+                             <option value="">All</option>
+                        </select>
+                    </div>
+                    <div class="filter-dropdown">
+                        <label for="ram-filter">Filter by RAM Size</label>
+                        <select id="ram-filter">
+                            <option value="">All</option>
+                        </select>
+                    </div>
+                    <div class="filter-buttons">
+                        <button class="apply-filters-btn">Apply Filters</button>
+                        <button class="clear-filters-btn">Clear All</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Placeholder for Needs Replacement Table -->
+        <section class="needs-replacement">
+            <h2>Needs Replacement</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Device Name</th>
+                        <th>Department</th>
+                        <th>RAM</th>
+                        <th>CPU Generation</th>
+                        <th>OS Version</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>DESKTOP-001</td>
+                        <td>Engineering</td>
+                        <td>4GB</td>
+                        <td>6th Gen</td>
+                        <td>Windows 7</td>
+                        <td>Replace Soon</td>
+                    </tr>
+                    <tr>
+                        <td>DESKTOP-002</td>
+                        <td>Marketing</td>
+                        <td>8GB</td>
+                        <td>7th Gen</td>
+                        <td>Windows 8</td>
+                        <td>Replace Soon</td>
+                    </tr>
+                     <tr>
+                        <td>DESKTOP-003</td>
+                        <td>Sales</td>
+                        <td>16GB</td>
+                        <td>9th Gen</td>
+                        <td>Windows 10</td>
+                        <td>OK</td>
+                    </tr>
+                    <tr>
+                        <td>DESKTOP-004</td>
+                        <td>HR</td>
+                        <td>4GB</td>
+                        <td>6th Gen</td>
+                        <td>Windows 7</td>
+                        <td>Replace Soon</td>
+                    </tr>
+                    <tr>
+                        <td>DESKTOP-005</td>
+                        <td>Finance</td>
+                        <td>8GB</td>
+                        <td>8th Gen</td>
+                        <td>Windows 10</td>
+                        <td>OK</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </div>
+<script src="details.js"></script>
+<script src="/Language/Language.js"></script> <!-- Assuming Language.js is needed -->
+<script>
+    // Add goBack function if it's not in Language.js or details.js
+    function goBack() {
+        window.history.back();
+    }
+</script>
+</body>
+</html>

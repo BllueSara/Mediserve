@@ -1046,3 +1046,85 @@ header {
 [dir="rtl"] .upcoming-table svg {
   transform: scaleX(-1);
 }
+
+
+button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+button:hover {
+  background-color: #2980b9;
+  transform: scale(1.05);
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+
+.card4 .more-details-btn {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  margin-bottom: 1rem;
+  display: inline-block;
+}
+
+.card4 .more-details-btn:hover {
+  background-color: #2980b9;
+  transform: scale(1.05);
+}
+
+/* محاذاة الزر حسب اتجاه اللغة */
+[dir="ltr"] .card4 .more-details-btn {
+  float: left;
+}
+
+[dir="rtl"] .card4 .more-details-btn {
+  float: right;
+}
+
+.external-maintenance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+
+
+
+
+[dir="rtl"] .external-maintenance-header {
+  flex-direction: row-reverse;
+}
+
+
+.more-details-btn {
+  display: inline-block; /* حتى يظهر كزر */
+  background-color: #3498db;
+  color: white;
+  text-decoration: none;
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.more-details-btn:hover {
+  background-color: #2980b9;
+  transform: scale(1.05);
+}
