@@ -153,18 +153,38 @@ app.delete('/api/entries/:id', authenticateToken, async (req, res) => {
   const entryId = req.params.id;
 
   try {
-    const [result] = await db.promise().query(
-      'DELETE FROM entries WHERE id = ? AND user_id = ?',
-      [entryId, userId]
-    );
+    const conn = db.promise();
+
+    // ✅ Get user info
+    const [userRows] = await conn.query(`SELECT name, role FROM users WHERE id = ?`, [userId]);
+    const user = userRows[0];
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const isAdmin = user.role === 'admin'; // أو user.is_admin === 1
+
+    // ✅ Get entry to check ownership
+    const [entryRows] = await conn.query(`SELECT * FROM entries WHERE id = ?`, [entryId]);
+    if (!entryRows.length) return res.status(404).json({ error: 'Entry not found' });
+
+    const entry = entryRows[0];
+
+    // ✅ Check permission
+    if (!isAdmin && entry.user_id !== userId) {
+      return res.status(403).json({ error: '❌ Unauthorized to delete this entry' });
+    }
+
+    // ✅ Delete the entry
+    const [result] = await conn.query('DELETE FROM entries WHERE id = ?', [entryId]);
 
     if (result.affectedRows === 0) {
-      return res.status(403).json({ error: 'Unauthorized or not found' });
+      return res.status(400).json({ error: '❌ Delete failed' });
     }
 
     res.json({ success: true });
+
   } catch (err) {
-    res.status(500).json({ error: 'Delete failed' });
+    console.error("❌ Delete Error:", err);
+    res.status(500).json({ error: '❌ Delete failed', details: err.message });
   }
 });
 
@@ -176,14 +196,24 @@ app.put('/api/entries/:id', authenticateToken, async (req, res) => {
   try {
     const conn = db.promise();
 
-    // ✅ Get user's name
-    const [userRows] = await conn.query(`SELECT name FROM users WHERE id = ?`, [userId]);
-    const userName = userRows[0]?.name || 'Unknown';
+    // ✅ Get user's name and role
+    const [userRows] = await conn.query(`SELECT name, role FROM users WHERE id = ?`, [userId]);
+    const user = userRows[0];
+    if (!user) return res.status(404).json({ message: "❌ User not found" });
+
+    const userName = user.name;
+    const isAdmin = user.role === 'admin'; // أو استبدل بـ: user.is_admin === 1
 
     // ✅ Get old entry
     const [oldEntryRows] = await conn.query(`SELECT * FROM entries WHERE id = ?`, [entryId]);
     if (!oldEntryRows.length) return res.status(404).json({ message: "❌ Entry not found" });
+
     const oldEntry = oldEntryRows[0];
+
+    // ✅ Block update if not owner and not admin
+    if (!isAdmin && oldEntry.user_id !== userId) {
+      return res.status(403).json({ message: "❌ غير مصرح لك بتعديل هذا الإدخال" });
+    }
 
     // ✅ Update entry
     await conn.query(`
@@ -193,7 +223,7 @@ app.put('/api/entries/:id', authenticateToken, async (req, res) => {
       WHERE id = ?
     `, [circuit, isp, location, ip, speed, start_date, end_date, entryId]);
 
-    // ✅ Compare field changes
+    // ✅ Compare changes
     const formatDate = d => d ? new Date(d).toISOString().split('T')[0] : null;
     const changes = [];
 
@@ -227,7 +257,7 @@ app.put('/api/entries/:id', authenticateToken, async (req, res) => {
     `, [newDeptId, ip, newDeptId]);
     if (deviceUpdate.affectedRows > 0) logUpdates.push("Maintenance_Devices");
 
-    // ✅ Update Maintenance_Reports linked to those devices
+    // ✅ Update Maintenance_Reports
     const [reportUpdate] = await conn.query(`
       UPDATE Maintenance_Reports
       SET department_id = ?
@@ -237,7 +267,7 @@ app.put('/api/entries/:id', authenticateToken, async (req, res) => {
     `, [newDeptId, ip]);
     if (reportUpdate.affectedRows > 0) logUpdates.push("Maintenance_Reports");
 
-    // ✅ Update other linked tables
+    // ✅ Update other related tables
     const updates = [
       { table: "PC_info", column: "Department", conditionCol: "Department", value: newDeptId },
       { table: "General_Maintenance", column: "department_name", conditionCol: "department_name", value: location },
@@ -258,7 +288,7 @@ app.put('/api/entries/:id', authenticateToken, async (req, res) => {
       if (result.affectedRows > 0) logUpdates.push(update.table);
     }
 
-    // ✅ Log department change only if location changed
+    // ✅ Log department change
     if (logUpdates.length > 0 && oldEntry.location !== location) {
       await conn.query(`
         INSERT INTO Activity_Logs (user_id, user_name, action, details)
@@ -291,6 +321,7 @@ app.put('/api/entries/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ message: "❌ Update failed", error: err.message });
   }
 });
+
 
 
 // 6. Generate report

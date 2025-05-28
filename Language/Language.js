@@ -1207,7 +1207,7 @@ const languageManager = {
             'select_floor': 'اختر الطابق',
             'search_floor': 'ابحث عن طابق...',
             'technical': 'المهندس',
-            'select_technical': 'اختر االمهندس',
+            'select_technical': 'اختر المهندس',
             'search_technical': 'ابحث عن المهندس...',
             'problem_status': 'حالة المشكلة',
             'select_status': 'اختر الحالة',
@@ -1895,6 +1895,31 @@ departments: {
   "Medical Coding Department": { en: "Medical Coding Department", ar: "قسم الترميز الطبي" },
   "Executive Administration": { en: "Executive Administration", ar: "الإدارة التنفيذية" },
   "Prisons Department": { en: "Prisons Department", ar: "قسم السجون" },
+  "Orthopedic Nursing (Men's Ward)": {
+  en: "Orthopedic Nursing (Men's Ward)",
+  ar: "تمريض العظام - قسم الرجال"
+},
+"Executive Director's Office": {
+  en: "Executive Director's Office",
+  ar: "مكتب المدير التنفيذي"
+},
+"Internal Medicine Nursing (Women's Ward)": {
+  en: "Internal Medicine Nursing (Women's Ward)",
+  ar: "تمريض الباطنة - قسم النساء"
+},
+"Surgical Nursing (Women's Ward)": {
+  en: "Surgical Nursing (Women's Ward)",
+  ar: "تمريض الجراحة - قسم النساء"
+},
+"Orthopedic Nursing (Women's Ward)": {
+  en: "Orthopedic Nursing (Women's Ward)",
+  ar: "تمريض العظام - قسم النساء"
+},
+"Surgical Nursing (Men's Ward)": {
+  en: "Surgical Nursing (Men's Ward)",
+  ar: "تمريض الجراحة - قسم الرجال"
+}
+
 },
     floors : {
     "Basement 2": { en: "Basement 2", ar: "القبو الثاني" },

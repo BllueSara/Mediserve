@@ -173,6 +173,24 @@ function fetchAndRenderModels(deviceType, dropdownId) {
     labelKey: "model",
     itemKey: "model_name",
     storageKey: dropdownId,
+
+    // ✅ فلترة حسب لغة النظام (بدون تعديل الداتابيس)
+    transformData: (items) => {
+      const currentLang = languageManager.currentLang;
+
+      return items
+        .filter(item => {
+          const name = item.model_name?.trim() || "";
+          const isUserAddedArabic = isArabicText(name);
+
+          return currentLang === "ar" ? true : !isUserAddedArabic;
+        })
+        .map(item => ({
+          ...item,
+          model_name: item.model_name
+        }));
+    },
+
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", dropdownId);
 
@@ -183,21 +201,25 @@ function fetchAndRenderModels(deviceType, dropdownId) {
 
       openAddModelPopup();
     },
+
     onEditOption: (oldVal) => {
       const newVal = prompt("Edit Model:", oldVal);
       if (newVal && newVal !== oldVal) {
         editOption(dropdownId, oldVal, newVal, cleanedType);
       }
     },
+
     onDeleteOption: (val) => {
       if (confirm(`Delete "${val}"?`)) {
         deleteOption(dropdownId, val, cleanedType);
       }
     },
-    onSelectOption: () => {
-    }
+
+    onSelectOption: () => {}
   });
 }
+
+
 
 
 // ✅ تحديث الحقول إلى custom dropdown
@@ -652,7 +674,6 @@ console.log("📤 البيانات المرسلة إلى السيرفر:", devic
     });
 }
 
-
 function fetchScannerTypes() {
   renderDropdownOptions({
     endpoint: "http://localhost:5050/Scanner_Types",
@@ -662,6 +683,23 @@ function fetchScannerTypes() {
     labelKey: "scanner_type",
     itemKey: "scanner_type",
     storageKey: "scanner-type",
+    transformData: (items) => {
+  const currentLang = languageManager.currentLang;
+
+  return items
+    .filter(item => {
+      const name = item.scanner_type?.trim() || "";
+      const isUserAddedArabic = isArabicText(name);
+
+      // ✅ نعرض العربي فقط إذا اللغة عربية، ونعرض الانجليزي دائمًا
+      return currentLang === "ar" ? true : !isUserAddedArabic;
+    })
+    .map(item => ({
+      ...item,
+      scanner_type: item.scanner_type
+    }));
+},
+
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "scanner-type");
       openAddOptionPopup("scanner-type");
@@ -689,7 +727,23 @@ function fetchPrinterTypes() {
     inputId: "printer-type",
     labelKey: "printer_type",
     itemKey: "printer_type",
-    storageKey: "printer-type",
+    storageKey: "printer-type", 
+transformData: (items) => {
+  const currentLang = languageManager.currentLang;
+
+  return items
+    .filter(item => {
+      const name = item.printer_type?.trim() || "";
+      const isUserAddedArabic = isArabicText(name);
+
+      // ✅ نعرض العربي فقط إذا اللغة عربية، ونعرض الانجليزي دائمًا
+      return currentLang === "ar" ? true : !isUserAddedArabic;
+    })
+    .map(item => ({
+      ...item,
+      printer_type: item.printer_type
+    }));
+},
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "printer-type");
       openAddOptionPopup("printer-type");
@@ -717,6 +771,22 @@ function fetchInkTypes() {
     labelKey: "ink_type",
     itemKey: "ink_type",
     storageKey: "ink-type",
+transformData: (items) => {
+  const currentLang = languageManager.currentLang;
+
+  return items
+    .filter(item => {
+      const name = item.ink_type?.trim() || "";
+      const isUserAddedArabic = isArabicText(name);
+
+      // ✅ نعرض العربي فقط إذا اللغة عربية، ونعرض الانجليزي دائمًا
+      return currentLang === "ar" ? true : !isUserAddedArabic;
+    })
+    .map(item => ({
+      ...item,
+      ink_type: item.ink_type
+    }));
+},
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "ink-type");
       openAddOptionPopup("ink-type");
@@ -735,6 +805,11 @@ function fetchInkTypes() {
   });
 }
 
+function isArabicText(text) {
+  const arabicRegex = /[\u0600-\u06FF]/;
+  return arabicRegex.test(text);
+}
+
 function fetchDepartments(selectId = "department") {
   renderDropdownOptions({
     endpoint: "http://localhost:5050/Departments",
@@ -747,21 +822,36 @@ function fetchDepartments(selectId = "department") {
 
     // ✅ ترجم كل عنصر بعد ما يجي من API
 transformData: (items) => {
-  return items.map(item => {
-    const originalName = item.name?.trim();
-    const translated = translateDepartmentName(originalName);
-    
+  const currentLang = languageManager.currentLang;
 
-    return {
-      ...item,
-      originalSection: originalName,        // ← نحفظ الاسم الحقيقي
-      section: translated,                  // ← نعرض الترجمة
-      name: translated                      // ← نعرض الترجمة أيضًا (لو الدروب داون يستخدم name)
-    };
-  });
+  return items
+    .filter(item => {
+      const original = item.name?.trim() || "";
+      const translated = translateDepartmentName(original);
+
+      const isTranslated = translated !== original;
+      const isUserAddedArabic = !isTranslated && isArabicText(original);
+
+      if (currentLang === "ar") {
+        // ✅ عرض إذا القسم مترجم أو مضاف بالعربي
+        return isTranslated || isUserAddedArabic;
+      } else {
+        // ✅ إخفاء القسم إذا شكله عربي (تمت إضافته يدويًا بالعربي)
+        return !isUserAddedArabic;
+      }
+    })
+    .map(item => {
+      const originalName = item.name?.trim();
+      const translated = translateDepartmentName(originalName);
+
+      return {
+        ...item,
+        originalSection: originalName,
+        section: translated,
+        name: translated
+      };
+    });
 },
-
-
 
 
     onAddNew: () => {
@@ -896,6 +986,22 @@ function fetchDrives() {
     labelKey: "hard_drive",
     itemKey: "drive_type",
     storageKey: "drive-select",
+transformData: (items) => {
+  const currentLang = languageManager.currentLang;
+
+  return items
+    .filter(item => {
+      const name = item.drive_type?.trim() || "";
+      const isUserAddedArabic = isArabicText(name);
+
+      // ✅ نعرض العربي فقط إذا اللغة عربية، ونعرض الانجليزي دائمًا
+      return currentLang === "ar" ? true : !isUserAddedArabic;
+    })
+    .map(item => ({
+      ...item,
+      drive_type: item.drive_type
+    }));
+},
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "drive-select");
       openAddOptionPopup("drive-select");
@@ -918,7 +1024,22 @@ function fetchCPU() {
     inputId: "cpu-select",
     labelKey: "processor",
     itemKey: "cpu_name",
-    storageKey: "cpu-select",
+    storageKey: "cpu-select",transformData: (items) => {
+  const currentLang = languageManager.currentLang;
+
+  return items
+    .filter(item => {
+      const name = item.cpu_name?.trim() || "";
+      const isUserAddedArabic = isArabicText(name);
+
+      // ✅ نعرض العربي فقط إذا اللغة عربية، ونعرض الانجليزي دائمًا
+      return currentLang === "ar" ? true : !isUserAddedArabic;
+    })
+    .map(item => ({
+      ...item,
+      cpu_name: item.cpu_name
+    }));
+},
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "cpu-select");
       openAddOptionPopup("cpu-select");
@@ -942,6 +1063,22 @@ function fetchRAM() {
     labelKey: "ram",
     itemKey: "ram_type",
     storageKey: "ram-select",
+transformData: (items) => {
+  const currentLang = languageManager.currentLang;
+
+  return items
+    .filter(item => {
+      const name = item.ram_type?.trim() || "";
+      const isUserAddedArabic = isArabicText(name);
+
+      // ✅ نعرض العربي فقط إذا اللغة عربية، ونعرض الانجليزي دائمًا
+      return currentLang === "ar" ? true : !isUserAddedArabic;
+    })
+    .map(item => ({
+      ...item,
+      ram_type: item.ram_type
+    }));
+},
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "ram-select");
       openAddOptionPopup("ram-select");
@@ -965,6 +1102,22 @@ function fetchOS() {
     labelKey: "operating_system",
     itemKey: "os_name",
     storageKey: "os-select",
+transformData: (items) => {
+  const currentLang = languageManager.currentLang;
+
+  return items
+    .filter(item => {
+      const name = item.os_name?.trim() || "";
+      const isUserAddedArabic = isArabicText(name);
+
+      // ✅ نعرض العربي فقط إذا اللغة عربية، ونعرض الانجليزي دائمًا
+      return currentLang === "ar" ? true : !isUserAddedArabic;
+    })
+    .map(item => ({
+      ...item,
+      os_name: item.os_name
+    }));
+},
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "os-select");
       openAddOptionPopup("os-select");
@@ -988,6 +1141,22 @@ function fetchProcessorGen() {
     labelKey: "processor_generation",
     itemKey: "generation_number",
     storageKey: "generation-select",
+transformData: (items) => {
+  const currentLang = languageManager.currentLang;
+
+  return items
+    .filter(item => {
+      const name = item.generation_number?.trim() || "";
+      const isUserAddedArabic = isArabicText(name);
+
+      // ✅ نعرض العربي فقط إذا اللغة عربية، ونعرض الانجليزي دائمًا
+      return currentLang === "ar" ? true : !isUserAddedArabic;
+    })
+    .map(item => ({
+      ...item,
+      generation_number: item.generation_number
+    }));
+},
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "generation-select");
       openAddOptionPopup("generation-select");
@@ -1010,6 +1179,22 @@ function fetchRAMSize() {
     labelKey: "ram_size",
     itemKey: "ram_size",
     storageKey: "ram-size-select",
+transformData: (items) => {
+  const currentLang = languageManager.currentLang;
+
+  return items
+    .filter(item => {
+      const name = item.ram_size?.trim() || "";
+      const isUserAddedArabic = isArabicText(name);
+
+      // ✅ نعرض العربي فقط إذا اللغة عربية، ونعرض الانجليزي دائمًا
+      return currentLang === "ar" ? true : !isUserAddedArabic;
+    })
+    .map(item => ({
+      ...item,
+      ram_size: item.ram_size
+    }));
+},
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "ram-size-select");
       openAddOptionPopup("ram-size-select");
@@ -1023,6 +1208,8 @@ function fetchRAMSize() {
     }
   });
 }
+
+
 
 
 
@@ -1247,47 +1434,57 @@ async function fetchDeviceTypes() {
         container.appendChild(addNewRow);
       }
 
-      data.deviceTypes.forEach((item) => {
-        const deviceType = item.DeviceType?.toLowerCase().trim();
-        const isPCRelated = ["pc", "laptop", "desktop", "كمبيوتر", "لابتوب"].includes(deviceType);
+         data.deviceTypes.forEach((item) => {
+  const originalType = item.DeviceType?.trim() || "";
+  const deviceType = originalType.toLowerCase();
 
-        const allowedType =
-          permissions.device_access === 'all' ||
-          (permissions.device_access === 'pc' && isPCRelated) ||
-          permissions.device_access === deviceType;
+  const isPCRelated = ["pc", "laptop", "desktop", "كمبيوتر", "لابتوب"].includes(deviceType);
 
-        if (!allowedType) return;
+  const allowedType =
+    permissions.device_access === 'all' ||
+    (permissions.device_access === 'pc' && isPCRelated) ||
+    permissions.device_access === deviceType;
 
-        const row = document.createElement("div");
-        row.className = "dropdown-option-row";
+  if (!allowedType) return;
 
-        const text = document.createElement("div");
-        text.className = "dropdown-option-text";
-        text.textContent = item.DeviceType;
-text.onclick = () => {
-  selectedDisplay.textContent = item.DeviceType;
-  hiddenInput.value = item.DeviceType;
+  // ✅ فلترة حسب اللغة الحالية
+  const currentLang = languageManager.currentLang;
+  const isUserAddedArabic = isArabicText(originalType);
 
-  const specDisplay = document.getElementById("selected-device-spec");
-  const specInput = document.getElementById("device-spec");
-  if (specDisplay && specInput) {
-    specDisplay.textContent = translations['select_specification'];
-    specInput.value = "";
-    cleanDropdownError(specInput);
-  }
+  if (currentLang !== "ar" && isUserAddedArabic) return;
 
-  cleanDropdownError(hiddenInput);
-  closeAllDropdowns();
+  // ✅ إنشاء العنصر
+  const row = document.createElement("div");
+  row.className = "dropdown-option-row";
 
-  const type = item.DeviceType.trim().toLowerCase();
-  const sectionDropdown = document.getElementById("section");
-  const dept = sectionDropdown?.value;
+  const text = document.createElement("div");
+  text.className = "dropdown-option-text";
+  text.textContent = originalType;
 
-  if (type && dept) {
-    fetchDeviceSpecsByTypeAndDepartment();
-  }
+  text.onclick = () => {
+    selectedDisplay.textContent = originalType;
+    hiddenInput.value = originalType;
 
-};
+    const specDisplay = document.getElementById("selected-device-spec");
+    const specInput = document.getElementById("device-spec");
+    if (specDisplay && specInput) {
+      specDisplay.textContent = translations['select_specification'];
+      specInput.value = "";
+      cleanDropdownError(specInput);
+    }
+
+    cleanDropdownError(hiddenInput);
+    closeAllDropdowns();
+
+    const type = originalType.trim().toLowerCase();
+    const sectionDropdown = document.getElementById("section");
+    const dept = sectionDropdown?.value;
+
+    if (type && dept) {
+      fetchDeviceSpecsByTypeAndDepartment();
+    }
+
+  };
         row.appendChild(text);
         container.appendChild(row);
         // إضافة أيقونات التعديل والحذف فقط إذا كان لديه صلاحية كاملة
