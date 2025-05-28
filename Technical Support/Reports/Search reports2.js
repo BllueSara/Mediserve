@@ -219,28 +219,39 @@ issueHtml = `
 
 
 
+const isArabic = languageManager.currentLang === 'ar';
+const direction = isArabic ? 'rtl' : 'ltr';
+const align = isArabic ? 'right' : 'left';
+
 card.innerHTML = `
-  <div class="report-card-header">
-    <img src="/icon/${isTicket ? "ticket" : "Maintenance"}.png" alt="icon" />
-    ${sourceLabel}
-    <select 
-      class="status-select ${statusClass}"
-      data-report-id="${report.id}"
-      data-ticket-id="${report.ticket_id || ''}">
-      <option value="Open" ${report.status === "Open" ? "selected" : ""}>${t("open")}</option>
-      <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>${t("in_progress")}</option>
-      <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>${t("closed")}</option>
-    </select>
+  <div class="report-card-header" dir="${direction}" style="display: flex; align-items: center; justify-content: space-between;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <img src="/icon/${isTicket ? "ticket" : "Maintenance"}.png" alt="icon" />
+      <span style="text-align:${align}; display: inline-block;">${sourceLabel}</span>
+    </div>
+    <div style="margin-${isArabic ? 'left' : 'right'}: 12px;">
+      <select 
+        class="status-select ${statusClass}"
+        data-report-id="${report.id}"
+        data-ticket-id="${report.ticket_id || ''}">
+        <option value="Open" ${report.status === "Open" ? "selected" : ""}>${t("open")}</option>
+        <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>${t("in_progress")}</option>
+        <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>${t("closed")}</option>
+      </select>
+    </div>
   </div>
-  <div class="report-details">
+
+  <div class="report-details" dir="${direction}">
     <img src="/icon/desktop.png" alt="Device Icon" />
-    <span>${formatDateTime(report.created_at)}</span>
+    <span style="text-align:${align}; display: block;">${formatDateTime(report.created_at)}</span>
   </div>
-  <p><strong>${t("ticket_number")}:</strong> ${report.ticket_number ||'' }</p>
-  <p><strong>${t("device_name")}:</strong> ${report.device_name || "N/A"}</p>
-  <p><strong>${t("department")}:</strong> ${report.department_name || "N/A"}</p>
-  ${issueHtml}
+
+  <p style="text-align:${align}"><strong>${t("ticket_number")}:</strong> ${report.ticket_number || ''}</p>
+  <p style="text-align:${align}"><strong>${t("device_name")}:</strong> ${report.device_name || "N/A"}</p>
+  <p style="text-align:${align}"><strong>${t('department')}:</strong> ${translateDepartmentName(report.department_name)}</p>
+  <div style="text-align:${align}">${issueHtml}</div>
 `;
+
 
 
         card.addEventListener("click", (e) => {
