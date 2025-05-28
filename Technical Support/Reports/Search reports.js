@@ -69,6 +69,26 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 t = (key, fallback = '') => languageManager.translations[languageManager.currentLang]?.[key] || fallback || key;
+function tryTranslateList(input, dict, lang) {
+  try {
+    const items = JSON.parse(input);
+    if (!Array.isArray(items)) throw new Error();
+    return items
+      .map(i => `- ${dict?.[i.trim()]?.[lang] || i}`)
+      .join("<br>");
+  } catch {
+    return input; // fallback
+  }
+}
+
+function normalizeKey(str) {
+  return str
+    .toLowerCase()
+    .replace(/[“”"']/g, "")       // يشيل علامات التنصيص الذكية
+    .replace(/[^\w\s]/g, "")      // يشيل الرموز مثل () وغيرها
+    .replace(/\s+/g, " ")         // يوحد الفراغات
+    .trim();
+}
 
 function loadReports(page = 1) {
   const token = localStorage.getItem('token');
@@ -81,6 +101,7 @@ function loadReports(page = 1) {
     .then(data => {
       const container = document.getElementById("report-list");
       container.innerHTML = "";
+const isArabic = languageManager.currentLang === 'ar';
 
       const type = document.getElementById("filter-type")?.value;
       const status = document.getElementById("filter-status")?.value;
@@ -133,11 +154,13 @@ function loadReports(page = 1) {
       paginatedReports.forEach(report => {
         const isInternalTicket = report.maintenance_type === "Internal";
         const isTicketFromOtherType = report.issue_summary?.includes("Ticket Created");
-        let ticketNumber = report.ticket_number;
-        if (!ticketNumber && report.full_description?.includes("Ticket (TIC-")) {
-          const match = report.full_description.match(/Ticket\s+\((TIC-[\d]+)\)/);
-          ticketNumber = match ? match[1] : null;
-        }
+let ticketNumber = report.ticket_number;
+if (!ticketNumber) {
+  const text = `${report.full_description || ""} ${report.issue_summary || ""}`;
+  const match = text.match(/(?:#)?(TIC-\d+|INT-\d{8}-\d{3}|INT-\d+)/i);
+  ticketNumber = match ? match[1].trim() : null;
+}
+
 
         const isNewSimple = report.source === "new";
         const card = document.createElement("div");
@@ -224,52 +247,119 @@ function loadReports(page = 1) {
             }
           } catch {}
 
-          if (isArray && checklistItems.length) {
-            issueHtml = `<ul style="margin-left: 20px;">${checklistItems.map(i => `<li>${i}</li>`).join("")}</ul>`;
-          } else {
-            issueHtml = `<div style="margin-left: 10px;">${problemContent || t('no_specifications_found')}</div>`;
-          }
+const dict = languageManager.description || {};
+
+if (isArray && checklistItems.length) {
+issueHtml = `<ul style="
+  margin: 0;
+  padding-${isArabic ? "right" : "left"}: 20px;
+  list-style-position: inside;
+  text-align: ${isArabic ? "right" : "left"};
+">
+  ${
+    checklistItems.map(item => {
+      const norm = normalizeKey(item);
+      const key = Object.keys(dict).find(k => normalizeKey(k) === norm);
+      const translated = key ? dict[key][languageManager.currentLang] : item;
+      return `<li style="margin: 0; padding: 2px 0;">${translated}</li>`;
+    }).join("")
+  }
+</ul>`;
+
+} else {
+  issueHtml = `<div style="margin-left: 10px;">${problemContent || t('no_specifications_found')}</div>`;
+}
+
 
           if (report.full_description) {
             issueHtml += `<div style="margin-top:10px;background:#f2f2f2;padding:8px;border-radius:6px"><strong>${t('notes')}:</strong><br>${report.full_description}</div>`;
           }
         } else {
-          let issue = report.issue_summary || "";
-          let diagnosis = report.full_description || "";
+  let issue = report.issue_summary || "";
+  let diagnosis = report.full_description || "";
 
-          issue = issue.replace(/^selected issue:\s*/i, "");
-          diagnosis = diagnosis.replace(/^initial diagnosis:\s*/i, "");
+  issue = issue.replace(/^selected issue:\s*/i, "").trim();
+  diagnosis = diagnosis.replace(/^initial diagnosis:\s*/i, "").trim();
 
-          issueHtml = `
-            <div class="report-issue-line">
-              ${issue ? `<span><strong>${t('selected_issue')}:</strong> ${issue}</span>` : ""}
-              ${diagnosis ? `<span><strong>${t('initial_diagnosis')}:</strong> ${diagnosis}</span>` : ""}
-            </div>
-          `;
+  const lang = languageManager.currentLang;
+  const dict = languageManager.description || {};
+
+  // 🧠 دالة ترجمة ذكية
+
+
+function translateTextBlock(text) {
+  let arr = [];
+
+  try {
+    const parsed = JSON.parse(text);
+    if (Array.isArray(parsed)) {
+      arr = parsed;
+    } else {
+      throw new Error("Not array");
+    }
+  } catch {
+    arr = text
+      .replace(/^\[|\]$/g, "")
+      .split(/[\n,،-]+/)
+      .map(s => s.replace(/^["“”']?|["“”']?$/g, "").trim())
+      .filter(Boolean);
+  }
+
+  return arr.map(original => {
+    const norm = normalizeKey(original);
+    const key = Object.keys(dict).find(k => normalizeKey(k) === norm);
+    return `<li style="margin: 2px 0;">${key ? dict[key][lang] : original}</li>`;
+  }).join("");
+}
+
+const translatedIssueList = issue ? translateTextBlock(issue) : "";
+const translatedDiagnosisList = diagnosis ? translateTextBlock(diagnosis) : "";
+
+issueHtml = `
+  <div class="report-issue-line" style="text-align: ${isArabic ? "right" : "left"};">
+    ${translatedIssueList
+      ? `<div><strong>${t('selected_issue')}:</strong><ul style="padding-${isArabic ? "right" : "left"}: 20px;">${translatedIssueList}</ul></div>`
+      : ""}
+    ${translatedDiagnosisList
+      ? `<div style="margin-top:10px;"><strong>${t('initial_diagnosis')}:</strong><ul style="padding-${isArabic ? "right" : "left"}: 20px;">${translatedDiagnosisList}</ul></div>`
+      : ""}
+  </div>
+`;
         }
+const direction = isArabic ? "rtl" : "ltr";
+const align = isArabic ? "right" : "left";
+const justify = isArabic ? "space-between" : "space-between";
 
-        card.innerHTML = `
-          <div class="report-card-header">
-            <img src="${iconSrc}" alt="icon" />
-            <span>${maintenanceLabel}</span>
-            <select 
-              data-report-id="${report.id}" 
-              data-ticket-id="${report.ticket_id || ''}" 
-              class="status-select ${getStatusClass(report.status)}">
-              <option value="Open" ${report.status === "Open" ? "selected" : ""}>${t('open')}</option>
-              <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>${t('in_progress')}</option>
-              <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>${t('closed')}</option>
-            </select>
-          </div>
-          <div class="report-details">
-            <img src="/icon/desktop.png" alt="device" />
-            <span>${formatDateTime(report.created_at)}</span>
-          </div>
-          ${ticketNumber ? `<p><strong>${t('ticket_number')}:</strong> ${ticketNumber}</p>` : ""}
-          ${!isInternalTicket ? `<p><strong>${t('device_name')}:</strong> ${report.device_name || "N/A"}</p>` : ""}
-          ${!isInternalTicket ? `<p><strong>${t('department')}:</strong> ${report.department_name || "N/A"}</p>` : ""}
-          ${!isTicketOnly ? `<p><strong>${t('issue')}:</strong><br>${issueHtml}</p>` : ""}
-        `;
+card.innerHTML = `
+  <div class="report-card-header" dir="${direction}" style="display: flex; align-items: center; justify-content: ${justify}; gap: 10px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <img src="${iconSrc}" alt="icon" />
+      <span style="text-align:${align}">${maintenanceLabel}</span>
+    </div>
+<select 
+  data-report-id="${report.id}" 
+  class="status-select ${getStatusClass(report.status)}"
+  style="margin-${languageManager.currentLang === 'ar' ? 'left' : 'right'}: 12px;"
+>
+
+      <option value="Open" ${report.status === "Open" ? "selected" : ""}>${t('open')}</option>
+      <option value="In Progress" ${report.status === "In Progress" ? "selected" : ""}>${t('in_progress')}</option>
+      <option value="Closed" ${report.status === "Closed" ? "selected" : ""}>${t('closed')}</option>
+    </select>
+  </div>
+
+  <div class="report-details" dir="${direction}">
+    <img src="/icon/desktop.png" alt="device" />
+    <span style="text-align:${align}">${formatDateTime(report.created_at)}</span>
+  </div>
+
+${ticketNumber ? `<p style="text-align:${align}"><strong>${t('ticket_number')}:</strong> ${ticketNumber}</p>` : ""}
+  ${report.device_name ? `<p style="text-align:${align}"><strong>${t('device_name')}:</strong> ${report.device_name}</p>` : ""}
+  ${report.department_name ? `<p style="text-align:${align}"><strong>${t('department')}:</strong> ${translateDepartmentName(report.department_name)}</p>` : ""}
+  ${!isTicketOnly ? `<p style="text-align:${align}"><strong>${t('issue')}:</strong><br>${issueHtml}</p>` : ""}
+`;
+
+
 
         container.appendChild(card);
 
