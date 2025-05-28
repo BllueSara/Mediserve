@@ -622,6 +622,31 @@ const translations = {
   },
 departments: {
   "Laboratory Department": { en: "Laboratory Department", ar: "قسم المختبر" },
+  "Orthopedic Nursing (Men's Ward)": {
+  en: "Orthopedic Nursing (Men's Ward)",
+  ar: "تمريض العظام - قسم الرجال"
+},
+"Executive Director's Office": {
+  en: "Executive Director's Office",
+  ar: "مكتب المدير التنفيذي"
+},
+"Internal Medicine Nursing (Women's Ward)": {
+  en: "Internal Medicine Nursing (Women's Ward)",
+  ar: "تمريض الباطنة - قسم النساء"
+},
+"Surgical Nursing (Women's Ward)": {
+  en: "Surgical Nursing (Women's Ward)",
+  ar: "تمريض الجراحة - قسم النساء"
+},
+"Orthopedic Nursing (Women's Ward)": {
+  en: "Orthopedic Nursing (Women's Ward)",
+  ar: "تمريض العظام - قسم النساء"
+},
+"Surgical Nursing (Men's Ward)": {
+  en: "Surgical Nursing (Men's Ward)",
+  ar: "تمريض الجراحة - قسم الرجال"
+},
+
   "Internal Medicine Nursing (Men's Ward)": { en: "Internal Medicine Nursing (Men's Ward)", ar: "تمريض الباطنة (قسم الرجال)" },
   "Intensive Care Unit (ICU) Nursing": { en: "Intensive Care Unit (ICU) Nursing", ar: "تمريض العناية المركزة" },
   "Nursing Services Administration": { en: "Nursing Services Administration", ar: "إدارة خدمات التمريض" },
