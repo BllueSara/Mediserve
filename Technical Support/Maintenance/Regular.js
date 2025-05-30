@@ -112,10 +112,12 @@ text.onclick = () => {
       const editIcon = document.createElement("i");
       editIcon.className = "fas fa-edit";
       editIcon.title = t['edit'] || "Edit";
-      editIcon.onclick = (e) => {
-        e.stopPropagation();
-        onEditOption?.(value);
-      };
+editIcon.onclick = (e) => {
+  e.stopPropagation();
+  const label = typeof value === 'object' ? value.name : value;
+  onEditOption?.(label);
+};
+
       icons.appendChild(editIcon);
     }
 
@@ -124,10 +126,11 @@ text.onclick = () => {
       const deleteIcon = document.createElement("i");
       deleteIcon.className = "fas fa-trash";
       deleteIcon.title = t['delete'] || "Delete";
-      deleteIcon.onclick = (e) => {
-        e.stopPropagation();
-        onDeleteOption?.(value);
-      };
+deleteIcon.onclick = (e) => {
+  e.stopPropagation();
+  const label = typeof value === 'object' ? value.name : value;
+  onDeleteOption?.(label);
+};
       icons.appendChild(deleteIcon);
     }
 
@@ -2009,6 +2012,155 @@ function fetchDevicesBySection() {
     .catch(err => console.error("❌ Error fetching device specs:", err));
 }
 
+function openDeviceEditPopup(type, deviceData) {
+  const lang = languageManager.currentLang;
+  const t = languageManager.translations[lang];
+
+  const popup = document.getElementById("popup-modal");
+  const fieldsContainer = document.getElementById("popup-fields");
+
+  // إظهار النافذة
+const popupTitle = document.getElementById("popup-title");
+popup.style.display = "flex";
+popupTitle.textContent = t['edit'] + " " + t['device_specifications']; // ✅ هذا صحيح
+
+
+
+  // حفظ المرجع عالميًا لتستخدمه دوال أخرى
+  window.popupFieldsContainer = fieldsContainer;
+  window.popupHeading = popupTitle;
+
+  // رسم الحقول حسب نوع الجهاز
+  updatePopupHeadingAndFields(type);
+
+ (async () => {
+  document.querySelector("input[name='device-name']").value = deviceData.name || "";
+  document.querySelector("input[name='serial']").value = deviceData.Serial_Number || "";
+  document.querySelector("input[name='ministry-id']").value = deviceData.Governmental_Number || "";
+
+  await setSelectedOption("model-" + type, deviceData.Model);
+  await setSelectedOption("department-" + type, deviceData.Department);
+  await setSelectedOption("generation-select", deviceData.Generation);
+  await setSelectedOption("cpu-select", deviceData.Processor);
+  await setSelectedOption("ram-select", deviceData.RAM);
+  await setSelectedOption("drive-select", deviceData.Hard_Drive);
+  await setSelectedOption("os-select", deviceData.OS);
+  await setSelectedOption("ram-size-select", deviceData.RAM_Size);
+
+  const macInput = document.querySelector("input[name='mac-address']");
+  if (macInput) macInput.value = deviceData.MAC_Address || "";
+
+  const ipInput = document.querySelector("input[name='ip-address']");
+  if (ipInput) ipInput.value = deviceData.IP_Address || "";
+
+  if (type === "printer") {
+    await setSelectedOption("ink-type", deviceData.Ink_Type);
+    await setSelectedOption("printer-type", deviceData.Printer_Type);
+    document.querySelector("input[name='ink-serial-number']").value = deviceData.Ink_Serial_Number || "";
+  }
+
+  if (type === "scanner") {
+    await setSelectedOption("scanner-type", deviceData.Scanner_Type);
+  }
+
+  // زر الحفظ
+  const saveBtn = document.querySelector("#popup-modal .save-btn");
+  saveBtn.onclick =async () => {
+    const updatedDevice = {
+      id: deviceData.id,
+      name: document.querySelector("input[name='device-name']").value.trim(),
+      Serial_Number: document.querySelector("input[name='serial']").value.trim(),
+      Governmental_Number: document.querySelector("input[name='ministry-id']").value.trim(),
+      Model: document.getElementById("model-" + type)?.value,
+      Department: document.getElementById("department-" + type)?.value,
+      Generation: document.getElementById("generation-select")?.value,
+      Processor: document.getElementById("cpu-select")?.value,
+      RAM: document.getElementById("ram-select")?.value,
+      Hard_Drive: document.getElementById("drive-select")?.value,
+      OS: document.getElementById("os-select")?.value,
+      RAM_Size: document.getElementById("ram-size-select")?.value,
+      MAC_Address: document.querySelector("input[name='mac-address']")?.value || null,
+      IP_Address: document.querySelector("input[name='ip-address']")?.value || null,
+      Device_Type: type
+    };
+
+    if (type === "printer") {
+      updatedDevice.Ink_Type = document.getElementById("ink-type")?.value;
+      updatedDevice.Printer_Type = document.getElementById("printer-type")?.value;
+      updatedDevice.Ink_Serial_Number = document.querySelector("input[name='ink-serial-number']")?.value || "";
+    }
+
+    if (type === "scanner") {
+      updatedDevice.Scanner_Type = document.getElementById("scanner-type")?.value;
+    }
+
+  const success = await editOption("device-spec", updatedDevice);
+  if (success) {
+    popup.style.display = "none";
+    fetchDeviceSpecsByTypeAndDepartment(); // ✅ إعادة تحميل القائمة بعد الحفظ
+  }
+
+  };
+})();
+
+}
+
+
+function openGenericEditPopup(deviceData) {
+  const type = deviceData.Device_Type || "";
+  openGenericPopup("device_specifications", "device-spec");
+
+  setTimeout(() => {
+    document.getElementById("spec-name").value = deviceData.name || "";
+    document.getElementById("spec-serial").value = deviceData.Serial_Number || "";
+    document.getElementById("spec-ministry").value = deviceData.Governmental_Number || "";
+
+    setSelectedOption("spec-model", deviceData.Model);
+    setSelectedOption("spec-department", deviceData.Department);
+
+    const saveBtn = document.querySelector("#generic-popup .popup-buttons button");
+    saveBtn.onclick = async() => {
+      const updatedDevice = {
+        id: deviceData.id,
+        name: document.getElementById("spec-name").value.trim(),
+        Serial_Number: document.getElementById("spec-serial").value.trim(),
+        Governmental_Number: document.getElementById("spec-ministry").value.trim(),
+        Model: document.getElementById("spec-model").value,
+        Department: document.getElementById("spec-department").value,
+        Device_Type: type,
+      };
+
+  const success = await editOption("device-spec", updatedDevice);
+  if (success) {
+    document.getElementById("generic-popup").style.display = "none";
+    fetchDeviceSpecsByTypeAndDepartment(); // ✅ إعادة تحميل القائمة بعد الحفظ
+  }
+
+    };
+  }, 200);
+}
+async function setSelectedOption(inputId, value, attempts = 10) {
+  if (!value || attempts <= 0) return;
+
+  const wait = (ms) => new Promise(res => setTimeout(res, ms));
+
+  for (let i = 0; i < attempts; i++) {
+    const input = document.getElementById(inputId);
+    const span = document.getElementById("selected-" + inputId);
+
+    if (input && span) {
+      input.value = value;
+      span.textContent = value;
+      return;
+    }
+
+    await wait(200); // انتظر حتى تجهز العناصر
+  }
+
+  console.warn(`❌ setSelectedOption فشل: ${inputId} لم يتم العثور عليه بعد محاولات ${attempts}`);
+}
+
+
 
 async function fetchDeviceSpecsByTypeAndDepartment() {
  const type = document.getElementById("device-type")?.value?.toLowerCase();
@@ -2119,61 +2271,51 @@ async function fetchDeviceSpecsByTypeAndDepartment() {
             const editIcon = document.createElement("i");
             editIcon.className = "fas fa-edit";
             editIcon.title = t['edit'];
-                       editIcon.title = t['edit'];editIcon.onclick = (e) => {
+editIcon.onclick = async (e) => {
   e.stopPropagation();
 
-  // إغلاق كل dropdowns مفتوحة
-  closeAllDropdowns();
+  const deviceId = device.id;
+  if (!deviceId) {
+    console.error("❌ device.id is undefined!");
+    return;
+  }
 
-  // إنشاء النافذة يدوياً (أو ممكن تستخدم modal جاهز)
-  const formContainer = document.createElement("div");
-  formContainer.className = "device-edit-form";
+  try {
+const res = await fetch(`http://localhost:5050/device-spec/${deviceId}`, {
+  headers: {
+    "Authorization": `Bearer ${localStorage.getItem("token")}`
+  }
+});
+    const fullDeviceData = await res.json();
 
-  formContainer.innerHTML = `
-    <div class="device-edit-popup">
-      <h3>${t['edit']} ${t['device_specifications']}</h3>
-      <label>${t['device_name']}:</label>
-      <input type="text" id="edit-name" value="${device.name}" />
-      <label>${t['serial_number']}:</label>
-      <input type="text" id="edit-serial" value="${device.Serial_Number}" />
-      <label>${t['governmental_number']}:</label>
-      <input type="text" id="edit-gov" value="${device.Governmental_Number}" />
-      <div class="popup-buttons">
-        <button id="save-edit" class="btn-primary">${t['save'] || "Save"}</button>
-        <button id="cancel-edit" class="btn-secondary">${t['cancel'] || "Cancel"}</button>
-      </div>
-    </div>
-  `;
+    console.log("✅ Full device data loaded:", fullDeviceData);
 
-  // إظهار النموذج
-  document.body.appendChild(formContainer);
+   const deviceType = fullDeviceData.Device_Type || "pc";
+const typeCleaned = deviceType.trim().toLowerCase();
 
-  // إغلاق النموذج
-  document.getElementById("cancel-edit").onclick = () => formContainer.remove();
+let mappedType = "other"; // افتراضي
+if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(typeCleaned)) {
+  mappedType = "pc";
+} else if (typeCleaned === "printer") {
+  mappedType = "printer";
+} else if (typeCleaned === "scanner") {
+  mappedType = "scanner";
+}
 
-  // حفظ التعديل
-  document.getElementById("save-edit").onclick = () => {
-    const newName = document.getElementById("edit-name").value.trim();
-    const newSerial = document.getElementById("edit-serial").value.trim();
-    const newGovNumber = document.getElementById("edit-gov").value.trim();
+if (["pc", "printer", "scanner"].includes(mappedType)) {
+  openDeviceEditPopup(mappedType, fullDeviceData);
+} else {
+  openGenericEditPopup(fullDeviceData);
+}
 
-    if (!newName || !newSerial || !newGovNumber) {
-      alert(t['please_fill_all_fields'] || "❌ Please fill all fields.");
-      return;
-    }
-
-    editOption("device-spec", {
-      id: device.id,
-      newName,
-      newSerial,
-      newGovNumber,
-    });
-
-    formContainer.remove();
-  };
+  } catch (err) {
+    console.error("❌ Failed to fetch full device data:", err);
+    alert("❌ Could not load full device data for editing.");
+  }
+};
 
 
-            };
+
             icons.appendChild(editIcon);
           }
 
@@ -2181,13 +2323,16 @@ async function fetchDeviceSpecsByTypeAndDepartment() {
             const deleteIcon = document.createElement("i");
             deleteIcon.className = "fas fa-trash";
             deleteIcon.title = t['delete'];
-            deleteIcon.onclick = (e) => {
-              e.stopPropagation();
-              if (confirm(`${t['confirm_delete']} "${device.name}"?`)) {
-                deleteOption("device-spec", { id: device.id });
+deleteIcon.onclick = async (e) => {
+  e.stopPropagation();
+  if (confirm(`${t['confirm_delete']} "${device.name}"?`)) {
+    const success = await deleteOption("device-spec", { id: device.id });
+    if (success) {
+      fetchDeviceSpecsByTypeAndDepartment(); // ✅ تحديث القائمة مباشرة
+    }
+  }
+};
 
-              }
-            };
             icons.appendChild(deleteIcon);
           }
 
@@ -2431,47 +2576,42 @@ function mapSelectIdToServerTarget(selectId) {
 
 
 
-function deleteOption(selectId, value, type = null) {
+async function deleteOption(selectId, targetObject) {
   const lang = languageManager.currentLang;
   const t = languageManager.translations[lang];
 
-  if (!value) {
-    alert(t['please_select_valid_option']);
-    return;
-  }
-
-
-
-  const isDeviceSpec = selectId === "device-spec";
-  const url = isDeviceSpec
+  const url = selectId === "device-spec"
     ? "http://localhost:5050/delete-device-specification"
     : "http://localhost:5050/delete-option-complete";
 
-  const body = isDeviceSpec
-    ? { id: value.id }
-    : { target: mapSelectIdToServerTarget(selectId), value, type };
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("token")}`
+      },
+      body: JSON.stringify(targetObject)
+    });
 
-  fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${localStorage.getItem('token')}`
-    },
-    body: JSON.stringify(body)
-  })
-    .then(res => res.json())
-    .then(result => {
-      if (result.error) {
-        alert(result.error);
-      } else {
+    const result = await res.json();
+
+    if (result.error) {
+      alert(result.error);
+      return false;
+    } else {
+      if (selectId !== "device-spec") {
         refreshDropdown(selectId);
       }
-    })
-    .catch(err => {
-      console.error("❌ Error deleting option:", err);
-      alert(t['failed_to_delete_option']);
-    });
+      return true;
+    }
+  } catch (err) {
+    console.error("❌ Error deleting option:", err);
+    alert(t['failed_to_delete_option']);
+    return false;
+  }
 }
+
 function refreshDropdown(selectId) {
   if (selectId === "problem-type") {
     fetchDeviceTypes();
@@ -2520,14 +2660,13 @@ function refreshDropdown(selectId) {
   }
 }
 
-
-function editOption(selectId, oldValue, newValue = null, type = null) {
+async function editOption(selectId, updatedDevice, newValue = null, type = null) {
   const lang = languageManager.currentLang;
   const t = languageManager.translations[lang];
 
-  if (!oldValue || (!newValue && selectId !== "device-spec")) {
+  if (!updatedDevice || (selectId !== "device-spec" && (!updatedDevice || !newValue))) {
     alert(t['please_select_and_enter_valid_value']);
-    return;
+    return false;
   }
 
   const isDeviceSpec = selectId === "device-spec";
@@ -2536,40 +2675,41 @@ function editOption(selectId, oldValue, newValue = null, type = null) {
     : "http://localhost:5050/update-option-complete";
 
   const body = isDeviceSpec
-    ? {
-        id: oldValue.id,
-        newName: oldValue.newName,
-        newSerial: oldValue.newSerial,
-        newGovNumber: oldValue.newGovNumber
-      }
+    ? updatedDevice
     : {
         target: mapSelectIdToServerTarget(selectId),
-        oldValue,
+        oldValue: updatedDevice,
         newValue,
         type
       };
 
-  fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${localStorage.getItem('token')}`
-    },
-    body: JSON.stringify(body)
-  })
-    .then(res => res.json())
-    .then(result => {
-      if (result.error) {
-        alert(result.error);
-      } else {
-        refreshDropdown(selectId);
-      }
-    })
-    .catch(err => {
-      console.error("❌ Error editing option:", err);
-      alert(t['failed_to_edit_option']);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(body)
     });
+
+    const result = await res.json();
+
+    if (result.error) {
+      alert(result.error);
+      return false;
+    } else {
+      if (!isDeviceSpec) refreshDropdown(selectId);
+      return true;
+    }
+  } catch (err) {
+    console.error("❌ Error editing option:", err);
+    alert(t['failed_to_edit_option']);
+    return false;
+  }
 }
+
+
 
 
 function attachEditDeleteHandlers(optionsContainerId, type = null) {

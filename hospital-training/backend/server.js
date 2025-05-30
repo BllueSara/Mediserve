@@ -336,6 +336,120 @@ app.get("/device-specifications", (req, res) => {
     res.json(result);
   });
 });
+app.get("/device-spec/:id", authenticateToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const [deviceRows] = await db.promise().query(
+      `SELECT * FROM Maintenance_Devices WHERE id = ?`,
+      [id]
+    );
+
+    if (deviceRows.length === 0) {
+      return res.status(404).json({ error: "❌ الجهاز غير موجود" });
+    }
+
+    const device = deviceRows[0];
+    const type = device.device_type?.toLowerCase().trim();
+    const serial = device.serial_number;
+
+    let baseData = {
+      id: device.id,
+      name: device.device_name,
+      Device_Type: device.device_type,
+      Serial_Number: device.serial_number,
+      Governmental_Number: device.governmental_number,
+      MAC_Address: device.mac_address,
+      IP_Address: device.ip_address,
+    };
+
+    // قسم
+    const [deptRow] = await db.promise().query(
+      `SELECT name FROM Departments WHERE id = ?`,
+      [device.department_id]
+    );
+    if (deptRow.length > 0) baseData.Department = deptRow[0].name;
+
+    // PC
+if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(type)) {
+  const [pcRows] = await db.promise().query(`
+    SELECT 
+      pm.model_name AS Model,
+      os.os_name AS OS,
+      cpu.cpu_name AS Processor,
+      ram.ram_type AS RAM,
+      gen.generation_number AS Generation,
+      drive.drive_type AS Hard_Drive,
+      ram_size.ram_size AS RAM_Size,
+      pc.Mac_Address AS MAC_Address,
+      pc.Ip_Address AS IP_Address
+    FROM PC_info pc
+    LEFT JOIN PC_Model pm ON pc.Model_id = pm.id
+    LEFT JOIN OS_Types os ON pc.OS_id = os.id
+    LEFT JOIN CPU_Types cpu ON pc.Processor_id = cpu.id
+    LEFT JOIN RAM_Types ram ON pc.RAM_id = ram.id
+    LEFT JOIN Processor_Generations gen ON pc.Generation_id = gen.id
+    LEFT JOIN Hard_Drive_Types drive ON pc.Drive_id = drive.id
+    LEFT JOIN RAM_Sizes ram_size ON pc.RamSize_id = ram_size.id
+    WHERE pc.Serial_Number = ?
+  `, [serial]);
+
+  baseData = { ...baseData, ...(pcRows[0] || {}) };
+}
+
+
+    // Printer
+    if (type === "printer") {
+      const [printerRows] = await db.promise().query(`
+        SELECT 
+          pm.model_name AS Model,
+          pt.printer_type AS Printer_Type,
+          it.ink_type AS Ink_Type,
+          iser.serial_number AS Ink_Serial_Number
+        FROM Printer_info pi
+        LEFT JOIN Printer_Model pm ON pi.Model_id = pm.id
+        LEFT JOIN Printer_Types pt ON pi.PrinterType_id = pt.id
+        LEFT JOIN Ink_Types it ON pi.InkType_id = it.id
+        LEFT JOIN Ink_Serials iser ON pi.InkSerial_id = iser.id
+        WHERE pi.Serial_Number = ?
+      `, [serial]);
+
+      baseData = { ...baseData, ...(printerRows[0] || {}) };
+    }
+
+    // Scanner
+    if (type === "scanner") {
+      const [scannerRows] = await db.promise().query(`
+        SELECT 
+          sm.model_name AS Model,
+          st.scanner_type AS Scanner_Type
+        FROM Scanner_info si
+        LEFT JOIN Scanner_Model sm ON si.Model_id = sm.id
+        LEFT JOIN Scanner_Types st ON si.ScannerType_id = st.id
+        WHERE si.Serial_Number = ?
+      `, [serial]);
+
+      baseData = { ...baseData, ...(scannerRows[0] || {}) };
+    }
+
+    // ✅ أجهزة غير معروفة - نحاول نجيب موديلها على الأقل
+    if (!["pc", "printer", "scanner", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(type)) {
+      const [modelRows] = await db.promise().query(`
+        SELECT model_name FROM Maintance_Device_Model WHERE id = ?
+      `, [device.model_id]);
+
+      if (modelRows.length > 0) {
+        baseData.Model = modelRows[0].model_name;
+      }
+    }
+
+    res.json(baseData);
+  } catch (err) {
+    console.error("❌ Error fetching full device data:", err);
+    res.status(500).json({ error: "❌ حدث خطأ أثناء جلب البيانات" });
+  }
+});
+
 
 
 
@@ -540,17 +654,19 @@ app.get("/devices/:type/:department", (req, res) => {
   }
 
 
-  const sql = `
-    SELECT 
-      md.id,
-      md.serial_number AS Serial_Number,
-      md.governmental_number AS Governmental_Number,
-      ${nameSelect}
-    FROM Maintenance_Devices md
-    ${joinClause}
-    WHERE md.device_type = ?
-      AND md.department_id = (SELECT id FROM Departments WHERE name = ?)
-  `;
+const sql = `
+  SELECT 
+    md.id,
+    md.serial_number AS Serial_Number,
+    md.governmental_number AS Governmental_Number,
+    ${nameSelect}
+  FROM Maintenance_Devices md
+  ${joinClause}
+  WHERE md.device_type = ?
+    AND md.department_id = (SELECT id FROM Departments WHERE name = ?)
+    AND (md.is_deleted IS NULL OR md.is_deleted = FALSE)
+`;
+
 
   db.query(sql, [type, department], (err, result) => {
     if (err) {
@@ -2798,19 +2914,13 @@ MAX(R.report_number) AS report_number,
 const compareReadable = (label, oldVal, newVal, changes = []) => {
   const oldStr = (oldVal ?? "").toString().trim();
   const newStr = (newVal ?? "").toString().trim();
-  if (oldStr && newStr && oldStr !== newStr) {
-    changes.push(`🔧 ${label}: "${oldStr}" → "${newStr}"`);
+
+  if (oldStr !== newStr) {
+    changes.push(`🔧 ${label}: "${oldStr || "-"}" → "${newStr || "-"}"`);
   }
 };
 
-const compareRefNameIfChanged = async (label, table, column, id, newName, changes = []) => {
-  if (!id || !newName) return;
-  const [[row]] = await db.promise().query(`SELECT ${column} FROM ${table} WHERE id = ?`, [id]);
-  const currentName = row?.[column];
-  if (currentName && currentName.trim() !== newName.trim()) {
-    changes.push(`🔧 ${label}: "${currentName}" → "${newName}"`);
-  }
-};
+
 
 app.post("/update-report-full", authenticateToken, upload.fields([
   { name: "attachment", maxCount: 1 },
@@ -2829,7 +2939,7 @@ app.post("/update-report-full", authenticateToken, upload.fields([
     console.log("✍️ Received signature file:", signatureFile.originalname);
   }
 
-  const {
+  let {
     id, issue_summary, full_description, priority, status, device_type,
     technical, department_name, category, source,
     device_id, device_name, serial_number, governmental_number,
@@ -2837,19 +2947,19 @@ app.post("/update-report-full", authenticateToken, upload.fields([
     model_name, drive_type, mac_address, ip_address,
     ink_type, ink_serial_number, printer_type, scanner_type
   } = updatedData;
-  const departmentId = await getId("Departments", "name", department_name);
+  const departmentId = await getOrCreateId("Departments", "name", department_name);
   const lowerType = device_type?.toLowerCase();
   const isPC = lowerType === "pc";
   const isPrinter = lowerType === "printer";
   const isScanner = lowerType === "scanner";
 
   // استخدم جدول Maintance_Device_Model في جميع الحالات
-  const modelId = await getModelId(device_type, model_name);
+const modelId = await getOrCreateModelId(device_type, model_name);
 
 
   let scanner_type_id = null;
   if (isScanner && scanner_type) {
-    scanner_type_id = await getId("Scanner_Types", "scanner_type", scanner_type);
+    scanner_type_id = await getOrCreateId("Scanner_Types", "scanner_type", scanner_type);
   }
 
   if (!source) {
@@ -2871,11 +2981,16 @@ app.post("/update-report-full", authenticateToken, upload.fields([
 
 
     // جلب بيانات Maintenance_Devices
-    let [oldDeviceRows] = await db.promise().query(
-      `SELECT * FROM Maintenance_Devices WHERE serial_number = ? LIMIT 1`,
-      [serial_number]
-    );
-    const oldDevice = oldDeviceRows[0] || {};
+// جلب بيانات Maintenance_Devices باستخدام id أو fallback إلى serial_number
+let oldDevice = {};
+if (reportOld.device_id) {
+  const [rows] = await db.promise().query(`SELECT * FROM Maintenance_Devices WHERE id = ? LIMIT 1`, [reportOld.device_id]);
+  oldDevice = rows[0] || {};
+} else if (serial_number) {
+  const [rows] = await db.promise().query(`SELECT * FROM Maintenance_Devices WHERE serial_number = ? LIMIT 1`, [serial_number]);
+  oldDevice = rows[0] || {};
+}
+
 
     // جلب بيانات PC_info / Printer_info / Scanner_info
     let oldSpec = {};
@@ -2889,12 +3004,13 @@ app.post("/update-report-full", authenticateToken, upload.fields([
     oldSpec = oldSpec || {};
 
     // ✅ مقارنات عامة
-    compareReadable("Issue Summary", reportOld.issue_summary, issue_summary, changes);
-    compareReadable("Description", reportOld.full_description || reportOld.details, full_description, changes);
-    compareReadable("Priority", reportOld.priority, priority, changes);
-    compareReadable("Status", reportOld.status, status, changes);
-    compareReadable("Assigned To", reportOld.assigned_to || technical, technical, changes);
-    compareReadable("Category", reportOld.report_type || category, category, changes);
+compareReadable("Issue Summary", reportOld.issue_summary, issue_summary, changes);
+compareReadable("Description", reportOld.full_description ?? reportOld.details, full_description, changes);
+compareReadable("Priority", reportOld.priority, priority, changes);
+compareReadable("Status", reportOld.status, status, changes);
+compareReadable("Assigned To", reportOld.assigned_to, technical, changes);
+compareReadable("Category", reportOld.report_type, category, changes);
+
 
     // ✅ بيانات نصية مباشرة
     compareReadable("Device Name", oldDevice.device_name, device_name, changes);
@@ -3037,18 +3153,18 @@ app.post("/update-report-full", authenticateToken, upload.fields([
     // Get specification IDs
     let cpuId, ramId, osId, generationId, driveId, ramSizeId;
     if (isPC) {
-      cpuId = await getId("CPU_Types", "cpu_name", cpu_name);
-      ramId = await getId("RAM_Types", "ram_type", ram_type);
-      osId = await getId("OS_Types", "os_name", os_name?.trim());
-      generationId = await getId("Processor_Generations", "generation_number", generation_number);
-      driveId = await getId("Hard_Drive_Types", "drive_type", drive_type);
-      ramSizeId = await getId("RAM_Sizes", "ram_size", ram_size);
+      cpuId = await getOrCreateId("CPU_Types", "cpu_name", cpu_name);
+      ramId = await getOrCreateId("RAM_Types", "ram_type", ram_type);
+      osId = await getOrCreateId("OS_Types", "os_name", os_name?.trim());
+      generationId = await getOrCreateId("Processor_Generations", "generation_number", generation_number);
+      driveId = await getOrCreateId("Hard_Drive_Types", "drive_type", drive_type);
+      ramSizeId = await getOrCreateId("RAM_Sizes", "ram_size", ram_size);
     }
 
     if (isPrinter) {
-      ink_type = await getId("Ink_Types", "ink_type", ink_type);
-      ink_serial_number = await getId("Ink_Serials", "serial_number", ink_serial_number);
-      printer_type = await getId("Printer_Types", "printer_type", printer_type);
+      ink_type = await getOrCreateId("Ink_Types", "ink_type", ink_type);
+      ink_serial_number = await getOrCreateId("Ink_Serials", "serial_number", ink_serial_number);
+      printer_type = await getOrCreateId("Printer_Types", "printer_type", printer_type);
     }
     if (source === "new") {
       const updateSql = `
@@ -3129,7 +3245,6 @@ app.post("/update-report-full", authenticateToken, upload.fields([
 
 
 
-      await db.promise().query(updateReportSql, reportValues);
 
       await db.promise().query(`
         UPDATE Internal_Tickets 
@@ -3138,41 +3253,111 @@ app.post("/update-report-full", authenticateToken, upload.fields([
         [priority, technical, status, id]);
     }
 
-    let actualDeviceId = device_id;
-    if (!actualDeviceId && serial_number) {
-      const [rows] = await db.promise().query(
-        `SELECT id FROM Maintenance_Devices WHERE serial_number = ? LIMIT 1`,
-        [serial_number]
+// خذ ID الجهاز من التقرير نفسه
+let actualDeviceId = reportOld.device_id;
+
+// جب بيانات الجهاز القديم باستخدام نفس الـ ID
+if (actualDeviceId) {
+  const [rows] = await db.promise().query(
+    `SELECT * FROM Maintenance_Devices WHERE id = ? LIMIT 1`,
+    [actualDeviceId]
+  );
+  oldDevice = rows[0] || {};
+}
+
+
+if (actualDeviceId) {
+  const oldSerial = oldDevice.serial_number?.trim();
+  const newSerial = serial_number?.trim();
+
+  // ✅ طباعة لتأكيد الفرق
+  console.log("🧾 Comparing old vs new serial");
+  console.log("🔴 old:", oldSerial);
+  console.log("🟢 new:", newSerial);
+
+  if (oldSerial && newSerial && oldSerial !== newSerial) {
+    const [conflictRows] = await db.promise().query(
+      `SELECT id FROM Maintenance_Devices WHERE serial_number = ? AND id != ?`,
+      [newSerial, actualDeviceId]
+    );
+    if (conflictRows.length > 0) {
+      return res.status(400).json({ error: "❌ الرقم التسلسلي مستخدم مسبقًا من قبل جهاز آخر." });
+    }
+
+    // تحديث الجداول المرتبطة
+    const tablesToUpdate = [
+      { table: 'PC_info', field: 'Serial_Number' },
+      { table: 'Printer_info', field: 'Serial_Number' },
+      { table: 'Scanner_info', field: 'Serial_Number' },
+      { table: 'General_Maintenance', field: 'serial_number' },
+      { table: 'Regular_Maintenance', field: 'serial_number' },
+      { table: 'External_Maintenance', field: 'serial_number' }
+    ];
+
+    for (const { table, field } of tablesToUpdate) {
+      await db.promise().query(
+        `UPDATE ${table} SET ${field} = ? WHERE ${field} = ?`,
+        [newSerial, oldSerial]
       );
-      if (rows.length > 0) actualDeviceId = rows[0].id;
     }
+console.log("📦 modelId to update:", modelId);
+console.log("🛠 Final SQL:", `UPDATE Maintenance_Devices SET ${updates.join(", ")} WHERE id = ?`);
+console.log("📥 Values:", values);
 
-    if (actualDeviceId) {
-      const updates = [
-        "device_type = ?", "device_name = ?", "serial_number = ?", "governmental_number = ?", "department_id = ?"
-      ];
-      const values = [device_type, device_name, serial_number, governmental_number, departmentId];
+    // ✅ تحديث Maintenance_Devices بعد الجداول الأخرى
+    await db.promise().query(
+      `UPDATE Maintenance_Devices SET serial_number = ? WHERE id = ?`,
+      [newSerial, actualDeviceId]
+    );
 
-      if (modelId) {
-        updates.push("model_id = ?");
-        values.push(modelId);
-      }
-      if (isPC) {
-        updates.push("cpu_id = ?", "ram_id = ?", "os_id = ?", "generation_id = ?", "drive_id = ?", "ram_size_id = ?", "mac_address = ?", "ip_address = ?");
-        values.push(cpuId, ramId, osId, generationId, driveId, ramSizeId, mac_address, ip_address);
-      }
-      if (isPrinter) {
-        updates.push("ink_type = ?", "ink_serial_number = ?", "printer_type = ?");
-        values.push(ink_type, ink_serial_number, printer_type);
-      }
-      if (isScanner) {
-        updates.push("scanner_type_id = ?");
-        values.push(scanner_type_id);
-      }
+    // 💡 حدث أيضا oldDevice عشان ينعكس في بقية الكود
+    oldDevice.serial_number = newSerial;
+  }
 
-      values.push(actualDeviceId);
-      await db.promise().query(`UPDATE Maintenance_Devices SET ${updates.join(", ")} WHERE id = ?`, values);
-    }
+  // الآن تحديث باقي بيانات Maintenance_Devices
+  const updates = [
+    "device_type = ?", "device_name = ?", "governmental_number = ?", "department_id = ?"
+  ];
+  const values = [device_type, device_name, governmental_number, departmentId];
+
+console.log("🎯 modelId from getOrCreateModelId:", modelId);
+
+updates.push("model_id = ?");
+values.push(modelId || null);
+if (isPrinter && serial_number && modelId) {
+  await db.promise().query(`
+    UPDATE Printer_info SET Model_id = ? WHERE Serial_Number = ?
+  `, [modelId, serial_number]);
+}
+
+if (isScanner && serial_number && modelId) {
+  await db.promise().query(`
+    UPDATE Scanner_info SET Model_id = ? WHERE Serial_Number = ?
+  `, [modelId, serial_number]);
+}
+
+if (isPC && serial_number && modelId) {
+  await db.promise().query(`
+    UPDATE PC_info SET Model_id = ? WHERE Serial_Number = ?
+  `, [modelId, serial_number]);
+}
+
+  if (isPC) {
+    updates.push(
+      "cpu_id = ?", "ram_id = ?", "os_id = ?", "generation_id = ?",
+      "drive_id = ?", "ram_size_id = ?", "mac_address = ?", "ip_address = ?"
+    );
+    values.push(cpuId, ramId, osId, generationId, driveId, ramSizeId, mac_address, ip_address);
+  }
+
+  values.push(actualDeviceId);
+  await db.promise().query(
+    `UPDATE Maintenance_Devices SET ${updates.join(", ")} WHERE id = ?`,
+    values
+  );
+}
+
+
 
     // تحديث PC_info
     if (isPC && serial_number) {
@@ -3186,10 +3371,11 @@ app.post("/update-report-full", authenticateToken, upload.fields([
     // تحديث Printer_info
     if (isPrinter && serial_number) {
       await db.promise().query(`
-        UPDATE Printer_info
-        SET InkType_id = ?, InkSerial_id = ?, PrinterType_id = ?
-        WHERE Serial_Number = ?
-      `, [ink_type, ink_serial_number, printer_type, serial_number]);
+  UPDATE Printer_info
+  SET Printer_Name = ?, InkType_id = ?, InkSerial_id = ?, PrinterType_id = ?
+  WHERE Serial_Number = ?
+`, [device_name, ink_type, ink_serial_number, printer_type, serial_number]);
+
     }
 
     // تحديث Scanner_info
@@ -3241,9 +3427,74 @@ app.post("/update-report-full", authenticateToken, upload.fields([
     console.error("\u274C Error during update:", err);
     res.status(500).json({ error: "\u274C خطأ في الخادم أثناء التحديث" });
   }
+
 });
 
+async function getOrCreateModelId(deviceType, modelName) {
+  if (!deviceType  || !modelName) {
+    throw new Error("Both deviceType and modelName are required");
+  }
 
+  const tableMap = {
+    pc: { table: "PC_Model", field: "model_name" },
+    printer: { table: "Printer_Model", field: "model_name" },
+    scanner: { table: "Scanner_Model", field: "model_name" }
+  };
+
+  const lowerType = deviceType.toLowerCase();
+  const entry = tableMap[lowerType];
+
+  if (entry) {
+    const [[existing]] = await db.promise().query(
+      `SELECT id FROM ${entry.table} WHERE ${entry.field} = ?`,
+      [modelName]
+    );
+    if (existing) return existing.id;
+
+    const [result] = await db.promise().query(
+      `INSERT INTO ${entry.table} (${entry.field}) VALUES (?)`,
+      [modelName]
+    );
+    return result.insertId;
+  }
+
+  // fallback: generic model table
+  const [[existing]] = await db.promise().query(
+    `SELECT id FROM Maintance_Device_Model WHERE model_name = ? AND device_type_name = ?`,
+    [modelName, deviceType]
+  );
+  if (existing) return existing.id;
+
+  const [result] = await db.promise().query(
+    `INSERT INTO Maintance_Device_Model (model_name, device_type_name) VALUES (?, ?)`,
+    [modelName, deviceType]
+  );
+  return result.insertId;
+}
+
+
+
+async function getOrCreateId(table, column, value) {
+  if (!value || value.toString().trim() === "") return null;
+
+  const trimmed = value.toString().trim();
+
+  const [rows] = await db.promise().query(
+    `SELECT id FROM ${table} WHERE ${column} = ? LIMIT 1`,
+    [trimmed]
+  );
+
+  if (rows.length > 0) {
+    return rows[0].id;
+  }
+
+  const [insert] = await db.promise().query(
+    `INSERT INTO ${table} (${column}) VALUES (?)`,
+    [trimmed]
+  );
+
+  return insert.insertId;
+}
 
 
 // 🔁 دوال المساعدة
@@ -4509,28 +4760,8 @@ app.post("/delete-device-specification", authenticateToken, async (req, res) => 
   if (!id) {
     return res.status(400).json({ error: "❌ Missing device ID" });
   }
-  const referencedTables = [
-    { table: "General_Maintenance", column: "device_id" },
-    { table: "Regular_Maintenance", column: "device_id" },
-    { table: "Maintenance_Reports", column: "device_id" },
-    { table: "New_Maintenance_Report", column: "device_id" }
-  ];
-
 
   try {
-    // تحقق من الارتباط بالجداول
-    for (const ref of referencedTables) {
-      const [rows] = await db.promise().query(
-        `SELECT COUNT(*) AS count FROM ${ref.table} WHERE ${ref.column} = ?`,
-        [id]
-      );
-      if (rows[0].count > 0) {
-        return res.status(400).json({
-          error: `❌ Cannot delete device. It is referenced in table "${ref.table}"`
-        });
-      }
-    }
-
     const [deviceInfo] = await db.promise().query(
       `SELECT device_name, Serial_Number, Governmental_Number FROM Maintenance_Devices WHERE id = ?`,
       [id]
@@ -4540,22 +4771,23 @@ app.post("/delete-device-specification", authenticateToken, async (req, res) => 
       return res.status(404).json({ error: "❌ Device not found" });
     }
 
-    const [deleteResult] = await db.promise().query(
-      `DELETE FROM Maintenance_Devices WHERE id = ?`,
+    // ✅ Soft delete: علّم الجهاز كمحذوف
+    const [updateResult] = await db.promise().query(
+      `UPDATE Maintenance_Devices SET is_deleted = TRUE WHERE id = ?`,
       [id]
     );
 
-    if (deleteResult.affectedRows === 0) {
-      return res.status(404).json({ error: "❌ Already deleted" });
+    if (updateResult.affectedRows === 0) {
+      return res.status(404).json({ error: "❌ Already deleted or not found" });
     }
 
     const userId = req.user?.id;
     const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
     const userName = userRow[0]?.name || 'Unknown';
 
-    logActivity(userId, userName, "Deleted", `Deleted device ID ${id} (${deviceInfo[0].name})`);
+    await logActivity(userId, userName, "Deleted", `Soft-deleted device ID ${id} (${deviceInfo[0].device_name})`);
 
-    res.json({ message: "✅ Device deleted successfully." });
+    res.json({ message: "✅ Device soft-deleted successfully." });
 
   } catch (err) {
     console.error("❌ Delete device error:", err);
@@ -4563,77 +4795,150 @@ app.post("/delete-device-specification", authenticateToken, async (req, res) => 
   }
 });
 
-app.post("/update-device-specification", authenticateToken, async (req, res) => {
-  const { id, newName, newSerial, newGovNumber } = req.body;
 
-  if (!id || !newName || !newSerial || !newGovNumber) {
+app.post("/update-device-specification", authenticateToken, async (req, res) => {
+  const {
+    id,
+    name,
+    Serial_Number,
+    Governmental_Number,
+    Model,
+    Department,
+    Device_Type,
+    Generation,
+    Processor,
+    RAM,
+    Hard_Drive,
+    OS,
+    RAM_Size,
+    MAC_Address,
+    IP_Address,
+    Ink_Type,
+    Printer_Type,
+    Ink_Serial_Number,
+    Scanner_Type
+  } = req.body;
+
+  if (!id || !name || !Serial_Number || !Governmental_Number) {
     return res.status(400).json({ error: "❌ Missing required fields" });
   }
 
   try {
-    // ✅ تحديث الجدول الرئيسي
-    const [updateMain] = await db.promise().query(
-      `UPDATE Maintenance_Devices SET device_name = ?, Serial_Number = ?, Governmental_Number = ? WHERE id = ?`,
-      [newName.trim(), newSerial.trim(), newGovNumber.trim(), id]
-    );
+    const getId = async (table, column, value) => {
+      if (!value) return null;
+      const [rows] = await db.promise().query(`SELECT id FROM ${table} WHERE ${column} = ?`, [value]);
+      return rows[0]?.id || null;
+    };
 
-    if (updateMain.affectedRows === 0) {
-      return res.status(404).json({ error: "❌ Device not found" });
+    const modelId = await getId("Maintance_Device_Model", "model_name", Model);
+    const departmentId = await getId("Departments", "name", Department);
+
+    // 1️⃣ تحديث Maintenance_Devices
+    await db.promise().query(`
+      UPDATE Maintenance_Devices SET
+        device_name = ?, serial_number = ?, governmental_number = ?,
+        model_id = ?, department_id = ?, device_type = ?
+      WHERE id = ?
+    `, [
+      name.trim(), Serial_Number.trim(), Governmental_Number.trim(),
+      modelId, departmentId, Device_Type?.trim(), id
+    ]);
+
+    // 2️⃣ تحديث حسب نوع الجهاز
+    const type = Device_Type?.toLowerCase().trim();
+
+    if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(type)) {
+      const osId = await getId("OS_Types", "os_name", OS);
+      const cpuId = await getId("CPU_Types", "cpu_name", Processor);
+      const genId = await getId("Processor_Generations", "generation_number", Generation);
+      const ramId = await getId("RAM_Types", "ram_type", RAM);
+      const driveId = await getId("Hard_Drive_Types", "drive_type", Hard_Drive);
+      const ramSizeId = await getId("RAM_Sizes", "ram_size", RAM_Size);
+      const pcModelId = await getId("PC_Model", "model_name", Model);
+
+      await db.promise().query(`
+        UPDATE PC_info SET
+          Computer_Name = ?, Governmental_Number = ?, Department = ?, 
+          Model_id = ?, OS_id = ?, Processor_id = ?, Generation_id = ?, RAM_id = ?, 
+          RamSize_id = ?, Drive_id = ?, Mac_Address = ?, Ip_Address = ?
+        WHERE Serial_Number = ?
+      `, [
+        name, Governmental_Number, departmentId, pcModelId, osId, cpuId,
+        genId, ramId, ramSizeId, driveId, MAC_Address, IP_Address, Serial_Number
+      ]);
+
+    } else if (type === "printer") {
+      const printerTypeId = await getId("Printer_Types", "printer_type", Printer_Type);
+      let inkTypeId = await getId("Ink_Types", "ink_type", Ink_Type);
+      let inkSerialId = await getId("Ink_Serials", "serial_number", Ink_Serial_Number);
+
+      // إضافة إذا ما كانوا موجودين
+      if (!inkTypeId && Ink_Type) {
+        const [res] = await db.promise().query(`INSERT INTO Ink_Types (ink_type) VALUES (?)`, [Ink_Type]);
+        inkTypeId = res.insertId;
+      }
+
+      if (!inkSerialId && Ink_Serial_Number) {
+        const [res] = await db.promise().query(
+          `INSERT INTO Ink_Serials (serial_number, ink_type_id) VALUES (?, ?)`,
+          [Ink_Serial_Number, inkTypeId]
+        );
+        inkSerialId = res.insertId;
+      }
+
+      const printerModelId = await getId("Printer_Model", "model_name", Model);
+
+      await db.promise().query(`
+        UPDATE Printer_info SET
+          Printer_Name = ?, Governmental_Number = ?, Department = ?, 
+          Model_id = ?, PrinterType_id = ?, InkType_id = ?, InkSerial_id = ?
+        WHERE Serial_Number = ?
+      `, [
+        name, Governmental_Number, departmentId, printerModelId, printerTypeId,
+        inkTypeId, inkSerialId, Serial_Number
+      ]);
+
+    } else if (type === "scanner") {
+      const scannerTypeId = await getId("Scanner_Types", "scanner_type", Scanner_Type);
+      const scannerModelId = await getId("Scanner_Model", "model_name", Model);
+
+      await db.promise().query(`
+        UPDATE Scanner_info SET
+          Scanner_Name = ?, Governmental_Number = ?, Department = ?, 
+          Model_id = ?, ScannerType_id = ?
+        WHERE Serial_Number = ?
+      `, [
+        name, Governmental_Number, departmentId, scannerModelId, scannerTypeId, Serial_Number
+      ]);
     }
 
-    // ✅ الجداول المرتبطة
-    const relatedTables = [
-      {
-        table: "General_Maintenance",
-        fields: ["device_name", "serial_number", "governmental_number"]
-      },
-      {
-        table: "Regular_Maintenance",
-        fields: ["device_name", "serial_number", "governmental_number"]
-      },
-      {
-        table: "External_Maintenance",
-        fields: ["device_name", "serial_number", "governmental_number"]
-      },
-      {
-        table: "New_Maintenance_Report",
-        fields: ["device_name", "serial_number", "governmental_number"]
-      },
+    // 3️⃣ تحديث الجداول المرتبطة
+const relatedTables = [
+  { table: "General_Maintenance" },
+  { table: "Regular_Maintenance" },
+  { table: "External_Maintenance" },
+  { table: "New_Maintenance_Report" },
+  { table: "Internal_Tickets" },
+  { table: "External_Tickets" }
+];
+
+for (const { table } of relatedTables) {
+  const [columns] = await db.promise().query(`
+    SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_NAME = ? AND COLUMN_NAME = 'device_id'
+  `, [table]);
+
+  if (columns.length > 0) {
+    await db.promise().query(`
+      UPDATE ${table}
+      SET device_name = ?, serial_number = ?, governmental_number = ?
+      WHERE device_id = ?
+    `, [name, Serial_Number, Governmental_Number, id]);
+  }
+}
 
 
-      {
-        table: "Internal_Tickets",
-        fields: ["device_name", "serial_number", "governmental_number"]
-      },
-      {
-        table: "External_Tickets",
-        fields: ["device_name", "serial_number", "governmental_number"]
-      }
-    ];
-
-    // ✅ تحديث كل جدول إذا يحتوي device_id
-    for (const { table, fields } of relatedTables) {
-      const [exists] = await db.promise().query(
-        `SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? AND COLUMN_NAME = 'device_id'`,
-        [table]
-      );
-
-      if (exists.length > 0) {
-        const query = `
-          UPDATE ${table}
-          SET ${fields[0]} = ?, ${fields[1]} = ?, ${fields[2]} = ?
-          WHERE device_id = ?
-        `;
-        await db.promise().query(query, [
-          newName.trim(),
-          newSerial.trim(),
-          newGovNumber.trim(),
-          id
-        ]);
-      }
-    }
-
-    // ✅ تسجيل اللوق
+    // 4️⃣ Logging
     const userId = req.user?.id;
     const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
     const userName = userRow[0]?.name || 'Unknown';
@@ -4642,16 +4947,17 @@ app.post("/update-device-specification", authenticateToken, async (req, res) => 
       userId,
       userName,
       "Edited",
-      `Updated device ID ${id} to name: ${newName}, serial: ${newSerial}, gov#: ${newGovNumber}`
+      `Updated device ID ${id} – name: ${name}, serial: ${Serial_Number}, gov#: ${Governmental_Number}`
     );
 
     res.json({ message: "✅ Device specification updated successfully." });
 
   } catch (err) {
     console.error("❌ Update device error:", err);
-    res.status(500).json({ error: "Server error during update." });
+    res.status(500).json({ error: "❌ Server error during update." });
   }
 });
+
 
 // ضروري تتأكد إن عندك body-parser أو express.json() مفعّل
 
