@@ -1409,7 +1409,7 @@ if (showSignature && reportData?.signature_path) {
     const updatedData = {
       id: reportData.id,
       issue_summary: document.getElementById("description")?.innerText.trim() || "",
-      full_description: document.getElementById("note")?.innerText.replace(/^(.*?:)?\s*/, "").trim() || "",
+      full_description: document.querySelector("#note .info-value")?.textContent.trim() || "",
       priority: document.getElementById("priority")?.innerText.trim(),
       status: document.getElementById("report-status")?.innerText.trim(),
       device_type: document.getElementById("device-type")?.innerText.trim(),
@@ -1508,6 +1508,8 @@ if (signatureUpload.files.length > 0) {
       const result = await res.json();
       if (result.message) {
         alert("✅ All changes saved successfully.");
+          location.reload(); // ✅ يعيد الصفحة إلى شكلها الأصلي النظيف
+
       } else {
         throw new Error("❌ Update failed on server.");
       }
@@ -1518,21 +1520,28 @@ if (signatureUpload.files.length > 0) {
     
     // تعطيل التحرير
 // تعطيل التحرير بعد الحفظ
+// تعطيل التحرير بعد الحفظ
 const editableElements = document.querySelectorAll(
   "#report-id, #priority, #device-type, #assigned-to, #department, #category, .description, .note, .spec-box"
 );
+
 editableElements.forEach(el => {
   el.removeAttribute("contenteditable");
   el.style.border = "none";
   el.style.backgroundColor = "transparent";
   el.style.padding = "0";
+  el.style.display = ""; // ← يرجع القيمة الطبيعية
+  el.style.minHeight = "";
 });
 
+// إخفاء إدخالات الملفات
 document.getElementById("attachment-input").style.display = "none";
 document.getElementById("signature-edit-wrapper").style.display = "none";
 
+// تبديل الأزرار
 saveBtn.style.display = "none";
 editBtn.style.display = "inline-block";
+
 
   });
   
