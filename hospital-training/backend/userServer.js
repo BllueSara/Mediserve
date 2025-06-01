@@ -34,7 +34,6 @@ app.get('/', (req, res) => {
 });
 
 
-
 // مفتاح التوكن (مهم تحفظه بمكان آمن)
 const JWT_SECRET = 'super_secret_key_123';
 

@@ -51,6 +51,25 @@ function fixEncoding(badText) {
   }
 }
 
+function cleanValue(val) {
+  return (val || "").replace(/\s*\[(ar|en)\]$/i, "").trim();
+}
+
+function cleanTag(value) {
+  return value?.toString().trim().replace(/\s*\[(ar|en)\]$/i, "");
+}
+
+function cleanReport(raw) {
+  const cleaned = {};
+  for (const key in raw) {
+    if (typeof raw[key] === "string") {
+      cleaned[key] = cleanTag(raw[key]);
+    } else {
+      cleaned[key] = raw[key];
+    }
+  }
+  return cleaned;
+}
 
 let reportData = null;
 
@@ -71,18 +90,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   fetch(`http://localhost:5050/report/${reportId}?type=${reportType}`)
     .then(res => res.json())
-    .then(report => {
-      console.log("📦 التقرير:", report);
+   .then(rawReport => {
+      console.log("📦 التقرير (خام):", rawReport);
 
-      
-
+      const report = cleanReport(rawReport); // ← 🧼 تنظيف التاجات
       reportData = report;
-      const lang = languageManager.currentLang; // ar أو en
 
-const normalizeKey = (text) => {
-  return text.replace(/[^\w\s]/gi, "").toLowerCase().trim();
-};
+      const lang = languageManager.currentLang;
 
+      const normalizeKey = (text) => {
+        return text.replace(/[^\w\s]/gi, "").toLowerCase().trim();
+      };
 const rawPriority = report.priority || "Medium";
 const rawType = report.device_type || "";
 const rawDept = report.department_name || "";
@@ -160,7 +178,7 @@ const translatedCategory = translations.category?.[rawCategory]?.[lang] || rawCa
           fields.forEach(({ icon, label, value, showForPC, showForPrinter, showForScanner, alwaysShow, i18n }) => {
             const shouldShow =
               alwaysShow ||
-              (showForPC && deviceType === "pc") ||
+             (showForPC && ["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes((deviceType || "").toLowerCase())) ||
               (showForPrinter && deviceType === "printer") ||
               (showForScanner && deviceType === "scanner") ||
               !!value;
@@ -294,11 +312,12 @@ document.getElementById("category").textContent = translatedCategory;
     
           document.getElementById("report-status").textContent = report.status || "Pending";
       document.getElementById("submitted-date").textContent = `Submitted on ${new Date(report.created_at).toLocaleString()}`;
-     const problem = (report.problem_status || "").trim();
+const problem = (report.problem_status || "").trim();
 const summary = (report.issue_summary || report.initial_diagnosis || "").trim();
 
 let descriptionHtml = "";
 
+// ✅ معالجة نوع التذكرة
 if (isInternalTicket) {
   descriptionHtml = summary || "No description.";
 } else {
@@ -321,20 +340,24 @@ if (isInternalTicket) {
     descriptionHtml = "No description.";
   }
 }
-// ✅ فقط لـ General: استخدم issue_summary فقط
-// ✅ فقط لـ General: استخدم issue_description أولاً
+
+// ✅ General تستخدم issue_description أولاً
 if (report.maintenance_type === "General") {
   descriptionHtml = report.issue_description || report.issue_summary || "No description.";
 }
 
-// ✅ معالجة وصف "Regular" بنفس الطريقة
+// ✅ Regular تستخدم problem_status أولاً
 if (report.maintenance_type === "Regular") {
   descriptionHtml = report.problem_status || report.issue_summary || "No description.";
 }
 
-// 🧼 تنظيف النصوص
-descriptionHtml = descriptionHtml.replace(/^Selected Issue:\s*/i, "").trim();
+// 🧼 تنظيف النص من "Selected Issue:" + وسم اللغة
+descriptionHtml = descriptionHtml
+  .replace(/^Selected Issue:\s*/i, "")
+  .replace(/\s*\[(ar|en)\]/gi, "") // ← حذف الوسوم من كامل النص
+  .trim();
 
+// 🔄 تحويل النصوص لقائمة عناصر
 let items = [];
 try {
   const parsed = JSON.parse(descriptionHtml);
@@ -347,27 +370,28 @@ try {
   items = descriptionHtml
     .replace(/^\[|\]$/g, "")
     .split(/[\n,،]+/)
-    .map(s => s.replace(/^["“”']?|["“”']?$/g, "").trim())
+    .map(s =>
+      s
+        .replace(/^["“”']?|["“”']?$/g, "")
+        .replace(/\s*\[(ar|en)\]$/i, "") // ← تنظيف كل عنصر
+        .trim()
+    )
     .filter(Boolean);
 }
 
-// ✅ الترجمة
+// ✅ الترجمة من القاموس
 const translated = items.map(text => {
   const dict = translations.description || {};
-  const cleanedText = text
-    .replace(/[“”]/g, '"') // ← تحويل علامات الاقتباس الذكية إلى العادية
-    .trim();
-
+  const cleanedText = text.replace(/[“”]/g, '"').trim();
   const found = Object.keys(dict).find(key => key.trim() === cleanedText);
   return `- ${found ? dict[found][lang] : text}`;
 }).join("<br>");
 
-
-// ✅ عرض
+// ✅ العرض النهائي
 const descEl = document.getElementById("description");
 descEl.innerHTML = translated || "No description.";
 descEl.style.textAlign = lang === 'ar' ? 'right' : 'left';
-    
+
       
       
 if (report.maintenance_type === "General") {
@@ -461,27 +485,30 @@ else {
 
 
       
-      
+
       
       
 
       const specs = [];
-      if (report.device_name) specs.push(`🔘 Device Name: ${report.device_name}`);
-      if (report.serial_number) specs.push(`🔑 Serial Number: ${report.serial_number}`);
-      if (report.governmental_number) specs.push(`🏛️ Ministry Number: ${report.governmental_number}`);
-      if (report.cpu_name) specs.push(`🧠 CPU: ${report.cpu_name}`);
-      if (report.ram_type) specs.push(`💾 RAM: ${report.ram_type}`);
-      if (report.os_name) specs.push(`🖥️ OS: ${report.os_name}`);
-      if (report.generation_number) specs.push(`📶 Generation: ${report.generation_number}`);
-      if (report.model_name) specs.push(`🔧 Model: ${report.model_name}`);
-      if (report.drive_type) specs.push(`💽 Hard Drive: ${report.drive_type}`);
-      if (report.ram_size) specs.push(`📏 RAM Size: ${report.ram_size}`);
-      if (report.mac_address) specs.push(`🌐 MAC Address: ${report.mac_address}`);
-      if (report.ip_address) specs.push(`🖧 IP Address: ${report.ip_address}`);
-      if (report.printer_type) specs.push(`🖨️ Printer Type: ${report.printer_type}`);
-      if (report.ink_type) specs.push(`🖋️ Ink Type: ${report.ink_type}`);
-      if (report.ink_serial_number) specs.push(`🔖 Ink Serial Number: ${report.ink_serial_number}`);
-      if (report.scanner_type) specs.push(`📠 Scanner Type: ${report.scanner_type}`);
+const cleanTag = (value) => value?.toString().trim().replace(/\s*\[(ar|en)\]$/i, "");
+
+if (report.device_name) specs.push(`🔘 Device Name: ${cleanTag(report.device_name)}`);
+if (report.serial_number) specs.push(`🔑 Serial Number: ${cleanTag(report.serial_number)}`);
+if (report.governmental_number) specs.push(`🏛️ Ministry Number: ${cleanTag(report.governmental_number)}`);
+if (report.cpu_name) specs.push(`🧠 CPU: ${cleanTag(report.cpu_name)}`);
+if (report.ram_type) specs.push(`💾 RAM: ${cleanTag(report.ram_type)}`);
+if (report.os_name) specs.push(`🖥️ OS: ${cleanTag(report.os_name)}`);
+if (report.generation_number) specs.push(`📶 Generation: ${cleanTag(report.generation_number)}`);
+if (report.model_name) specs.push(`🔧 Model: ${cleanTag(report.model_name)}`);
+if (report.drive_type) specs.push(`💽 Hard Drive: ${cleanTag(report.drive_type)}`);
+if (report.ram_size) specs.push(`📏 RAM Size: ${cleanTag(report.ram_size)}`);
+if (report.mac_address) specs.push(`🌐 MAC Address: ${cleanTag(report.mac_address)}`);
+if (report.ip_address) specs.push(`🖧 IP Address: ${cleanTag(report.ip_address)}`);
+if (report.printer_type) specs.push(`🖨️ Printer Type: ${cleanTag(report.printer_type)}`);
+if (report.ink_type) specs.push(`🖋️ Ink Type: ${cleanTag(report.ink_type)}`);
+if (report.ink_serial_number) specs.push(`🔖 Ink Serial Number: ${cleanTag(report.ink_serial_number)}`);
+if (report.scanner_type) specs.push(`📠 Scanner Type: ${cleanTag(report.scanner_type)}`);
+
       
 
       
@@ -495,29 +522,29 @@ else {
         const deviceType = (report.device_type || "").trim().toLowerCase();
         
         const fields = [
-          { icon: "🔘", label: "Device Name:", value: report.device_name, alwaysShow: true, i18n: "device_name" },
-          { icon: "🔑", label: "Serial Number:", value: report.serial_number, alwaysShow: true, i18n: "serial_number" },
-          { icon: "🏛️", label: "Ministry Number:", value: report.governmental_number, alwaysShow: true, i18n: "ministry_number" },
-          { icon: "🧠", label: "CPU:", value: report.cpu_name, showForPC: true, i18n: "cpu" },
-          { icon: "💾", label: "RAM:", value: report.ram_type, showForPC: true, i18n: "ram" },
-          { icon: "🖥️", label: "OS:", value: report.os_name, showForPC: true, i18n: "os" },
-          { icon: "📶", label: "Generation:", value: report.generation_number, showForPC: true, i18n: "generation" },
-          { icon: "🔧", label: "Model:", value: report.model_name, alwaysShow: true, i18n: "model" },
-          { icon: "📟", label: "Device Type:", value: report.device_type, i18n: "device_type" },
-          { icon: "💽", label: "Hard Drive:", value: report.drive_type, showForPC: true, i18n: "hard_drive" },
-          { icon: "📏", label: "RAM Size:", value: report.ram_size, showForPC: true, i18n: "ram_size" },
-          { icon: "🌐", label: "MAC Address:", value: report.mac_address, showForPC: true, i18n: "mac_address" },
-          { icon: "🖧", label: "IP Address:", value: report.ip_address, showForPC: true, i18n: "ip_address" },
-          { icon: "🖨️", label: "Printer Type:", value: report.printer_type, showForPrinter: true, i18n: "printer_type" },
-          { icon: "🖋️", label: "Ink Type:", value: report.ink_type, showForPrinter: true, i18n: "ink_type" },
-          { icon: "🔖", label: "Ink Serial Number:", value: report.ink_serial_number, showForPrinter: true, i18n: "ink_serial" },
-          { icon: "📠", label: "Scanner Type:", value: report.scanner_type, showForScanner: true, i18n: "scanner_type" },
+ { icon: "🔘", label: "Device Name:", value: cleanTag(report.device_name), alwaysShow: true, i18n: "device_name" },
+  { icon: "🔑", label: "Serial Number:", value: cleanTag(report.serial_number), alwaysShow: true, i18n: "serial_number" },
+  { icon: "🏛️", label: "Ministry Number:", value: cleanTag(report.governmental_number), alwaysShow: true, i18n: "ministry_number" },
+  { icon: "🧠", label: "CPU:", value: cleanTag(report.cpu_name), showForPC: true, i18n: "cpu" },
+  { icon: "💾", label: "RAM:", value: cleanTag(report.ram_type), showForPC: true, i18n: "ram" },
+  { icon: "🖥️", label: "OS:", value: cleanTag(report.os_name), showForPC: true, i18n: "os" },
+  { icon: "📶", label: "Generation:", value: cleanTag(report.generation_number), showForPC: true, i18n: "generation" },
+  { icon: "🔧", label: "Model:", value: cleanTag(report.model_name), alwaysShow: true, i18n: "model" },
+  { icon: "📟", label: "Device Type:", value: cleanTag(report.device_type), i18n: "device_type" },
+  { icon: "💽", label: "Hard Drive:", value: cleanTag(report.drive_type), showForPC: true, i18n: "hard_drive" },
+  { icon: "📏", label: "RAM Size:", value: cleanTag(report.ram_size), showForPC: true, i18n: "ram_size" },
+  { icon: "🌐", label: "MAC Address:", value: cleanTag(report.mac_address), showForPC: true, i18n: "mac_address" },
+  { icon: "🖧", label: "IP Address:", value: cleanTag(report.ip_address), showForPC: true, i18n: "ip_address" },
+  { icon: "🖨️", label: "Printer Type:", value: cleanTag(report.printer_type), showForPrinter: true, i18n: "printer_type" },
+  { icon: "🖋️", label: "Ink Type:", value: cleanTag(report.ink_type), showForPrinter: true, i18n: "ink_type" },
+  { icon: "🔖", label: "Ink Serial Number:", value: cleanTag(report.ink_serial_number), showForPrinter: true, i18n: "ink_serial" },
+  { icon: "📠", label: "Scanner Type:", value: cleanTag(report.scanner_type), showForScanner: true, i18n: "scanner_type" },
         ];
         
         fields.forEach(({ icon, label, value, showForPC, showForPrinter, showForScanner, alwaysShow, i18n }) => {
           const shouldShow =
             alwaysShow ||
-            (showForPC && deviceType === "pc") ||
+             (showForPC && ["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes((deviceType || "").toLowerCase())) ||
             (showForPrinter && deviceType === "printer") ||
             (showForScanner && deviceType === "scanner") ||
             !!value;
@@ -617,6 +644,7 @@ const translations = {
   deviceType: {
   "pc": { en: "pc", ar: "جهاز كمبيوتر" },
    "Printer": { en: "Printer", ar: "طابعة" },
+   "printer": { en: "printer", ar: "طابعة" },
    "Scanner": { en: "Scanner", ar: "ماسح ضوئي" },
    "scanner": { en: "Scanner", ar: "ماسح ضوئي" }
   },
@@ -981,6 +1009,7 @@ departments: {
   }
 ,
 };
+
 function normalizeKey(text) {
   return text
     .replace(/[“”]/g, '"')        // اقتباسات ذكية إلى عادية
@@ -997,16 +1026,37 @@ Object.entries(translations.description).forEach(([key, val]) => {
   normalizedDescriptions[normalized] = val;
 });
 
+function reverseTranslate(value, dictionary, targetLang) {
+  for (const key in dictionary) {
+    const entry = dictionary[key];
+    const values = typeof entry === "object" ? Object.values(entry).map(v => v?.trim()) : [entry];
+    if (values.includes(value?.trim())) {
+      return entry[targetLang] || value;
+    }
+  }
+  return value;
+}
 
 
   // ⬇️ تحميل PDF
-  document.querySelector(".download-btn")?.addEventListener("click", () => {
-    document.getElementById("pdf-options-modal").style.display = "block";
-      const lang = document.getElementById("pdf-lang").value || "en"; // ← هنا فقط نحدد اللغة
+document.querySelector(".download-btn")?.addEventListener("click", () => {
+  document.getElementById("pdf-options-modal").style.display = "block";
+
+  // ← لا تعتمد على لغة الموقع إطلاقًا، فقط على اختيار المستخدم
+  const lang = document.getElementById("pdf-lang").value || "en";
+  const isArabic = lang === "ar";
+
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF("p", "mm", "a4", true);
-  doc.setFont(lang === "ar" ? "Amiri" : "helvetica", "normal"); 
-  });
+
+  // ✅ استخدم خط Amiri دائمًا
+  doc.addFileToVFS("Amiri-Regular.ttf", tajawalRegularBase64);
+  doc.addFont("Amiri-Regular.ttf", "Amiri", "normal");
+  doc.setFont("Amiri", "normal");
+
+  // 🔄 يمكنك الآن استخدام المتغير isArabic لضبط الاتجاه فقط
+});
+
 // ✅ دعم توليد PDF بلغتين (عربية / إنجليزية)
 
 document.getElementById("generate-pdf-btn")?.addEventListener("click", async () => {
@@ -1014,7 +1064,6 @@ document.getElementById("generate-pdf-btn")?.addEventListener("click", async () 
 
   const msLogoImg = document.querySelector(".ms-logo img");
   const hospitalLogoImg = document.querySelector(".hospital-logo img");
-
   await waitForImagesToLoad([msLogoImg, hospitalLogoImg]);
 
   const { jsPDF } = window.jspdf;
@@ -1023,19 +1072,12 @@ document.getElementById("generate-pdf-btn")?.addEventListener("click", async () 
 
   const doc = new jsPDF("p", "mm", "a4", true);
 
-if (isArabic) {
   doc.addFileToVFS("Amiri-Regular.ttf", tajawalRegularBase64);
   doc.addFont("Amiri-Regular.ttf", "Amiri", "normal");
-
   doc.addFileToVFS("Amiri-Bold.ttf", tajawalBoldBase64);
   doc.addFont("Amiri-Bold.ttf", "Amiri", "bold");
 
   doc.setFont("Amiri", "normal");
-} else {
-  doc.setFont("helvetica", "bold");
-}
-
-
   const pageWidth = doc.internal.pageSize.getWidth();
 
   const msBase64 = getImageBase64(msLogoImg);
@@ -1044,45 +1086,58 @@ if (isArabic) {
   doc.addImage(msBase64, "PNG", 3, 8, 25, 12);
   doc.addImage(hospitalBase64, "PNG", pageWidth - 35, 8, 25, 12);
 
-  doc.setFontSize(14);
-
-
-
-
+  const L = {
+    en: { report: "Report", report_id: "Report ID", priority: "Priority", device_type: "Device Type", assigned_to: "Assigned To", department: "Department", category: "Category", attachment: "Attachment", description: "Description", technical_notes: "Technical Notes", signature: "Signature", specs: "Device Specifications" },
+    ar: { report: "تقرير", report_id: "رقم التقرير", priority: "الأولوية", device_type: "نوع الجهاز", assigned_to: "المسؤول", department: "القسم", category: "الفئة", attachment: "المرفق", description: "الوصف", technical_notes: "ملاحظات فنية", signature: "التوقيع", specs: "مواصفات الجهاز" }
+  }[lang];
 
   let y = 40;
 
+  doc.setFontSize(16);
+// ✅ عنوان التقرير
+// ✅ عنوان التقرير مع دعم الترجمة واللغة
+function normalizeText(text) {
+  return text
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[^A-Za-z\u0600-\u06FF0-9\s]/g, "") // إنجليزي + عربي + أرقام
+    .toLowerCase()
+    .trim();
+}
 
-  const labels = {
-    en: { report: "Report", report_id: "Report ID", priority: "Priority", device_type: "Device Type", assigned_to: "Assigned To", department: "Department", category: "Category", attachment: "Attachment", description: "Description", technical_notes: "Technical Notes", signature: "Signature", specs: "Device Specifications" },
-    ar: { report: "تقرير", report_id: "رقم التقرير", priority: "الأولوية", device_type: "نوع الجهاز", assigned_to: "المسؤول", department: "القسم", category: "الفئة", attachment: "المرفق", description: "الوصف", technical_notes: "ملاحظات فنية", signature: "التوقيع", specs: "مواصفات الجهاز" }
-  };
+function getTitleKey(text) {
+  const norm = normalizeText(text);
+  for (const [key, val] of Object.entries(translations.titleType || {})) {
+    if (
+      normalizeText(key) === norm ||
+      normalizeText(val.en) === norm ||
+      normalizeText(val.ar) === norm
+    ) {
+      return key;
+    }
+  }
+  return null;
+}
 
-  const L = labels[lang];
-
-doc.setFontSize(16);
-
-// جلب عنوان التقرير من العنصر
+// --- داخل كود توليد التقرير
 let reportTitle = document.getElementById("report-title")?.textContent || L.report;
-
-// إزالة رقم التذكرة (مثلاً: "#123")
 reportTitle = reportTitle.split("#")[0].trim();
 
-// تحديد اللغة
+const titleKey = getTitleKey(reportTitle);
+const translatedReportTitle = titleKey
+  ? translations.titleType[titleKey]?.[lang]
+  : reportTitle;
 
-// استخدام الترجمة إن توفرت
-const translatedReportTitle = translations.titleType[reportTitle]?.[lang] || reportTitle;
-
-// ✅ تصحيح الترتيب: "التقرير :اسم"
 const titleText = isArabic
   ? prepareArabic(`${L.report} :${translatedReportTitle}`)
   : `${L.report}: ${translatedReportTitle}`;
 
-// طباعة العنوان في منتصف الصفحة
+doc.setFont("Amiri", "bold");
 doc.text(titleText, pageWidth / 2, 20, { align: "center" });
-doc.setFontSize(12);
 
 
+
+  doc.setFontSize(12);
   const attachmentName = reportData?.attachment_name || null;
   const attachmentUrl = reportData?.attachment_path ? `http://localhost:5050/uploads/${reportData.attachment_path}` : null;
 
@@ -1093,44 +1148,41 @@ doc.setFontSize(12);
   const showSignature = document.getElementById("opt-signature").checked;
   const showAttachment = document.getElementById("opt-attachment").checked;
   const showSpecs = document.getElementById("opt-specs").checked;
-  const align = isArabic ? "right" : "left";
 
+  const align = isArabic ? "right" : "left";
   const xLabel = isArabic ? pageWidth - 15 : 15;
   const xValue = isArabic ? pageWidth - 60 : 60;
-const rawDeviceType = document.getElementById("device-type")?.textContent?.trim();
-const rawDepartment = document.getElementById("department")?.textContent?.trim();
-const rawCategory = document.getElementById("category")?.textContent?.trim();
-const rawPriority = document.getElementById("priority")?.textContent?.trim();
-const translatedPriority = translations.priority?.[rawPriority]?.[lang] || rawPriority;
 
-const translatedDeviceType = translations.deviceType?.[normalizeKey(rawDeviceType)]?.[lang] || rawDeviceType;
-const translatedDepartment = translations.departments?.[rawDepartment]?.[lang] || rawDepartment;
-const translatedCategory = translations.category?.[rawCategory]?.[lang] || rawCategory;
-
-console.log("✅ Device:", translatedDeviceType, "Dept:", translatedDepartment);
-
-const fields = [
-  [L.report_id, document.getElementById("report-id")?.textContent],
-  showPriority && [L.priority, translatedPriority], // ✅ هنا استخدم الترجمة
-  showDeviceType && [L.device_type, translatedDeviceType],
-  [L.assigned_to, document.getElementById("assigned-to")?.textContent],
-  [L.department, translatedDepartment],
-  [L.category, translatedCategory]
-].filter(Boolean);
+  const rawDeviceType = document.getElementById("device-type")?.textContent?.trim();
+  const rawDepartment = document.getElementById("department")?.textContent?.trim();
+  const rawCategory = document.getElementById("category")?.textContent?.trim();
+  const rawPriority = document.getElementById("priority")?.textContent?.trim();
+const translatedPriority = reverseTranslate(rawPriority, translations.priority, lang);
+const translatedDeviceType = reverseTranslate(rawDeviceType, translations.deviceType, lang);
+const translatedDepartment = reverseTranslate(rawDepartment, translations.departments, lang);
+const translatedCategory = reverseTranslate(rawCategory, translations.category, lang);
 
 
-fields.forEach(([label, value]) => {
-  const labelText = isArabic ? prepareArabic(`${label}`) : `${label}:`;
-  const valueText = isArabic ? prepareArabic(value || "") : (value || "");
-  doc.setFont(isArabic ? "Amiri" : "helvetica", "bold").text(labelText, xLabel, y, { align });
-  doc.setFont(isArabic ? "Amiri" : "helvetica", "normal").text(valueText, xValue, y, { align });
-  y += 8;
-});
+  const fields = [
+    [L.report_id, document.getElementById("report-id")?.textContent],
+    showPriority && [L.priority, translatedPriority],
+    showDeviceType && [L.device_type, translatedDeviceType],
+    [L.assigned_to, document.getElementById("assigned-to")?.textContent],
+    [L.department, translatedDepartment],
+    [L.category, translatedCategory]
+  ].filter(Boolean);
 
+  fields.forEach(([label, value]) => {
+    const labelText = isArabic ? prepareArabic(`${label}`) : `${label}:`;
+    const valueText = isArabic ? prepareArabic(value || "") : (value || "");
+    doc.setFont("Amiri", "bold").text(labelText, xLabel, y, { align });
+    doc.setFont("Amiri", "normal").text(valueText, xValue, y, { align });
+    y += 8;
+  });
 
   if (showAttachment && attachmentName && attachmentUrl) {
     const label = isArabic ? prepareArabic(`${L.attachment}:`) : `${L.attachment}:`;
-    doc.setFont(isArabic ? "Amiri" : "helvetica", "bold").text(label, xLabel, y, { align });
+    doc.setFont("Amiri", "bold").text(label, xLabel, y, { align });
     doc.setTextColor(0, 0, 255);
     doc.textWithLink(attachmentName, xValue, y, { url: attachmentUrl, align });
     doc.setTextColor(0, 0, 0);
@@ -1139,69 +1191,94 @@ fields.forEach(([label, value]) => {
 
 if (showDescription) {
   y += 5;
-
   const descLabel = isArabic ? prepareArabic(L.description) : `${L.description}:`;
-  doc.setFont(isArabic ? "Amiri" : "helvetica", "bold").text(descLabel, xLabel, y, { align });
+  doc.setFont("Amiri", "bold").text(descLabel, xLabel, y, { align });
   y += 6;
 
   const descEl = document.getElementById("description");
   let rawDesc = descEl?.textContent?.trim() || "";
 
-  // ✅ إصلاح النص إذا احتوى على "Selected Issue:"
   if (rawDesc.startsWith("Selected Issue:")) {
     rawDesc = rawDesc.replace(/^Selected Issue:\s*/i, "").trim();
   }
 
   let items = [];
 
-  try {
-    items = JSON.parse(rawDesc);
-    if (!Array.isArray(items)) throw new Error();
-  } catch {
-    items = rawDesc
-      .replace(/^\[|\]$/g, "")
-      .split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/g)
-      .map(s => s.replace(/^["“”']?|["“”']?$/g, "").trim())
-      .filter(Boolean);
+try {
+  items = JSON.parse(rawDesc);
+  if (!Array.isArray(items)) throw new Error();
+} catch {
+  // يدعم التقسيم بناءً على الشرطة (-) أو النقطتين أو أسطر جديدة
+  items = rawDesc
+    .split(/[\n\r\-•]+/g)
+    .map(s => s.replace(/^["“”']?|["“”']?$/g, "").trim())
+    .filter(Boolean);
+}
+
+function normalizeKey(text) {
+  return text
+    .replace(/[“”]/g, '"')        // اقتباسات ذكية
+    .replace(/[‘’]/g, "'")        // اقتباسات مفردة
+    .replace(/^[^A-Za-z\u0600-\u06FF0-9]+/, "") // نحذف الرموز من بداية النص فقط
+    .replace(/[^A-Za-z\u0600-\u06FF0-9\s]/g, "") // نحذف باقي الرموز
+    .toLowerCase()
+    .trim();
+}
+
+function findOriginalKeyByAnyLang(text) {
+  const normalizedText = normalizeKey(text);
+  for (const [key, val] of Object.entries(translations.description)) {
+    if (
+      normalizeKey(val.en) === normalizedText ||
+      normalizeKey(val.ar) === normalizedText ||
+      normalizeKey(key) === normalizedText
+    ) {
+      return key;
+    }
   }
+  return null;
+}
 
-  items.forEach(text => {
-    const norm = normalizeKey(text);
-    const translated = normalizedDescriptions[norm]?.[lang] || text;
-    const finalText = isArabic ? prepareArabic(translated) : translated;
+items.forEach(text => {
+  const normalizedInput = normalizeKey(text);
+  const originalKey = findOriginalKeyByAnyLang(text);
+  const translated = originalKey
+    ? translations.description[originalKey][lang]
+    : text;
 
-    const wrapped = doc.splitTextToSize(finalText, pageWidth - 30);
-    doc.setFont(isArabic ? "Amiri" : "helvetica", "normal").text(wrapped, xLabel, y, { align });
-    y += wrapped.length * 6 + 2;
-  });
+  console.log("--------");
+  console.log("Raw Text:", text);
+  console.log("Normalized Input:", normalizedInput);
+  console.log("Detected Original Key:", originalKey);
+  console.log("Translated Text:", translated);
+  console.log("Language:", lang);
+
+  const finalText = lang === "ar" ? prepareArabic(translated) : translated;
+
+  const wrapped = doc.splitTextToSize(finalText, pageWidth - 30);
+  doc.setFont("Amiri", "normal").text(wrapped, xLabel, y, { align });
+  y += wrapped.length * 6 + 2;
+});
+
 
   y += 3;
 }
-
-
-
-
 if (showNote) {
-const align = isArabic ? "right" : "left";
-const xLabel = isArabic ? pageWidth - 15 : 15;
+  const rows = Array.from(document.querySelectorAll("#note .info-row"));
+  const isReportArabic = lang === "ar";
+  const noteLabel = isReportArabic ? prepareArabic(L.technical_notes) : L.technical_notes;
 
-
-  const noteLabel = isArabic ? prepareArabic(L.technical_notes) : L.technical_notes;
-  doc.setFont(isArabic ? "Amiri" : "helvetica", "bold")
-     .text(noteLabel, xLabel, y, { align });
+  doc.setFont("Amiri", "bold").text(noteLabel, xLabel, y, { align });
   y += 6;
 
-  const lang = isArabic ? "ar" : "en";
-  const rows = Array.from(document.querySelectorAll("#note .info-row"));
-
-  const noteLabelTranslations = {
-    "Customer Name": { en: "Customer Name", ar: "اسم العميل" },
-    "ID Number": { en: "ID Number", ar: "رقم الهوية" },
-    "Ext Number": { en: "Ext Number", ar: "رقم التحويلة" },
-    "Initial Diagnosis": { en: "Initial Diagnosis", ar: "التشخيص المبدئي" },
-    "Final Diagnosis": { en: "Final Diagnosis", ar: "التشخيص النهائي" },
-    "Floor": { en: "Floor", ar: "الطابق" }
-  };
+const noteLabelTranslations = {
+  "Customer Name": { en: "Customer Name", ar: "اسم العميل" },
+  "ID Number": { en: "ID Number", ar: "رقم الهوية" },
+  "Ext Number": { en: "Ext Number", ar: "رقم التمديد" }, // ✅ أضف هذا
+  "Initial Diagnosis": { en: "Initial Diagnosis", ar: "التشخيص الأولي" }, // ✅ أضف هذا
+  "Final Diagnosis": { en: "Final Diagnosis", ar: "التشخيص النهائي" },
+  "Floor": { en: "Floor", ar: "الطابق" }
+};
 
   const floors = {
     "Basement 2": { en: "Basement 2", ar: "القبو الثاني" },
@@ -1221,36 +1298,50 @@ const xLabel = isArabic ? pageWidth - 15 : 15;
     "Rooftop": { en: "Rooftop", ar: "السطح" },
     "Parking": { en: "Parking", ar: "مواقف السيارات" }
   };
-const textAlign = isArabic ? "right" : "left";
-const xText = isArabic ? pageWidth - 15 : 15;
+
+function findLabelKeyByAnyLang(label, dictionary) {
+  const normalized = normalizeKey(label);
+  for (const [key, value] of Object.entries(dictionary)) {
+    if (
+      normalizeKey(key) === normalized ||
+      normalizeKey(value.en) === normalized ||
+      normalizeKey(value.ar) === normalized
+    ) {
+      return key;
+    }
+  }
+  return null;
+}
+
 
 rows.forEach(row => {
   let rawLabel = row.querySelector(".info-label")?.textContent?.trim() || "";
   let value = row.querySelector(".info-value")?.textContent?.trim() || "";
 
   rawLabel = rawLabel.replace(/:$/, "").trim();
-  const translatedLabel = noteLabelTranslations[rawLabel]?.[lang] || rawLabel;
+  const labelKey = findLabelKeyByAnyLang(rawLabel, noteLabelTranslations);
+  const translatedLabel = labelKey ? noteLabelTranslations[labelKey][lang] : rawLabel;
 
   let translatedValue = value;
-
-  if (rawLabel === "Floor") {
-    translatedValue = floors?.[value]?.[lang] || value;
+  if (labelKey === "Floor") {
+    const floorKey = findLabelKeyByAnyLang(value, floors);
+    translatedValue = floorKey ? floors[floorKey][lang] : value;
   }
 
-  let finalLine;
+  console.log("----------- NOTE ITEM -----------");
+  console.log("Raw Label:", rawLabel);
+  console.log("Value:", value);
+  console.log("Label Key:", labelKey);
+  console.log("Translated Label:", translatedLabel);
+  console.log("Translated Value:", translatedValue);
+  console.log("Language:", lang);
 
-  if (isArabic && rawLabel === "Floor") {
-    finalLine = prepareArabic(`${translatedLabel}: ${translatedValue}`);
-  } else if (isArabic) {
-    finalLine = prepareArabic(`${translatedValue} :${translatedLabel}`);
-  } else {
-    finalLine = `${translatedLabel}: ${translatedValue}`;
-  }
+  const line = isArabic
+    ? prepareArabic(`${translatedValue} :${translatedLabel}`)
+    : `${translatedLabel}: ${translatedValue}`;
 
-  const lines = doc.splitTextToSize(finalLine, pageWidth - 30);
-  doc.setFont(isArabic ? "Amiri" : "helvetica", "normal")
-     .text(lines, xText, y, { align: textAlign });
-
+  const lines = doc.splitTextToSize(line, pageWidth - 30);
+  doc.setFont("Amiri", "normal").text(lines, xLabel, y, { align });
   y += lines.length * 6 + 2;
 });
 
@@ -1259,69 +1350,50 @@ rows.forEach(row => {
   y += 5;
 }
 
-
-
 if (showSpecs) {
-  // عنوان قسم المواصفات
   const specsTitle = isArabic ? prepareArabic(L.specs) : `${L.specs}:`;
-  doc.setFont(isArabic ? "Amiri" : "helvetica", "bold").text(specsTitle, xLabel, y, { align });
+  doc.setFont("Amiri", "bold").text(specsTitle, xLabel, y, { align });
   y += 8;
 
-  // ترجمة العناوين
   const labelTranslations = {
-    "Device Name": { en: "Device Name", ar: "اسم الجهاز" },
-    "Serial Number": { en: "Serial Number", ar: "الرقم التسلسلي" },
-    "Ministry Number": { en: "Ministry Number", ar: "الرقم الوزاري" },
-    "CPU": { en: "CPU", ar: "المعالج" },
-    "RAM": { en: "RAM", ar: "نوع الذاكرة" },
-    "OS": { en: "OS", ar: "نظام التشغيل" },
-    "Generation": { en: "Generation", ar: "الجيل" },
-    "Model": { en: "Model", ar: "الموديل" },
-    "Device Type": { en: "Device Type", ar: "نوع الجهاز" },
-    "Hard Drive": { en: "Hard Drive", ar: "نوع القرص" },
-    "RAM Size": { en: "RAM Size", ar: "حجم الذاكرة" },
-    "MAC Address": { en: "MAC Address", ar: "عنوان MAC" },
-    "IP Address": { en: "IP Address", ar: "عنوان IP" },
-    "Printer Type": { en: "Printer Type", ar: "نوع الطابعة" },
-    "Ink Type": { en: "Ink Type", ar: "نوع الحبر" },
-    "Ink Serial Number": { en: "Ink Serial Number", ar: "الرقم التسلسلي للحبر" },
-    "Scanner Type": { en: "Scanner Type", ar: "نوع الماسح الضوئي" }
+    device_name: { en: "Device Name", ar: "اسم الجهاز" },
+    serial_number: { en: "Serial Number", ar: "الرقم التسلسلي" },
+    ministry_number: { en: "Ministry Number", ar: "الرقم الوزاري" },
+    cpu: { en: "CPU", ar: "المعالج" },
+    ram: { en: "RAM", ar: "نوع الذاكرة" },
+    os: { en: "OS", ar: "نظام التشغيل" },
+    generation: { en: "Generation", ar: "الجيل" },
+    model: { en: "Model", ar: "الموديل" },
+    device_type: { en: "Device Type", ar: "نوع الجهاز" },
+    hard_drive: { en: "Hard Drive", ar: "نوع القرص" },
+    ram_size: { en: "RAM Size", ar: "حجم الذاكرة" },
+    mac_address: { en: "MAC Address", ar: "عنوان MAC" },
+    ip_address: { en: "IP Address", ar: "عنوان IP" },
+    printer_type: { en: "Printer Type", ar: "نوع الطابعة" },
+    ink_type: { en: "Ink Type", ar: "نوع الحبر" },
+    ink_serial: { en: "Ink Serial Number", ar: "الرقم التسلسلي للحبر" },
+    scanner_type: { en: "Scanner Type", ar: "نوع الماسح الضوئي" }
   };
 
-  const lang = isArabic ? "ar" : "en";
+  const specs = Array.from(document.querySelectorAll("#device-specs .spec-box"))
+    .map(box => {
+      const spans = box.querySelectorAll("span");
+      if (spans.length < 2) return null;
 
-  // استخراج المواصفات من الصفحة
-const specs = Array.from(document.querySelectorAll("#device-specs .spec-box"))
-  .flatMap(el => {
-    const text = el.innerText.trim();
-    const matches = [...text.matchAll(/([\w\s]+?):\s*([^:]+)(?=\s+\w+?:|$)/g)];
+      const i18nKey = spans[1].getAttribute("data-i18n")?.trim();
+      const rawLabel = i18nKey || spans[1].textContent.trim().replace(/[:\s]*$/, "");
+      const value = spans[2]?.textContent?.trim() || "";
 
-    return matches.map(([_, rawLabel, value]) => {
-      const normalized = rawLabel
-        .replace(/[:\u200B-\u200D\uFEFF]/g, "")
-        .replace(/\s+/g, " ")
-        .trim()
-        .toLowerCase();
+      if (!rawLabel || !value) return null;
 
-      let translatedLabel = rawLabel;
-      for (const key in labelTranslations) {
-        if (key.toLowerCase() === normalized) {
-          translatedLabel = labelTranslations[key][lang];
-          break;
-        }
-      }
+      const translation = labelTranslations[rawLabel]?.[lang] || rawLabel;
+      const line = isArabic
+        ? prepareArabic(`${value} :${translation}`)
+        : `${translation}: ${value}`;
+      return line;
+    })
+    .filter(Boolean);
 
-      // ✅ القيمة ثم النقطتين ثم العنوان
-const line = isArabic
-  ? prepareArabic(`${value.trim()} :${translatedLabel}`)
-  : `${translatedLabel}: ${value.trim()}`;
-      return isArabic ? prepareArabic(line) : line;
-    });
-  })
-  .filter(Boolean);
-
-
-  // إعداد العرض في عمودين
   const colCount = 2;
   const colWidth = (pageWidth - 30) / colCount;
   let col = 0;
@@ -1330,11 +1402,9 @@ const line = isArabic
   specs.forEach((spec) => {
     const x = startX + (col * colWidth);
     const lines = doc.splitTextToSize(spec, colWidth);
-
     lines.forEach((line, idx) => {
-      doc.setFont(isArabic ? "Amiri" : "helvetica", "normal").text(line, x, y + (idx * 5));
+      doc.setFont("Amiri", "normal").text(line, x, y + (idx * 5));
     });
-
     col++;
     if (col === colCount) {
       col = 0;
@@ -1346,32 +1416,30 @@ const line = isArabic
 }
 
 
+  y = Math.max(y + 20, 240);
+  const signLabel = isArabic ? prepareArabic(`${L.signature}`) : `${L.signature}:`;
+  doc.setFont("Amiri", "bold").text(signLabel, xLabel, y, { align });
 
+  if (showSignature && reportData?.signature_path) {
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = `http://localhost:5050/${reportData.signature_path}`;
+      await new Promise((res, rej) => {
+        img.onload = res;
+        img.onerror = rej;
+      });
 
-y = Math.max(y + 20, 240);
-const signLabel = isArabic ? prepareArabic(`${L.signature}`) : `${L.signature}:`;
-doc.setFont(isArabic ? "Amiri" : "helvetica", "bold").text(signLabel, xLabel, y, { align });
-
-if (showSignature && reportData?.signature_path) {
-  try {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = `http://localhost:5050/${reportData.signature_path}`;
-    await new Promise((res, rej) => {
-      img.onload = res;
-      img.onerror = rej;
-    });
-
-    const canvas = document.createElement("canvas");
-    canvas.width = img.width;
-    canvas.height = img.height;
-    canvas.getContext("2d").drawImage(img, 0, 0);
-    const url = canvas.toDataURL("image/png");
-    doc.addImage(url, "PNG", xLabel - 50, y + 5, 50, 25);
-  } catch (e) {
-    console.warn("⚠️ Signature not loaded", e);
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      canvas.getContext("2d").drawImage(img, 0, 0);
+      const url = canvas.toDataURL("image/png");
+      doc.addImage(url, "PNG", xLabel - 50, y + 5, 50, 25);
+    } catch (e) {
+      console.warn("⚠️ Signature not loaded", e);
+    }
   }
-}
 
   const [typeOnly, ticketPart] = reportTitle.split("#").map(p => p.trim());
   const fileName = ticketPart ? `${typeOnly} - ${ticketPart}` : typeOnly;
@@ -1394,7 +1462,7 @@ if (showSignature && reportData?.signature_path) {
   
     // 👇 عرض مدخل رفع المرفق
     document.getElementById("attachment-input").style.display = "block";
-  document.getElementById("signature-edit-wrapper").style.display = "block";
+  document.getElementById("signature-edit-wrapper").styleخ.display = "block";
 
     saveBtn.style.display = "inline-block";
     document.querySelector(".edit-btn").style.display = "none";

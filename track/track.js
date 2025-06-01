@@ -1,3 +1,10 @@
+function cleanTag(text) {
+  return typeof text === "string"
+    ? text.replace(/\s*\[(ar|en)\]/gi, "").trim()
+    : text;
+}
+
+
 document.addEventListener("DOMContentLoaded", () => {
   const container = document.getElementById("activity-log-container");
   const filterButtons = document.querySelectorAll(".filter-btn");
@@ -33,8 +40,8 @@ function renderLogs(filter, searchTerm = "") {
   container.innerHTML = "";
 
   const filteredLogs = allLogs.filter(log => {
-    const action = log.action?.toLowerCase() || "";
-    const details = log.details?.toLowerCase() || "";
+    const action = cleanTag(log.action)?.toLowerCase() || "";
+    const details = cleanTag(log.details)?.toLowerCase() || "";
     const search = searchTerm.toLowerCase();
 
     const actionMatch = filter === "All" || action.includes(filter.toLowerCase());
@@ -49,21 +56,23 @@ function renderLogs(filter, searchTerm = "") {
   }
 
   filteredLogs.forEach(log => {
-    
     const createdAt = new Date(log.timestamp);
     const time = createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const date = createdAt.toLocaleDateString();
+
+    const action = cleanTag(log.action);
+    const details = cleanTag(log.details);
+    const user = cleanTag(log.user_name);
 
     const card = document.createElement("div");
     card.className = "activity-card";
 
     card.innerHTML = `
       <div class="flex gap-4">
-     
         <div class="activity-content">
-          <h2>${log.action}</h2>
-          <p>${log.details}</p>
-          <p class="meta">By: ${log.user_name}</p>
+          <h2>${action}</h2>
+          <p>${details}</p>
+          <p class="meta">By: ${user}</p>
         </div>
       </div>
       <div class="activity-time">
@@ -75,6 +84,7 @@ function renderLogs(filter, searchTerm = "") {
     container.appendChild(card);
   });
 }
+
 
 const searchInput = document.getElementById("search-input");
 let currentFilter = "All";
