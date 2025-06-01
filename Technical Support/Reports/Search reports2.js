@@ -1,3 +1,18 @@
+  function cleanTag(value) {
+  return value?.replace(/\s*\[(ar|en)\]$/i, "").trim();
+}
+
+function cleanReport(raw) {
+  const cleaned = {};
+  for (const key in raw) {
+    if (typeof raw[key] === "string") {
+      cleaned[key] = cleanTag(raw[key]);
+    } else {
+      cleaned[key] = raw[key];
+    }
+  }
+  return cleaned;
+}
 document.addEventListener("DOMContentLoaded", () => {
   const urlParams = new URLSearchParams(window.location.search);
   const page = urlParams.get("page") || 1;
@@ -70,8 +85,12 @@ function loadExternalReports(page = 1) {
     headers: { 'Authorization': `Bearer ${token}` }
   })
     .then(res => res.json())
-    .then(data => {
-      const container = document.getElementById("report-list");
+.then(data => {
+  // 🧼 تنظيف التاجات من جميع البيانات
+  data = data.map(cleanReport);
+
+  const container = document.getElementById("report-list");
+
       container.innerHTML = "";
 
       const type = document.getElementById("filter-type")?.value;

@@ -1,3 +1,25 @@
+  function cleanTag(value) {
+  return value?.replace(/\s*\[(ar|en)\]$/i, "").trim();
+}
+function cleanText(text) {
+  return (text || "")
+    .replace(/\[\s*(ar|en)\s*\]/gi, "")       // يزيل [ar] أو [en]
+    .replace(/\s{2,}/g, " ")                  // يزيل المسافات الزائدة
+    .trim();
+}
+
+
+function cleanReport(raw) {
+  const cleaned = {};
+  for (const key in raw) {
+    if (typeof raw[key] === "string") {
+      cleaned[key] = cleanText(raw[key]);
+    } else {
+      cleaned[key] = raw[key];
+    }
+  }
+  return cleaned;
+}
 document.addEventListener("DOMContentLoaded", () => {
   const urlParams = new URLSearchParams(window.location.search);
   const page = urlParams.get('page') || 1;
@@ -5,7 +27,8 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelector(".new-report-btn")?.addEventListener("click", () => {
     window.location.href = "Newreport.html";
   });
-  
+
+
   document.querySelectorAll(".pagination .page-btn[data-page]").forEach(button => {
     button.addEventListener("click", () => {
       const page = button.dataset.page;
@@ -98,8 +121,12 @@ function loadReports(page = 1) {
     }
   })
     .then(res => res.json())
-    .then(data => {
-      const container = document.getElementById("report-list");
+.then(data => {
+  // 🧼 تنظيف التاجات من جميع البيانات
+  data = data.map(cleanReport);
+
+  const container = document.getElementById("report-list");
+
       container.innerHTML = "";
 const isArabic = languageManager.currentLang === 'ar';
 
@@ -305,11 +332,13 @@ function translateTextBlock(text) {
       .filter(Boolean);
   }
 
-  return arr.map(original => {
-    const norm = normalizeKey(original);
-    const key = Object.keys(dict).find(k => normalizeKey(k) === norm);
-    return `<li style="margin: 2px 0;">${key ? dict[key][lang] : original}</li>`;
-  }).join("");
+return arr.map(original => {
+  const cleanedOriginal = cleanText(original); // 👈 إضافة هذه
+  const norm = normalizeKey(cleanedOriginal);
+  const key = Object.keys(dict).find(k => normalizeKey(k) === norm);
+  return `<li style="margin: 2px 0;">${key ? dict[key][lang] : cleanedOriginal}</li>`;
+}).join("");
+
 }
 
 const translatedIssueList = issue ? translateTextBlock(issue) : "";

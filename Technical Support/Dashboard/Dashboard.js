@@ -6,6 +6,22 @@ function goBack() {
 function goToHome() {
   window.location.href = "Home.html";
 }
+function cleanTag(value) {
+  return typeof value === "string"
+    ? value.replace(/\s*\[(ar|en)\]$/gi, "").trim()
+    : value;
+}
+
+function cleanReport(obj) {
+  if (Array.isArray(obj)) {
+    return obj.map(cleanReport);
+  }
+  const cleaned = {};
+  for (const key in obj) {
+    cleaned[key] = cleanTag(obj[key]);
+  }
+  return cleaned;
+}
 
 function goToMireDetails(){
   window.location.href = "details.html";
@@ -262,8 +278,10 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     })
-    .then(data => {
-      drawDoughnut('routineStatusChart', data.regular.percentage, '#8B5CF6');
+.then(rawData => {
+  const data = cleanReport(rawData);
+  drawDoughnut('routineStatusChart', data.regular.percentage, '#8B5CF6');
+
       drawDoughnut('internalStatusChart', data.internal.percentage, '#3B82F6');
       drawDoughnut('externalStatusChart', data.external.percentage, '#F59E0B');
 
@@ -291,7 +309,8 @@ async function loadSupportTicketsSummary() {
 
     if (!res.ok) throw new Error('Failed to fetch support ticket summary');
 
-    const data = await res.json();
+const rawData = await res.json();
+const data = cleanReport(rawData);
 
     const container = document.getElementById('supportTicketsContainer');
     container.innerHTML = '';
@@ -488,7 +507,20 @@ async function loadMaintenanceOverviewChart() {
 
     if (!res.ok) throw new Error('Failed to load overview data');
 
-    const data = await res.json();
+const rawData = await res.json();
+const data = cleanReport(rawData);
+// 🧹 نظف المفاتيح من [ar] أو [en]
+function cleanKeys(obj) {
+  const result = {};
+  for (const key in obj) {
+    const cleanKey = key.replace(/\s*\[(ar|en)\]$/i, "").trim();
+    result[cleanKey] = obj[key];
+  }
+  return result;
+}
+
+data.internal = cleanKeys(data.internal || {});
+data.external = cleanKeys(data.external || {});
 
     // جمع كل الأنواع من internal و external
     const allTypesSet = new Set([
@@ -521,7 +553,8 @@ async function loadRepeatedProblems() {
 
     if (!res.ok) throw new Error('❌ Failed to fetch repeated problems');
 
-    const data = await res.json();
+const rawData = await res.json();
+const data = cleanReport(rawData);
     const container = document.getElementById('repeatedProblemsContainer');
     container.innerHTML = '';
 
@@ -600,7 +633,8 @@ async function loadUpgradeDevices() {
 
     if (!res.ok) throw new Error('❌ Failed to fetch upgrade devices');
 
-    const data = await res.json();
+const rawData = await res.json();
+const data = cleanReport(rawData);
     const tbody = document.getElementById('upgradeDevicesBody');
     tbody.innerHTML = '';
 
@@ -669,7 +703,8 @@ async function drawMonthlyCompletionLineChart() {
     });
 
     if (!res.ok) throw new Error('Failed to load monthly completion data');
-    const data = await res.json();
+const rawData = await res.json();
+const data = cleanReport(rawData);
 
     drawLineChart(
       'reportLineChart',

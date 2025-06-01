@@ -31,17 +31,17 @@ async function renderDropdownOptions({
   onEditOption,
   onDeleteOption,
   onSelectOption,
-      transformData // ← أضف هذا
+  transformData // ← أضف هذا
 
 }) {
   const permissions = await checkUserPermissions();
   const res = await fetch(endpoint);
-let data = await res.json();
+  let data = await res.json();
 
-// ✅ دعم التحويل (الترجمة)
-if (typeof transformData === "function") {
-  data = transformData(data);
-}
+  // ✅ دعم التحويل (الترجمة)
+  if (typeof transformData === "function") {
+    data = transformData(data);
+  }
   const container = document.getElementById(containerId);
   const display = document.getElementById(displayId);
   const input = document.getElementById(inputId);
@@ -70,36 +70,36 @@ if (typeof transformData === "function") {
 
   // ✅ العناصر
   data.forEach(item => {
-const value = typeof itemKey === 'function' ? itemKey(item) : item[itemKey];
-const displayText = typeof value === 'object' ? value.name : value;
-const actualValue = typeof value === 'object' ? value.name : value;
-const internalId = typeof value === 'object' ? value.id : null;
+    const value = typeof itemKey === 'function' ? itemKey(item) : item[itemKey];
+    const displayText = typeof value === 'object' ? value.name : value;
+    const actualValue = typeof value === 'object' ? value.name : value;
+    const internalId = typeof value === 'object' ? value.id : null;
 
-const row = document.createElement("div");
-row.className = "dropdown-option-row";
+    const row = document.createElement("div");
+    row.className = "dropdown-option-row";
 
-const text = document.createElement("div");
-text.className = "dropdown-option-text";
-text.textContent = displayText;
+    const text = document.createElement("div");
+    text.className = "dropdown-option-text";
+    text.textContent = displayText;
 
 
-text.onclick = () => {
-  display.textContent = displayText;
+    text.onclick = () => {
+      display.textContent = displayText;
 
-  // إذا كان العنصر خاص بـ technical-status → احفظ ID فقط
-  if (inputId === "technical-status") {
-    input.value = internalId || "";
-    input.dataset.name = actualValue; // ← اختياري لو حبيت تحتفظ بالاسم
-    console.log("✅ تم تحديد الفني:", actualValue, "ID:", internalId);
-  } else {
-    input.value = actualValue; // الاسم العادي
-  }
+      // إذا كان العنصر خاص بـ technical-status → احفظ ID فقط
+      if (inputId === "technical-status") {
+        input.value = internalId || "";
+        input.dataset.name = actualValue; // ← اختياري لو حبيت تحتفظ بالاسم
+        console.log("✅ تم تحديد الفني:", actualValue, "ID:", internalId);
+      } else {
+        input.value = actualValue; // الاسم العادي
+      }
 
-  if (onSelectOption) onSelectOption(actualValue, item);
+      if (onSelectOption) onSelectOption(actualValue, item);
 
-  cleanDropdownError(input);
-  closeAllDropdowns();
-};
+      cleanDropdownError(input);
+      closeAllDropdowns();
+    };
 
 
 
@@ -112,11 +112,11 @@ text.onclick = () => {
       const editIcon = document.createElement("i");
       editIcon.className = "fas fa-edit";
       editIcon.title = t['edit'] || "Edit";
-editIcon.onclick = (e) => {
-  e.stopPropagation();
-  const label = typeof value === 'object' ? value.name : value;
-  onEditOption?.(label);
-};
+      editIcon.onclick = (e) => {
+        e.stopPropagation();
+        const label = typeof value === 'object' ? value.name : value;
+        onEditOption?.(label);
+      };
 
       icons.appendChild(editIcon);
     }
@@ -126,11 +126,11 @@ editIcon.onclick = (e) => {
       const deleteIcon = document.createElement("i");
       deleteIcon.className = "fas fa-trash";
       deleteIcon.title = t['delete'] || "Delete";
-deleteIcon.onclick = (e) => {
-  e.stopPropagation();
-  const label = typeof value === 'object' ? value.name : value;
-  onDeleteOption?.(label);
-};
+      deleteIcon.onclick = (e) => {
+        e.stopPropagation();
+        const label = typeof value === 'object' ? value.name : value;
+        onDeleteOption?.(label);
+      };
       icons.appendChild(deleteIcon);
     }
 
@@ -140,19 +140,19 @@ deleteIcon.onclick = (e) => {
   });
 
   // ✅ استرجاع القيمة المحفوظة
-const saved = sessionStorage.getItem(storageKey || inputId);
-if (saved) {
-  const allRows = container.querySelectorAll(".dropdown-option-row");
-  for (const row of allRows) {
-    const textEl = row.querySelector(".dropdown-option-text");
-    if (textEl?.textContent?.trim() === saved.trim()) {
-      textEl.click();  // ← هذا ينفذ الكود اللي يحفظ dataset.id
-      break;
+  const saved = sessionStorage.getItem(storageKey || inputId);
+  if (saved) {
+    const allRows = container.querySelectorAll(".dropdown-option-row");
+    for (const row of allRows) {
+      const textEl = row.querySelector(".dropdown-option-text");
+      if (textEl?.textContent?.trim() === saved.trim()) {
+        textEl.click();  // ← هذا ينفذ الكود اللي يحفظ dataset.id
+        break;
+      }
     }
-  }
 
-  sessionStorage.removeItem(storageKey || inputId);
-}
+    sessionStorage.removeItem(storageKey || inputId);
+  }
 
 
 
@@ -186,24 +186,27 @@ function fetchAndRenderModels(deviceType, dropdownId) {
     itemKey: "model_name",   // ✅ ونرسله
     storageKey: dropdownId,
 
-transformData: (items) => {
-  const currentLang = languageManager.currentLang;
+    transformData: (items) => {
+      const currentLang = languageManager.currentLang;
 
-  return items
-    .filter(item => {
-      const name = item.model_name?.trim() || "";
-      const isUserAddedArabic = isArabicText(name);
+      return items
+        .filter(item => {
+          const name = item.model_name?.trim() || "";
+          const isArabic = name.endsWith("[ar]");
+          const isEnglish = name.endsWith("[en]");
+          const isUnlabeled = !isArabic && !isEnglish;
 
-      // ✅ لو اللغة عربي → نعرض كل شيء
-      // ✅ لو اللغة إنجليزي → نخفي فقط اللي شكله عربي
-      return currentLang === "ar" ? true : !isUserAddedArabic;
-    })
-    .map(item => ({
-      ...item,
-      originalId: item.id,
-      model_name: item.model_name
-    }));
-},
+          return currentLang === "ar" ? isArabic || isUnlabeled : isEnglish || isUnlabeled;
+        })
+        .map(item => {
+          const cleanedName = item.model_name.replace(/\s*\[(ar|en)\]$/, "");
+          return {
+            ...item,
+            model_name: cleanedName
+          };
+        });
+
+    },
 
 
     onAddNew: () => {
@@ -559,7 +562,10 @@ function savePCSpec() {
   });
 
   data.forEach((value, key) => {
-    deviceData[key] = value.trim();
+    const raw = value.trim();
+    const cleanValue = raw.replace(/\s*\[(ar|en)\]$/i, ""); // ✅ حذف التاج
+    deviceData[key] = cleanValue;
+
     const input = popupForm.querySelector(`[name="${key}"]`);
 
     if (input?.hasAttribute("required") && !value.trim()) {
@@ -597,10 +603,10 @@ function savePCSpec() {
 
   }
   // ✅ اجلب اسم القسم الصحيح من sessionStorage
-const departmentName = sessionStorage.getItem("original-department");
-deviceData.department = departmentName; // استبدل القيمة بالاسم بدلاً من الرقم
+  const departmentName = sessionStorage.getItem("original-department");
+  deviceData.department = departmentName; // استبدل القيمة بالاسم بدلاً من الرقم
 
-console.log("📦 البيانات المرسلة:", deviceData);
+  console.log("📦 البيانات المرسلة:", deviceData);
 
   fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
     method: "POST",
@@ -633,65 +639,90 @@ console.log("📦 البيانات المرسلة:", deviceData);
             }
           }
         } else {
-    // ✅ هنا نعرض رسالة السيرفر تحت الحقل الصحيح
+          // ✅ هنا نعرض رسالة السيرفر تحت الحقل الصحيح
 
-    // تحديد الحقل المناسب حسب نوع الخطأ
-    if (result.error.includes("IP")) {
-      const ipInput = popupForm.querySelector('[name="ip-address"]');
-      if (ipInput) {
-        ipInput.classList.add("input-error");
+          // تحديد الحقل المناسب حسب نوع الخطأ
+          if (result.error.includes("IP")) {
+            const ipInput = popupForm.querySelector('[name="ip-address"]');
+            if (ipInput) {
+              ipInput.classList.add("input-error");
 
-        // إزالة أي رسالة موجودة مسبقًا
-        const oldMsg = ipInput.nextElementSibling;
-        if (!oldMsg || !oldMsg.classList.contains("input-error-message")) {
-          const msg = document.createElement("div");
-          msg.className = "input-error-message";
-          msg.textContent = result.error;
-          ipInput.insertAdjacentElement("afterend", msg);
+              // إزالة أي رسالة موجودة مسبقًا
+              const oldMsg = ipInput.nextElementSibling;
+              if (!oldMsg || !oldMsg.classList.contains("input-error-message")) {
+                const msg = document.createElement("div");
+                msg.className = "input-error-message";
+                msg.textContent = result.error;
+                ipInput.insertAdjacentElement("afterend", msg);
+              }
+            }
+          } else if (result.error.includes("MAC")) {
+            const macInput = popupForm.querySelector('[name="mac-address"]');
+            if (macInput) {
+              macInput.classList.add("input-error");
+
+              const oldMsg = macInput.nextElementSibling;
+              if (!oldMsg || !oldMsg.classList.contains("input-error-message")) {
+                const msg = document.createElement("div");
+                msg.className = "input-error-message";
+                msg.textContent = result.error;
+                macInput.insertAdjacentElement("afterend", msg);
+              }
+            }
+          } else {
+            alert(result.error); // ← fallback
+          }
         }
-      }
-    } else if (result.error.includes("MAC")) {
-      const macInput = popupForm.querySelector('[name="mac-address"]');
-      if (macInput) {
-        macInput.classList.add("input-error");
-
-        const oldMsg = macInput.nextElementSibling;
-        if (!oldMsg || !oldMsg.classList.contains("input-error-message")) {
-          const msg = document.createElement("div");
-          msg.className = "input-error-message";
-          msg.textContent = result.error;
-          macInput.insertAdjacentElement("afterend", msg);
-        }
-      }
-    } else {
-      alert(result.error); // ← fallback
-    }
-  }
-  return;
+        return;
       }
 
       // ✅ تم الحفظ بنجاح
-// ✅ تم الحفظ بنجاح
-const dropdown = document.getElementById("device-spec");
-const option = document.createElement("option");
-option.value = result.insertedId || deviceData.serial || deviceData["device-name"];
-option.textContent = `${deviceData["device-name"]} | ${deviceData.serial} | ${deviceData["ministry-id"]}`;
-dropdown.appendChild(option);
-dropdown.value = option.value;
+      // ✅ تم الحفظ بنجاح
+      const dropdown = document.getElementById("device-spec");
+      const option = document.createElement("option");
+      option.value = result.insertedId || deviceData.serial || deviceData["device-name"];
+      option.textContent = `${deviceData["device-name"]} | ${deviceData.serial} | ${deviceData["ministry-id"]}`;
+      dropdown.appendChild(option);
+      dropdown.value = option.value;
 
-const displaySpan = document.getElementById("selected-device-spec");
-if (displaySpan) {
-  displaySpan.textContent = option.textContent;
-}
+      const displaySpan = document.getElementById("selected-device-spec");
+      if (displaySpan) {
+        displaySpan.textContent = option.textContent;
+      }
 
-popup.style.display = "none";
-setTimeout(() => {
-  fetchDeviceSpecsByTypeAndDepartment();
-}, 100);
+      popup.style.display = "none";
+      setTimeout(() => {
+        fetchDeviceSpecsByTypeAndDepartment();
+      }, 100);
     })
     .catch(err => {
       console.error("❌ خطأ أثناء الاتصال بالسيرفر:", err);
     });
+}
+function createLangAwareTransform(field) {
+  return (items) => {
+    const currentLang = languageManager.currentLang;
+
+    return items
+      .filter(item => {
+        const raw = item[field]?.trim() || "";
+        const isArabic = raw.endsWith("[ar]");
+        const isEnglish = raw.endsWith("[en]");
+        const isUnlabeled = !isArabic && !isEnglish;
+
+        return currentLang === "ar"
+          ? isArabic || isUnlabeled
+          : isEnglish || isUnlabeled;
+      })
+      .map(item => {
+        const raw = item[field]?.trim() || "";
+        const cleaned = raw.replace(/\s*\[(ar|en)\]$/, "");
+        return {
+          ...item,
+          [field]: cleaned
+        };
+      });
+  };
 }
 
 function fetchScannerTypes() {
@@ -703,22 +734,8 @@ function fetchScannerTypes() {
     labelKey: "scanner_type",
     itemKey: "scanner_type",
     storageKey: "scanner-type",    // ✅ فلترة بناءً على لغة النظام
-transformData: (items) => {
-  const currentLang = languageManager.currentLang;
+    transformData: createLangAwareTransform("printer_type"),
 
-  return items
-    .filter(item => {
-      const name = item.scanner_type?.trim() || "";
-      const isUserAddedArabic = isArabicText(name);
-
-      // ✅ نعرض العربي فقط إذا اللغة عربية، ونعرض الانجليزي دائمًا
-      return currentLang === "ar" ? true : !isUserAddedArabic;
-    })
-    .map(item => ({
-      ...item,
-      scanner_type: item.scanner_type
-    }));
-},
 
 
     onAddNew: () => {
@@ -748,23 +765,10 @@ function fetchPrinterTypes() {
     inputId: "printer-type",
     labelKey: "printer_type",
     itemKey: "printer_type",
-    storageKey: "printer-type", 
-transformData: (items) => {
-  const currentLang = languageManager.currentLang;
+    storageKey: "printer-type",
+    transformData: createLangAwareTransform("printer_type")
 
-  return items
-    .filter(item => {
-      const name = item.printer_type?.trim() || "";
-      const isUserAddedArabic = isArabicText(name);
-
-      // ✅ نعرض العربي فقط إذا اللغة عربية، ونعرض الانجليزي دائمًا
-      return currentLang === "ar" ? true : !isUserAddedArabic;
-    })
-    .map(item => ({
-      ...item,
-      printer_type: item.printer_type
-    }));
-},
+    ,
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "printer-type");
       openAddOptionPopup("printer-type");
@@ -792,22 +796,9 @@ function fetchInkTypes() {
     labelKey: "ink_type",
     itemKey: "ink_type",
     storageKey: "ink-type",
-transformData: (items) => {
-  const currentLang = languageManager.currentLang;
+    transformData: createLangAwareTransform("ink_type")
 
-  return items
-    .filter(item => {
-      const name = item.ink_type?.trim() || "";
-      const isUserAddedArabic = isArabicText(name);
-
-      // ✅ نعرض العربي فقط إذا اللغة عربية، ونعرض الانجليزي دائمًا
-      return currentLang === "ar" ? true : !isUserAddedArabic;
-    })
-    .map(item => ({
-      ...item,
-      ink_type: item.ink_type
-    }));
-},
+    ,
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "ink-type");
       openAddOptionPopup("ink-type");
@@ -825,6 +816,7 @@ transformData: (items) => {
     }
   });
 }
+
 function isArabicText(text) {
   const arabicRegex = /[\u0600-\u06FF]/;
   return arabicRegex.test(text);
@@ -843,37 +835,45 @@ function fetchDepartments(selectId = "department") {
     storageKey: selectId,
 
     // ✅ ترجم كل عنصر بعد ما يجي من API
-transformData: (items) => {
-  const currentLang = languageManager.currentLang;
+    transformData: (items) => {
+      const currentLang = languageManager.currentLang;
 
-  return items
-    .filter(item => {
-      const original = item.name?.trim() || "";
-      const translated = translateDepartmentName(original);
+      return items
+        .filter(item => {
+          const original = item.name?.trim() || "";
+          const translated = translateDepartmentName(original);
 
-      const isTranslated = translated !== original;
-      const isUserAddedArabic = !isTranslated && isArabicText(original);
+          const hasArTag = /\[ar\]$/i.test(original);
+          const hasEnTag = /\[en\]$/i.test(original);
+          const isTranslated = translated !== original;
+          const isArabic = isArabicText(original);
 
-      if (currentLang === "ar") {
-        // ✅ عرض إذا القسم مترجم أو مضاف بالعربي
-        return isTranslated || isUserAddedArabic;
-      } else {
-        // ✅ إخفاء القسم إذا شكله عربي (تمت إضافته يدويًا بالعربي)
-        return !isUserAddedArabic;
-      }
-    })
-    .map(item => {
-      const originalName = item.name?.trim();
-      const translated = translateDepartmentName(originalName);
+          // ✅ نعرض دائمًا العناصر المترجمة (الموجودة في قائمة الترجمة)
+          if (isTranslated) return true;
 
-      return {
-        ...item,
-        originalSection: originalName,
-        section: translated,
-        name: translated
-      };
-    });
-},
+          // ✅ العناصر اليدوية بالوسم فقط
+          if (hasArTag) return currentLang === "ar";
+          if (hasEnTag) return currentLang === "en";
+
+          // ✅ عناصر بدون ترجمة أو وسم → نعتمد على شكل النص
+          return currentLang === "ar" ? isArabic : !isArabic;
+        })
+        .map(item => {
+          const originalName = item.name?.trim();
+          const translated = translateDepartmentName(originalName);
+
+          // ✅ نحذف الوسم إذا موجود
+          const displayName = translated.replace(/\s*\[(ar|en)\]$/i, "").trim();
+
+          return {
+            ...item,
+            originalSection: originalName,
+            section: displayName,
+            name: displayName
+          };
+        });
+    },
+
 
 
 
@@ -898,11 +898,11 @@ transformData: (items) => {
         deleteOption("section", val, "Department");
       }
     },
-onSelectOption: (originalValue, fullItem) => {
-  const englishName = fullItem.originalSection || originalValue;
-  sessionStorage.setItem("original-department", englishName);
-  fetchDeviceSpecsByTypeAndDepartment();
-}
+    onSelectOption: (originalValue, fullItem) => {
+      const englishName = fullItem.originalSection || originalValue;
+      sessionStorage.setItem("original-department", englishName);
+      fetchDeviceSpecsByTypeAndDepartment();
+    }
 
 
   });
@@ -915,10 +915,18 @@ function saveNewSection() {
     return;
   }
 
+  const isArabic = isArabicText(sectionName); // 👈 تحديد حسب شكل النص
+  const langLabel = isArabic ? "[ar]" : "[en]";
+  const sectionNameWithLang = `${sectionName} ${langLabel}`;
+
+
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
-    body: JSON.stringify({ target: "section", value: sectionName })
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${localStorage.getItem('token')}`
+    },
+    body: JSON.stringify({ target: "section", value: sectionNameWithLang })
   })
     .then(res => res.json())
     .then(result => {
@@ -927,44 +935,33 @@ function saveNewSection() {
         return;
       }
 
-
       const selectId = sessionStorage.getItem("lastDepartmentSelectId") || "spec-department";
 
-      // ✅ تحديث الدروب داون المخصص
-      // ✅ بعد fetchDepartments(selectId);
+      // ✅ تحديث القوائم
       fetchDepartments(selectId);
-      sessionStorage.setItem(selectId, sectionName);
+      sessionStorage.setItem(selectId, sectionNameWithLang);
 
-      // ✅ إظهار القيمة الجديدة يدويًا
       setTimeout(() => {
         const displaySpan = document.getElementById(`selected-${selectId}`);
         const hiddenInput = document.getElementById(selectId);
 
         if (displaySpan && hiddenInput) {
           displaySpan.textContent = sectionName;
-          hiddenInput.value = sectionName;
+          hiddenInput.value = sectionNameWithLang;
         }
       }, 200);
 
-
-      // ✅ إزالة بيانات الجلس
       sessionStorage.removeItem("lastDepartmentSelectId");
       sessionStorage.removeItem("returnToPopup");
 
-      // ✅ أغلق البوب أب الحالي
-      document.getElementById("generic-popup").style.display = "none";
-
-      // ✅ فقط إذا كانت الإضافة داخل popup المواصفات + نوع الجهاز غير معروف
       const deviceType = document.getElementById("device-type")?.value?.toLowerCase();
       const isSpecContext = ["spec-department", "department-pc", "department-printer", "department-scanner"].includes(selectId);
 
-        if (isSpecContext && !["pc", "printer", "scanner","desktop", "laptop", "كمبيوتر", "لابتوب"].includes(deviceType)) {
+      if (isSpecContext && !["pc", "printer", "scanner", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(deviceType)) {
         const modelName = document.getElementById("spec-model")?.value;
         if (modelName) sessionStorage.setItem("spec-model", modelName);
 
         const popup = document.getElementById("generic-popup");
-
-        // ✅ إذا البوب أب موجود ومفتوح، لا تفتحه من جديد
         if (popup && popup.style.display !== "flex") {
           setTimeout(() => {
             openGenericPopup("Device Specification", "device-spec");
@@ -972,7 +969,7 @@ function saveNewSection() {
             setTimeout(() => {
               const deptSelect = document.getElementById("spec-department");
               if (deptSelect) {
-                deptSelect.value = sectionName;
+                deptSelect.value = sectionNameWithLang;
                 deptSelect.dispatchEvent(new Event("change", { bubbles: true }));
               }
 
@@ -988,12 +985,14 @@ function saveNewSection() {
         }
       }
 
+      document.getElementById("generic-popup").style.display = "none";
     })
     .catch(err => {
       console.error("❌ Failed to save section:", err);
       alert("❌ Error saving section");
     });
 }
+
 
 
 
@@ -1006,22 +1005,11 @@ function fetchDrives() {
     labelKey: "hard_drive",
     itemKey: "drive_type",
     storageKey: "drive-select",
-transformData: (items) => {
-  const currentLang = languageManager.currentLang;
+    transformData: createLangAwareTransform("drive_type")
+    ,
 
-  return items
-    .filter(item => {
-      const name = item.drive_type?.trim() || "";
-      const isUserAddedArabic = isArabicText(name);
 
-      // ✅ نعرض العربي فقط إذا اللغة عربية، ونعرض الانجليزي دائمًا
-      return currentLang === "ar" ? true : !isUserAddedArabic;
-    })
-    .map(item => ({
-      ...item,
-      drive_type: item.drive_type
-    }));
-},
+
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "drive-select");
       openAddOptionPopup("drive-select");
@@ -1044,22 +1032,9 @@ function fetchCPU() {
     inputId: "cpu-select",
     labelKey: "processor",
     itemKey: "cpu_name",
-    storageKey: "cpu-select",transformData: (items) => {
-  const currentLang = languageManager.currentLang;
-
-  return items
-    .filter(item => {
-      const name = item.cpu_name?.trim() || "";
-      const isUserAddedArabic = isArabicText(name);
-
-      // ✅ نعرض العربي فقط إذا اللغة عربية، ونعرض الانجليزي دائمًا
-      return currentLang === "ar" ? true : !isUserAddedArabic;
-    })
-    .map(item => ({
-      ...item,
-      cpu_name: item.cpu_name
-    }));
-},
+    storageKey: "cpu-select",
+    transformData: createLangAwareTransform("cpu_name")
+    ,
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "cpu-select");
       openAddOptionPopup("cpu-select");
@@ -1083,22 +1058,8 @@ function fetchRAM() {
     labelKey: "ram",
     itemKey: "ram_type",
     storageKey: "ram-select",
-transformData: (items) => {
-  const currentLang = languageManager.currentLang;
-
-  return items
-    .filter(item => {
-      const name = item.ram_type?.trim() || "";
-      const isUserAddedArabic = isArabicText(name);
-
-      // ✅ نعرض العربي فقط إذا اللغة عربية، ونعرض الانجليزي دائمًا
-      return currentLang === "ar" ? true : !isUserAddedArabic;
-    })
-    .map(item => ({
-      ...item,
-      ram_type: item.ram_type
-    }));
-},
+    transformData: createLangAwareTransform("ram_type")
+    ,
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "ram-select");
       openAddOptionPopup("ram-select");
@@ -1122,22 +1083,8 @@ function fetchOS() {
     labelKey: "operating_system",
     itemKey: "os_name",
     storageKey: "os-select",
-transformData: (items) => {
-  const currentLang = languageManager.currentLang;
-
-  return items
-    .filter(item => {
-      const name = item.os_name?.trim() || "";
-      const isUserAddedArabic = isArabicText(name);
-
-      // ✅ نعرض العربي فقط إذا اللغة عربية، ونعرض الانجليزي دائمًا
-      return currentLang === "ar" ? true : !isUserAddedArabic;
-    })
-    .map(item => ({
-      ...item,
-      os_name: item.os_name
-    }));
-},
+    transformData: createLangAwareTransform("os_name")
+    ,
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "os-select");
       openAddOptionPopup("os-select");
@@ -1161,22 +1108,7 @@ function fetchProcessorGen() {
     labelKey: "processor_generation",
     itemKey: "generation_number",
     storageKey: "generation-select",
-transformData: (items) => {
-  const currentLang = languageManager.currentLang;
-
-  return items
-    .filter(item => {
-      const name = item.generation_number?.trim() || "";
-      const isUserAddedArabic = isArabicText(name);
-
-      // ✅ نعرض العربي فقط إذا اللغة عربية، ونعرض الانجليزي دائمًا
-      return currentLang === "ar" ? true : !isUserAddedArabic;
-    })
-    .map(item => ({
-      ...item,
-      generation_number: item.generation_number
-    }));
-},
+    transformData: createLangAwareTransform("generation_number"),
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "generation-select");
       openAddOptionPopup("generation-select");
@@ -1199,22 +1131,7 @@ function fetchRAMSize() {
     labelKey: "ram_size",
     itemKey: "ram_size",
     storageKey: "ram-size-select",
-transformData: (items) => {
-  const currentLang = languageManager.currentLang;
-
-  return items
-    .filter(item => {
-      const name = item.ram_size?.trim() || "";
-      const isUserAddedArabic = isArabicText(name);
-
-      // ✅ نعرض العربي فقط إذا اللغة عربية، ونعرض الانجليزي دائمًا
-      return currentLang === "ar" ? true : !isUserAddedArabic;
-    })
-    .map(item => ({
-      ...item,
-      ram_size: item.ram_size
-    }));
-},
+    transformData: createLangAwareTransform("ram_size"),
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "ram-size-select");
       openAddOptionPopup("ram-size-select");
@@ -1370,11 +1287,15 @@ function openAddOptionPopup(targetId) {
 function saveOptionForSelect() {
   const t = languageManager.translations[languageManager.currentLang];
 
-  const value = document.getElementById("generic-popup-input").value.trim();
+  const rawValue = document.getElementById("generic-popup-input").value.trim();
   const targetId = document.getElementById("generic-popup-target-id").value;
   const dropdown = document.getElementById(targetId);
 
-  if (!value || !dropdown) return;
+  if (!rawValue || !dropdown) return;
+
+  const isArabic = isArabicText(rawValue); // ✅ تحديد اللغة من شكل النص
+  const tag = isArabic ? "[ar]" : "[en]";
+  const value = `${rawValue} ${tag}`; // ✅ أضف الوسم الصحيح
 
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
@@ -1387,9 +1308,8 @@ function saveOptionForSelect() {
     .then(res => res.json())
     .then(result => {
       if (result.error) {
-        alert(t[result.error] || result.error); // ✅ إذا كان الخطأ موجود في الترجمة استخدمه
+        alert(t[result.error] || result.error);
       } else {
-        // ✅ تحديث الخيارات بعد الإضافة
         switch (targetId) {
           case "os-select": fetchOS(); break;
           case "ram-select": fetchRAM(); break;
@@ -1402,9 +1322,7 @@ function saveOptionForSelect() {
           case "scanner-type": fetchScannerTypes(); break;
         }
 
-        // ✅ حفظ القيمة لاختيارها تلقائيًا بعد التحديث
-        sessionStorage.setItem(targetId, value);
-
+        sessionStorage.setItem(targetId, rawValue); // ✅ حفظ القيمة بدون الوسم
         closeGenericPopup();
       }
     })
@@ -1433,13 +1351,11 @@ async function fetchDeviceTypes() {
       const lang = languageManager.currentLang;
       const translations = languageManager.translations[lang];
 
-      // إضافة زر "Add New" فقط إذا كان لديه صلاحية كاملة
+      // زر الإضافة
       if (permissions.full_access || permissions.add_items) {
         const addNewRow = document.createElement("div");
         addNewRow.className = "dropdown-option-row add-new-option";
-        addNewRow.innerHTML = `
-          <div class="dropdown-option-text">+ ${translations['add_new']} ${translations['device_type']}</div>
-        `;
+        addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${translations['add_new']} ${translations['device_type']}</div>`;
         addNewRow.onclick = () => {
           sessionStorage.setItem("lastDropdownOpened", "device-type");
           const el = document.getElementById("device-type");
@@ -1450,62 +1366,67 @@ async function fetchDeviceTypes() {
         container.appendChild(addNewRow);
       }
 
-data.deviceTypes.forEach((item) => {
-  const originalType = item.DeviceType?.trim() || "";
-  const deviceType = originalType.toLowerCase();
+      data.deviceTypes.forEach((item) => {
+        const originalType = item.DeviceType?.trim() || "";
+        const deviceType = originalType.toLowerCase();
 
-  const isPCRelated = ["pc", "laptop", "desktop", "كمبيوتر", "لابتوب"].includes(deviceType);
+        const isPCRelated = ["pc", "laptop", "desktop", "كمبيوتر", "لابتوب"].includes(deviceType);
+        const allowedType =
+          permissions.device_access === 'all' ||
+          (permissions.device_access === 'pc' && isPCRelated) ||
+          permissions.device_access === deviceType;
 
-  const allowedType =
-    permissions.device_access === 'all' ||
-    (permissions.device_access === 'pc' && isPCRelated) ||
-    permissions.device_access === deviceType;
+        if (!allowedType) return;
 
-  if (!allowedType) return;
+        // ✅ تحقق من الوسم
+        const hasArTag = /\[ar\]$/i.test(originalType);
+        const hasEnTag = /\[en\]$/i.test(originalType);
+        const isUnlabeled = !hasArTag && !hasEnTag;
 
-  // ✅ فلترة حسب اللغة الحالية
-  const currentLang = languageManager.currentLang;
-  const isUserAddedArabic = isArabicText(originalType);
+        const showThis =
+          (hasArTag && lang === "ar") ||
+          (hasEnTag && lang === "en") ||
+          isUnlabeled;
 
-  if (currentLang !== "ar" && isUserAddedArabic) return;
+        if (!showThis) return;
 
-  // ✅ إنشاء العنصر
-  const row = document.createElement("div");
-  row.className = "dropdown-option-row";
 
-  const text = document.createElement("div");
-  text.className = "dropdown-option-text";
-  text.textContent = originalType;
+        // ✅ إزالة الوسم من العرض فقط
+        const displayName = originalType.replace(/\s*\[(ar|en)\]$/i, "").trim();
 
-  text.onclick = () => {
-    selectedDisplay.textContent = originalType;
-    hiddenInput.value = originalType;
+        const row = document.createElement("div");
+        row.className = "dropdown-option-row";
 
-    const specDisplay = document.getElementById("selected-device-spec");
-    const specInput = document.getElementById("device-spec");
-    if (specDisplay && specInput) {
-      specDisplay.textContent = translations['select_specification'];
-      specInput.value = "";
-      cleanDropdownError(specInput);
-    }
+        const text = document.createElement("div");
+        text.className = "dropdown-option-text";
+        text.textContent = displayName;
 
-    cleanDropdownError(hiddenInput);
-    closeAllDropdowns();
+        text.onclick = () => {
+          selectedDisplay.textContent = displayName;
+          hiddenInput.value = originalType;
 
-    const type = originalType.trim().toLowerCase();
-    const sectionDropdown = document.getElementById("section");
-    const dept = sectionDropdown?.value;
+          const specDisplay = document.getElementById("selected-device-spec");
+          const specInput = document.getElementById("device-spec");
+          if (specDisplay && specInput) {
+            specDisplay.textContent = translations['select_specification'];
+            specInput.value = "";
+            cleanDropdownError(specInput);
+          }
 
-    if (type && dept) {
-      fetchDeviceSpecsByTypeAndDepartment();
-    }
+          cleanDropdownError(hiddenInput);
+          closeAllDropdowns();
 
-    if (type) fetchProblemStatus(type);
-  };
+          const type = displayName.toLowerCase();
+          const sectionDropdown = document.getElementById("section");
+          const dept = sectionDropdown?.value;
+
+          if (type && dept) fetchDeviceSpecsByTypeAndDepartment();
+          if (type) fetchProblemStatus(type);
+        };
 
         row.appendChild(text);
         container.appendChild(row);
-        // إضافة أيقونات التعديل والحذف فقط إذا كان لديه صلاحية كاملة
+
         if (permissions.full_access || permissions.edit_items || permissions.delete_items) {
           const icons = document.createElement("div");
           icons.className = "dropdown-actions-icons";
@@ -1516,9 +1437,9 @@ data.deviceTypes.forEach((item) => {
             editIcon.title = translations['edit'];
             editIcon.onclick = (e) => {
               e.stopPropagation();
-              const newValue = prompt(`${translations['edit']} ${translations['device_type']}:`, item.DeviceType);
-              if (newValue && newValue.trim() !== item.DeviceType) {
-                editOption("problem-type", item.DeviceType, newValue.trim());
+              const newVal = prompt(`${translations['edit']} ${translations['device_type']}:`, displayName);
+              if (newVal && newVal.trim() !== displayName) {
+                editOption("problem-type", originalType, newVal.trim());
               }
             };
             icons.appendChild(editIcon);
@@ -1530,8 +1451,8 @@ data.deviceTypes.forEach((item) => {
             deleteIcon.title = translations['delete'];
             deleteIcon.onclick = (e) => {
               e.stopPropagation();
-              if (confirm(`${translations['confirm_delete']} "${item.DeviceType}"?`)) {
-                deleteOption("problem-type", item.DeviceType);
+              if (confirm(`${translations['confirm_delete']} "${displayName}"?`)) {
+                deleteOption("problem-type", originalType);
               }
             };
             icons.appendChild(deleteIcon);
@@ -1539,11 +1460,8 @@ data.deviceTypes.forEach((item) => {
 
           row.appendChild(icons);
         }
-
-
-
       });
-
+      // ✅ خيار "كل الأجهزة" للمشرف
       if (data.role === 'admin') {
         const allRow = document.createElement("div");
         allRow.className = "dropdown-option-row";
@@ -1552,27 +1470,31 @@ data.deviceTypes.forEach((item) => {
           selectedDisplay.textContent = translations['all_devices'];
           hiddenInput.value = "all-devices";
           closeAllDropdowns();
-            sessionStorage.removeItem("original-department");
-
+          sessionStorage.removeItem("original-department");
           fetchDeviceSpecsByTypeAndDepartment(true);
         };
         container.appendChild(allRow);
       }
 
-const savedDeviceType = sessionStorage.getItem("device-type");
-if (savedDeviceType) {
-  selectedDisplay.textContent = savedDeviceType;
-  hiddenInput.value = savedDeviceType;
-  sessionStorage.removeItem("device-type");
-
-  // ✅ استدعِ مباشرة المشاكل بعد اختيار الجهاز الجديد
-  fetchProblemStatus(savedDeviceType.trim().toLowerCase());
-}
-
+      // ✅ إعادة تعيين الجهاز المحفوظ
+      const savedDeviceType = sessionStorage.getItem("device-type");
+      if (savedDeviceType) {
+        const display = savedDeviceType.replace(/\s*\[(ar|en)\]$/, "").trim();
+        selectedDisplay.textContent = display;
+        hiddenInput.value = savedDeviceType;
+        sessionStorage.removeItem("device-type");
+        fetchProblemStatus(display.toLowerCase());
+      }
     })
     .catch(err => {
       console.error("❌ Failed to fetch device types:", err);
     });
+}
+
+
+function detectLangTag(text) {
+  const hasArabic = /[\u0600-\u06FF]/.test(text);
+  return hasArabic ? "ar" : "en";
 }
 
 function fetchTechnicalStatus(callback) {
@@ -1586,23 +1508,43 @@ function fetchTechnicalStatus(callback) {
     storageKey: "technical-status",
 
     // ✅ فلترة حسب اللغة
+    // transformData: (items) => {
+    //   const currentLang = languageManager.currentLang;
+
+    //   return items
+    //     .filter(item => {
+    //       const rawName = item.Engineer_Name || item.name || "";
+    //       const isArabic = rawName.trim().endsWith("[ar]");
+    //       const isEnglish = rawName.trim().endsWith("[en]");
+    //       const isUnlabeled = !isArabic && !isEnglish;
+
+    //       // ✅ عرض بناءً على اللغة الحالية
+    //       if (currentLang === "ar") return isArabic || isUnlabeled;
+    //       return isEnglish || isUnlabeled;
+    //     })
+    //     .map(item => {
+    //       const rawName = item.Engineer_Name || item.name || "";
+    //       const cleanedName = rawName.replace(/\s*\[(ar|en)\]$/i, ""); // إزالة الوسم من العرض
+
+    //       return {
+    //         ...item,
+    //         name: cleanedName
+    //       };
+    //     });
+    // },
 transformData: (items) => {
-  const currentLang = languageManager.currentLang;
+  return items.map(item => {
+    const rawName = item.Engineer_Name || item.name || "";
+    const cleanedName = rawName.replace(/\s*\[(ar|en)\]$/i, ""); // 🧼 إزالة الوسم فقط من العرض
 
-  return items
-    .filter(item => {
-      const name = item.Engineer_Name || item.name || "";
-      const isUserAddedArabic = isArabicText(name);
-
-      // ✅ إذا اللغة عربي → نعرض الكل
-      // ✅ إذا اللغة إنجليزي → نعرض فقط غير العربي
-      return currentLang === "ar" ? true : !isUserAddedArabic;
-    })
-    .map(item => ({
+    return {
       ...item,
-      name: item.Engineer_Name || item.name || "N/A"
-    }));
+      name: cleanedName
+    };
+  });
 },
+
+
 
 
     onAddNew: () => {
@@ -1620,7 +1562,7 @@ transformData: (items) => {
         deleteOption("technical-status", val);
       }
     },
-    onSelectOption: () => {},
+    onSelectOption: () => { },
   });
 
   if (typeof callback === "function") callback();
@@ -1653,6 +1595,9 @@ function saveNewTechnical() {
     return;
   }
 
+  const langTag = detectLangTag(name); // 👈 استخرج اللغة
+  const nameWithTag = `${name} [${langTag}]`; // 👈 أضف الوسم
+
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
     headers: {
@@ -1661,7 +1606,7 @@ function saveNewTechnical() {
     },
     body: JSON.stringify({
       target: "technical",
-      value: name
+      value: nameWithTag
     })
   })
     .then(res => res.status === 204 ? {} : res.json())
@@ -1683,6 +1628,7 @@ function saveNewTechnical() {
       alert(t['failed_to_save'] || "Failed to save engineer");
     });
 }
+
 
 async function fetchProblemStatus(deviceType, onFinished) {
   const permissions = await checkUserPermissions();
@@ -1736,53 +1682,61 @@ async function fetchProblemStatus(deviceType, onFinished) {
     let selectedProblems = [];
 
     data.forEach(item => {
-    const originalText = item.problem_text || item.problemStates_Maintance_device_name || "Unnamed Problem";
-  const translated = translateProblemText(deviceType, originalText);
-  const value = originalText;
+      const originalText = item.problem_text || item.problemStates_Maintance_device_name || "Unnamed Problem";
+      const translated = translateProblemText(deviceType, originalText);
+      const value = originalText;
 
-  // ✅ تجاهل العنصر إذا ما له ترجمة واللغة الحالية غير عربية
-  const currentLang = languageManager.currentLang;
-  const isTranslated = translated !== originalText;
-  const isUserAddedArabic = !isTranslated && isArabicText(originalText);
+      const currentLang = languageManager.currentLang;
+      const isTranslated = translated !== originalText;
+      const isUserAddedArabic = !isTranslated && isArabicText(originalText);
 
-  if (currentLang !== "ar" && isUserAddedArabic) {
-    return; // ❌ تجاهل المشكلة إذا مضافة بالعربي فقط ولغة الموقع إنجليزي
-  }
+      const hasArTag = /\[ar\]$/i.test(originalText);
+      const hasEnTag = /\[en\]$/i.test(originalText);
 
-  const row = document.createElement("div");
-  row.className = "dropdown-option-row";
+      // ✅ فلترة حسب اللغة الحالية والوسم
+      if (currentLang === "ar" && hasEnTag) return;
+      if (currentLang === "en" && hasArTag) return;
 
-  const text = document.createElement("div");
-  text.className = "dropdown-option-text";
+      // ✅ تجاهل العربي الغير مترجم أو غير موسوم عند اللغة الإنجليزية
+      if (currentLang === "en" && !hasArTag && !hasEnTag && isUserAddedArabic) return;
 
-  const mappedDeviceType = mapDeviceType(deviceType);
+      const row = document.createElement("div");
+      row.className = "dropdown-option-row";
 
-  text.textContent = isAllDevices
-    ? `${translated} (${item.device_type || deviceType})`
-    : translated;
+      const text = document.createElement("div");
+      text.className = "dropdown-option-text";
 
-  console.log("✅ Looking up:", {
-    originalDeviceType: deviceType,
-    mappedDeviceType,
-    text: originalText,
-    found: languageManager.problemStatuses?.[mappedDeviceType]?.[originalText]
-  });
+      const mappedDeviceType = mapDeviceType(deviceType);
 
-  text.onclick = () => {
-    const existingIndex = selectedProblems.findIndex(p => p.value === value);
+      // ✅ إزالة الوسم من الاسم المعروض
+      const cleanTranslated = translated.replace(/\s*\[(ar|en)\]$/i, "").trim();
 
-    if (existingIndex === -1) {
-      selectedProblems.push({ value, label: translated });
-      text.style.backgroundColor = "#d0f0fd";
-    } else {
-      selectedProblems.splice(existingIndex, 1);
-      text.style.backgroundColor = "";
-    }
+      text.textContent = isAllDevices
+        ? `${cleanTranslated} (${item.device_type || deviceType})`
+        : cleanTranslated;
 
-    displaySpan.textContent = selectedProblems.map(p => p.label).join(", ");
-    hiddenInput.value = JSON.stringify(selectedProblems.map(p => p.value));
-    cleanDropdownError(hiddenInput);
-  };
+      console.log("✅ Looking up:", {
+        originalDeviceType: deviceType,
+        mappedDeviceType,
+        text: originalText,
+        found: languageManager.problemStatuses?.[mappedDeviceType]?.[originalText]
+      });
+
+      text.onclick = () => {
+        const existingIndex = selectedProblems.findIndex(p => p.value === value);
+
+        if (existingIndex === -1) {
+          selectedProblems.push({ value, label: cleanTranslated });
+          text.style.backgroundColor = "#d0f0fd";
+        } else {
+          selectedProblems.splice(existingIndex, 1);
+          text.style.backgroundColor = "";
+        }
+
+        displaySpan.textContent = selectedProblems.map(p => p.label).join(", ");
+        hiddenInput.value = JSON.stringify(selectedProblems.map(p => p.value));
+        cleanDropdownError(hiddenInput);
+      };
 
 
       row.appendChild(text);
@@ -1838,7 +1792,6 @@ async function fetchProblemStatus(deviceType, onFinished) {
 
 
 
-
 function openAddProblemStatusPopup(deviceType) {
   const t = languageManager.translations[languageManager.currentLang];
 
@@ -1860,7 +1813,9 @@ function openAddProblemStatusPopup(deviceType) {
 function saveNewProblemStatus(deviceType) {
   const t = languageManager.translations[languageManager.currentLang];
   const name = document.getElementById("new-problem-status-name").value.trim();
-
+  const isArabic = isArabicText(name);
+  const langLabel = isArabic ? "[ar]" : "[en]";
+  const labeledName = `${name} ${langLabel}`;
   if (!name) {
     alert(t['please_enter_valid_value']);
     return;
@@ -1874,7 +1829,7 @@ function saveNewProblemStatus(deviceType) {
     },
     body: JSON.stringify({
       target: "problem-status",
-      value: name,
+      value: labeledName,
       type: deviceType
     })
   })
@@ -2020,9 +1975,9 @@ function openDeviceEditPopup(type, deviceData) {
   const fieldsContainer = document.getElementById("popup-fields");
 
   // إظهار النافذة
-const popupTitle = document.getElementById("popup-title");
-popup.style.display = "flex";
-popupTitle.textContent = t['edit'] + " " + t['device_specifications']; // ✅ هذا صحيح
+  const popupTitle = document.getElementById("popup-title");
+  popup.style.display = "flex";
+  popupTitle.textContent = t['edit'] + " " + t['device_specifications']; // ✅ هذا صحيح
 
 
 
@@ -2033,78 +1988,137 @@ popupTitle.textContent = t['edit'] + " " + t['device_specifications']; // ✅ ه
   // رسم الحقول حسب نوع الجهاز
   updatePopupHeadingAndFields(type);
 
- (async () => {
-  document.querySelector("input[name='device-name']").value = deviceData.name || "";
-  document.querySelector("input[name='serial']").value = deviceData.Serial_Number || "";
-  document.querySelector("input[name='ministry-id']").value = deviceData.Governmental_Number || "";
+  (async () => {
+    document.querySelector("input[name='device-name']").value = deviceData.name || "";
+    document.querySelector("input[name='serial']").value = deviceData.Serial_Number || "";
+    document.querySelector("input[name='ministry-id']").value = deviceData.Governmental_Number || "";
 
-  await setSelectedOption("model-" + type, deviceData.Model);
-  await setSelectedOption("department-" + type, deviceData.Department);
-  await setSelectedOption("generation-select", deviceData.Generation);
-  await setSelectedOption("cpu-select", deviceData.Processor);
-  await setSelectedOption("ram-select", deviceData.RAM);
-  await setSelectedOption("drive-select", deviceData.Hard_Drive);
-  await setSelectedOption("os-select", deviceData.OS);
-  await setSelectedOption("ram-size-select", deviceData.RAM_Size);
+    await setSelectedOption("model-" + type, deviceData.Model);
+    await setSelectedOption("department-" + type, deviceData.Department);
+    await setSelectedOption("generation-select", deviceData.Generation);
+    await setSelectedOption("cpu-select", deviceData.Processor);
+    await setSelectedOption("ram-select", deviceData.RAM);
+    await setSelectedOption("drive-select", deviceData.Hard_Drive);
+    await setSelectedOption("os-select", deviceData.OS);
+    console.log("📦 RAM_Size from DB:", deviceData.RAM_Size);
+    await setSelectedOption("ram-size-select", deviceData.RAM_Size);
 
-  const macInput = document.querySelector("input[name='mac-address']");
-  if (macInput) macInput.value = deviceData.MAC_Address || "";
+    const macInput = document.querySelector("input[name='mac-address']");
+    if (macInput) macInput.value = deviceData.MAC_Address || "";
 
-  const ipInput = document.querySelector("input[name='ip-address']");
-  if (ipInput) ipInput.value = deviceData.IP_Address || "";
-
-  if (type === "printer") {
-    await setSelectedOption("ink-type", deviceData.Ink_Type);
-    await setSelectedOption("printer-type", deviceData.Printer_Type);
-    document.querySelector("input[name='ink-serial-number']").value = deviceData.Ink_Serial_Number || "";
-  }
-
-  if (type === "scanner") {
-    await setSelectedOption("scanner-type", deviceData.Scanner_Type);
-  }
-
-  // زر الحفظ
-  const saveBtn = document.querySelector("#popup-modal .save-btn");
-  saveBtn.onclick =async () => {
-    const updatedDevice = {
-      id: deviceData.id,
-      name: document.querySelector("input[name='device-name']").value.trim(),
-      Serial_Number: document.querySelector("input[name='serial']").value.trim(),
-      Governmental_Number: document.querySelector("input[name='ministry-id']").value.trim(),
-      Model: document.getElementById("model-" + type)?.value,
-      Department: document.getElementById("department-" + type)?.value,
-      Generation: document.getElementById("generation-select")?.value,
-      Processor: document.getElementById("cpu-select")?.value,
-      RAM: document.getElementById("ram-select")?.value,
-      Hard_Drive: document.getElementById("drive-select")?.value,
-      OS: document.getElementById("os-select")?.value,
-      RAM_Size: document.getElementById("ram-size-select")?.value,
-      MAC_Address: document.querySelector("input[name='mac-address']")?.value || null,
-      IP_Address: document.querySelector("input[name='ip-address']")?.value || null,
-      Device_Type: type
-    };
+    const ipInput = document.querySelector("input[name='ip-address']");
+    if (ipInput) ipInput.value = deviceData.IP_Address || "";
 
     if (type === "printer") {
-      updatedDevice.Ink_Type = document.getElementById("ink-type")?.value;
-      updatedDevice.Printer_Type = document.getElementById("printer-type")?.value;
-      updatedDevice.Ink_Serial_Number = document.querySelector("input[name='ink-serial-number']")?.value || "";
+      await setSelectedOption("ink-type", deviceData.Ink_Type);
+      await setSelectedOption("printer-type", deviceData.Printer_Type);
+      document.querySelector("input[name='ink-serial-number']").value = deviceData.Ink_Serial_Number || "";
     }
 
     if (type === "scanner") {
-      updatedDevice.Scanner_Type = document.getElementById("scanner-type")?.value;
+      await setSelectedOption("scanner-type", deviceData.Scanner_Type);
     }
 
-  const success = await editOption("device-spec", updatedDevice);
-  if (success) {
-    popup.style.display = "none";
-    fetchDeviceSpecsByTypeAndDepartment(); // ✅ إعادة تحميل القائمة بعد الحفظ
-  }
+    // زر الحفظ
+    const saveBtn = document.querySelector("#popup-modal .save-btn");
+    saveBtn.onclick = async () => {
+      const updatedDevice = {
+        id: deviceData.id,
+        name: document.querySelector("input[name='device-name']").value.trim(),
+        Serial_Number: document.querySelector("input[name='serial']").value.trim(),
+        Governmental_Number: document.querySelector("input[name='ministry-id']").value.trim(),
 
-  };
-})();
+        Model: appendLangTagIfMissingg(document.getElementById("model-" + type)?.value, "model-" + type),
+        Department: appendLangTagIfMissingg(document.getElementById("department-" + type)?.value, "department-" + type),
+        Generation: appendLangTagIfMissingg(document.getElementById("generation-select")?.value, "generation-select"),
+        Processor: appendLangTagIfMissingg(document.getElementById("cpu-select")?.value, "cpu-select"),
+        RAM: appendLangTagIfMissingg(document.getElementById("ram-select")?.value, "ram-select"),
+        Hard_Drive: appendLangTagIfMissingg(document.getElementById("drive-select")?.value, "drive-select"),
+        OS: appendLangTagIfMissingg(document.getElementById("os-select")?.value, "os-select"),
+        RAM_Size: appendLangTagIfMissingg(document.getElementById("ram-size-select")?.value, "ram-size-select"),
+
+        MAC_Address: document.querySelector("input[name='mac-address']")?.value || null,
+        IP_Address: document.querySelector("input[name='ip-address']")?.value || null,
+        Device_Type: type
+      };
+
+      if (type === "printer") {
+        updatedDevice.Ink_Type = appendLangTagIfMissingg(document.getElementById("ink-type")?.value, "ink-type");
+        updatedDevice.Printer_Type = appendLangTagIfMissingg(document.getElementById("printer-type")?.value, "printer-type");
+        updatedDevice.Ink_Serial_Number = document.querySelector("input[name='ink-serial-number']")?.value || "";
+      }
+
+      if (type === "scanner") {
+        updatedDevice.Scanner_Type = appendLangTagIfMissingg(document.getElementById("scanner-type")?.value, "scanner-type");
+      }
+
+      console.log("🚀 سيتم إرسال updatedDevice:", updatedDevice);
+
+      const success = await editOption("device-spec", updatedDevice);
+      if (success) {
+        popup.style.display = "none";
+        fetchDeviceSpecsByTypeAndDepartment(); // ✅ إعادة تحميل القائمة بعد الحفظ
+      }
+    };
+
+
+
+  })();
 
 }
+function appendLangTagIfMissingg(value, selectId = null) {
+  if (!value) return value;
 
+  const hasTag = /\[(ar|en)\]$/i.test(value);
+  if (hasTag) return value;
+
+  if (selectId) {
+    const select = document.getElementById(selectId);
+    if (select && select.options) {
+      const options = Array.from(select.options);
+      const match = options.find(
+        opt => opt.textContent?.trim() === value.trim() && /\[(ar|en)\]$/i.test(opt.value)
+      );
+
+
+      if (match) return match.value;
+    }
+  }
+
+  const isArabic = /[\u0600-\u06FF]/.test(value);
+  return isArabic ? `${value} [ar]` : value;
+}
+
+
+
+async function setSelectedOption(inputId, value, attempts = 10) {
+  if (!value || attempts <= 0) return;
+
+  const wait = (ms) => new Promise(res => setTimeout(res, ms));
+
+  for (let i = 0; i < attempts; i++) {
+    const input = document.getElementById(inputId);
+    const span = document.getElementById("selected-" + inputId);
+
+    if (input && span) {
+      // طباعة قيمة الأصلية
+      console.log(`🔍 setSelectedOption: inputId = ${inputId}, original value = "${value}"`);
+
+      // إذا كانت القيمة فيها [ar] أو [en] اطبع تنبيه خاص
+      if (/\[(ar|en)\]$/i.test(value)) {
+        console.log(`⚠️ القيمة تحتوي على تاج لغة: "${value}"`);
+      }
+
+      input.value = value;
+      span.textContent = value;
+      return;
+    } 
+
+    await wait(200); // انتظر حتى تجهز العناصر
+  }
+
+  console.warn(`❌ setSelectedOption فشل: ${inputId} لم يتم العثور عليه بعد محاولات ${attempts}`);
+}
 
 function openGenericEditPopup(deviceData) {
   const type = deviceData.Device_Type || "";
@@ -2119,51 +2133,32 @@ function openGenericEditPopup(deviceData) {
     setSelectedOption("spec-department", deviceData.Department);
 
     const saveBtn = document.querySelector("#generic-popup .popup-buttons button");
-    saveBtn.onclick = async() => {
+    saveBtn.onclick = async () => {
       const updatedDevice = {
         id: deviceData.id,
         name: document.getElementById("spec-name").value.trim(),
         Serial_Number: document.getElementById("spec-serial").value.trim(),
         Governmental_Number: document.getElementById("spec-ministry").value.trim(),
-        Model: document.getElementById("spec-model").value,
-        Department: document.getElementById("spec-department").value,
+        Model: appendLangTagIfMissingg(document.getElementById("spec-model")?.value, "spec-model"),
+        Department: appendLangTagIfMissingg(document.getElementById("spec-department")?.value, "spec-department"),
         Device_Type: type,
       };
 
-  const success = await editOption("device-spec", updatedDevice);
-  if (success) {
-    document.getElementById("generic-popup").style.display = "none";
-    fetchDeviceSpecsByTypeAndDepartment(); // ✅ إعادة تحميل القائمة بعد الحفظ
-  }
+      const success = await editOption("device-spec", updatedDevice);
+      if (success) {
+        document.getElementById("generic-popup").style.display = "none";
+        fetchDeviceSpecsByTypeAndDepartment(); // ✅ إعادة تحميل القائمة بعد الحفظ
+      }
 
     };
   }, 200);
 }
-async function setSelectedOption(inputId, value, attempts = 10) {
-  if (!value || attempts <= 0) return;
 
-  const wait = (ms) => new Promise(res => setTimeout(res, ms));
-
-  for (let i = 0; i < attempts; i++) {
-    const input = document.getElementById(inputId);
-    const span = document.getElementById("selected-" + inputId);
-
-    if (input && span) {
-      input.value = value;
-      span.textContent = value;
-      return;
-    }
-
-    await wait(200); // انتظر حتى تجهز العناصر
-  }
-
-  console.warn(`❌ setSelectedOption فشل: ${inputId} لم يتم العثور عليه بعد محاولات ${attempts}`);
-}
 
 
 
 async function fetchDeviceSpecsByTypeAndDepartment() {
- const type = document.getElementById("device-type")?.value?.toLowerCase();
+  const type = document.getElementById("device-type")?.value?.toLowerCase();
   const deptName = sessionStorage.getItem("original-department"); // ← نضمن إنها بالإنجليزي
 
 
@@ -2183,7 +2178,7 @@ async function fetchDeviceSpecsByTypeAndDepartment() {
   const permissions = await checkUserPermissions();
 
   optionsContainer.innerHTML = "";
-  
+
 
   const lang = languageManager.currentLang;
   const t = languageManager.translations[lang];
@@ -2271,48 +2266,48 @@ async function fetchDeviceSpecsByTypeAndDepartment() {
             const editIcon = document.createElement("i");
             editIcon.className = "fas fa-edit";
             editIcon.title = t['edit'];
-editIcon.onclick = async (e) => {
-  e.stopPropagation();
+            editIcon.onclick = async (e) => {
+              e.stopPropagation();
 
-  const deviceId = device.id;
-  if (!deviceId) {
-    console.error("❌ device.id is undefined!");
-    return;
-  }
+              const deviceId = device.id;
+              if (!deviceId) {
+                console.error("❌ device.id is undefined!");
+                return;
+              }
 
-  try {
-const res = await fetch(`http://localhost:5050/device-spec/${deviceId}`, {
-  headers: {
-    "Authorization": `Bearer ${localStorage.getItem("token")}`
-  }
-});
-    const fullDeviceData = await res.json();
+              try {
+                const res = await fetch(`http://localhost:5050/device-spec/${deviceId}`, {
+                  headers: {
+                    "Authorization": `Bearer ${localStorage.getItem("token")}`
+                  }
+                });
+                const fullDeviceData = await res.json();
 
-    console.log("✅ Full device data loaded:", fullDeviceData);
+                console.log("✅ Full device data loaded:", fullDeviceData);
 
-   const deviceType = fullDeviceData.Device_Type || "pc";
-const typeCleaned = deviceType.trim().toLowerCase();
+                const deviceType = fullDeviceData.Device_Type || "pc";
+                const typeCleaned = deviceType.trim().toLowerCase();
 
-let mappedType = "other"; // افتراضي
-if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(typeCleaned)) {
-  mappedType = "pc";
-} else if (typeCleaned === "printer") {
-  mappedType = "printer";
-} else if (typeCleaned === "scanner") {
-  mappedType = "scanner";
-}
+                let mappedType = "other"; // افتراضي
+                if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(typeCleaned)) {
+                  mappedType = "pc";
+                } else if (typeCleaned === "printer") {
+                  mappedType = "printer";
+                } else if (typeCleaned === "scanner") {
+                  mappedType = "scanner";
+                }
 
-if (["pc", "printer", "scanner"].includes(mappedType)) {
-  openDeviceEditPopup(mappedType, fullDeviceData);
-} else {
-  openGenericEditPopup(fullDeviceData);
-}
+                if (["pc", "printer", "scanner"].includes(mappedType)) {
+                  openDeviceEditPopup(mappedType, fullDeviceData);
+                } else {
+                  openGenericEditPopup(fullDeviceData);
+                }
 
-  } catch (err) {
-    console.error("❌ Failed to fetch full device data:", err);
-    alert("❌ Could not load full device data for editing.");
-  }
-};
+              } catch (err) {
+                console.error("❌ Failed to fetch full device data:", err);
+                alert("❌ Could not load full device data for editing.");
+              }
+            };
 
 
 
@@ -2323,15 +2318,15 @@ if (["pc", "printer", "scanner"].includes(mappedType)) {
             const deleteIcon = document.createElement("i");
             deleteIcon.className = "fas fa-trash";
             deleteIcon.title = t['delete'];
-deleteIcon.onclick = async (e) => {
-  e.stopPropagation();
-  if (confirm(`${t['confirm_delete']} "${device.name}"?`)) {
-    const success = await deleteOption("device-spec", { id: device.id });
-    if (success) {
-      fetchDeviceSpecsByTypeAndDepartment(); // ✅ تحديث القائمة مباشرة
-    }
-  }
-};
+            deleteIcon.onclick = async (e) => {
+              e.stopPropagation();
+              if (confirm(`${t['confirm_delete']} "${device.name}"?`)) {
+                const success = await deleteOption("device-spec", { id: device.id });
+                if (success) {
+                  fetchDeviceSpecsByTypeAndDepartment(); // ✅ تحديث القائمة مباشرة
+                }
+              }
+            };
 
             icons.appendChild(deleteIcon);
           }
@@ -2367,33 +2362,33 @@ document.addEventListener("DOMContentLoaded", () => {
   fetchDepartments("section");
   fetchTechnicalStatus(); // ✅ جلب أسماء المهندسين مع بداية الصفحة
 
-const typeDropdown = document.getElementById("device-type");
-const sectionDropdown = document.getElementById("section");
+  const typeDropdown = document.getElementById("device-type");
+  const sectionDropdown = document.getElementById("section");
 
-if (typeDropdown && sectionDropdown) {
-typeDropdown.addEventListener("change", () => {
-  const type = typeDropdown?.value?.toLowerCase();
-  const dept = sectionDropdown?.value;
+  if (typeDropdown && sectionDropdown) {
+    typeDropdown.addEventListener("change", () => {
+      const type = typeDropdown?.value?.toLowerCase();
+      const dept = sectionDropdown?.value;
 
-  if (type && dept) {
-    fetchDeviceSpecsByTypeAndDepartment();
+      if (type && dept) {
+        fetchDeviceSpecsByTypeAndDepartment();
+      }
+
+      if (type) fetchProblemStatus(type);
+    });
+
+    sectionDropdown.addEventListener("change", () => {
+      const dept = sectionDropdown?.value;
+      const type = typeDropdown?.value?.toLowerCase();
+
+      sessionStorage.setItem("original-department", dept);
+
+      if (type && dept) {
+        fetchDeviceSpecsByTypeAndDepartment();
+      }
+    });
+
   }
-
-  if (type) fetchProblemStatus(type);
-});
-
-sectionDropdown.addEventListener("change", () => {
-  const dept = sectionDropdown?.value;
-  const type = typeDropdown?.value?.toLowerCase();
-
-  sessionStorage.setItem("original-department", dept);
-
-  if (type && dept) {
-    fetchDeviceSpecsByTypeAndDepartment();
-  }
-});
-
-}
 
 
   const optionsContainer = document.getElementById("device-spec-options");
@@ -2495,15 +2490,16 @@ document.querySelector("form").addEventListener("submit", function (e) {
 
   // ✅ جمع البيانات
   formData.forEach((value, key) => {
-    data[key] = value;
+    data[key] = cleanLangTag(value);
   });
+  ;
 
   // ✅ استبدال الاسم بـ ID للفني
   const techInput = document.getElementById("technical-status");
   // أضف هذي الأسطر قبل if (techInput?.dataset?.id)
-console.log("🧪 input موجود؟", !!techInput);
-console.log("🧪 value:", techInput?.value);
-console.log("🧪 id:", techInput?.dataset?.id);
+  console.log("🧪 input موجود؟", !!techInput);
+  console.log("🧪 value:", techInput?.value);
+  console.log("🧪 id:", techInput?.dataset?.id);
   if (techInput?.dataset?.id) {
     data["technical-status"] = techInput.dataset.id;
   } else {
@@ -2545,8 +2541,11 @@ async function submitRegularMaintenance(data) {
     alert("❌ فشل في الاتصال بالسيرفر. حاول مرة أخرى.");
   }
 }
+function cleanLangTag(value) {
+  return value.replace(/\s*\[(ar|en)\]$/i, "").trim();
+}
 
- 
+
 
 function mapSelectIdToServerTarget(selectId) {
   const map = {
@@ -2576,22 +2575,42 @@ function mapSelectIdToServerTarget(selectId) {
 
 
 
-async function deleteOption(selectId, targetObject) {
+async function deleteOption(selectId, valueOrObject, type = null) {
   const lang = languageManager.currentLang;
   const t = languageManager.translations[lang];
 
-  const url = selectId === "device-spec"
+  if (!valueOrObject) {
+    alert(t['please_select_valid_option']);
+    return false;
+  }
+
+  const isDeviceSpec = selectId === "device-spec";
+  const url = isDeviceSpec
     ? "http://localhost:5050/delete-device-specification"
     : "http://localhost:5050/delete-option-complete";
 
+  // تحديد إذا المستخدم مرر كائن جاهز (targetObject) أو قيمة تقليدية
+  const body = typeof valueOrObject === "object" && (valueOrObject.id || valueOrObject.target)
+    ? valueOrObject
+    : isDeviceSpec
+      ? { id: valueOrObject }
+      : {
+        target: mapSelectIdToServerTarget(selectId),
+        value: valueOrObject,
+        type
+      };
+
   try {
+    console.log("🚀 Sending payload:", body);
+    console.log("📦 JSON.stringify output:", JSON.stringify(body));
+
     const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${localStorage.getItem("token")}`
       },
-      body: JSON.stringify(targetObject)
+      body: JSON.stringify(body)
     });
 
     const result = await res.json();
@@ -2599,18 +2618,20 @@ async function deleteOption(selectId, targetObject) {
     if (result.error) {
       alert(result.error);
       return false;
-    } else {
-      if (selectId !== "device-spec") {
-        refreshDropdown(selectId);
-      }
-      return true;
     }
+
+    if (!isDeviceSpec) {
+      refreshDropdown(selectId);
+    }
+
+    return true;
   } catch (err) {
     console.error("❌ Error deleting option:", err);
     alert(t['failed_to_delete_option']);
     return false;
   }
 }
+
 
 function refreshDropdown(selectId) {
   if (selectId === "problem-type") {
@@ -2642,7 +2663,7 @@ function refreshDropdown(selectId) {
     const type = selectId.replace("model-", "");
     fetchAndRenderModels(type, selectId);
   } else if (selectId === "device-spec") {
-                sessionStorage.removeItem("original-department");
+    sessionStorage.removeItem("original-department");
 
     fetchDeviceSpecsByTypeAndDepartment();
   }
@@ -2677,13 +2698,15 @@ async function editOption(selectId, updatedDevice, newValue = null, type = null)
   const body = isDeviceSpec
     ? updatedDevice
     : {
-        target: mapSelectIdToServerTarget(selectId),
-        oldValue: updatedDevice,
-        newValue,
-        type
-      };
+      target: mapSelectIdToServerTarget(selectId),
+      oldValue: updatedDevice,
+      newValue: appendLangTagIfMissing(newValue.trim(), lang),
+      type
+    };
 
   try {
+
+
     const res = await fetch(url, {
       method: "POST",
       headers: {
@@ -2708,6 +2731,17 @@ async function editOption(selectId, updatedDevice, newValue = null, type = null)
     return false;
   }
 }
+
+// 👇 هذه الدالة فوق
+function appendLangTagIfMissing(value) {
+  const hasLangTag = /\[(ar|en)\]$/i.test(value);
+  if (hasLangTag) return value;
+
+  const isArabic = isArabicText(value);
+  return `${value} ${isArabic ? "[ar]" : "[en]"}`;
+}
+
+
 
 
 
@@ -2969,9 +3003,10 @@ function openAddModelPopup() {
 
 function saveNewModel() {
   const deviceType = document.getElementById("device-type").value.trim().toLowerCase();
-  const modelName = document.getElementById("new-model-name").value.trim();
   const token = localStorage.getItem("token"); // ✅ استرجاع التوكن
-
+  const modelName = document.getElementById("new-model-name").value.trim();
+  const langTag = detectLangTag(modelName);
+  const nameWithTag = `${modelName} [${langTag}]`;
   if (!modelName) {
     alert("❌ Please enter a model name");
     return;
@@ -2983,7 +3018,7 @@ function saveNewModel() {
       "Content-Type": "application/json",
       "Authorization": "Bearer " + token // ✅ مهم جدًا
     },
-    body: JSON.stringify({ model_name: modelName, device_type_name: deviceType })
+    body: JSON.stringify({ model_name: nameWithTag, device_type_name: deviceType })
   })
     .then(res => res.json())
     .then(result => {
@@ -2992,9 +3027,9 @@ function saveNewModel() {
         return;
       }
 
-   sessionStorage.setItem(`model-${deviceType}`, modelName); // 👈 حفظ الاسم بمفتاح متوافق مع renderDropdownOptions
-fetchAndRenderModels(deviceType, `model-${deviceType}`);
-sessionStorage.setItem("spec-model", modelName); // 👈 للموديل داخل المواصفات
+      sessionStorage.setItem(`model-${deviceType}`, modelName); // 👈 حفظ الاسم بمفتاح متوافق مع renderDropdownOptions
+      fetchAndRenderModels(deviceType, `model-${deviceType}`);
+      sessionStorage.setItem("spec-model", modelName); // 👈 للموديل داخل المواصفات
 
 
       const isSpecContext = sessionStorage.getItem("returnToPopup") === "true";
@@ -3105,13 +3140,20 @@ function saveDeviceSpecification() {
 
   if (hasError) return;
 
+  function cleanLangTag(value) {
+    return value.replace(/\s*\[(ar|en)\]$/i, "").trim();
+  }
+
   const specData = {
-    "ministry-id": document.getElementById("spec-ministry").value.trim(),
-    "device-name": document.getElementById("spec-name").value.trim(),
-    model: document.getElementById("spec-model").value.trim(),
-    serial: document.getElementById("spec-serial").value.trim(),
-department: sessionStorage.getItem("original-department") || document.getElementById("spec-department").value.trim()
+    "ministry-id": cleanLangTag(document.getElementById("spec-ministry").value.trim()),
+    "device-name": cleanLangTag(document.getElementById("spec-name").value.trim()),
+    model: cleanLangTag(document.getElementById("spec-model").value.trim()),
+    serial: cleanLangTag(document.getElementById("spec-serial").value.trim()),
+    department: cleanLangTag(
+      sessionStorage.getItem("original-department") || document.getElementById("spec-department").value.trim()
+    )
   };
+
 
   fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
     method: "POST",
@@ -3136,7 +3178,7 @@ department: sessionStorage.getItem("original-department") || document.getElement
         if (displaySpan) displaySpan.textContent = option.textContent;
 
         sessionStorage.removeItem("returnToPopup");
-        
+
         fetchDeviceSpecsByTypeAndDepartment();
 
         requiredFields.forEach(({ id }) => document.getElementById(id).value = "");
@@ -3279,15 +3321,18 @@ function prependAddNewOption(selectElement, value = "add-new", text = "+ Add New
   }
 }
 
-
-
 function saveGenericOption() {
-  const value = document.getElementById("generic-popup-input").value.trim();
+  const rawValue = document.getElementById("generic-popup-input").value.trim();
   const targetId = document.getElementById("generic-popup-target-id").value;
   const dropdown = document.getElementById(targetId);
-  const lang = languageManager.currentLang;
-  const t = languageManager.translations[lang];
-  if (!value || !dropdown) return;
+  const t = languageManager.translations[languageManager.currentLang];
+
+  if (!rawValue || !dropdown) return;
+
+  // ✅ كشف اللغة من النص نفسه وليس من لغة الموقع
+  const isArabic = isArabicText(rawValue);
+  const tag = isArabic ? "[ar]" : "[en]";
+  const labeledValue = `${rawValue} ${tag}`;
 
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
@@ -3295,26 +3340,25 @@ function saveGenericOption() {
       "Content-Type": "application/json",
       "Authorization": "Bearer " + localStorage.getItem("token")
     },
-    body: JSON.stringify({ target: targetId, value })
+    body: JSON.stringify({ target: targetId, value: labeledValue })
   })
-    .then(res => {
-      if (!res.ok) return res.json().then(err => { throw new Error(err.error) });
-      return res.json();
-    })
+    .then(res => res.json())
     .then(result => {
-      if (targetId === "device-type") {
-        sessionStorage.setItem("device-type", value);
-        fetchDeviceTypes();
+      if (result.error) {
+        alert(t[result.error] || result.error);
+      } else {
+        if (targetId === "device-type") {
+          sessionStorage.setItem("device-type", labeledValue);
+          fetchDeviceTypes(); // ✅ إعادة تحميل DeviceType بعد الإضافة
+        }
+        sessionStorage.removeItem("returnToPopup");
+        closeGenericPopup();
       }
-
-      sessionStorage.removeItem("returnToPopup");
-      closeGenericPopup();
     })
     .catch(err => {
-      alert(err.message);
+      alert(err.message || "❌ Failed to save");
     });
 }
-
 
 
 // إظهار إشعار أسفل الدروب ليست

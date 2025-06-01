@@ -109,14 +109,24 @@ app.get('/TypeProplem', authenticateToken, (req, res) => {
 });
 
 app.get("/problem-states/:deviceType", (req, res) => {
-  const { deviceType } = req.params;
-  const allowedTables = {
-    pc: 'ProblemStates_Pc',
-    printer: 'ProblemStates_Printer',
-    scanner: 'ProblemStates_Scanner'
+  const rawType = req.params.deviceType.toLowerCase().trim();
+
+  const typeMap = {
+    pc: ['pc', 'desktop', 'laptop', 'كمبيوتر', 'لابتوب'],
+    printer: ['printer', 'طابعة'],
+    scanner: ['scanner', 'سكانر']
   };
 
-  if (deviceType === 'all-devices') {
+  let matchedType = null;
+
+  for (const [key, aliases] of Object.entries(typeMap)) {
+    if (aliases.includes(rawType)) {
+      matchedType = key;
+      break;
+    }
+  }
+
+  if (rawType === 'all-devices') {
     const sql = `
       SELECT problem_text, 'PC' AS device_type FROM ProblemStates_Pc
       UNION ALL
@@ -131,8 +141,13 @@ app.get("/problem-states/:deviceType", (req, res) => {
       }
       res.json(results);
     });
-  } else if (allowedTables[deviceType.toLowerCase()]) {
-    const tableName = allowedTables[deviceType.toLowerCase()];
+  } else if (matchedType) {
+    const tableName = {
+      pc: 'ProblemStates_Pc',
+      printer: 'ProblemStates_Printer',
+      scanner: 'ProblemStates_Scanner'
+    }[matchedType];
+
     db.query(`SELECT * FROM ${tableName}`, (err, result) => {
       if (err) {
         console.error("❌ DB Error:", err);
@@ -143,7 +158,7 @@ app.get("/problem-states/:deviceType", (req, res) => {
   } else {
     db.query(
       "SELECT problemStates_Maintance_device_name FROM `problemStates_Maintance_device` WHERE device_type_name = ?",
-      [deviceType],
+      [rawType],
       (err, results) => {
         if (err) {
           console.error("❌ DB Error:", err);
@@ -154,6 +169,7 @@ app.get("/problem-states/:deviceType", (req, res) => {
     );
   }
 });
+
 
 
 // 💾 راوت للمشكلة حق الصيانة
@@ -455,16 +471,22 @@ if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(type)
 
 app.post("/submit-external-maintenance", authenticateToken, async (req, res) => {
   const userId = req.user.id;
-  const {
-    ticket_number,
-    device_type: rawDeviceType,
-    device_specifications,
-    section,
-    maintenance_manager,
-    reporter_name,
-    initial_diagnosis,
-    final_diagnosis
-  } = req.body;
+const {
+  ticket_number,
+  device_type: rawDeviceType,
+  device_specifications,
+  section: rawSection,
+  maintenance_manager,
+  reporter_name: rawReporter,
+  initial_diagnosis,
+  final_diagnosis
+} = req.body;
+
+// 🧼 تنظيف اللغة من المدخلات
+const section = removeLangTag(rawSection);
+const reporter_name = removeLangTag(rawReporter);
+const deviceType = removeLangTag(rawDeviceType)?.toLowerCase();
+
 
   const userName = await getUserNameById(userId);
   const isAllDevices = (rawDeviceType && rawDeviceType.toLowerCase() === "all-devices");
@@ -519,10 +541,11 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
       : `${deviceInfo.device_name} (${deviceInfo.device_type})`;
 
     let deviceType = rawDeviceType?.toLowerCase();
-    const allowedTypes = ["pc", "printer", "scanner"];
-    deviceType = allowedTypes.includes(deviceType)
-      ? deviceType.charAt(0).toUpperCase() + deviceType.slice(1)
-      : deviceInfo.device_type;
+const allowedTypes = ["pc", "printer", "scanner"];
+const normalizedDeviceType = allowedTypes.includes(deviceType)
+  ? deviceType.charAt(0).toUpperCase() + deviceType.slice(1)
+  : deviceInfo.device_type;
+
     const engineerRes = await queryAsync(
       `SELECT id FROM Engineers WHERE name = ?`,
       [reporter_name]
@@ -530,7 +553,7 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
     const technicalEngineerId = engineerRes[0]?.id || null;
 
     const commonValues = [
-      ticket_number, deviceType, device_specifications, section,
+      ticket_number, normalizedDeviceType, device_specifications, section,
       maintenance_manager, reporter_name,
       initial_diagnosis, final_diagnosis,
       deviceInfo.serial_number, deviceInfo.governmental_number, deviceInfo.device_name,
@@ -569,7 +592,7 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
     printer_type, ink_type, ink_serial_number, scanner_type, user_id
   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `, [ // ✅ This must contain 26 values
-      ticket_number, deviceType, device_specifications, section,
+      ticket_number, normalizedDeviceType, device_specifications, section,
       maintenance_manager, reporter_name,
       initial_diagnosis, `Ticket (${ticket_number}) has been created by (${userName})`,
       deviceInfo.serial_number, deviceInfo.governmental_number, deviceInfo.device_name,
@@ -613,7 +636,7 @@ app.post("/submit-external-maintenance", authenticateToken, async (req, res) => 
       userId,
       userName,
       'Submitted External Maintenance',
-      `Submitted external maintenance for a ${deviceInfo.device_type} | Device Name: ${deviceInfo.device_name} | Serial: ${deviceInfo.serial_number} | Governmental No.: ${deviceInfo.governmental_number}`
+      `Submitted external maintenance for a ${deviceInfo.normalizedDeviceType} | Device Name: ${deviceInfo.device_name} | Serial: ${deviceInfo.serial_number} | Governmental No.: ${deviceInfo.governmental_number}`
     ]);
 
 
@@ -713,17 +736,25 @@ async function generateNumber(type) {
 
 app.post("/submit-regular-maintenance", authenticateToken, async (req, res) => {
   const userId = req.user.id;
-  const {
-    "maintenance-date": date,
-    frequency,
-    "device-type": rawDeviceType,
-    section,
-    "device-spec": deviceSpec,
-    details = [],
-    notes = "",
-    problem_status = "",
-    technical_engineer_id = null
-  } = req.body;
+const {
+  "maintenance-date": date,
+  frequency,
+  "device-type": rawDeviceTypeInput,
+  section: rawSection,
+  "device-spec": deviceSpec,
+  details = [],
+  notes = "",
+  problem_status: rawProblemStatus = "",
+  technical_engineer_id = null
+} = req.body;
+
+const section = removeLangTag(rawSection);
+const rawDeviceType = removeLangTag(rawDeviceTypeInput);
+
+const problem_status = Array.isArray(rawProblemStatus)
+  ? rawProblemStatus.map(removeLangTag)
+  : removeLangTag(rawProblemStatus);
+
   // تنسيق عرض المشاكل للإشعارات
   let formattedProblemStatus = "No issues reported";
   if (Array.isArray(problem_status)) {
@@ -932,12 +963,18 @@ app.post("/submit-regular-maintenance", authenticateToken, async (req, res) => {
       'regular-report'
     ]);
 
-    const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE id = ?`, [technical_engineer_id]);
-    const techEngineerName = techEngineerRes[0]?.name;
+// 🧼 دالة تنظيف التاج من الاسم
+function cleanTag(str) {
+  return (str || "").replace(/\[\s*(ar|en)\s*\]/gi, "").trim();
+}
 
-    if (techEngineerName) {
-      const techUserRes = await queryAsync(`SELECT id FROM Users WHERE name = ?`, [techEngineerName]);
-      const techUserId = techUserRes[0]?.id;
+const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE id = ?`, [technical_engineer_id]);
+const techEngineerName = techEngineerRes[0]?.name;
+
+if (techEngineerName) {
+  const cleanedName = cleanTag(techEngineerName); // ✅ نظف الاسم
+  const techUserRes = await queryAsync(`SELECT id FROM Users WHERE name = ?`, [cleanedName]);
+  const techUserId = techUserRes[0]?.id;
 
       if (techUserId) {
         await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
@@ -1018,8 +1055,12 @@ app.post("/submit-new-device", authenticateToken, async (req, res) => {
   const {
     "device-spec": deviceId,
     "device-type": rawDeviceType,
-    section
+    section: rawSection
   } = req.body;
+
+  // 🧼 تنظيف النوع والقسم من أي وسم لغة
+  const deviceType = removeLangTag(rawDeviceType);
+  const section = removeLangTag(rawSection);
 
   try {
     // 1. تحقق من القسم
@@ -1047,7 +1088,7 @@ app.post("/submit-new-device", authenticateToken, async (req, res) => {
     const dbType = device.device_type?.toLowerCase();
     const reqType = rawDeviceType?.toLowerCase();
     if (dbType !== reqType) {
-      return res.status(400).json({ error: `❌ نوع الجهاز غير متطابق (Expected: ${dbType}, Received: ${reqType})` });
+      return res.status(400).json({ error: `❌ نوع الجهاز غير متطابق (Expected: ${dbType}, Received: ${deviceType})` });
     }
 
     if (device.department_id !== departmentId) {
@@ -1316,40 +1357,55 @@ app.post("/add-options-regular", authenticateToken, (req, res) => {
 app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
-  const {
-    "maintenance-date": date,
-    DeviceType: rawDeviceType,
-    DeviceID: deviceSpec,
-    Section: section,
-    Floor: floor,
-    Extension: extension,
-    ProblemStatus: problemStatus,
-    InitialDiagnosis: initialDiagnosis,
-    FinalDiagnosis: finalDiagnosis,
-    Technical: technical,
-    CustomerName: customerName,
-    IDNumber: idNumber,
-    Notes: notes = ""
-  } = req.body;
-  // تنسيق عرض المشاكل للإشعارات
-  let formattedProblemStatus = "No issues reported";
-  if (Array.isArray(problemStatus)) {
-    formattedProblemStatus = problemStatus.length ? problemStatus.join(", ") : formattedProblemStatus;
-  } else if (typeof problemStatus === "string" && problemStatus.trim() !== "") {
-    formattedProblemStatus = problemStatus;
-  }
+const {
+  "maintenance-date": date,
+  DeviceType: rawDeviceType,
+  DeviceID: deviceSpec,
+  Section: rawSection,
+  Floor: floor,
+  Extension: extension,
+  ProblemStatus: rawProblemStatus,
+  InitialDiagnosis: initialDiagnosis,
+  FinalDiagnosis: finalDiagnosis,
+  Technical: technical,
+  CustomerName: customerName,
+  IDNumber: idNumber,
+  Notes: notes = ""
+} = req.body;
 
+// 🧼 إزالة الوسوم من القيم
+const section = removeLangTag(rawSection);
+const deviceType = removeLangTag(rawDeviceType);
+
+const problemStatus = Array.isArray(rawProblemStatus)
+  ? rawProblemStatus.map(removeLangTag)
+  : removeLangTag(rawProblemStatus);
+
+// تنسيق عرض المشاكل للإشعارات
+let formattedProblemStatus = "No issues reported";
+if (Array.isArray(problemStatus)) {
+  formattedProblemStatus = problemStatus.length ? problemStatus.join(", ") : formattedProblemStatus;
+} else if (typeof problemStatus === "string" && problemStatus.trim() !== "") {
+  formattedProblemStatus = problemStatus;
+}
+
+function cleanTag(str) {
+  return (str || "").replace(/\[\s*(ar|en)\s*\]/gi, "").trim();
+}
 
   const adminUser = await getUserById(userId);
   const userName = await getUserNameById(userId);
 
-  let engineerName;
-  if (adminUser?.role === 'admin' && technical) {
-    const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE name = ?`, [technical]);
-    engineerName = techEngineerRes[0]?.name || userName;
-  } else {
-    engineerName = userName;
-  }
+const cleanedTechnical = cleanTag(technical);
+
+let engineerName;
+if (adminUser?.role === 'admin' && cleanedTechnical) {
+  const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE name = ?`, [cleanedTechnical]);
+  engineerName = techEngineerRes[0]?.name || userName;
+} else {
+  engineerName = userName;
+}
+
 
   const isAllDevices = (rawDeviceType && rawDeviceType.toLowerCase() === "all-devices");
 
@@ -1472,21 +1528,39 @@ app.post("/submit-general-maintenance", authenticateToken, async (req, res) => {
       'internal-ticket-report'
     ]);
 
-    const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE name = ?`, [technical]);
-    const techEngineerName = techEngineerRes[0]?.name;
+// 🧼 دالة تنظيف التاج من الاسم
 
-    if (techEngineerName) {
-      const techUserRes = await queryAsync(`SELECT id FROM Users WHERE name = ?`, [techEngineerName]);
-      const techUserId = techUserRes[0]?.id;
+const cleanedTechnical = cleanTag(technical); // "rawad"
 
-      if (techUserId) {
-        await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-          techUserId,
-          `You have been assigned a new General maintenance task on ${deviceInfo.device_name} (${displayDevice}) by ${userName}`,
-          'technical-notification'
-        ]);
-      }
-    }
+const techEngineerRes = await queryAsync(`
+  SELECT name FROM Engineers 
+  WHERE TRIM(REPLACE(REPLACE(name, '[en]', ''), '[ar]', '')) = ?
+`, [cleanedTechnical]);
+
+const techEngineerName = techEngineerRes[0]?.name;
+
+if (techEngineerName) {
+  const techUserRes = await queryAsync(`
+    SELECT id FROM Users 
+    WHERE TRIM(REPLACE(REPLACE(name, '[en]', ''), '[ar]', '')) = ?
+  `, [cleanedTechnical]);
+
+  const techUserId = techUserRes[0]?.id;
+
+  if (techUserId) {
+    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
+      techUserId,
+      `You have been assigned a new General maintenance task on ${deviceInfo.device_name} (${displayDevice}) by ${userName}`,
+      'technical-notification'
+    ]);
+  } else {
+    console.warn("❌ No user found in Users with cleaned name:", cleanedTechnical);
+  }
+} else {
+  console.warn("❌ No engineer found in Engineers with cleaned name:", cleanedTechnical);
+}
+
+
 
 
     await queryAsync(`
@@ -1590,7 +1664,9 @@ app.get("/get-external-reports", authenticateToken, async (req, res) => {
     LEFT JOIN External_Tickets et ON mr.report_number = et.ticket_number
     LEFT JOIN Maintenance_Devices md ON mr.device_id = md.id
     LEFT JOIN Departments d ON md.department_id = d.id
-    LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number
+LEFT JOIN PC_info pc 
+  ON LOWER(md.device_type) IN ('pc', 'desktop', 'laptop', 'كمبيوتر', 'لابتوب') 
+  AND md.serial_number = pc.Serial_Number
     LEFT JOIN Printer_info pr ON md.device_type = 'Printer' AND md.serial_number = pr.Serial_Number
     LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number
     WHERE mr.maintenance_type = 'External'
@@ -1788,7 +1864,9 @@ pc.Ip_Address AS ip_address,
       LEFT JOIN Maintenance_Devices md ON mr.device_id = md.id
       LEFT JOIN Departments d ON md.department_id = d.id
 
-      LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number
+LEFT JOIN PC_info pc 
+  ON LOWER(md.device_type) IN ('pc', 'desktop', 'laptop', 'كمبيوتر', 'لابتوب') 
+  AND md.serial_number = pc.Serial_Number
       LEFT JOIN CPU_Types cpu ON pc.Processor_id = cpu.id
       LEFT JOIN RAM_Types ram ON pc.RAM_id = ram.id
       LEFT JOIN RAM_Sizes rsize ON pc.RamSize_id = rsize.id
@@ -2047,7 +2125,9 @@ FROM Maintenance_Reports mr
 LEFT JOIN Maintenance_Devices md ON mr.device_id = md.id
 LEFT JOIN Departments d ON md.department_id = d.id
 LEFT JOIN Internal_Tickets it ON mr.ticket_id = it.id
-LEFT JOIN PC_info pc ON md.device_type = 'PC' AND md.serial_number = pc.Serial_Number
+LEFT JOIN PC_info pc 
+  ON LOWER(md.device_type) IN ('pc', 'desktop', 'laptop', 'كمبيوتر', 'لابتوب') 
+  AND md.serial_number = pc.Serial_Number
 LEFT JOIN CPU_Types cpu ON pc.Processor_id = cpu.id
 LEFT JOIN RAM_Types ram ON pc.RAM_id = ram.id
 LEFT JOIN RAM_Sizes rsize ON pc.RamSize_id = rsize.id
@@ -2288,46 +2368,81 @@ app.post("/add-device-specification", async (req, res) => {
 });
 
 
+
+// ✅ دالة تنظيف التاج من نهاية النصوص
+function removeLangTag(str) {
+  return typeof str === "string" ? str.replace(/\s*\[(ar|en)\]$/i, "").trim() : str;
+}
+
 app.post('/AddDevice/:type', authenticateToken, async (req, res) => {
   const deviceType = req.params.type.toLowerCase();
   const Serial_Number = req.body.serial;
   const Governmental_Number = req.body["ministry-id"];
-  const department = req.body.department;
-  const model = req.body.model;
-  const Device_Name = req.body["device-name"] || req.body["pc-name"] || null;
   const Mac_Address = req.body["mac-address"] || null;
   const Ip_Address = req.body["ip-address"] || null;
-const isValidMac = (mac) => /^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$/i.test(mac);
-const isValidIp = (ip) => /^((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(\.|$)){4}$/.test(ip);
-
-if (Ip_Address && !isValidIp(Ip_Address)) {
-  return res.status(400).json({ error: " عنوان IP غير صالح. مثال صحيح: 192.168.1.1" });
-}
-
-if (Mac_Address && !isValidMac(Mac_Address)) {
-  return res.status(400).json({ error: " عنوان MAC غير صالح. مثال صحيح: 00:1A:2B:3C:4D:5E" });
-}
-  const Printer_Type = req.body["printer-type"] || null;
-  const Ink_Type = req.body["ink-type"] || null;
   const Ink_Serial_Number = req.body["ink-serial-number"] || null;
 
-  try {
-    const getId = async (table, column, value) => {
-      return new Promise((resolve, reject) => {
-        db.query(`SELECT id FROM ${table} WHERE ${column} = ?`, [value], (err, result) => {
-          if (err) reject(err);
-          else resolve(result[0]?.id || null);
-        });
-      });
-    };
+  // ✅ تنظيف التاجات والمسافات من القيم النصية
+  const normalizeValue = (value) => {
+    return value?.trim().replace(/\s*\[(ar|en)\]$/i, "");
+  };
 
-    const Department_id = await getId('Departments', 'name', department);
+  const department = normalizeValue(req.body.department);
+  const model = normalizeValue(req.body.model);
+  const Device_Name = normalizeValue(req.body["device-name"] || req.body["pc-name"] || null);
+  const Printer_Type = normalizeValue(req.body["printer-type"] || "");
+  const Ink_Type = normalizeValue(req.body["ink-type"] || "");
+  const Scanner_Type = normalizeValue(req.body["scanner-type"] || "");
+
+  const isValidMac = (mac) => /^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$/i.test(mac);
+  const isValidIp = (ip) => /^((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(\.|$)){4}$/.test(ip);
+
+  if (Ip_Address && !isValidIp(Ip_Address)) {
+    return res.status(400).json({ error: " عنوان IP غير صالح. مثال صحيح: 192.168.1.1" });
+  }
+
+  if (Mac_Address && !isValidMac(Mac_Address)) {
+    return res.status(400).json({ error: " عنوان MAC غير صالح. مثال صحيح: 00:1A:2B:3C:4D:5E" });
+  }
+
+  // ✅ دالة موحدة لجلب أو إنشاء القيمة بعد تنظيفها
+  const safeGetId = async (table, column, value) => {
+    const cleanValue = normalizeValue(value);
+    if (!cleanValue) return null;
+
+    return new Promise((resolve, reject) => {
+      const searchQuery = `
+        SELECT id FROM ${table}
+        WHERE TRIM(REPLACE(REPLACE(${column}, ' [ar]', ''), ' [en]', '')) = ?
+        LIMIT 1
+      `;
+      db.query(searchQuery, [cleanValue], async (err, result) => {
+        if (err) return reject(err);
+
+        if (result.length > 0) {
+          return resolve(result[0].id);
+        } else {
+          try {
+            const [insertResult] = await db.promise().query(
+              `INSERT INTO ${table} (${column}) VALUES (?)`,
+              [cleanValue]
+            );
+            resolve(insertResult.insertId);
+          } catch (insertErr) {
+            reject(insertErr);
+          }
+        }
+      });
+    });
+  };
+
+  try {
+    const Department_id = await safeGetId('Departments', 'name', department);
 
     if (!Department_id || !Serial_Number || !Governmental_Number || !Device_Name) {
       return res.status(400).json({ error: "❌ تأكد من تعبئة جميع الحقول المطلوبة" });
     }
 
-    // ✅ تحقق من التكرار في Maintenance_Devices
     const [existing] = await db.promise().query(
       `SELECT * FROM Maintenance_Devices WHERE serial_number = ? OR governmental_number = ?`,
       [Serial_Number, Governmental_Number]
@@ -2335,7 +2450,6 @@ if (Mac_Address && !isValidMac(Mac_Address)) {
 
     if (existing.length > 0) {
       const existingDevice = existing[0];
-
       if (existingDevice.serial_number === Serial_Number) {
         return res.status(400).json({
           error: "already_exists",
@@ -2351,19 +2465,21 @@ if (Mac_Address && !isValidMac(Mac_Address)) {
       }
     }
 
-    // 🧠 باقي الكود كما هو بدون تعديل
-    if (deviceType === 'pc') {
-      const OS_id = await getId('OS_Types', 'os_name', req.body.os);
-      const Processor_id = await getId('CPU_Types', 'cpu_name', req.body.processor);
-      const Generation_id = await getId('Processor_Generations', 'generation_number', req.body.generation);
-      const RAM_id = await getId('RAM_Types', 'ram_type', req.body.ram);
-      const Model_id = await getId("PC_Model", "model_name", model);
-      const Drive_id = await getId('Hard_Drive_Types', 'drive_type', req.body.drive);
-      const RamSize_id = await getId('RAM_Sizes', 'ram_size', req.body.ram_size);
+const normalizedType = (deviceType || "").trim().toLowerCase();
+const isPcType = ["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(normalizedType);
 
-      if (!OS_id || !Processor_id || !Generation_id || !RAM_id || !Model_id || !Drive_id) {
-        return res.status(400).json({ error: "❌ تأكد من اختيار كل الخيارات للجهاز (PC)" });
-      }
+if (isPcType) {
+  const OS_id = await safeGetId('OS_Types', 'os_name', req.body.os);
+  const Processor_id = await safeGetId('CPU_Types', 'cpu_name', req.body.processor);
+  const Generation_id = await safeGetId('Processor_Generations', 'generation_number', req.body.generation);
+  const RAM_id = await safeGetId('RAM_Types', 'ram_type', req.body.ram);
+  const Drive_id = await safeGetId('Hard_Drive_Types', 'drive_type', req.body.drive);
+  const RamSize_id = await safeGetId('RAM_Sizes', 'ram_size', req.body.ram_size);
+  const Model_id = await safeGetId("PC_Model", "model_name", model);
+
+  if (!OS_id || !Processor_id || !Generation_id || !RAM_id || !Model_id || !Drive_id) {
+    return res.status(400).json({ error: "❌ تأكد من اختيار كل الخيارات للجهاز (PC)" });
+  }
 
       const insertQuery = `
         INSERT INTO PC_info 
@@ -2390,31 +2506,16 @@ if (Mac_Address && !isValidMac(Mac_Address)) {
       await db.promise().query(insertQuery, values);
 
     } else if (deviceType === 'printer') {
-      const Model_id = await getId("Printer_Model", "model_name", model);
-      const PrinterType_id = Printer_Type ? await getId("Printer_Types", "printer_type", Printer_Type) : null;
+      const Model_id = await safeGetId("Printer_Model", "model_name", model);
+      const PrinterType_id = Printer_Type ? await safeGetId("Printer_Types", "printer_type", Printer_Type) : null;
+      const InkType_id = Ink_Type ? await safeGetId("Ink_Types", "ink_type", Ink_Type) : null;
+      const InkSerial_id = Ink_Serial_Number ? await safeGetId("Ink_Serials", "serial_number", Ink_Serial_Number) : null;
 
-      let InkType_id = null;
-      if (Ink_Type) {
-        InkType_id = await getId("Ink_Types", "ink_type", Ink_Type);
-        if (!InkType_id) {
-          const [insertResult] = await db.promise().query(
-            "INSERT INTO Ink_Types (ink_type) VALUES (?)",
-            [Ink_Type]
-          );
-          InkType_id = insertResult.insertId;
-        }
-      }
-
-      let InkSerial_id = null;
-      if (Ink_Serial_Number) {
-        InkSerial_id = await getId("Ink_Serials", "serial_number", Ink_Serial_Number);
-        if (!InkSerial_id) {
-          const [insertResult] = await db.promise().query(
-            "INSERT INTO Ink_Serials (serial_number, ink_type_id) VALUES (?, ?)",
-            [Ink_Serial_Number, InkType_id]
-          );
-          InkSerial_id = insertResult.insertId;
-        }
+      if (InkSerial_id && InkType_id) {
+        await db.promise().query(
+          `UPDATE Ink_Serials SET ink_type_id = ? WHERE id = ?`,
+          [InkType_id, InkSerial_id]
+        );
       }
 
       if (!Model_id) {
@@ -2441,20 +2542,8 @@ if (Mac_Address && !isValidMac(Mac_Address)) {
       await db.promise().query(insertQuery, values);
 
     } else if (deviceType === 'scanner') {
-      const Model_id = await getId("Scanner_Model", "model_name", model);
-      const Scanner_Type = req.body["scanner-type"] || null;
-      let ScannerType_id = null;
-
-      if (Scanner_Type) {
-        ScannerType_id = await getId("Scanner_Types", "scanner_type", Scanner_Type);
-        if (!ScannerType_id) {
-          const [insertResult] = await db.promise().query(
-            "INSERT INTO Scanner_Types (scanner_type) VALUES (?)",
-            [Scanner_Type]
-          );
-          ScannerType_id = insertResult.insertId;
-        }
-      }
+      const Model_id = await safeGetId("Scanner_Model", "model_name", model);
+      const ScannerType_id = Scanner_Type ? await safeGetId("Scanner_Types", "scanner_type", Scanner_Type) : null;
 
       if (!Model_id) {
         return res.status(400).json({ error: "❌ لم يتم تحديد موديل الماسح الضوئي" });
@@ -2478,7 +2567,6 @@ if (Mac_Address && !isValidMac(Mac_Address)) {
       await db.promise().query(insertQuery, values);
     }
 
-    // ✅ الإدخال النهائي في Maintenance_Devices
     const insertMaintenanceDevice = `
       INSERT INTO Maintenance_Devices (serial_number, governmental_number, device_type, device_name, department_id)
       VALUES (?, ?, ?, ?, ?)
@@ -2492,29 +2580,23 @@ if (Mac_Address && !isValidMac(Mac_Address)) {
       Department_id
     ]);
 
-    console.log("✅ تم إدخال الجهاز في Maintenance_Devices بنجاح، ID:", result2.insertId);
-    // ✅ إدخال لوق بعد نجاح إضافة الجهاز
+    // ✅ Logging
     const userId = req.user?.id;
-
     if (userId) {
       db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
         if (!errUser && resultUser.length > 0) {
           const userName = resultUser[0].name;
-
           const logQuery = `
-        INSERT INTO Activity_Logs (user_id, user_name, action, details)
-        VALUES (?, ?, ?, ?)
-      `;
+            INSERT INTO Activity_Logs (user_id, user_name, action, details)
+            VALUES (?, ?, ?, ?)
+          `;
           const logValues = [
             userId,
             userName,
             "Add Device",
-            `Added a new '${deviceType}' with serial '${Serial_Number}' to Maintenance_Devices`
+            `Added '${deviceType}' with serial '${Serial_Number}'`
           ];
-
-          db.query(logQuery, logValues, (logErr) => {
-            if (logErr) console.error("❌ Logging failed:", logErr);
-          });
+          db.query(logQuery, logValues);
         }
       });
     }
@@ -2529,8 +2611,6 @@ if (Mac_Address && !isValidMac(Mac_Address)) {
     res.status(500).json({ error: "❌ حدث خطأ أثناء المعالجة" });
   }
 });
-
-
 
 
 
@@ -2880,21 +2960,23 @@ MAX(R.report_number) AS report_number,
 
   let params = [];
 
-  if (userRole !== 'admin') {
-    internalSql += `
-      AND (
-        R.user_id = ?
-        OR EXISTS (
-          SELECT 1 FROM Engineers E2
-          JOIN Users U2 ON U2.name = E2.name
-          WHERE E2.id = RM.technical_engineer_id AND U2.id = ?
-        )
-        OR LOWER(T.assigned_to) = LOWER(?)
+if (userRole !== 'admin') {
+  internalSql += `
+    AND (
+      R.user_id = ?
+      OR EXISTS (
+        SELECT 1 FROM Engineers E2
+        JOIN Users U2 ON 
+          TRIM(REPLACE(REPLACE(E2.name, '[en]', ''), '[ar]', '')) = TRIM(U2.name)
+        WHERE E2.id = RM.technical_engineer_id AND U2.id = ?
       )
-    `;
-    newSql += ` WHERE user_id = ? `;
-    params = [userId, userId, userName, userId];
-  }
+      OR LOWER(REPLACE(REPLACE(T.assigned_to, '[en]', ''), '[ar]', '')) = LOWER(?)
+    )
+  `;
+  newSql += ` WHERE user_id = ? `;
+  params = [userId, userId, userName, userId];
+}
+
 
   internalSql += ` GROUP BY R.id `;
 
@@ -4017,7 +4099,7 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), authenticate
         ) VALUES (?, ?, ?, ?, ?, ?, 'Internal', 'Incident', ?)
       `;
       const reportValues = [
-        report_number,
+        generatedTicketNumber,
         ticketId,
         device_id || null,
         initial_diagnosis || '',
@@ -4040,7 +4122,7 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), authenticate
 
         await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
           userId,
-          `Report created ${report_number} linked to ticket ${generatedTicketNumber} for ${ticket_type}`,
+          `Report created for ticket ${generatedTicketNumber} for ${ticket_type}`,
           'internal-ticket-report'
         ]);
 
@@ -4075,7 +4157,7 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), authenticate
           userId,
           userName,
           'Submitted Internal Ticket',
-          `Internal ticket submitted (${generatedTicketNumber}) with report (${report_number})`
+          `Internal ticket submitted (${generatedTicketNumber}) with report )`
         ]);
 
         res.status(201).json({
