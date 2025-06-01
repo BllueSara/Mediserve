@@ -5,6 +5,12 @@ const notifPopup = document.getElementById('notifications-popup');
 const notifList = document.getElementById('notifications-list');
 const notifButton = document.querySelector('a[href="/Notifications/Notifications.html"]');
 
+function cleanTag(text) {
+  return typeof text === 'string'
+    ? text.replace(/\s*\[(ar|en)\]/gi, '').trim()
+    : text;
+}
+
 notifButton.addEventListener('click', (e) => {
   e.preventDefault();
   toggleNotifications();
@@ -99,10 +105,11 @@ div.className = `notification-item p-3 border-b ${getColor(n.type)}`;
 div.innerHTML = `
   <div class="notification-content">
     <div class="font-semibold">${getTypeLabel(n.type)}</div>
-    <div class="text-sm text-gray-600">${n.message}</div>
+    <div class="text-sm text-gray-600">${cleanTag(n.message)}</div>
     <div class="text-xs text-gray-400">${new Date(n.created_at).toLocaleString()}</div>
   </div>
 `;
+
 
   
   
