@@ -105,3 +105,172 @@ searchInput.addEventListener("input", () => {
   renderLogs(currentFilter, searchInput.value);
 });
 });
+
+// // ===================== دوال مساعدة =====================
+
+// // 1) تنضيف وسوم [ar] أو [en] من نص
+// function cleanTag(text) {
+//   return typeof text === "string"
+//     ? text.replace(/\s*\[(ar|en)\]/gi, "").trim()
+//     : text;
+// }
+
+// // 2) دالة طلب ترجمة مباشرة من Google Translate
+// async function translateWithGoogle(text, targetLang, sourceLang = "en") {
+//   if (!text || !targetLang || targetLang === sourceLang) return text;
+//   const encoded = encodeURIComponent(text);
+//   const url =
+//     `https://translate.googleapis.com/translate_a/single?client=gtx` +
+//     `&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encoded}`;
+
+//   try {
+//     const res = await fetch(url);
+//     if (!res.ok) throw new Error("Failed to fetch Google Translate");
+//     const data = await res.json();
+//     return data?.[0]?.[0]?.[0] || text;
+//   } catch (err) {
+//     console.warn("⚠️ translateWithGoogle error:", err);
+//     return text;
+//   }
+// }
+
+// // 3) دالة لتنظيف كامل كائن التقرير من أي وسم [ar] أو [en]
+// function cleanReport(raw) {
+//   const cleaned = {};
+//   for (const key in raw) {
+//     if (typeof raw[key] === "string") {
+//       cleaned[key] = cleanTag(raw[key]);
+//     } else {
+//       cleaned[key] = raw[key];
+//     }
+//   }
+//   return cleaned;
+// }
+
+// // ===================== الكود الرئيسي =====================
+
+// document.addEventListener("DOMContentLoaded", () => {
+//   const container = document.getElementById("activity-log-container");
+//   const filterButtons = document.querySelectorAll(".filter-btn");
+//   const searchInput   = document.getElementById("search-input");
+//   let allLogs = [];
+//   let currentFilter = "All";
+
+//   // أولًا: جلب كل السجلات وتخزينها في allLogs
+//   fetch("http://localhost:4000/activity-logs", {
+//     headers: {
+//       Authorization: `Bearer ${localStorage.getItem("token")}`
+//     }
+//   })
+//     .then(res => res.json())
+//     .then(logs => {
+//       if (!Array.isArray(logs)) {
+//         container.innerHTML = "<p>No logs found.</p>";
+//         return;
+//       }
+//       // نظّف كل مدخلات السجلات من أي وسم غير ضروري
+//       allLogs = logs.map(cleanReport);
+
+//       // عرض جميع السجلات في البداية
+//       renderLogs(); 
+//     })
+//     .catch(err => {
+//       console.error("❌ Failed to load logs:", err);
+//       container.innerHTML = "<p>Error loading activity logs.</p>";
+//     });
+
+//   // عند الضغط على أي زر فلترة:
+//   filterButtons.forEach(button => {
+//     button.addEventListener("click", () => {
+//       document.querySelector(".filter-btn.active")?.classList.remove("active");
+//       button.classList.add("active");
+//       currentFilter = button.dataset.filter;
+//       renderLogs();
+//     });
+//   });
+
+//   // عند الكتابة في حقل البحث:
+//   searchInput.addEventListener("input", () => {
+//     renderLogs();
+//   });
+
+
+//   // =========== دالة renderLogs تصبح async حتى نتمكّن من استخدام await ===========
+
+//   async function renderLogs() {
+//     container.innerHTML = "";
+
+//     const searchTerm = searchInput.value.trim().toLowerCase();
+
+//     // 1) فلترة السجلات حسب الزر النشط وعبارة البحث
+//     const filteredLogs = allLogs.filter(log => {
+//       const action  = cleanTag(log.action || "").toLowerCase();
+//       const details = cleanTag(log.details || "").toLowerCase();
+//       const filter  = currentFilter.toLowerCase();
+//       const search  = searchTerm.toLowerCase();
+
+//       // مطابقة الفلتر (All يعني كل السجلات)
+//       const actionMatch = (filter === "all") || action.includes(filter);
+
+//       // مطابقة البحث في حقل action أو details
+//       const searchMatch = !search || action.includes(search) || details.includes(search);
+
+//       return actionMatch && searchMatch;
+//     });
+
+//     if (filteredLogs.length === 0) {
+//       container.innerHTML = "<p>No logs found for this category.</p>";
+//       return;
+//     }
+
+//     // 2) لكل سجل مطلوب، نبني بطاقة عرض (وبما أننا قد نحتاج ترجمة عبر Google، نستخدم await)
+//     for (const log of filteredLogs) {
+//       // صياغة التاريخ والوقت
+//       const createdAt = new Date(log.timestamp);
+//       const time = createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+//       const date = createdAt.toLocaleDateString();
+
+//       // نظّف الحقول أولًا من أي وسم زائد
+//       const rawAction  = cleanTag(log.action || "");
+//       const rawDetails = cleanTag(log.details || "");
+//       const rawUser    = cleanTag(log.user_name || "");
+
+//       // بناء النصوص الأصلية
+//       let displayAction  = rawAction;
+//       let displayDetails = rawDetails;
+//       let displayUser    = rawUser;
+
+//       // إذا كانت لغة العرض الحالية ليست "en" (أي المطلوب ترجمتها):
+//       const lang = languageManager.currentLang; // مثلاً "ar" أو "en"
+//       if (lang && lang !== "en") {
+//         // ترجمة الفعل action
+//         displayAction = await translateWithGoogle(rawAction, lang, "en");
+//         // ترجمة التفاصيل details
+//         displayDetails = await translateWithGoogle(rawDetails, lang, "en");
+//         // (اختياري) ترجمة اسم المستخدم إذا لزم الأمر. غالبًا يبقى كما هو.
+//         // displayUser = await translateWithGoogle(rawUser, lang, "en");
+//       }
+
+//       // بناء بطاقة HTML واحدة
+//       const card = document.createElement("div");
+//       card.className = "activity-card";
+
+//       card.innerHTML = `
+//         <div class="flex gap-4">
+//           <div class="activity-content">
+//             <h2>${displayAction}</h2>
+//             <p>${displayDetails}</p>
+//             <p class="meta">By: ${displayUser}</p>
+//           </div>
+//         </div>
+//         <div class="activity-time">
+//           <p>${time}</p>
+//           <p class="date">${date}</p>
+//         </div>
+//       `;
+
+//       container.appendChild(card);
+//     }
+//   }
+
+// }); // نهاية DOMContentLoaded
