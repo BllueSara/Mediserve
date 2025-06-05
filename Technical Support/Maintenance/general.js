@@ -756,18 +756,16 @@ onSelectOption: (originalValue, fullItem) => {
 
   });
 }
-
 function saveNewSection() {
-const sectionName = document.getElementById("new-section-name").value.trim();
-if (!sectionName) {
-  alert("❌ Please enter a section name");
-  return;
-}
+  const sectionName = document.getElementById("new-section-name").value.trim();
+  if (!sectionName) {
+    alert("❌ Please enter a section name");
+    return;
+  }
 
-const isArabic = isArabicText(sectionName); // 👈 تحديد حسب شكل النص
-const langLabel = isArabic ? "[ar]" : "[en]";
-const sectionNameWithLang = `${sectionName} ${langLabel}`;
-
+  const isArabic = isArabicText(sectionName);
+  const langLabel = isArabic ? "[ar]" : "[en]";
+  const sectionNameWithLang = `${sectionName} ${langLabel}`;
 
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
@@ -784,56 +782,98 @@ const sectionNameWithLang = `${sectionName} ${langLabel}`;
         return;
       }
 
+      // ============================
+      // 1) حدِّدي selectId وتحديث قائمة الأقسام
+      // ============================
       const selectId = sessionStorage.getItem("lastDepartmentSelectId") || "spec-department";
-
-      // ✅ تحديث القوائم
-      fetchDepartments(selectId);
+      fetchDepartments(selectId); // تعيد تحميل الأكشن الخاص بالأقسام وترسم الـ dropdown
       sessionStorage.setItem(selectId, sectionNameWithLang);
 
+      // ============================
+      // 2) نعكسي العرض في العنصر الظاهر (displaySpan) والقيمة المخفية (hiddenInput)
+      // ============================
       setTimeout(() => {
         const displaySpan = document.getElementById(`selected-${selectId}`);
         const hiddenInput = document.getElementById(selectId);
-
         if (displaySpan && hiddenInput) {
+          // العرض فقط بالاسم (من دون وسم اللغة)
           displaySpan.textContent = sectionName;
           hiddenInput.value = sectionNameWithLang;
+          // تعبئة الـ sessionStorage للقيمة الفعلية كيّ تُستخدم لاحقًا
+          sessionStorage.setItem("original-department", sectionNameWithLang);
         }
       }, 200);
 
+      // ============================
+      // 3) ننظف مفاتيح sessionStorage المؤقتة
+      // ============================
       sessionStorage.removeItem("lastDepartmentSelectId");
       sessionStorage.removeItem("returnToPopup");
 
+      // ============================
+      // 4) بناء على سياق القسم (isSpecContext)، نفتح الـ popup المناسب أو نستدعي تحميل المواصفات
+      // ============================
       const deviceType = document.getElementById("device-type")?.value?.toLowerCase();
       const isSpecContext = ["spec-department", "department-pc", "department-printer", "department-scanner"].includes(selectId);
 
+      // إذا كان القسم ينتمي لموضع مواصفات (spec context) ولم يكن نوع الجهاز من الأنواع المخصّصة (pc/printer/scanner):
       if (isSpecContext && !["pc", "printer", "scanner", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(deviceType)) {
+        // نخزن موديل إذا موجود
         const modelName = document.getElementById("spec-model")?.value;
         if (modelName) sessionStorage.setItem("spec-model", modelName);
 
-        const popup = document.getElementById("generic-popup");
-        if (popup && popup.style.display !== "flex") {
+        // نفتح Generic Popup لإضافة مواصفات جهاز جديد (لأن النوع ليس pc/printer/scanner)
+        setTimeout(() => {
+          openGenericPopup("Device Specification", "device-spec");
+
+          // بعد فتح البوب أب بـ 150ms، نعيد تعيين القسم الجديد والقيمة المخزنة للموديل:
           setTimeout(() => {
-            openGenericPopup("Device Specification", "device-spec");
+            const deptSelect = document.getElementById("spec-department");
+            if (deptSelect) {
+              deptSelect.value = sectionNameWithLang;
+              deptSelect.dispatchEvent(new Event("change", { bubbles: true }));
+            }
 
-            setTimeout(() => {
-              const deptSelect = document.getElementById("spec-department");
-              if (deptSelect) {
-                deptSelect.value = sectionNameWithLang;
-                deptSelect.dispatchEvent(new Event("change", { bubbles: true }));
-              }
-
-              const modelSelect = document.getElementById("spec-model");
-              const savedModel = sessionStorage.getItem("spec-model");
-              if (modelSelect && savedModel) {
-                modelSelect.value = savedModel;
-                modelSelect.dispatchEvent(new Event("change", { bubbles: true }));
-                sessionStorage.removeItem("spec-model");
-              }
-            }, 150);
-          }, 100);
-        }
+            const modelSelect = document.getElementById("spec-model");
+            const savedModel = sessionStorage.getItem("spec-model");
+            if (modelSelect && savedModel) {
+              modelSelect.value = savedModel;
+              modelSelect.dispatchEvent(new Event("change", { bubbles: true }));
+              sessionStorage.removeItem("spec-model");
+            }
+          }, 150);
+        }, 100);
       }
 
+      // ============================
+      // 5) **الجديد**: في كل الأحوال (بعد إضافة القسم)، نريد إعادة تحميل قائمة مواصفات الجهاز للقسم الجديد وفتحها
+      // ============================
+      //
+      // نؤخّر قليلًا حتى تكمل fetchDepartments ثم نمضي في تحميل المواصفات وفتح الـ dropdown:
+      setTimeout(() => {
+        // نستدعي الدالة التي تحمّل مواصفات الأجهزة بناءً على النوع والقسم الجديدين
+        fetchDeviceSpecsByTypeAndDepartment()
+          .then(() => {
+            // بعد انتهاء الـ fetch من بناء قائمة المواصفات في DOM، نفتح الـ dropdown الخاص بمواصفات الجهاز:
+            const displaySpanSpec = document.getElementById("selected-device-spec");
+            const optionsContainerSpec = document.getElementById("device-spec-options");
+            if (displaySpanSpec && optionsContainerSpec) {
+              // طريقتك في فتح القائمة يمكن أن تكون بإضافة كلاس أو تغيير الـ style.display
+              // مثال عام:
+              displaySpanSpec.classList.add("open");          // إضافة كلاس “open” لو معتمد
+              optionsContainerSpec.style.display = "block";   // إظهار الحاوية
+            }
+          })
+          .catch(err => {
+            console.error("❌ خطأ عند تحميل مواصفات الأجهزة بعد إضافة القسم:", err);
+          });
+      }, 500); 
+      // ↑ مهلة 500ms تقريبًا تسمح لإنهاء renderDropdownOptions + تغيير DOM للقسم
+      // يمكنك ضبطها حسب سرعة اتصالك والـ rendering عندك.
+
+      // ============================
+      // 6) أخيرًا: إغلاق الـ generic-popup الخاص بإضافة القسم
+      // ============================
       document.getElementById("generic-popup").style.display = "none";
     })
     .catch(err => {
@@ -841,6 +881,7 @@ const sectionNameWithLang = `${sectionName} ${langLabel}`;
       alert("❌ Error saving section");
     });
 }
+
 
 
 

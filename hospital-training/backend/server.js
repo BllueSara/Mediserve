@@ -886,8 +886,8 @@ const problem_status = Array.isArray(rawProblemStatus)
 
     await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
       userId,
-      `Regular maintenance created for ${displayDevice} by engineer ${engineerName || 'N/A'} {${formattedProblemStatus}}`,
-      'regular-maintenance'
+      `Regular maintenance for ${displayDevice} has been created by ${userName} and assigned to engineer ${engineerName || 'N/A'} [${formattedProblemStatus}]`,
+  'regular-maintenance'
     ]);
 
     const nextTicketId = await generateNumber("INT");
@@ -931,8 +931,8 @@ const problem_status = Array.isArray(rawProblemStatus)
       VALUES (?, ?, ?)
     `, [
       userId,
-      `Report created ${ticketNumber} for ${displayDevice} by engineer ${engineerName || 'N/A'} (${formattedProblemStatus})`,
-      'internal-ticket-report'
+      `Ticket ${ticketNumber} has been opened by ${userName} and assigned to engineer ${engineerName || 'N/A'} [${formattedProblemStatus}]`,
+  'internal-ticket-report'
     ]);
 
     const reportNumberMain = formatNumber("REP", nextTicketId, "MAIN");
@@ -959,8 +959,8 @@ const problem_status = Array.isArray(rawProblemStatus)
       VALUES (?, ?, ?)
     `, [
       userId,
-      `Report created ${reportNumberMain} for device ${deviceInfo.device_name} (${displayDevice}) by engineer ${engineerName || 'N/A'}`,
-      'regular-report'
+      `Main report ${reportNumberMain} for device ${deviceInfo.device_name} (${displayDevice}) has been submitted by ${userName} and handled by engineer ${engineerName || 'N/A'}`,
+  'regular-report'
     ]);
 
 // 🧼 دالة تنظيف التاج من الاسم
@@ -979,8 +979,8 @@ if (techEngineerName) {
       if (techUserId) {
         await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
           techUserId,
-          `You have been assigned a new Regular maintenance task on ${displayDevice} by ${userName}`,
-          'technical-notification'
+          `You have been assigned a new Regular maintenance task for ${displayDevice} by ${userName}. [Engineer: ${cleanedName}]`,
+      'technical-notification'
         ]);
       }
     }

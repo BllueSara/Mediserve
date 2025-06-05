@@ -1,4 +1,28 @@
-// 🔙 زر الرجوع
+/**
+ * دالة مساعدة تستخدم واجهة translate.googleapis.com للحصول على ترجمة
+ * @param {string} text النصّ الأصلي
+ * @param {string} targetLang شفرة اللغة الهدف ("ar" أو "en")
+ * @param {string} sourceLang شفرة اللغة المصدر (افتراضي "en")
+ * @returns {Promise<string>} الوعد الذي يعود بالنصّ المترجَم
+ */
+async function translateWithGoogle(text, targetLang, sourceLang = "en") {
+  if (!text || !targetLang) return text;
+  const encoded = encodeURIComponent(text);
+  const url =
+    `https://translate.googleapis.com/translate_a/single?client=gtx` +
+    `&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encoded}`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to fetch Google Translate");
+    const data = await res.json();
+    const firstSegment = data?.[0]?.[0]?.[0];
+    return firstSegment || text;
+  } catch (err) {
+    console.warn("⚠️ translateWithGoogle error:", err);
+    return text;
+  }
+}
 function goBack() {
   window.history.back();
 }
@@ -30,7 +54,6 @@ const loadFonts = async () => {
 
 loadFonts();
 
-
 function normalizeKey(str) {
   return str
     .toLowerCase()
@@ -39,7 +62,6 @@ function normalizeKey(str) {
     .replace(/\s+/g, " ")        // توحيد المسافات
     .trim();
 }
-
 
 function fixEncoding(badText) {
   try {
@@ -78,9 +100,8 @@ const ctx = canvas.getContext("2d");
 let drawing = false;
 let userDrewOnCanvas = false;
 
-
 document.addEventListener("DOMContentLoaded", () => {
-  
+
   const saveBtn = document.querySelector(".save-btn");
 
   const reportId = new URLSearchParams(window.location.search).get("id");
@@ -90,49 +111,75 @@ document.addEventListener("DOMContentLoaded", () => {
 
   fetch(`http://localhost:5050/report/${reportId}?type=${reportType}`)
     .then(res => res.json())
-   .then(rawReport => {
+    .then(async rawReport => { // ← جعل المعالج async لاستخدام await
       console.log("📦 التقرير (خام):", rawReport);
 
       const report = cleanReport(rawReport); // ← 🧼 تنظيف التاجات
       reportData = report;
 
       const lang = languageManager.currentLang;
+      const normalizeKey = (text) => text.replace(/[^\w\s]/gi, "").toLowerCase().trim();
 
-      const normalizeKey = (text) => {
-        return text.replace(/[^\w\s]/gi, "").toLowerCase().trim();
-      };
-const rawPriority = report.priority || "Medium";
-const rawType = report.device_type || "";
-const rawDept = report.department_name || "";
-const rawCategory = report.maintenance_type === "Regular" ? "Regular" :
-  report.maintenance_type === "General" ? "General" :
-  report.maintenance_type === "Internal" ? (report.ticket_type || "Internal") :
-  report.maintenance_type === "External" ? "External" : "";
+      // — 3) ترجمة Priority/Type/Dept/Category مع الفالباك إلى Google
+      const rawPriority = report.priority || "Medium";
+      const rawType     = report.device_type || "";
+      const rawDept     = report.department_name || "";
+      const rawCategory = 
+        report.maintenance_type === "Regular" ? "Regular" :
+        report.maintenance_type === "General" ? "General" :
+        report.maintenance_type === "Internal" ? (report.ticket_type || "Internal") :
+        report.maintenance_type === "External" ? "External" : "";
 
-const translatedPriority = translations.priority?.[rawPriority]?.[lang] || rawPriority;
-const translatedType = translations.deviceType?.[normalizeKey(rawType)]?.[lang] || rawType;
-const translatedDept = translations.departments?.[rawDept]?.[lang] || rawDept;
-const translatedCategory = translations.category?.[rawCategory]?.[lang] || rawCategory;
-              const attachmentSection = document.getElementById("attachment-section");
+      let translatedPriority;
+      if (translations.priority?.[rawPriority]?.[lang]) {
+        translatedPriority = translations.priority[rawPriority][lang];
+      } else {
+        translatedPriority = await translateWithGoogle(rawPriority, lang, "en");
+      }
 
-        // ✅ عرض المرفق إذا موجود
-        if (report.attachment_name && report.attachment_path) {
-          const attachmentLink = document.createElement("a");
-          attachmentLink.href = `http://localhost:5050/uploads/${report.attachment_path}`;
-          attachmentLink.textContent = `📎 ${report.attachment_name}`;
-          attachmentLink.download = report.attachment_name;
-          attachmentLink.style = "display: block; margin-top: 10px; color: #007bff; text-decoration: underline;";
-          attachmentSection.appendChild(attachmentLink);
-        }
-        
-        // ✅ عرض التوقيع إذا موجود (نفس مكان المرفق)
-        if (report.signature_path) {
-          const sigImg = document.createElement("img");
-          sigImg.src = `http://localhost:5050/${report.signature_path}`;
-          sigImg.alt = "Signature";
-          sigImg.style = "margin-top: 10px; max-width: 200px; border: 1px solid #ccc; display: block;";
-          attachmentSection.appendChild(sigImg);
-        }
+      const keyType = normalizeKey(rawType);
+      let translatedType;
+      if (translations.deviceType?.[keyType]?.[lang]) {
+        translatedType = translations.deviceType[keyType][lang];
+      } else {
+        translatedType = await translateWithGoogle(rawType, lang, "en");
+      }
+
+      let translatedDept;
+      if (translations.departments?.[rawDept]?.[lang]) {
+        translatedDept = translations.departments[rawDept][lang];
+      } else {
+        translatedDept = await translateWithGoogle(rawDept, lang, "en");
+      }
+
+      let translatedCategory;
+      if (translations.category?.[rawCategory]?.[lang]) {
+        translatedCategory = translations.category[rawCategory][lang];
+      } else {
+        translatedCategory = await translateWithGoogle(rawCategory, lang, "en");
+      }
+
+      const attachmentSection = document.getElementById("attachment-section");
+
+      // ✅ عرض المرفق إذا موجود
+      if (report.attachment_name && report.attachment_path) {
+        const attachmentLink = document.createElement("a");
+        attachmentLink.href = `http://localhost:5050/uploads/${report.attachment_path}`;
+        attachmentLink.textContent = `📎 ${report.attachment_name}`;
+        attachmentLink.download = report.attachment_name;
+        attachmentLink.style = "display: block; margin-top: 10px; color: #007bff; text-decoration: underline;";
+        attachmentSection.appendChild(attachmentLink);
+      }
+
+      // ✅ عرض التوقيع إذا موجود (نفس مكان المرفق)
+      if (report.signature_path) {
+        const sigImg = document.createElement("img");
+        sigImg.src = `http://localhost:5050/${report.signature_path}`;
+        sigImg.alt = "Signature";
+        sigImg.style = "margin-top: 10px; max-width: 200px; border: 1px solid #ccc; display: block;";
+        attachmentSection.appendChild(sigImg);
+      }
+
       const isExternal = report.source === "external";
 
       if (reportType === "new") {
@@ -140,7 +187,7 @@ const translatedCategory = translations.category?.[rawCategory]?.[lang] || rawCa
         document.getElementById("report-id").textContent = `NMR-${report.id}`;
         document.getElementById("priority").textContent = report.priority || "Medium";
         document.getElementById("device-type").textContent = report.device_type || "";
-        document.getElementById("assigned-to").textContent = report.assigned_to ||"";
+        document.getElementById("assigned-to").textContent = report.assigned_to || "";
         document.getElementById("department").textContent = report.department_name || "";
         document.getElementById("category").textContent = "New";
         document.getElementById("report-status").textContent = report.status || "Open";
@@ -151,9 +198,6 @@ const translatedCategory = translations.category?.[rawCategory]?.[lang] || rawCa
         const specsContainer = document.getElementById("device-specs");
         specsContainer.innerHTML = "";
         if (report.device_type) {
-          const specsContainer = document.getElementById("device-specs");
-          specsContainer.innerHTML = "";
-          
           const deviceType = report.device_type?.trim()?.toLowerCase() || "";
           const fields = [
             { icon: "🔘", label: "Device Name:", value: report.device_name, alwaysShow: true, i18n: "device_name" },
@@ -174,41 +218,41 @@ const translatedCategory = translations.category?.[rawCategory]?.[lang] || rawCa
             { icon: "🔖", label: "Ink Serial Number:", value: report.ink_serial_number, showForPrinter: true, i18n: "ink_serial" },
             { icon: "📠", label: "Scanner Type:", value: report.scanner_type, showForScanner: true, i18n: "scanner_type" },
           ];
-          
+
           fields.forEach(({ icon, label, value, showForPC, showForPrinter, showForScanner, alwaysShow, i18n }) => {
             const shouldShow =
               alwaysShow ||
-             (showForPC && ["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes((deviceType || "").toLowerCase())) ||
+              (showForPC && ["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(deviceType)) ||
               (showForPrinter && deviceType === "printer") ||
               (showForScanner && deviceType === "scanner") ||
               !!value;
-          
+
             if (shouldShow) {
               const div = document.createElement("div");
               div.className = "spec-box";
-              
+
               // إنشاء عنصر span للأيقونة
               const iconSpan = document.createElement("span");
               iconSpan.textContent = icon;
               iconSpan.style.marginRight = "5px";
-              
+
               // إنشاء عنصر span للتسمية
               const labelSpan = document.createElement("span");
               labelSpan.setAttribute("data-i18n", i18n);
               labelSpan.textContent = label;
-              
+
               // إنشاء عنصر span للقيمة
               const valueSpan = document.createElement("span");
               valueSpan.textContent = value || "";
-              
+
               // إضافة العناصر إلى div
               div.appendChild(iconSpan);
               div.appendChild(labelSpan);
               div.appendChild(document.createTextNode(" "));
               div.appendChild(valueSpan);
-              
+
               specsContainer.appendChild(div);
-              
+
               // تطبيق الترجمة مباشرة
               if (languageManager.currentLang === 'ar') {
                 const translation = languageManager.translations.ar[i18n];
@@ -218,15 +262,8 @@ const translatedCategory = translations.category?.[rawCategory]?.[lang] || rawCa
               }
             }
           });
-          
-          
-          
-          
         }
 
-        
-        
-        
         return;
       }
 
@@ -234,166 +271,157 @@ const translatedCategory = translations.category?.[rawCategory]?.[lang] || rawCa
       const isInternalTicket = report.maintenance_type === "Internal";
       let ticketNumber = report.ticket_number?.trim();
 
- // محاولة استخراج رقم التذكرة من الوصف أو الملخص حتى لو بصيغة مختلفة
- if (!ticketNumber) {
-  const fullText = `${report.full_description || ""} ${report.issue_summary || ""}`;
-  const match = fullText.match(/(?:Ticket Number:|Ticket\s+\()? *(TIC-\d+|INT-\d{8}-\d{3})/i);
-  if (match) {
-    ticketNumber = match[1].trim();
-    console.log("📌 Extracted ticket number:", ticketNumber);
-  } else {
-    console.warn("⚠️ No ticket number found in report");
-  }
- }
+      // محاولة استخراج رقم التذكرة من الوصف أو الملخص
+      if (!ticketNumber) {
+        const fullText = `${report.full_description || ""} ${report.issue_summary || ""}`;
+        const match = fullText.match(/(?:Ticket Number:|Ticket\s+\()? *(TIC-\d+|INT-\d{8}-\d{3})/i);
+        if (match) {
+          ticketNumber = match[1].trim();
+          console.log("📌 Extracted ticket number:", ticketNumber);
+        } else {
+          console.warn("⚠️ No ticket number found in report");
+        }
+      }
 
-let titlePrefix = "Maintenance";
-if (report.maintenance_type === "Regular") titlePrefix = "Regular Maintenance";
-else if (report.maintenance_type === "General") titlePrefix = "General Maintenance";
-else if (report.maintenance_type === "Internal") titlePrefix = "Internal Ticket";
-else if (report.maintenance_type === "External") titlePrefix = "External Maintenance";
-const translatedTitle = translations.titleType?.[titlePrefix]?.[lang] || titlePrefix;
-let ticketNum = report.ticket_number?.trim();
-if (!ticketNum) {
-  const fullText = `${report.full_description || ""} ${report.issue_summary || ""}`;
-  const match = fullText.match(/(?:Ticket Number:|Ticket\s+\()? *(TIC-\d+|INT-\d{8}-\d{3})/i);
-  if (match) {
-    ticketNum = match[1].trim();
-  }
-}
+      let titlePrefix = "Maintenance";
+      if (report.maintenance_type === "Regular") titlePrefix = "Regular Maintenance";
+      else if (report.maintenance_type === "General") titlePrefix = "General Maintenance";
+      else if (report.maintenance_type === "Internal") titlePrefix = "Internal Ticket";
+      else if (report.maintenance_type === "External") titlePrefix = "External Maintenance";
+      const translatedTitle = translations.titleType?.[titlePrefix]?.[lang] || titlePrefix;
 
-const reportNum = report.report_number || report.request_number || "";
-const isTicketReport = reportNum.includes("-TICKET");
-const translatedTicket = translations.titleType?.["Ticket"]?.[lang] || "Ticket";
+      let ticketNum = report.ticket_number?.trim();
+      if (!ticketNum) {
+        const fullText = `${report.full_description || ""} ${report.issue_summary || ""}`;
+        const match = fullText.match(/(?:Ticket Number:|Ticket\s+\()? *(TIC-\d+|INT-\d{8}-\d{3})/i);
+        if (match) {
+          ticketNum = match[1].trim();
+        }
+      }
 
-let finalNumber = ticketNum || reportNum || report.id;
+      const reportNum = report.report_number || report.request_number || "";
+      const isTicketReport = reportNum.includes("-TICKET");
+      const translatedTicket = translations.titleType?.["Ticket"]?.[lang] || "Ticket";
 
-// إذا كانت -TICKET موجودة، نحذفها من الرقم قبل العرض
-if (isTicketReport && finalNumber.includes("-TICKET")) {
-  finalNumber = finalNumber.replace("-TICKET", "");
-}
+      let finalNumber = ticketNum || reportNum || report.id;
+      if (isTicketReport && finalNumber.includes("-TICKET")) {
+        finalNumber = finalNumber.replace("-TICKET", "");
+      }
 
-// نركب العنوان النهائي
-let reportTitle = `${translatedTitle} #${finalNumber}`;
-if (isTicketReport) {
-  reportTitle += ` - ${translatedTicket}`; // مثال: " - تذكرة"
-}
+      let reportTitle = `${translatedTitle} #${finalNumber}`;
+      if (isTicketReport) {
+        reportTitle += ` - ${translatedTicket}`;
+      }
 
-document.getElementById("report-title").textContent = reportTitle;
+      document.getElementById("report-title").textContent = reportTitle;
+      document.getElementById("report-title").setAttribute("data-i18n", "report_title_key");
 
+      document.getElementById("report-id").textContent =
+        report.maintenance_type === "Internal"
+          ? report.ticket_number || `INT-${report.id}`
+          : report.report_number || report.request_number || `MR-${report.id}`;
 
-
-   
-document.getElementById("report-title").setAttribute("data-i18n", "report_title_key");
-      
-document.getElementById("report-id").textContent =
-  report.maintenance_type === "Internal"
-    ? report.ticket_number || `INT-${report.id}`
-    : report.report_number || report.request_number || `MR-${report.id}`;
-
-      document.getElementById("priority").textContent = isExternal ? "" : (translatedPriority|| "");
-      document.getElementById("device-type").textContent = translatedType || "";
-      if (report.maintenance_type === "Regular" ) {
+      document.getElementById("priority").textContent    = isExternal ? "" : translatedPriority;
+      document.getElementById("device-type").textContent = translatedType;
+      if (report.maintenance_type === "Regular") {
         document.getElementById("assigned-to").textContent = report.technical_engineer || "";
-      }else if (  report.maintenance_type === "General") {
+      } else if (report.maintenance_type === "General") {
         document.getElementById("assigned-to").textContent = report.technician_name || "";
       } else if (report.maintenance_type === "Internal") {
-        document.getElementById("assigned-to").textContent =report.technical  || report.technician_name ||'' ;
-      }
-       else {
+        document.getElementById("assigned-to").textContent = report.technical || report.technician_name || '';
+      } else {
         document.getElementById("assigned-to").textContent = isExternal
           ? (report.reporter_name || "")
           : (report.assigned_to || report.reporter_name || report.technical_engineer);
       }
-      
-      document.getElementById("department").textContent = translatedDept || "";
 
-
-document.getElementById("category").textContent = translatedCategory;
-    
-          document.getElementById("report-status").textContent = report.status || "Pending";
+      document.getElementById("department").textContent = translatedDept;
+      document.getElementById("category").textContent   = translatedCategory;
+      document.getElementById("report-status").textContent = report.status || "Pending";
       document.getElementById("submitted-date").textContent = `Submitted on ${new Date(report.created_at).toLocaleString()}`;
-const problem = (report.problem_status || "").trim();
-const summary = (report.issue_summary || report.initial_diagnosis || "").trim();
 
-let descriptionHtml = "";
+      const problem = (report.problem_status || "").trim();
+      const summary = (report.issue_summary || report.initial_diagnosis || "").trim();
 
-// ✅ معالجة نوع التذكرة
-if (isInternalTicket) {
-  descriptionHtml = summary || "No description.";
-} else {
-  const normalizedProblem = problem.toLowerCase();
-  const normalizedSummary = summary.toLowerCase();
+      let descriptionHtml = "";
+      if (isInternalTicket) {
+        descriptionHtml = summary || "No description.";
+      } else {
+        const normalizedProblem = problem.toLowerCase();
+        const normalizedSummary = summary.toLowerCase();
 
-  if (problem && summary) {
-    if (normalizedSummary.includes(normalizedProblem)) {
-      descriptionHtml = summary;
-    } else if (normalizedProblem.includes(normalizedSummary)) {
-      descriptionHtml = problem;
-    } else {
-      descriptionHtml = `${summary}<br>${problem}`;
-    }
-  } else if (problem) {
-    descriptionHtml = problem;
-  } else if (summary) {
-    descriptionHtml = summary;
-  } else {
-    descriptionHtml = "No description.";
-  }
-}
+        if (problem && summary) {
+          if (normalizedSummary.includes(normalizedProblem)) {
+            descriptionHtml = summary;
+          } else if (normalizedProblem.includes(normalizedSummary)) {
+            descriptionHtml = problem;
+          } else {
+            descriptionHtml = `${summary}<br>${problem}`;
+          }
+        } else if (problem) {
+          descriptionHtml = problem;
+        } else if (summary) {
+          descriptionHtml = summary;
+        } else {
+          descriptionHtml = "No description.";
+        }
+      }
 
-// ✅ General تستخدم issue_description أولاً
-if (report.maintenance_type === "General") {
-  descriptionHtml = report.issue_description || report.issue_summary || "No description.";
-}
+      if (report.maintenance_type === "General") {
+        descriptionHtml = report.issue_description || report.issue_summary || "No description.";
+      }
 
-// ✅ Regular تستخدم problem_status أولاً
-if (report.maintenance_type === "Regular") {
-  descriptionHtml = report.problem_status || report.issue_summary || "No description.";
-}
+      if (report.maintenance_type === "Regular") {
+        descriptionHtml = report.problem_status || report.issue_summary || "No description.";
+      }
 
-// 🧼 تنظيف النص من "Selected Issue:" + وسم اللغة
-descriptionHtml = descriptionHtml
-  .replace(/^Selected Issue:\s*/i, "")
-  .replace(/\s*\[(ar|en)\]/gi, "") // ← حذف الوسوم من كامل النص
-  .trim();
+      descriptionHtml = descriptionHtml
+        .replace(/^Selected Issue:\s*/i, "")
+        .replace(/\s*\[(ar|en)\]/gi, "")
+        .trim();
 
-// 🔄 تحويل النصوص لقائمة عناصر
-let items = [];
-try {
-  const parsed = JSON.parse(descriptionHtml);
-  if (Array.isArray(parsed)) {
-    items = parsed;
-  } else {
-    throw new Error("Not array");
-  }
-} catch {
-  items = descriptionHtml
-    .replace(/^\[|\]$/g, "")
-    .split(/[\n,،]+/)
-    .map(s =>
-      s
-        .replace(/^["“”']?|["“”']?$/g, "")
-        .replace(/\s*\[(ar|en)\]$/i, "") // ← تنظيف كل عنصر
-        .trim()
-    )
-    .filter(Boolean);
-}
+      // 🔄 تحويل النصوص إلى مصفوفة عناصر items
+      let items = [];
+      try {
+        const parsed = JSON.parse(descriptionHtml);
+        if (Array.isArray(parsed)) {
+          items = parsed;
+        } else {
+          throw new Error("Not array");
+        }
+      } catch {
+        items = descriptionHtml
+          .replace(/^\[|\]$/g, "")
+          .split(/[\n,،]+/)
+          .map(s =>
+            s
+              .replace(/^["“”']?|["“”']?$/g, "")
+              .replace(/\s*\[(ar|en)\]$/i, "")
+              .trim()
+          )
+          .filter(Boolean);
+      }
 
-// ✅ الترجمة من القاموس
-const translated = items.map(text => {
-  const dict = translations.description || {};
-  const cleanedText = text.replace(/[“”]/g, '"').trim();
-  const found = Object.keys(dict).find(key => key.trim() === cleanedText);
-  return `- ${found ? dict[found][lang] : text}`;
-}).join("<br>");
+      // — 4) ترجمة كل عنصر في items بالقاموس أو Google إذا لم يوجد
+      const translatedItems = [];
+      for (const text of items) {
+        const cleanedText = text.replace(/[“”]/g, '"').trim();
+        const dict = translations.description || {};
+        const foundKey = Object.keys(dict).find(key => key.trim() === cleanedText);
 
-// ✅ العرض النهائي
-const descEl = document.getElementById("description");
-descEl.innerHTML = translated || "No description.";
-descEl.style.textAlign = lang === 'ar' ? 'right' : 'left';
+        if (foundKey) {
+          translatedItems.push(`- ${dict[foundKey][lang]}`);
+        } else {
+          const googleTranslated = await translateWithGoogle(cleanedText, lang, "en");
+          translatedItems.push(`- ${googleTranslated}`);
+        }
+      }
+      const finalTranslated = translatedItems.join("<br>");
 
-      
-      
+      const descEl = document.getElementById("description");
+      descEl.innerHTML = finalTranslated || "No description.";
+      descEl.style.textAlign = lang === 'ar' ? 'right' : 'left';
+
 if (report.maintenance_type === "General") {
   const generalInfo = [
     { label: "Customer Name", value: report.customer_name, i18n: "customer_name" },
@@ -404,84 +432,85 @@ if (report.maintenance_type === "General") {
     { label: "Floor", value: report.floor, i18n: "floor" },
   ];
 
-  const generalHtml = generalInfo.map(item => {
-    const lang = languageManager.currentLang;
-    const translationsMap = languageManager.translations?.[lang] || {};
-    const translatedLabel = translationsMap[item.i18n] || item.label;
+  // نبني الـ HTML للحقول، ونستخدم دائماً Google Translate لطباعة قيمة الطابق
+  const generalHtml = await Promise.all(
+    generalInfo.map(async item => {
+      const tmap = languageManager.translations?.[lang] || {};
+      const translatedLabel = tmap[item.i18n] || item.label;
 
-    return `
-      <div class="info-row">
-        <span class="info-label" data-i18n="${item.i18n}">${translatedLabel}</span>
-        <span class="info-value">${item.value || "N/A"}</span>
-      </div>
-    `;
-  }).join("");
+      let displayValue = item.value || "N/A";
+      if (item.i18n === "floor" && item.value) {
+        // دائماً نستدعي ترجمة جوجل للـ floor
+        displayValue = await translateWithGoogle(item.value, lang, "en");
+      }
+
+      return `
+        <div class="info-row">
+          <span class="info-label" data-i18n="${item.i18n}">${translatedLabel}</span>
+          <span class="info-value">${displayValue}</span>
+        </div>
+      `;
+    })
+  );
 
   document.getElementById("note").innerHTML = `
     <div class="info-box">
       <div class="info-title" data-i18n="additional_information">Additional Information</div>
-      ${generalHtml}
-    </div>
-  `;
-  document.getElementById("note").innerHTML = `
-  <div class="info-box">
-    <div class="info-title" data-i18n="additional_information">Additional Information</div>
-    ${generalHtml}
-  </div>
-`;
-languageManager.applyLanguage(); // ← هذا يخلّي الترجمة تشتغل
-
-}
-else {
-  let noteHtml = `
-    <div class="info-box">
-      <div class="info-title" data-i18n="${isExternal ? 'final_diagnosis' : 'technical_notes'}">
-        ${isExternal ? "Final Diagnosis" : "Technical Team Notes"}:
-      </div>
-      <div class="info-row">
-        <span class="info-value">${report.full_description || report.final_diagnosis || "No notes."}</span>
-      </div>
+      ${generalHtml.join("")}
     </div>
   `;
 
-  if (report.ticket_type) {
-    noteHtml += `
-      <div class="info-box" style="margin-top:10px;">
-        <div class="info-title" data-i18n="issue_summary">Issue Summary:</div>
-        <div class="info-row">
-          <span class="info-value">${report.issue_description}</span>
-        </div>
-      </div>
-    `;
-  }
-
-  if (report.source === "external-legacy") {
-    if (report.final_diagnosis) {
-      noteHtml += `
-        <div class="info-box" style="margin-top:10px;">
-          <div class="info-title" data-i18n="final_diagnosis">Final Diagnosis:</div>
-          <div class="info-row">
-            <span class="info-value">${report.final_diagnosis}</span>
-          </div>
-        </div>
-      `;
-    }
-
-    if (report.maintenance_manager) {
-      noteHtml += `
-        <div class="info-box" style="margin-top:10px;">
-          <div class="info-title" data-i18n="maintenance_manager">Maintenance Manager:</div>
-          <div class="info-row">
-            <span class="info-value">${report.maintenance_manager}</span>
-          </div>
-        </div>
-      `;
-    }
-  }
-
-  document.getElementById("note").innerHTML = noteHtml;
   languageManager.applyLanguage();
 }
+ else {
+        let noteHtml = `
+          <div class="info-box">
+            <div class="info-title" data-i18n="${isExternal ? 'final_diagnosis' : 'technical_notes'}">
+              ${isExternal ? "Final Diagnosis" : "Technical Team Notes"}:
+            </div>
+            <div class="info-row">
+              <span class="info-value">${report.full_description || report.final_diagnosis || "No notes."}</span>
+            </div>
+          </div>
+        `;
+
+        if (report.ticket_type) {
+          noteHtml += `
+            <div class="info-box" style="margin-top:10px;">
+              <div class="info-title" data-i18n="issue_summary">Issue Summary:</div>
+              <div class="info-row">
+                <span class="info-value">${report.issue_description}</span>
+              </div>
+            </div>
+          `;
+        }
+
+        if (report.source === "external-legacy") {
+          if (report.final_diagnosis) {
+            noteHtml += `
+              <div class="info-box" style="margin-top:10px;">
+                <div class="info-title" data-i18n="final_diagnosis">Final Diagnosis:</div>
+                <div class="info-row">
+                  <span class="info-value">${report.final_diagnosis}</span>
+                </div>
+              </div>
+            `;
+          }
+          if (report.maintenance_manager) {
+            noteHtml += `
+              <div class="info-box" style="margin-top:10px;">
+                <div class="info-title" data-i18n="maintenance_manager">Maintenance Manager:</div>
+                <div class="info-row">
+                  <span class="info-value">${report.maintenance_manager}</span>
+                </div>
+              </div>
+            `;
+          }
+        }
+
+        document.getElementById("note").innerHTML = noteHtml;
+        languageManager.applyLanguage();
+      }
 
 
       
