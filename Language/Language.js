@@ -826,6 +826,11 @@ const languageManager = {
             'back': 'رجوع',
             'enter': 'ادخل',
             'for': 'ل',
+                        'ink_serial': 'رقم التسلسلي للحبر',
+                                    'ink_serial_number': "رقم التسلسلي للحبر",
+
+
+
             'technical_status': "الحالة الفنية",
             'technical_status_name': "اسم الحالة الفنية",
             'enter_technical_status': "أدخل الحالة الفنية...",
@@ -859,7 +864,8 @@ const languageManager = {
             'issue_summary': 'ملخص المشكلة',
             'additional_information': 'معلومات اضافية',
             'error_loading_reports' : 'خطأ في تحميل التقارير',
-
+            'os': 'النظام التشغيلي',
+            'generation': 'التصنيف',
             // Home Page
             'enterprise_solutions': 'حلول تكنولوجيا المؤسسات',
             'comprehensive_services': 'خدمات تقنية شاملة للشركات الحديثة، تمكين التحول الرقمي الخاص بك مع حلول متطورة',
