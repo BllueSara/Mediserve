@@ -94,7 +94,11 @@ function normalizeKey(str) {
     .trim();
 }
 
-
+function getSelectVal(id) {
+  const sel = document.getElementById(id);
+  const opt = sel.options[sel.selectedIndex];
+  return opt?.dataset?.val ?? "";
+}
 
 
 async function loadReports(page = 1) {
@@ -120,6 +124,62 @@ async function loadReports(page = 1) {
     }
     return report;
   });
+  // 2.1) اجمع قيم الفلاتر
+
+// ← 2.1 اجمع قيم الفلاتر باستخدام getSelectVal
+const typeFilter       = getSelectVal("filter-type");
+const statusFilter     = getSelectVal("filter-status");
+const deviceTypeFilter = getSelectVal("filter-device-type");
+const searchQuery      = document.getElementById("search-input").value.trim().toLowerCase();
+const dateFrom         = document.getElementById("filter-date-from").value;
+const dateTo           = document.getElementById("filter-date-to").value;
+
+// 2.2) طبّق الفلاتر على data
+const filtered = data.filter(report => {
+    // —— 1) فلترة حسب النوع:
+    if (typeFilter) {
+      if (typeFilter === "New") {
+        if (report.source.toLowerCase() !== "new") return false;
+      }
+      else if (typeFilter === "Regular") {
+        if (report.maintenance_type !== "Regular") return false;
+      }
+      else if (typeFilter === "Internal") {
+        if (report.maintenance_type !== "Internal") return false;
+      }
+      else if (typeFilter === "Ticket") {
+        // نعرض فقط اللي تحتوي issue_summary على "Ticket Created"
+        if (!report.issue_summary?.includes("Ticket Created")) return false;
+      }
+    }
+
+    // —— 2) فلترة الحالة:
+    if (statusFilter && (report.status || "").toLowerCase() !== statusFilter.toLowerCase()) 
+      return false;
+
+    // —— 3) فلترة نوع الجهاز:
+    if (deviceTypeFilter && (report.device_type || "").toLowerCase() !== deviceTypeFilter.toLowerCase()) 
+      return false;
+
+    // —— 4) فلترة البحث الحر:
+    if (searchQuery) {
+      const haystack = [
+        report.issue_summary, 
+        report.full_description, 
+        report.department_name, 
+        report.device_name
+      ].join(" ").toLowerCase();
+      if (!haystack.includes(searchQuery)) return false;
+    }
+
+    // —— 5) فلترة التواريخ:
+    const created = new Date(report.created_at);
+    if (dateFrom && created < new Date(dateFrom)) return false;
+    if (dateTo   && created > new Date(dateTo))   return false;
+
+    return true;
+  });
+
 
   const container = document.getElementById("report-list");
   container.innerHTML = "";
@@ -130,7 +190,7 @@ async function loadReports(page = 1) {
   // 4.a) فلترة وفرز إلى صفحات (مثال بسيط جدًا لعرض العنصر الأول فقط لوحده)
   const reportsPerPage = 4;
   const startIndex     = (page - 1) * reportsPerPage;
-  const paginated      = data.slice(startIndex, startIndex + reportsPerPage);
+const paginated = filtered.slice(startIndex, startIndex + reportsPerPage);
 
   if (!paginated.length) {
     container.innerHTML = `<p>${t('no_matching_reports_found')}</p>`;
@@ -191,15 +251,34 @@ async function loadReports(page = 1) {
     }
 
     // ——— بناء تسمية الـ maintenanceLabel والـ iconSrc بناءً على نوع التقرير
-    let maintenanceLabel = t('general_maintenance');
-    let iconSrc = "/icon/maintenance.png";
-    if (isInternal) {
-      maintenanceLabel = t('internal_ticket');
-      iconSrc = "/icon/ticket.png";
-    } else if (report.maintenance_type === "Regular") {
-      maintenanceLabel = t('regular_maintenance');
-      iconSrc = "/icon/Maintenance.png";
-    }
+// 1) Map maintenance_type → baseLabelKey
+let baseLabelKey;
+switch (report.maintenance_type) {
+  case "Regular":
+    baseLabelKey = 'regular_maintenance';    // "صيانة دورية"
+    iconSrc      = "/icon/maintenance.png";
+    break;
+  case "Internal":
+    baseLabelKey = 'internal_ticket';        // "تذكرة داخلية"
+    iconSrc      = "/icon/ticket.png";
+    break;
+  case "External":
+    baseLabelKey = 'external_maintenance';   // "صيانة خارجية"
+    iconSrc      = "/icon/maintenance.png";
+    break;
+  default:
+    baseLabelKey = 'general_maintenance';    // "صيانة عامة"
+    iconSrc      = "/icon/maintenance.png";
+}
+
+// 2) Build the final maintenanceLabel
+let maintenanceLabel = t(baseLabelKey);
+// إذا هذا تقرير "Ticket Created" فقط → نلصق "- تذكرة" ونغيّر الأيقون
+if (isTicketOnly) {
+  maintenanceLabel += ` – ${t('ticket')}`;  // e.g. "صيانة دورية – تذكرة"
+  iconSrc = "/icon/ticket.png";
+}
+
 
     // ——— تجهيز issueHtml حسب نوع التقرير (Ticket-only / Regular / غير ذلك)
     let issueHtml = "";
@@ -291,31 +370,27 @@ async function loadReports(page = 1) {
     }
 
     // ——— هنا نترجم اسم القسم مباشرةً (بدون دالة منفصلة)
-    let translatedDeptName = "";
-    if (report.department_name) {
-      // 1) ننظف المدخل
-      const cleanedDept = cleanText(report.department_name);
-      const normDept   = normalizeKey(cleanedDept);
+// نعتبر أن report.department_name يأتي عادة كـ "EnglishName|ArabicName"
+let translatedDeptName = "";
+if (report.department_name) {
+  // 1) ننظف النصّ إذا احتجت (مثلاً trim أو إزالة علامات غير ضرورية)
+  const cleanedDept = cleanText(report.department_name).trim();
 
-      // 2) نحصل على قاموس الأقسام المحلي
-      const localDict   = languageManager.translations?.[lang]?.departments || {};
-      // 3) نبحث في القاموس إذا كان هناك مفتاح يطابق
-      let foundLocalKey = null;
-      for (const key of Object.keys(localDict)) {
-        if (normalizeKey(key) === normDept) {
-          foundLocalKey = key;
-          break;
-        }
-      }
+  // 2) نقسم عند '|' لنحصل على جزأين [EnglishPart, ArabicPart]
+  const parts = cleanedDept.split("|");
+  const englishPart = parts[0]?.trim() || "";
+  const arabicPart  = parts[1]?.trim() || "";
 
-      if (foundLocalKey) {
-        // إذا وجدناه في القاموس المحلي نستخدم الترجمة المخزّنة
-        translatedDeptName = localDict[foundLocalKey];
-      } else {
-        // خلاف ذلك نستدعي Google Translate مباشرةً
-        translatedDeptName = await translateWithGoogle(cleanedDept, lang, "en");
-      }
-    }
+  // 3) نختار الجزء المناسب حسب اللغة
+  if (lang === "ar") {
+    translatedDeptName = arabicPart || englishPart; 
+    // إذا لم يوجد الجزء العربي، نعرض الإنجليزي كـ fallback
+  } else {
+    translatedDeptName = englishPart || arabicPart;
+    // إذا لم يوجد الجزء الإنجليزي، نعرض العربي كـ fallback
+  }
+}
+
 
     // ——— أخيراً، نُنشئ البطاقة ونُدخل اسم القسم المترجم
     const direction = isArabic ? "rtl" : "ltr";
@@ -379,7 +454,7 @@ async function loadReports(page = 1) {
   }
 
   // ——— بعد الانتهاء من جميع البطاقات، نحدّث أزرار الصفحات
-  updatePagination(page, Math.ceil(data.length / reportsPerPage));
+updatePagination(page, Math.ceil(filtered.length / reportsPerPage));
 }
 
 
