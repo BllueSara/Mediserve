@@ -4,7 +4,12 @@
 function cleanTag(value) {
   return value?.replace(/\s*\[(ar|en)\]$/i, "").trim();
 }
-
+function cleanText(text) {
+  return (text || "")
+    .replace(/\[\s*(ar|en)\s*\]/gi, "")       // يزيل [ar] أو [en]
+    .replace(/\s{2,}/g, " ")                  // يزيل المسافات الزائدة
+    .trim();
+}
 // 2) دالة أحضار ترجمة فورية من Google Translate (fallback للعبارة نفسها عند الفشل)
 async function translateWithGoogle(text, targetLang, sourceLang = "en") {
   if (!text || !targetLang) return text;
@@ -204,6 +209,7 @@ function loadExternalReports(page = 1) {
 
         return typeMatch && statusMatch && searchMatch && dateMatch && deviceTypeMatch;
       });
+  const lang = languageManager.currentLang; // "ar" أو "en"
 
       // 2) إعداد التصفّح والصفحات
       const reportsPerPage = 4;
@@ -312,25 +318,27 @@ function loadExternalReports(page = 1) {
         `;
 
         // 3.4) الترجمة المدمجة لاسم القسم (بدون دالة منفصلة)
-        let translatedDeptName = "";
-        if (report.department_name) {
-          const cleanedDept = cleanTag(report.department_name);     // نظّف وسوم [ar] أو [en]
-          const normDept = normalizeKey(cleanedDept);               // وحّد المفتاح
+// نعتبر أن report.department_name يأتي عادة كـ "EnglishName|ArabicName"
+let translatedDeptName = "";
+if (report.department_name) {
+  // 1) ننظف النصّ إذا احتجت (مثلاً trim أو إزالة علامات غير ضرورية)
+  const cleanedDept = cleanText(report.department_name).trim();
 
-          // احصل على قاموس الأقسام للغة الحالية (en أو ar)
-          const localDeptDict = languageManager.translations[languageManager.currentLang]?.departments || {};
+  // 2) نقسم عند '|' لنحصل على جزأين [EnglishPart, ArabicPart]
+  const parts = cleanedDept.split("|");
+  const englishPart = parts[0]?.trim() || "";
+  const arabicPart  = parts[1]?.trim() || "";
 
-          // جرّب العثور على مفتاح مطابق في القاموس المحلي
-          let foundLocalKey = Object.keys(localDeptDict)
-            .find(k => normalizeKey(k) === normDept);
+  // 3) نختار الجزء المناسب حسب اللغة
+  if (lang === "ar") {
+    translatedDeptName = arabicPart || englishPart; 
+    // إذا لم يوجد الجزء العربي، نعرض الإنجليزي كـ fallback
+  } else {
+    translatedDeptName = englishPart || arabicPart;
+    // إذا لم يوجد الجزء الإنجليزي، نعرض العربي كـ fallback
+  }
+}
 
-          if (foundLocalKey) {
-            translatedDeptName = localDeptDict[foundLocalKey];
-          } else {
-            // إن لم نجده، نستدعي Google Translate مباشرة
-            translatedDeptName = await translateWithGoogle(cleanedDept, languageManager.currentLang, "en");
-          }
-        }
 
         // 3.5) نحسب اتجاه النص والمحاذاة بناءً على اللغة
         const isArabic = (languageManager.currentLang === 'ar');

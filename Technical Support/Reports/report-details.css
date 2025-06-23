@@ -309,3 +309,49 @@ header {
 .info-value {
   color: #000;
 }
+/* إعادة الحالة الافتراضية لكل select و option */
+select, select * {
+  all: unset             !important;
+  display: inline-block  !important;
+  appearance: auto       !important;
+  -webkit-appearance: auto !important;
+  -moz-appearance: auto    !important;
+  color: initial         !important;
+  background: initial    !important;
+  opacity: 1             !important;
+  visibility: visible    !important;
+  text-indent: 0         !important;
+  font: inherit          !important;
+  padding: 4px           !important;
+  margin: 0              !important;
+  border: 1px solid #ccc !important;
+}
+option {
+  color: initial         !important;
+  background: initial    !important;
+}
+/* عدّل هذه الـ selectors بحسب تركيب الـ DOM عندك */
+/* 1) استعادة الخصائص الافتراضية للـ select داخل spec-box */
+#device-specs .spec-box select,
+#device-specs .spec-box select * {
+  all: revert !important;
+}
+
+/* 2) ثم طبق عليه ستايل بسيط خاص بك */
+#device-specs .spec-box select {
+  display: inline-block !important;
+  min-width: 140px      !important;
+  padding: 4px          !important;
+  border: 1px solid #ccc!important;
+  background: #fff       !important;
+  color: #000            !important;
+  appearance: auto       !important;
+  -webkit-appearance: auto!important;
+  -moz-appearance: auto  !important;
+}
+
+/* 3) وأيضاً للأوبشن داخل القائمة */
+#device-specs .spec-box select option {
+  background: #fff !important;
+  color: #000      !important;
+}
