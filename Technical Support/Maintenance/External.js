@@ -384,7 +384,6 @@ function closePopup() {
   }
 }
 
-
 function savePCSpec() {
   const data = new FormData(popupForm);
   const deviceData = {};
@@ -411,13 +410,12 @@ function savePCSpec() {
     }
   });
 
-
   data.forEach((value, key) => {
-  const raw = value.trim();
-  const cleanValue = raw.replace(/\s*\[(ar|en)\]$/i, ""); // ✅ حذف التاج
-  deviceData[key] = cleanValue;
+    const raw = value.trim();
+    const cleanValue = raw.replace(/\s*\[(ar|en)\]$/i, ""); // ✅ حذف التاج
+    deviceData[key] = cleanValue;
 
-  const input = popupForm.querySelector(`[name="${key}"]`);
+    const input = popupForm.querySelector(`[name="${key}"]`);
 
     if (input?.hasAttribute("required") && !value.trim()) {
       const msg = document.createElement("div");
@@ -453,10 +451,14 @@ function savePCSpec() {
     delete deviceData["ip-address"];
 
   }
-const departmentName = sessionStorage.getItem("original-department");
-deviceData.department = departmentName;
+  // ✅ اجلب اسم القسم الصحيح من sessionStorage
+// اجلب الـ fullName المحفوظ كاملاً من sessionStorage:
+const departmentFullName = sessionStorage.getItem("department-full") || "";
+deviceData.department = departmentFullName;
 
-console.log("📤 البيانات المرسلة إلى السيرفر:", deviceData);
+
+  console.log("📦 البيانات المرسلة:", deviceData);
+
   fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
@@ -488,43 +490,44 @@ console.log("📤 البيانات المرسلة إلى السيرفر:", devic
             }
           }
         } else {
-    // ✅ هنا نعرض رسالة السيرفر تحت الحقل الصحيح
+          // ✅ هنا نعرض رسالة السيرفر تحت الحقل الصحيح
 
-    // تحديد الحقل المناسب حسب نوع الخطأ
-    if (result.error.includes("IP")) {
-      const ipInput = popupForm.querySelector('[name="ip-address"]');
-      if (ipInput) {
-        ipInput.classList.add("input-error");
+          // تحديد الحقل المناسب حسب نوع الخطأ
+          if (result.error.includes("IP")) {
+            const ipInput = popupForm.querySelector('[name="ip-address"]');
+            if (ipInput) {
+              ipInput.classList.add("input-error");
 
-        // إزالة أي رسالة موجودة مسبقًا
-        const oldMsg = ipInput.nextElementSibling;
-        if (!oldMsg || !oldMsg.classList.contains("input-error-message")) {
-          const msg = document.createElement("div");
-          msg.className = "input-error-message";
-          msg.textContent = result.error;
-          ipInput.insertAdjacentElement("afterend", msg);
+              // إزالة أي رسالة موجودة مسبقًا
+              const oldMsg = ipInput.nextElementSibling;
+              if (!oldMsg || !oldMsg.classList.contains("input-error-message")) {
+                const msg = document.createElement("div");
+                msg.className = "input-error-message";
+                msg.textContent = result.error;
+                ipInput.insertAdjacentElement("afterend", msg);
+              }
+            }
+          } else if (result.error.includes("MAC")) {
+            const macInput = popupForm.querySelector('[name="mac-address"]');
+            if (macInput) {
+              macInput.classList.add("input-error");
+
+              const oldMsg = macInput.nextElementSibling;
+              if (!oldMsg || !oldMsg.classList.contains("input-error-message")) {
+                const msg = document.createElement("div");
+                msg.className = "input-error-message";
+                msg.textContent = result.error;
+                macInput.insertAdjacentElement("afterend", msg);
+              }
+            }
+          } else {
+            alert(result.error); // ← fallback
+          }
         }
-      }
-    } else if (result.error.includes("MAC")) {
-      const macInput = popupForm.querySelector('[name="mac-address"]');
-      if (macInput) {
-        macInput.classList.add("input-error");
-
-        const oldMsg = macInput.nextElementSibling;
-        if (!oldMsg || !oldMsg.classList.contains("input-error-message")) {
-          const msg = document.createElement("div");
-          msg.className = "input-error-message";
-          msg.textContent = result.error;
-          macInput.insertAdjacentElement("afterend", msg);
-        }
-      }
-    } else {
-      alert(result.error); // ← fallback
-    }
-  }
-  return;
+        return;
       }
 
+      // ✅ تم الحفظ بنجاح
       // ✅ تم الحفظ بنجاح
       const dropdown = document.getElementById("device-spec");
       const option = document.createElement("option");
@@ -539,7 +542,9 @@ console.log("📤 البيانات المرسلة إلى السيرفر:", devic
       }
 
       popup.style.display = "none";
-      fetchDeviceSpecsByTypeAndDepartment();
+      setTimeout(() => {
+        fetchDeviceSpecsByTypeAndDepartment();
+      }, 100);
     })
     .catch(err => {
       console.error("❌ خطأ أثناء الاتصال بالسيرفر:", err);
@@ -667,81 +672,83 @@ function isArabicText(text) {
   return arabicRegex.test(text);
 }
 
+function fetchDepartments(selectId = "section") {
+  const url = `http://localhost:5050/Departments`;
 
-function fetchDepartments(selectId = "department") {
   renderDropdownOptions({
-    endpoint: "http://localhost:5050/Departments",
-    containerId: `${selectId}-options`,
-    displayId: `selected-${selectId}`,
-    inputId: selectId,
+    endpoint: url,
+    containerId: `${selectId}-options`,   // "section-options"
+    displayId: `selected-${selectId}`,     // "selected-section"
+    inputId: selectId,                     // هذا للوحة الدروب داون التفاعلي
     labelKey: "section",
-    itemKey: "name",
+    itemKey: "name",                       // الحقل المعروض في القائمة
     storageKey: selectId,
 
-    // ✅ ترجم كل عنصر بعد ما يجي من API
-transformData: (items) => {
-  const currentLang = languageManager.currentLang;
+    transformData: (items) => {
+      const currentLang = languageManager.currentLang; // "ar" أو "en"
+console.log("currentLang:", currentLang);
+      return items.map(item => {
+        const parts = (item.fullName || "").split("|");
+        const enPart = parts[0].trim();
+        const arPart = parts.length > 1 ? parts[1].trim() : "";
 
-  return items
-    .filter(item => {
-      const original = item.name?.trim() || "";
-      const translated = translateDepartmentName(original);
+        // نختار القسم المعروض بناءً على اللغة:
+        let displayName;
+        if (currentLang === "ar") {
+          displayName = arPart || enPart;
+        } else {
+          displayName = enPart;
+        }
+        displayName = displayName.replace(/\s*\[(ar|en)\]$/i, "").trim();
 
-      const hasArTag = /\[ar\]$/i.test(original);
-      const hasEnTag = /\[en\]$/i.test(original);
-      const isTranslated = translated !== original;
-      const isArabic = isArabicText(original);
-
-      // ✅ نعرض دائمًا العناصر المترجمة (الموجودة في قائمة الترجمة)
-      if (isTranslated) return true;
-
-      // ✅ العناصر اليدوية بالوسم فقط
-      if (hasArTag) return currentLang === "ar";
-      if (hasEnTag) return currentLang === "en";
-
-      // ✅ عناصر بدون ترجمة أو وسم → نعتمد على شكل النص
-      return currentLang === "ar" ? isArabic : !isArabic;
-    })
-    .map(item => {
-      const originalName = item.name?.trim();
-      const translated = translateDepartmentName(originalName);
-
-      // ✅ نحذف الوسم إذا موجود
-      const displayName = translated.replace(/\s*\[(ar|en)\]$/i, "").trim();
-
-      return {
-        ...item,
-        originalSection: originalName,
-        section: displayName,
-        name: displayName
-      };
-    });
-},
-
+        return {
+          id: item.id,
+          fullName: item.fullName.trim(),
+          name: displayName
+        };
+      });
+    },
 
     onAddNew: () => {
       sessionStorage.setItem("lastDepartmentSelectId", selectId);
-      ["spec-name", "spec-serial", "spec-ministry", "spec-model", selectId].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) sessionStorage.setItem(id, el.value);
-      });
-      sessionStorage.setItem("lastDropdownOpened", selectId);
       openAddSectionPopup();
     },
-    onEditOption: (oldVal) => {
-      const newVal = prompt("Edit Section:", oldVal);
-      if (newVal && newVal !== oldVal) {
-        editOption("section", oldVal, newVal, "Department");
+
+    onEditOption: (oldFullName) => {
+      const newVal = prompt("Edit Section (enter 'English|Arabic'):", oldFullName);
+      if (newVal && newVal !== oldFullName) {
+        editOption("section", oldFullName, newVal, "Department");
       }
     },
-    onDeleteOption: (val) => {
-      if (confirm(`Delete "${val}"?`)) {
-        deleteOption("section", val, "Department");
+
+    onDeleteOption: (fullName) => {
+      if (confirm(`هل تريد حذف هذا القسم؟`)) {
+        deleteOption("section", fullName, "Department");
       }
     },
-onSelectOption: (originalValue, fullItem) => {
-  const englishName = fullItem.originalSection || originalValue;
-  sessionStorage.setItem("original-department", englishName);
+
+onSelectOption: (localizedValue, fullItem) => {
+  // fullItem.fullName = "dwq|دوق" (ما خزّنناه من قاعدة البيانات)
+  // لن نفصلها هنا (نحتفظ بها كاملة)، لأننا نريد إرسالها كلّها لاحقًا.
+
+  // نحفظ الـ fullName كاملًا في sessionStorage
+  sessionStorage.setItem("department-full", fullItem.fullName);
+
+  // بعد ذلك نبيّن الجزء المختار ظاهريًا للمستخدم:
+  document.getElementById(`selected-section`).textContent = localizedValue;
+
+  // إذا كنت تريد إضافيًّا الحقل المخفي للقيمة المنظّفة:
+  // (مثلاً للبحث في API حالياً)
+  const parts = fullItem.fullName.split("|");
+  const enPart = parts[0].trim().replace(/\s*\[en\]$/i, "").trim();
+  const arPart = (parts[1] || "").trim().replace(/\s*\[ar\]$/i, "").trim();
+
+  // نخزّن في الحقل المخفي #section القسم المنظَّف (عربي أو إنجليزي) لطلبات fetch
+  const hiddenSection = document.getElementById("section");
+  hiddenSection.value = arPart; 
+  // أو: hiddenSection.value = (languageManager.currentLang === "ar" ? arPart : enPart);
+
+  // وأخيرًا نستدعي جلب مواصفات الجهاز
   fetchDeviceSpecsByTypeAndDepartment();
 }
 
@@ -749,24 +756,25 @@ onSelectOption: (originalValue, fullItem) => {
   });
 }
 
+
+
+
 function saveNewSection() {
-  const sectionName = document.getElementById("new-section-name").value.trim();
-  if (!sectionName) {
-    alert("❌ Please enter a section name");
+  const combined = document.getElementById("new-section-name").value.trim();
+
+  // 2) تأكّد أنها ليست فارغة وأنها تحتوي '|'
+  if (!combined || !combined.includes("|")) {
+    alert("❌ الرجاء إدخال القسم بصيغة 'EnglishText|ArabicText'");
     return;
   }
 
-  const isArabic = isArabicText(sectionName);
-  const langLabel = isArabic ? "[ar]" : "[en]";
-  const sectionNameWithLang = `${sectionName} ${langLabel}`;
-
-  fetch("http://localhost:5050/add-options-regular", {
+  fetch("http://localhost:5050/add-department", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${localStorage.getItem('token')}`
     },
-    body: JSON.stringify({ target: "section", value: sectionNameWithLang })
+    body: JSON.stringify({ value: combined })
   })
     .then(res => res.json())
     .then(result => {
@@ -775,58 +783,54 @@ function saveNewSection() {
         return;
       }
 
-      // ============================
-      // 1) حدِّدي selectId وتحديث قائمة الأقسام
-      // ============================
-      const selectId = sessionStorage.getItem("lastDepartmentSelectId") || "spec-department";
-      fetchDepartments(selectId); // تعيد تحميل الأكشن الخاص بالأقسام وترسم الـ dropdown
-      sessionStorage.setItem(selectId, sectionNameWithLang);
+      // ===== 1) إعادة تحميل قائمة الأقسام =====
+      const selectId = sessionStorage.getItem("lastDepartmentSelectId") || "section";
+      fetchDepartments(selectId);
 
-      // ============================
-      // 2) نعكسي العرض في العنصر الظاهر (displaySpan) والقيمة المخفية (hiddenInput)
-      // ============================
+      // ===== 2) خزن الجزء المناسب للعرض فقط =====
+      //    صيغة combined = "EnglishText|ArabicText"
+      const [enPart, arPart] = combined.split("|");
+      const toStore = (languageManager.currentLang === "ar" ? arPart : enPart) || enPart;
+      sessionStorage.setItem(selectId, toStore);
+
+      // 6) بعد قليل (على سبيل المثال 200ms) حدّد العنصر الظاهر والقيمة المخفية
       setTimeout(() => {
         const displaySpan = document.getElementById(`selected-${selectId}`);
         const hiddenInput = document.getElementById(selectId);
         if (displaySpan && hiddenInput) {
-          // العرض فقط بالاسم (من دون وسم اللغة)
-          displaySpan.textContent = sectionName;
-          hiddenInput.value = sectionNameWithLang;
-          // تعبئة الـ sessionStorage للقيمة الفعلية كيّ تُستخدم لاحقًا
-          sessionStorage.setItem("original-department", sectionNameWithLang);
+          if (languageManager.currentLang === "ar") {
+            displaySpan.textContent = arPart;   // الجزء العربي الظاهر
+          } else {
+            displaySpan.textContent = enPart;   // الجزء الإنجليزي الظاهر
+          }
+          // نخزّن القيمة الكاملة (English|Arabic) في الحقل المخفي
+          hiddenInput.value = combined;
+
+          // نخزّن الجزء الإنجليزي في original-department لاستخدامه لاحقًا
+          sessionStorage.setItem("original-department", enPart);
         }
       }, 200);
 
-      // ============================
-      // 3) ننظف مفاتيح sessionStorage المؤقتة
-      // ============================
+      // ===== 4) تنظيف مفاتيح sessionStorage المؤقتة =====
       sessionStorage.removeItem("lastDepartmentSelectId");
       sessionStorage.removeItem("returnToPopup");
 
-      // ============================
-      // 4) بناء على سياق القسم (isSpecContext)، نفتح الـ popup المناسب أو نستدعي تحميل المواصفات
-      // ============================
+      // ===== 5) فتح popup مواصفات الأجهزة (إن تطلب السياق) =====
       const deviceType = document.getElementById("device-type")?.value?.toLowerCase();
       const isSpecContext = ["spec-department", "department-pc", "department-printer", "department-scanner"].includes(selectId);
 
-      // إذا كان القسم ينتمي لموضع مواصفات (spec context) ولم يكن نوع الجهاز من الأنواع المخصّصة (pc/printer/scanner):
       if (isSpecContext && !["pc", "printer", "scanner", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(deviceType)) {
-        // نخزن موديل إذا موجود
         const modelName = document.getElementById("spec-model")?.value;
         if (modelName) sessionStorage.setItem("spec-model", modelName);
 
-        // نفتح Generic Popup لإضافة مواصفات جهاز جديد (لأن النوع ليس pc/printer/scanner)
         setTimeout(() => {
           openGenericPopup("Device Specification", "device-spec");
-
-          // بعد فتح البوب أب بـ 150ms، نعيد تعيين القسم الجديد والقيمة المخزنة للموديل:
           setTimeout(() => {
             const deptSelect = document.getElementById("spec-department");
             if (deptSelect) {
-              deptSelect.value = sectionNameWithLang;
+              deptSelect.value = combined;
               deptSelect.dispatchEvent(new Event("change", { bubbles: true }));
             }
-
             const modelSelect = document.getElementById("spec-model");
             const savedModel = sessionStorage.getItem("spec-model");
             if (modelSelect && savedModel) {
@@ -838,35 +842,23 @@ function saveNewSection() {
         }, 100);
       }
 
-      // ============================
-      // 5) **الجديد**: في كل الأحوال (بعد إضافة القسم)، نريد إعادة تحميل قائمة مواصفات الجهاز للقسم الجديد وفتحها
-      // ============================
-      //
-      // نؤخّر قليلًا حتى تكمل fetchDepartments ثم نمضي في تحميل المواصفات وفتح الـ dropdown:
+      // ===== 6) بعد إضافة القسم، أعد تحميل مواصفات الجهاز وافتح قائمة المواصفات =====
       setTimeout(() => {
-        // نستدعي الدالة التي تحمّل مواصفات الأجهزة بناءً على النوع والقسم الجديدين
         fetchDeviceSpecsByTypeAndDepartment()
           .then(() => {
-            // بعد انتهاء الـ fetch من بناء قائمة المواصفات في DOM، نفتح الـ dropdown الخاص بمواصفات الجهاز:
             const displaySpanSpec = document.getElementById("selected-device-spec");
             const optionsContainerSpec = document.getElementById("device-spec-options");
             if (displaySpanSpec && optionsContainerSpec) {
-              // طريقتك في فتح القائمة يمكن أن تكون بإضافة كلاس أو تغيير الـ style.display
-              // مثال عام:
-              displaySpanSpec.classList.add("open");          // إضافة كلاس “open” لو معتمد
-              optionsContainerSpec.style.display = "block";   // إظهار الحاوية
+              displaySpanSpec.classList.add("open");
+              optionsContainerSpec.style.display = "block";
             }
           })
           .catch(err => {
             console.error("❌ خطأ عند تحميل مواصفات الأجهزة بعد إضافة القسم:", err);
           });
-      }, 500); 
-      // ↑ مهلة 500ms تقريبًا تسمح لإنهاء renderDropdownOptions + تغيير DOM للقسم
-      // يمكنك ضبطها حسب سرعة اتصالك والـ rendering عندك.
+      }, 500);
 
-      // ============================
-      // 6) أخيرًا: إغلاق الـ generic-popup الخاص بإضافة القسم
-      // ============================
+      // ===== 7) أغلق popup إضافة القسم =====
       document.getElementById("generic-popup").style.display = "none";
     })
     .catch(err => {
@@ -874,7 +866,6 @@ function saveNewSection() {
       alert("❌ Error saving section");
     });
 }
-
 
 
 function fetchDrives() {
@@ -1526,12 +1517,12 @@ document.addEventListener(" ", () => {
     }
   });
 });
-
 function fetchDevicesBySection() {
   const type = document.getElementById("device-type").value.toLowerCase();
-  const department = document.getElementById("original-section").value;
+  const department = sessionStorage.getItem("section");
 
   if (!type || !department) {
+    alert("❌ تأكد من اختيار نوع الجهاز والقسم");
     return;
   }
 
@@ -1545,7 +1536,7 @@ function fetchDevicesBySection() {
       data.forEach(device => {
         const option = document.createElement("option");
         option.value = device.Serial_Number;
-        option.textContent = `${device.Serial_Number} | ${device[type === 'pc', "desktop", "laptop", "كمبيوتر", "لابتوب" ? 'Computer_Name' : type === 'printer' ? 'Printer_Name' : 'Scanner_Name']}`;
+        option.textContent = `${device.Serial_Number} | ${device[type === 'pc',"desktop", "laptop", "كمبيوتر", "لابتوب" ? 'Computer_Name' : type === 'printer' ? 'Printer_Name' : 'Scanner_Name']}`;
         dropdown.appendChild(option);
       });
     })
@@ -1553,59 +1544,59 @@ function fetchDevicesBySection() {
 }
 
 
-
-
 async function fetchDeviceSpecsByTypeAndDepartment() {
- const type = document.getElementById("device-type")?.value?.toLowerCase();
-  const deptName = sessionStorage.getItem("original-department"); // ← نضمن إنها بالإنجليزي
-
-
-  if (!type || !deptName) {
+  const type = document.getElementById("device-type")?.value?.toLowerCase();
+  const full = sessionStorage.getItem("department-full"); // أو من الـ hidden input
+  if (!type || !full) {
     console.warn("❌ النوع أو اسم القسم غير متوفر");
     return;
   }
 
-  console.log("📤 القسم المرسل فعليًا:", deptName);
+  const [enPart, arPart] = full.split("|").map(s => s.trim());
+  const deptNameToSend = languageManager.currentLang === "ar"
+    ? (arPart || enPart)
+    : (enPart || arPart);
+
+  console.log("📤 القسم المرسل فعليًا حسب اللغة:", deptNameToSend);
+
+  // … باقي الشيفرة تستدعي الـ fetch
+  fetch(`http://localhost:5050/devices/${type}/${encodeURIComponent(deptNameToSend)}`)
+
+  console.log("📤 القسم المرسل فعليًا حسب اللغة:", deptNameToSend);
+
   const optionsContainer = document.getElementById("device-spec-options");
   const displaySpan = document.getElementById("selected-device-spec");
   const hiddenInput = document.getElementById("device-spec");
+  if (!optionsContainer || !displaySpan || !hiddenInput) return;
 
-  if (!type || !deptName || !optionsContainer || !displaySpan || !hiddenInput) return;
-
-  // ✅ جلب الصلاحيات
   const permissions = await checkUserPermissions();
-
   optionsContainer.innerHTML = "";
-  
 
-  const lang = languageManager.currentLang;
-  const t = languageManager.translations[lang];
+  const currentLang = languageManager.currentLang;
+  const t = languageManager.translations[currentLang];
 
-  // ✅ إضافة زر "Add New Specification" فقط إذا لديه صلاحية
+  // إضافة زر "Add New Specification" كما كان لديك
   const addNewRow = document.createElement("div");
   addNewRow.className = "dropdown-option-row add-new-option";
   addNewRow.innerHTML = `<div class="dropdown-option-text">+ ${t['add_new']} ${t['device_specifications']}</div>`;
   addNewRow.onclick = () => {
     sessionStorage.setItem("lastDropdownOpened", "device-spec");
-
     if (["pc", "printer", "scanner", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(type)) {
       updatePopupHeadingAndFields(type);
       popup.style.display = "flex";
     } else {
       openGenericPopup("device_specifications", "device-spec");
     }
-
     closeAllDropdowns();
   };
   optionsContainer.appendChild(addNewRow);
-
 
   if (type === "all-devices") {
     fetch(`http://localhost:5050/all-devices-specs`)
       .then(res => res.json())
       .then(data => {
         data.forEach(device => {
-          const text = `${device.name} | ${device.Serial_Number} | ${device.Governmental_Number} (${device.device_type})`;
+          const text = `${device.device_name} | ${device.Serial_Number} | ${device.Governmental_Number} (${device.device_type})`;
           const row = document.createElement("div");
           row.className = "dropdown-option-row";
           const optionText = document.createElement("div");
@@ -1621,13 +1612,11 @@ async function fetchDeviceSpecsByTypeAndDepartment() {
           optionsContainer.appendChild(row);
         });
       })
-      .catch(err => {
-        console.error("❌ Error fetching all device specs:", err);
-      });
+      .catch(err => console.error("❌ Error fetching all device specs:", err));
     return;
   }
 
-  fetch(`http://localhost:5050/devices/${type}/${encodeURIComponent(deptName)}`)
+  fetch(`http://localhost:5050/devices/${type}/${encodeURIComponent(deptNameToSend)}`)
     .then(res => res.json())
     .then(data => {
       if (!Array.isArray(data) || data.length === 0) {
@@ -1639,7 +1628,7 @@ async function fetchDeviceSpecsByTypeAndDepartment() {
       }
 
       data.forEach(device => {
-        const text = `${device.name || "Unnamed"} | ${device.Serial_Number} | ${device.Governmental_Number}`;
+        const text = `${device.device_name} | ${device.Serial_Number} | ${device.Governmental_Number}`;
         const row = document.createElement("div");
         row.className = "dropdown-option-row";
 
@@ -1655,7 +1644,6 @@ async function fetchDeviceSpecsByTypeAndDepartment() {
 
         row.appendChild(optionText);
 
-        // ✅ أزرار تعديل وحذف إذا كان لديه الصلاحية
         if (permissions.full_access || permissions.edit_items || permissions.delete_items) {
           const icons = document.createElement("div");
           icons.className = "dropdown-actions-icons";
@@ -1664,49 +1652,43 @@ async function fetchDeviceSpecsByTypeAndDepartment() {
             const editIcon = document.createElement("i");
             editIcon.className = "fas fa-edit";
             editIcon.title = t['edit'];
-editIcon.onclick = async (e) => {
-  e.stopPropagation();
+            editIcon.onclick = async (e) => {
+              e.stopPropagation();
+              const deviceId = device.id;
+              if (!deviceId) {
+                console.error("❌ device.id is undefined!");
+                return;
+              }
+              try {
+                const res = await fetch(`http://localhost:5050/device-spec/${deviceId}`, {
+                  headers: {
+                    "Authorization": `Bearer ${localStorage.getItem("token")}`
+                  }
+                });
+                const fullDeviceData = await res.json();
+                console.log("✅ Full device data loaded:", fullDeviceData);
 
-  const deviceId = device.id;
-  if (!deviceId) {
-    console.error("❌ device.id is undefined!");
-    return;
-  }
+                const deviceType = fullDeviceData.Device_Type || "pc";
+                const typeCleaned = deviceType.trim().toLowerCase();
+                let mappedType = "other";
+                if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(typeCleaned)) {
+                  mappedType = "pc";
+                } else if (typeCleaned === "printer") {
+                  mappedType = "printer";
+                } else if (typeCleaned === "scanner") {
+                  mappedType = "scanner";
+                }
 
-  try {
-const res = await fetch(`http://localhost:5050/device-spec/${deviceId}`, {
-  headers: {
-    "Authorization": `Bearer ${localStorage.getItem("token")}`
-  }
-});
-    const fullDeviceData = await res.json();
-
-    console.log("✅ Full device data loaded:", fullDeviceData);
-
-   const deviceType = fullDeviceData.Device_Type || "pc";
-const typeCleaned = deviceType.trim().toLowerCase();
-
-let mappedType = "other"; // افتراضي
-if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(typeCleaned)) {
-  mappedType = "pc";
-} else if (typeCleaned === "printer") {
-  mappedType = "printer";
-} else if (typeCleaned === "scanner") {
-  mappedType = "scanner";
-}
-
-if (["pc", "printer", "scanner"].includes(mappedType)) {
-  openDeviceEditPopup(mappedType, fullDeviceData);
-} else {
-  openGenericEditPopup(fullDeviceData);
-}
-
-  } catch (err) {
-    console.error("❌ Failed to fetch full device data:", err);
-    alert("❌ Could not load full device data for editing.");
-  }
-};
-
+                if (["pc", "printer", "scanner"].includes(mappedType)) {
+                  openDeviceEditPopup(mappedType, fullDeviceData);
+                } else {
+                  openGenericEditPopup(fullDeviceData);
+                }
+              } catch (err) {
+                console.error("❌ Failed to fetch full device data:", err);
+                alert("❌ Could not load full device data for editing.");
+              }
+            };
             icons.appendChild(editIcon);
           }
 
@@ -1714,15 +1696,15 @@ if (["pc", "printer", "scanner"].includes(mappedType)) {
             const deleteIcon = document.createElement("i");
             deleteIcon.className = "fas fa-trash";
             deleteIcon.title = t['delete'];
-           deleteIcon.onclick = async (e) => {
-  e.stopPropagation();
-  if (confirm(`${t['confirm_delete']} "${device.name}"?`)) {
-    const success = await deleteOption("device-spec", { id: device.id });
-    if (success) {
-      fetchDeviceSpecsByTypeAndDepartment(); // ✅ تحديث القائمة مباشرة
-    }
-  }
-};
+            deleteIcon.onclick = async (e) => {
+              e.stopPropagation();
+              if (confirm(`${t['confirm_delete']} "${device.name}"?`)) {
+                const success = await deleteOption("device-spec", { id: device.id });
+                if (success) {
+                  fetchDeviceSpecsByTypeAndDepartment();
+                }
+              }
+            };
             icons.appendChild(deleteIcon);
           }
 
@@ -1732,7 +1714,7 @@ if (["pc", "printer", "scanner"].includes(mappedType)) {
         optionsContainer.appendChild(row);
       });
 
-      // ✅ استرجاع القيمة المحفوظة
+      // استرجاع القيمة المحفوظة إن وجدت
       const saved = sessionStorage.getItem("device-spec");
       if (saved) {
         const match = data.find(d => d.id === saved);
@@ -1744,10 +1726,9 @@ if (["pc", "printer", "scanner"].includes(mappedType)) {
         }
       }
     })
-    .catch(err => {
-      console.error("❌ Error fetching specs:", err);
-    });
+    .catch(err => console.error("❌ Error fetching specs:", err));
 }
+
 
 function openDeviceEditPopup(type, deviceData) {
   const lang = languageManager.currentLang;
@@ -1810,7 +1791,7 @@ popupTitle.textContent = t['edit'] + " " + t['device_specifications']; // ✅ ه
     Governmental_Number: document.querySelector("input[name='ministry-id']").value.trim(),
 
     Model: appendLangTagIfMissingg(document.getElementById("model-" + type)?.value, "model-" + type),
-    Department: appendLangTagIfMissingg(document.getElementById("department-" + type)?.value, "department-" + type),
+Department: sessionStorage.getItem("department-full") || "",
     Generation: appendLangTagIfMissingg(document.getElementById("generation-select")?.value, "generation-select"),
     Processor: appendLangTagIfMissingg(document.getElementById("cpu-select")?.value, "cpu-select"),
     RAM: appendLangTagIfMissingg(document.getElementById("ram-select")?.value, "ram-select"),
@@ -1910,14 +1891,17 @@ function openGenericEditPopup(deviceData) {
     setSelectedOption("spec-department", deviceData.Department);
 
     const saveBtn = document.querySelector("#generic-popup .popup-buttons button");
-    saveBtn.onclick = async() => {
+     saveBtn.onclick = async () => {
+       const departmentFull = sessionStorage.getItem("department-full")
+        || deviceData.Department
+        || "";
       const updatedDevice = {
         id: deviceData.id,
         name: document.getElementById("spec-name").value.trim(),
         Serial_Number: document.getElementById("spec-serial").value.trim(),
         Governmental_Number: document.getElementById("spec-ministry").value.trim(),
         Model: appendLangTagIfMissingg(document.getElementById("spec-model")?.value, "spec-model"),
-        Department: appendLangTagIfMissingg(document.getElementById("spec-department")?.value, "spec-department"),
+        Department: departmentFull,
         Device_Type: type,
       };
 
@@ -1945,16 +1929,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (typeDropdown && sectionDropdown) {
     typeDropdown.addEventListener("change", () => {
-      fetchDeviceSpecsByTypeAndDepartment();
+      const type = typeDropdown.value.toLowerCase();
+      const dept = sectionDropdown.value;
 
-
+      if (type && dept) {
+        fetchDeviceSpecsByTypeAndDepartment();
+      }
+      if (type) fetchProblemStatus(type);
     });
 
     sectionDropdown.addEventListener("change", () => {
-      fetchDeviceSpecsByTypeAndDepartment();
+      const dept = sectionDropdown.value; // هذه هي القيمة الكاملة "English|Arabic"
+      const type = typeDropdown.value.toLowerCase();
+
+      const englishOnly = dept.split("|")[0];
+      sessionStorage.setItem("original-department", englishOnly);
+
+      if (type && dept) {
+        fetchDeviceSpecsByTypeAndDepartment();
+      }
     });
   }
 
+
+  
   const optionsContainer = document.getElementById("device-spec-options");
 
   if (optionsContainer) {
@@ -2041,10 +2039,10 @@ async function deleteOption(selectId, valueOrObject, type = null) {
     : isDeviceSpec
       ? { id: valueOrObject }
       : {
-          target: mapSelectIdToServerTarget(selectId),
-          value: valueOrObject,
-          type
-        };
+        target: mapSelectIdToServerTarget(selectId),
+        value: valueOrObject,
+        type
+      };
 
   try {
     console.log("🚀 Sending payload:", body);
@@ -2129,6 +2127,7 @@ function appendLangTagIfMissing(value) {
 }
 
 
+
 async function editOption(selectId, updatedDevice, newValue = null, type = null) {
   const lang = languageManager.currentLang;
   const t = languageManager.translations[lang];
@@ -2143,18 +2142,30 @@ async function editOption(selectId, updatedDevice, newValue = null, type = null)
     ? "http://localhost:5050/update-device-specification"
     : "http://localhost:5050/update-option-complete";
 
-  const body = isDeviceSpec
-    ? updatedDevice
-    : {
-      target: mapSelectIdToServerTarget(selectId),
+  let body;
+  if (isDeviceSpec) {
+    body = updatedDevice;
+  } else {
+    const target = mapSelectIdToServerTarget(selectId);
+    let valueToSend;
+
+    if (selectId === "section") {
+      // إذا القسم، لا نضيف أي تاج لغة، نأخذ newValue كما هو
+      valueToSend = newValue.trim();
+    } else {
+      // لأي حقل آخر (غير device-spec و section) نستخدم appendLangTagIfMissing
+      valueToSend = appendLangTagIfMissing(newValue.trim(), lang);
+    }
+
+    body = {
+      target,
       oldValue: updatedDevice,
-      newValue: appendLangTagIfMissing(newValue.trim(), lang),
+      newValue: valueToSend,
       type
     };
+  }
 
   try {
-
-
     const res = await fetch(url, {
       method: "POST",
       headers: {
@@ -2163,7 +2174,6 @@ async function editOption(selectId, updatedDevice, newValue = null, type = null)
       },
       body: JSON.stringify(body)
     });
-
     const result = await res.json();
 
     if (result.error) {
@@ -2585,9 +2595,9 @@ function saveDeviceSpecification() {
     "device-name": cleanLangTag(document.getElementById("spec-name").value.trim()),
     model: cleanLangTag(document.getElementById("spec-model").value.trim()),
     serial: cleanLangTag(document.getElementById("spec-serial").value.trim()),
-    department: cleanLangTag(
-      sessionStorage.getItem("original-department") || document.getElementById("spec-department").value.trim()
-    )
+   department:   sessionStorage.getItem("department-full") ||
+                  document.getElementById("spec-department").value.trim()
+    
   };
 
 
@@ -3010,12 +3020,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const cleanLangTag = (val) => (val || "").replace(/\s*\[(ar|en)\]$/i, "").trim();
     const getVal = id => cleanLangTag(document.getElementById(id)?.value.trim() || "");
+const getRaw   = id  => (document.getElementById(id)?.value || "").trim();
 
     const data = {
       ticket_number: getVal("ticket-number"),
       device_type: getVal("device-type"),
       device_specifications: getVal("device-spec"),
-      section: getVal("section"),
+      section: getRaw("section"),
       maintenance_manager: getVal("maintenance-manager"),
       reporter_name: getVal("technical"),
       initial_diagnosis: getVal("initial-diagnosis"),
