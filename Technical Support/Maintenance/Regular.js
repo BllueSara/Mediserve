@@ -880,25 +880,15 @@ console.log("currentLang:", currentLang);
     },
 
 onSelectOption: (localizedValue, fullItem) => {
-  // fullItem.fullName = "dwq|دوق" (ما خزّنناه من قاعدة البيانات)
-  // لن نفصلها هنا (نحتفظ بها كاملة)، لأننا نريد إرسالها كلّها لاحقًا.
-
   // نحفظ الـ fullName كاملًا في sessionStorage
   sessionStorage.setItem("department-full", fullItem.fullName);
 
   // بعد ذلك نبيّن الجزء المختار ظاهريًا للمستخدم:
   document.getElementById(`selected-section`).textContent = localizedValue;
 
-  // إذا كنت تريد إضافيًّا الحقل المخفي للقيمة المنظّفة:
-  // (مثلاً للبحث في API حالياً)
-  const parts = fullItem.fullName.split("|");
-  const enPart = parts[0].trim().replace(/\s*\[en\]$/i, "").trim();
-  const arPart = (parts[1] || "").trim().replace(/\s*\[ar\]$/i, "").trim();
-
-  // نخزّن في الحقل المخفي #section القسم المنظَّف (عربي أو إنجليزي) لطلبات fetch
+  // نخزّن في الحقل المخفي #section القيمة الكاملة fullName
   const hiddenSection = document.getElementById("section");
-  hiddenSection.value = arPart; 
-  // أو: hiddenSection.value = (languageManager.currentLang === "ar" ? arPart : enPart);
+  hiddenSection.value = fullItem.fullName;
 
   // وأخيرًا نستدعي جلب مواصفات الجهاز
   fetchDeviceSpecsByTypeAndDepartment();

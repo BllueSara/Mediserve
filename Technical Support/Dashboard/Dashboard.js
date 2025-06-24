@@ -653,11 +653,19 @@ const data = cleanReport(rawData);
       const gen = parseInt(device.generation_number) || 0;
       const os = (device.os_name || '').toLowerCase();
 
-      // 🔥 حساب عدد المشاكل
+      // 🔥 حساب عدد المشاكل بناءً على الشروط الجديدة
       let issueCount = 0;
-      if (ram < 8) issueCount++;
-      if (gen < 6) issueCount++;
-      if (os.includes('windows') && !os.includes('10') && !os.includes('11')) issueCount++;
+      if (ram < 4) issueCount++;
+      if (gen < 8) issueCount++;
+      // تحقق من نسخة الويندوز
+      let winVersion = 0;
+      if (os.includes('windows')) {
+        const match = os.match(/windows\s*(\d+)/);
+        if (match && match[1]) {
+          winVersion = parseInt(match[1]);
+        }
+      }
+      if (winVersion && winVersion < 10) issueCount++;
 
       // 🚨 تحديد الحالة
       const status = issueCount >= 2 ? 'CRITICAL' : 'WARNING';

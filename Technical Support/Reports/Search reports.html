@@ -68,7 +68,12 @@
     <input type="date" id="filter-date-to" />
   </div>
 
-  <button class="new-report-btn" data-i18n="new_report_btn">New Report</button>
+  <div class="report-buttons-group">
+    <button class="new-report-btn" id="download-replacement-report" data-i18n="download_replacement_report" type="button">
+      <span>Replacement Report</span>
+    </button>
+    <button class="new-report-btn" data-i18n="new_report_btn">New Report</button>
+  </div>
 </div>
 
 
@@ -96,6 +101,7 @@
 }</script>
   <!-- JavaScript -->
   <script src="Reports.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="Search reports.js"></script>
   <script src="/Language/Language.js"></script>
 </body>
