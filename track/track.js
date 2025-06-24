@@ -4,6 +4,18 @@ function cleanTag(text) {
     : text;
 }
 
+function filterEngineerNameByLang(text, lang) {
+  if (!text || typeof text !== 'string') return text;
+  // فلترة أي اسم فيه | حتى لو جاء بعد كلمات مثل engineer أو user أو غيرها
+  // أمثلة: to engineer Sara|سارة, assigned to user Ali|علي
+  return text.replace(/([A-Za-zء-ي0-9_\-]+\|[A-Za-zء-ي0-9_\-]+)/g, (match) => {
+    const parts = match.split('|').map(s => s.trim());
+    if (parts.length === 2) {
+      return lang === 'ar' ? (parts[1] || parts[0]) : parts[0];
+    }
+    return match;
+  });
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   const container = document.getElementById("activity-log-container");
@@ -55,14 +67,17 @@ function renderLogs(filter, searchTerm = "") {
     return;
   }
 
+  const lang = languageManager.currentLang;
+
   filteredLogs.forEach(log => {
     const createdAt = new Date(log.timestamp);
     const time = createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const date = createdAt.toLocaleDateString();
 
-    const action = cleanTag(log.action);
-    const details = cleanTag(log.details);
-    const user = cleanTag(log.user_name);
+    // فلترة اسم المهندس حسب اللغة
+    const action = filterEngineerNameByLang(cleanTag(log.action), lang);
+    const details = filterEngineerNameByLang(cleanTag(log.details), lang);
+    const user = filterEngineerNameByLang(cleanTag(log.user_name), lang);
 
     const card = document.createElement("div");
     card.className = "activity-card";

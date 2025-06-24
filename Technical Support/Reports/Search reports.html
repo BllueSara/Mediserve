@@ -43,12 +43,12 @@
       placeholder="Search reports..."
     />
 
-    <select id="filter-type">
-      <option data-val=""        data-i18n="report_types">Report Types</option>
-      <option data-val="Regular" data-i18n="maintenance">Maintenance</option>
-      <option data-val="Ticket"  data-i18n="ticket">Ticket</option>
-      <option data-val="New"     data-i18n="new_report">New Report</option>
-    </select>
+<select id="filter-type">
+  <option data-val=""        data-i18n="report_types">Report Types</option>
+  <option data-val="maintenance"  data-i18n="maintenance">Maintenance</option>
+  <option data-val="Ticket"  data-i18n="ticket">Ticket</option>
+  <option data-val="New"     data-i18n="new_report">New Report</option>
+</select>
 
     <select id="filter-status">
       <option data-val=""           data-i18n="status">Status</option>
@@ -68,12 +68,7 @@
     <input type="date" id="filter-date-to" />
   </div>
 
-  <div class="report-buttons-group">
-    <button class="new-report-btn" id="download-replacement-report" data-i18n="download_replacement_report" type="button">
-      <span>Replacement Report</span>
-    </button>
-    <button class="new-report-btn" data-i18n="new_report_btn">New Report</button>
-  </div>
+  <button class="new-report-btn" data-i18n="new_report_btn">New Report</button>
 </div>
 
 
@@ -101,7 +96,6 @@
 }</script>
   <!-- JavaScript -->
   <script src="Reports.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="Search reports.js"></script>
   <script src="/Language/Language.js"></script>
 </body>

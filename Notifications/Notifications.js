@@ -102,6 +102,19 @@ async function loadNotifications() {
   }
 }
 
+function filterEngineerNameByLang(text, lang) {
+  if (!text || typeof text !== 'string') return text;
+  // فلترة أي اسم فيه | حتى لو جاء بعد كلمات مثل engineer أو user أو غيرها
+  // أمثلة: to engineer Sara|سارة, assigned to user Ali|علي
+  return text.replace(/([A-Za-zء-ي0-9_\-]+\|[A-Za-zء-ي0-9_\-]+)/g, (match) => {
+    const parts = match.split('|').map(s => s.trim());
+    if (parts.length === 2) {
+      return lang === 'ar' ? (parts[1] || parts[0]) : parts[0];
+    }
+    return match;
+  });
+}
+
 async function renderNotifications() {
   notifList.innerHTML = '';
   const notificationsToShow = showingAll ? allNotifications : allNotifications.slice(0, 4);
@@ -113,17 +126,14 @@ async function renderNotifications() {
   }
 
   for (const n of notificationsToShow) {
-    const rawMessage = cleanTag(n.message);
-    // ترجم رسالة الإشعار إذا كانت اللغة ليست إنجليزية
-    const displayMessage = (lang !== 'en')
-      ? await translateWithGoogle(rawMessage, lang, "en")
-      : rawMessage;
+    let rawMessage = cleanTag(n.message);
+    // فلترة اسم المهندس حسب اللغة
+    rawMessage = filterEngineerNameByLang(rawMessage, lang);
+    const displayMessage = rawMessage;
 
-    // جلب العنوان الأصلي من getTypeLabel ثم ترجمته إن لزم
+    // جلب العنوان الأصلي من getTypeLabel فقط (بدون ترجمة)
     const rawLabel = getTypeLabel(n.type);
-    const displayLabel = (lang !== 'en')
-      ? await translateWithGoogle(rawLabel, lang, "en")
-      : rawLabel;
+    const displayLabel = rawLabel;
 
     const div = document.createElement('div');
     div.className = `notification-item p-3 border-b ${getColor(n.type)}`;

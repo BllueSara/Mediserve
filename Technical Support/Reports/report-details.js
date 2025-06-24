@@ -1,4 +1,3 @@
-
 async function translateWithGoogle(text, targetLang, sourceLang = "en") {
   if (!text || !targetLang) return text;
   const encoded = encodeURIComponent(text);
@@ -51,7 +50,7 @@ loadFonts();
 function normalizeKey(str) {
   return str
     .toLowerCase()
-    .replace(/[“”"']/g, "")     // حذف علامات التنصيص
+    .replace(/[""]/g, "")     // حذف علامات التنصيص
     .replace(/[^\w\s]/g, "")     // حذف الرموز
     .replace(/\s+/g, " ")        // توحيد المسافات
     .trim();
@@ -94,6 +93,32 @@ const ctx = canvas.getContext("2d");
 let drawing = false;
 let userDrewOnCanvas = false;
 
+// انقل دالة getAssignedTo إلى أعلى الملف (خارج أي دوال أو DOMContentLoaded)
+function getAssignedTo(report, lang) {
+  lang = lang || (languageManager?.currentLang || 'en');
+  let raw = '';
+  switch (report.maintenance_type) {
+    case "Regular":
+      raw = report.technical_engineer || '';
+      break;
+    case "General":
+      raw = report.technician_name || '';
+      break;
+    case "Internal":
+      raw = report.technical || report.technician_name || '';
+      break;
+    default:
+      raw = report.assigned_to || report.reporter_name || report.technical_engineer || '';
+  }
+  if (raw.includes("|")) {
+    const parts = raw.split("|");
+    const en = parts[0] || "";
+    const ar = parts[1] || "";
+    return lang === "ar" ? (ar || en) : en;
+  }
+  return raw;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
 
   const saveBtn = document.querySelector(".save-btn");
@@ -134,25 +159,6 @@ document.addEventListener("DOMContentLoaded", () => {
         el.dataset.rawtext = rawMap[fieldId] || el.textContent.trim();
       });
       console.log("report payload:", report);
-
-      function getAssignedTo(report) {
-        switch (report.maintenance_type) {
-          case "Regular":
-            return report.technical_engineer || "";
-          case "General":
-            return report.technician_name || "";
-          case "Internal":
-            return report.technical || report.technician_name || "";
-          default:
-            // External أو أي حالة ثانية
-            return report.assigned_to       // إذا الباك يرسل assigned_to
-              || report.reporter_name
-              || report.technical_engineer
-              || "";
-        }
-      }
-
-
 
       const lang = languageManager.currentLang;
       const normalizeKey = (text) => text.replace(/[^\w\s]/gi, "").toLowerCase().trim();
@@ -226,6 +232,14 @@ document.addEventListener("DOMContentLoaded", () => {
       // **هذا نص العرض الأصلي (en|ar) قبل أي تحويل**
       departmentEl.dataset.rawtext = rawDept;
 
+      // معالجة المهندس بنفس طريقة القسم
+      const assignedToEl = document.getElementById("assigned-to");
+      const translatedAssignedTo = getAssignedTo(reportData, lang) || "N/A";
+
+      assignedToEl.textContent = translatedAssignedTo;
+      assignedToEl.dataset.key = translatedAssignedTo;
+      assignedToEl.dataset.rawtext = translatedAssignedTo;
+
 
       let translatedCategory;
       if (translations.category?.[rawCategory]?.[lang]) {
@@ -265,7 +279,13 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("report-id").textContent = `NMR-${report.id}`;
         document.getElementById("priority").textContent = report.priority || "Medium";
         document.getElementById("device-type").textContent = report.device_type || "";
-        document.getElementById("assigned-to").textContent = report.assigned_to || "";
+        
+        // معالجة اسم المهندس في حالة new
+        const assignedToEl = document.getElementById("assigned-to");
+        assignedToEl.textContent = getAssignedTo(report);
+        assignedToEl.dataset.key = report.assigned_to_raw || report.assigned_to || "";
+        assignedToEl.dataset.rawtext = report.assigned_to_raw || report.assigned_to || "";
+        
         document.getElementById("department").textContent = report.department_name || "";
         document.getElementById("category").textContent = "New";
         document.getElementById("report-status").textContent = report.status || "Open";
@@ -511,7 +531,7 @@ else if (report.maintenance_type === "Internal") {
   titlePrefix = "Internal Ticket";
 }
 else if (report.maintenance_type === "External") {
-  // distinguish the “new” external path
+  // distinguish the "new" external path
   titlePrefix =
     report.source === "external-new"
       ? "External Ticket"
@@ -556,8 +576,8 @@ const translatedTitle =
 
       document.getElementById("priority").textContent = isExternal ? "" : translatedPriority;
       document.getElementById("device-type").textContent = translatedType;
-      document.getElementById("assigned-to").textContent = getAssignedTo(report);
-
+      document.getElementById("assigned-to").textContent = getAssignedTo(report); // <--- REMOVE THIS LINE
+      // إعادة تعيين اسم المهندس بالطريقة الصحيحة
 
       document.getElementById("department").textContent = translatedDept;
       document.getElementById("category").textContent = translatedCategory;
@@ -619,7 +639,7 @@ const translatedTitle =
           .split(/[\n,،]+/)
           .map(s =>
             s
-              .replace(/^["“”']?|["“”']?$/g, "")
+              .replace(/^["""]?|["""]?$/g, "")
               .replace(/\s*\[(ar|en)\]$/i, "")
               .trim()
           )
@@ -629,7 +649,7 @@ const translatedTitle =
       // — 4) ترجمة كل عنصر في items بالقاموس أو Google إذا لم يوجد
       const translatedItems = [];
       for (const text of items) {
-        const cleanedText = text.replace(/[“”]/g, '"').trim();
+        const cleanedText = text.replace(/[""]/g, '"').trim();
         const dict = translations.description || {};
         const foundKey = Object.keys(dict).find(key => key.trim() === cleanedText);
 
@@ -1095,7 +1115,7 @@ const translatedTitle =
       "Mental Health Department": { en: "Mental Health Department", ar: "قسم الصحة النفسية" },
       "Mortality Department": { en: "Mortality Department", ar: "قسم الوفيات" },
       "Psychiatric Nursing": { en: "Psychiatric Nursing", ar: "تمريض الطب النفسي" },
-      "Orthopedic Nursing (Men’s Ward)": { en: "Orthopedic Nursing (Men’s Ward)", ar: "تمريض العظام (قسم الرجال)" },
+      "Orthopedic Nursing (Men's Ward)": { en: "Orthopedic Nursing (Men's Ward)", ar: "تمريض العظام (قسم الرجال)" },
       "Psychiatric Clinics Nursing": { en: "Psychiatric Clinics Nursing", ar: "تمريض العيادات النفسية" },
       "Diagnostic Radiology Department": { en: "Diagnostic Radiology Department", ar: "قسم الأشعة التشخيصية" },
       "Endoscopy Nursing": { en: "Endoscopy Nursing", ar: "تمريض التنظير" },
@@ -1103,7 +1123,7 @@ const translatedTitle =
       "Telephone Exchange Department": { en: "Telephone Exchange Department", ar: "قسم سنترال الهاتف" },
       "Facilities and Support Services Administration": { en: "Facilities and Support Services Administration", ar: "إدارة المرافق والخدمات المساندة" },
       "Urology Department": { en: "Urology Department", ar: "قسم المسالك البولية" },
-      "Surgical Nursing (Men’s Ward)": { en: "Surgical Nursing (Men’s Ward)", ar: "تمريض الجراحة (قسم الرجال)" },
+      "Surgical Nursing (Men's Ward)": { en: "Surgical Nursing (Men's Ward)", ar: "تمريض الجراحة (قسم الرجال)" },
       "Facilities and Maintenance Administration": { en: "Facilities and Maintenance Administration", ar: "إدارة المرافق والصيانة" },
       "Warehouse Department": { en: "Warehouse Department", ar: "قسم المستودعات" },
       "Security Department": { en: "Security Department", ar: "قسم الأمن" },
@@ -1133,7 +1153,7 @@ const translatedTitle =
       "Outpatient Clinics": { en: "Outpatient Clinics", ar: "العيادات الخارجية" },
       "Infection Control Department": { en: "Infection Control Department", ar: "قسم مكافحة العدوى" },
       "Public Health Department": { en: "Public Health Department", ar: "قسم الصحة العامة" },
-      "Internal Medicine Nursing (Women’s Ward)": { en: "Internal Medicine Nursing (Women’s Ward)", ar: "تمريض الباطنة (قسم النساء)" },
+      "Internal Medicine Nursing (Women's Ward)": { en: "Internal Medicine Nursing (Women's Ward)", ar: "تمريض الباطنة (قسم النساء)" },
       "Human Resources Operations Department": { en: "Human Resources Operations Department", ar: "إدارة عمليات الموارد البشرية" },
       "Patient Affairs Administration": { en: "Patient Affairs Administration", ar: "إدارة شؤون المرضى" },
       "Medical Secretary Department": { en: "Medical Secretary Department", ar: "قسم السكرتارية الطبية" },
@@ -1155,7 +1175,7 @@ const translatedTitle =
       "Safety Department": { en: "Safety Department", ar: "قسم السلامة" },
       "Executive Administration for Human Resources": { en: "Executive Administration for Human Resources", ar: "الإدارة التنفيذية للموارد البشرية" },
       "Prosthodontics Department": { en: "Prosthodontics Department", ar: "قسم تركيبات الأسنان" },
-      "Surgical Nursing (Women’s Ward)": { en: "Surgical Nursing (Women’s Ward)", ar: "تمريض الجراحة (قسم النساء)" },
+      "Surgical Nursing (Women's Ward)": { en: "Surgical Nursing (Women's Ward)", ar: "تمريض الجراحة (قسم النساء)" },
       "Quality and Patient Safety Administration": { en: "Quality and Patient Safety Administration", ar: "إدارة الجودة وسلامة المرضى" },
       "Executive Administration for Financial and Administrative Affairs": { en: "Executive Administration for Financial and Administrative Affairs", ar: "الإدارة التنفيذية للشؤون المالية والإدارية" },
       "Operating Room Nursing": { en: "Operating Room Nursing", ar: "تمريض غرف العمليات" },
@@ -1168,11 +1188,11 @@ const translatedTitle =
       "Medical Maintenance Department": { en: "Medical Maintenance Department", ar: "قسم الصيانة الطبية" },
       "Government Relations Department": { en: "Government Relations Department", ar: "قسم العلاقات الحكومية" },
       "Finance Office": { en: "Finance Office", ar: "مكتب المالية" },
-      "Orthopedic Nursing (Women’s Ward)": { en: "Orthopedic Nursing (Women’s Ward)", ar: "تمريض العظام (قسم النساء)" },
+      "Orthopedic Nursing (Women's Ward)": { en: "Orthopedic Nursing (Women's Ward)", ar: "تمريض العظام (قسم النساء)" },
       "Housing Department": { en: "Housing Department", ar: "قسم الإسكان" },
       "Vascular Surgery Department": { en: "Vascular Surgery Department", ar: "قسم جراحة الأوعية الدموية" },
       "Anesthesiology Department": { en: "Anesthesiology Department", ar: "قسم التخدير" },
-      "Executive Director’s Office": { en: "Executive Director’s Office", ar: "مكتب المدير التنفيذي" },
+      "Executive Director's Office": { en: "Executive Director's Office", ar: "مكتب المدير التنفيذي" },
       "Human Resources Development Administration": { en: "Human Resources Development Administration", ar: "إدارة تطوير الموارد البشرية" },
       "Admissions and Healthcare Access Support Administration": { en: "Admissions and Healthcare Access Support Administration", ar: "إدارة القبول ودعم الوصول للرعاية الصحية" },
       "Internal Communication Administration": { en: "Internal Communication Administration", ar: "إدارة الاتصال الداخلي" },
@@ -1214,10 +1234,10 @@ const translatedTitle =
     },
 
     description: {
-      "Computer won’t turn on at all (no lights/sound)": { en: "Computer won’t turn on at all (no lights/sound)", ar: "الكمبيوتر لا يعمل إطلاقًا (لا أضواء/أصوات)" },
+      "Computer won't turn on at all (no lights/sound)": { en: "Computer won't turn on at all (no lights/sound)", ar: "الكمبيوتر لا يعمل إطلاقًا (لا أضواء/أصوات)" },
       "Turns on but screen stays black": { en: "Turns on but screen stays black", ar: "يعمل ولكن تبقى الشاشة سوداء" },
       "Black screen / Blue screen with white error text (crashes suddenly)": { en: "Black screen / Blue screen with white error text (crashes suddenly)", ar: "شاشة سوداء أو زرقاء برسالة خطأ (يتعطل فجأة)" },
-      "Stuck on loading screen (Windows/macOS won’t start)": { en: "Stuck on loading screen (Windows/macOS won’t start)", ar: "عالق في شاشة التحميل (ويندوز/ماك لا يقلع)" },
+      "Stuck on loading screen (Windows/macOS won't start)": { en: "Stuck on loading screen (Windows/macOS won't start)", ar: "عالق في شاشة التحميل (ويندوز/ماك لا يقلع)" },
       "Monitor says \"No Signal\"": { en: "Monitor says \"No Signal\"", ar: "الشاشة تعرض \"لا يوجد إشارة\"" },
       "Blank Screen but computer is on": { en: "Blank Screen but computer is on", ar: "شاشة فارغة ولكن الكمبيوتر يعمل" },
       "Randomly shuts down or restarts": { en: "Randomly shuts down or restarts", ar: "يغلق أو يعيد التشغيل عشوائيًا" },
@@ -1256,8 +1276,8 @@ const translatedTitle =
         en: "No internet even when connected",
         ar: "لا يوجد إنترنت رغم الاتصال"
       },
-      "Can’t connect to Wi-Fi (wrong password/error)": {
-        en: "Can’t connect to Wi-Fi (wrong password/error)",
+      "Can't connect to Wi-Fi (wrong password/error)": {
+        en: "Can't connect to Wi-Fi (wrong password/error)",
         ar: "لا يمكن الاتصال بالواي فاي (كلمة مرور خاطئة أو خطأ)"
       },
       "Web pages load very slowly": {
@@ -1268,20 +1288,20 @@ const translatedTitle =
         en: "Deleted a file by accident (need recovery)",
         ar: "تم حذف ملف عن طريق الخطأ (يحتاج استرجاع)"
       },
-      "“Disk full” error (out of storage space)": {
-        en: "“Disk full” error (out of storage space)",
+      "\"Disk full\" error (out of storage space)": {
+        en: "\"Disk full\" error (out of storage space)",
         ar: "رسالة \"امتلاء القرص\" (لا توجد مساحة تخزين)"
       },
       "Application Problem (Apps not working)": {
         en: "Application Problem (Apps not working)",
         ar: "مشكلة في التطبيقات (لا تعمل)"
       },
-      "Program won’t install/uninstall": {
-        en: "Program won’t install/uninstall",
+      "Program won't install/uninstall": {
+        en: "Program won't install/uninstall",
         ar: "لا يمكن تثبيت أو إزالة البرنامج"
       },
-      "“Not responding” errors (frozen apps)": {
-        en: "“Not responding” errors (frozen apps)",
+      "\"Not responding\" errors (frozen apps)": {
+        en: "\"Not responding\" errors (frozen apps)",
         ar: "أخطاء \"لا يستجيب\" (البرامج مجمدة)"
       },
       "Pop-up ads/viruses (suspicious programs)": {
@@ -1300,20 +1320,20 @@ const translatedTitle =
         en: "Windows needs activation / Not working",
         ar: "ويندوز يحتاج تفعيل / لا يعمل"
       },
-      "Forgot password (can’t sign in)": {
-        en: "Forgot password (can’t sign in)",
+      "Forgot password (can't sign in)": {
+        en: "Forgot password (can't sign in)",
         ar: "نسيت كلمة المرور (لا يمكن تسجيل الدخول)"
       },
-      "“Your account is locked” message": {
-        en: "“Your account is locked” message",
+      "\"Your account is locked\" message": {
+        en: "\"Your account is locked\" message",
         ar: "رسالة \"تم قفل حسابك\""
       },
-      "Wrong username/password (but it’s correct)": {
-        en: "Wrong username/password (but it’s correct)",
+      "Wrong username/password (but it's correct)": {
+        en: "Wrong username/password (but it's correct)",
         ar: "اسم المستخدم أو كلمة المرور غير صحيحة (رغم أنها صحيحة)"
       },
-      "Can’t open a file (unsupported format)": {
-        en: "Can’t open a file (unsupported format)",
+      "Can't open a file (unsupported format)": {
+        en: "Can't open a file (unsupported format)",
         ar: "لا يمكن فتح الملف (صيغة غير مدعومة)"
       },
       "Date/time keeps resetting to wrong value": {
@@ -1331,21 +1351,21 @@ const translatedTitle =
 
       "Printer is not responding": { en: "Printer is not responding", ar: "الطابعة لا تستجيب" },
       "Printer is not detected": { en: "Printer is not detected", ar: "الطابعة غير مكتشفة" },
-      "Printer says \"offline\" when it’s plugged in": { en: "Printer says \"offline\" when it’s plugged in", ar: "الطابعة تظهر غير متصلة رغم توصيلها" },
+      "Printer says \"offline\" when it's plugged in": { en: "Printer says \"offline\" when it's plugged in", ar: "الطابعة تظهر غير متصلة رغم توصيلها" },
       "Printer driver error pops up": { en: "Printer driver error pops up", ar: "ظهور خطأ تعريف الطابعة" },
       "Printer turns on but screen is blank": { en: "Printer turns on but screen is blank", ar: "الطابعة تعمل ولكن الشاشة فارغة" },
       "Printer keeps restarting": { en: "Printer keeps restarting", ar: "الطابعة تعيد التشغيل باستمرار" },
       "Printer makes loud grinding noises": { en: "Printer makes loud grinding noises", ar: "الطابعة تصدر أصوات طحن عالية" },
       "Printer disconnects (USB cable not working)": { en: "Printer disconnects (USB cable not working)", ar: "الطابعة تفصل (كابل USB لا يعمل)" },
-      "Wi-Fi printer won’t connect to network": { en: "Wi-Fi printer won’t connect to network", ar: "الطابعة اللاسلكية لا تتصل بالشبكة" },
+      "Wi-Fi printer won't connect to network": { en: "Wi-Fi printer won't connect to network", ar: "الطابعة اللاسلكية لا تتصل بالشبكة" },
       "Printer works for one computer but not another": { en: "Printer works for one computer but not another", ar: "الطابعة تعمل على جهاز ولا تعمل على آخر" },
-      "Can’t find printer in the list of devices": { en: "Can’t find printer in the list of devices", ar: "لا يمكن العثور على الطابعة في قائمة الأجهزة" },
+      "Can't find printer in the list of devices": { en: "Can't find printer in the list of devices", ar: "لا يمكن العثور على الطابعة في قائمة الأجهزة" },
       "Random error message (e.g., \"Error 0x000001\")": { en: "Random error message (e.g., \"Error 0x000001\")", ar: "رسالة خطأ عشوائية (مثل: Error 0x000001)" },
       "Print jobs stuck in queue (nothing comes out)": { en: "Print jobs stuck in queue (nothing comes out)", ar: "أوامر الطباعة عالقة (لا شيء يُطبع)" },
       "Spooler errors (print jobs stuck in queue)": { en: "Spooler errors (print jobs stuck in queue)", ar: "أخطاء في خدمة الطباعة (الطباعة عالقة)" },
       "Printer is turned on but does nothing": { en: "Printer is turned on but does nothing", ar: "الطابعة تعمل لكنها لا تطبع" },
-      "Printer won’t print black (only color works)": { en: "Printer won’t print black (only color works)", ar: "الطابعة لا تطبع بالأسود (تطبع ألوان فقط)" },
-      "Printer won’t print colors (only black works)": { en: "Printer won’t print colors (only black works)", ar: "الطابعة لا تطبع ألوان (تطبع أسود فقط)" },
+      "Printer won't print black (only color works)": { en: "Printer won't print black (only color works)", ar: "الطابعة لا تطبع بالأسود (تطبع ألوان فقط)" },
+      "Printer won't print colors (only black works)": { en: "Printer won't print colors (only black works)", ar: "الطابعة لا تطبع ألوان (تطبع أسود فقط)" },
       "Ink not recognized (error even after replacing)": { en: "Ink not recognized (error even after replacing)", ar: "الحبر غير معروف (حتى بعد الاستبدال)" },
       "Printer says \"low ink\" but cartridge is new": { en: "Printer says \"low ink\" but cartridge is new", ar: "الطابعة تظهر أن الحبر منخفض رغم أنه جديد" },
       "Printer says \"out of paper\" but tray is full": { en: "Printer says \"out of paper\" but tray is full", ar: "الطابعة تقول أن الورق ناقص رغم امتلاء الصينية" },
@@ -1361,7 +1381,7 @@ const translatedTitle =
       "Black ink prints as blank/gray": { en: "Black ink prints as blank/gray", ar: "الحبر الأسود يُطبع رمادي أو لا يُطبع" },
       "Cartridge alignment problems": { en: "Cartridge alignment problems", ar: "مشاكل في محاذاة الخراطيش" },
       "Slow printing speed": { en: "Slow printing speed", ar: "سرعة طباعة بطيئة" },
-      "Scanner won’t scan (no response)": { en: "Scanner won’t scan (no response)", ar: "الماسح لا يستجيب" },
+      "Scanner won't scan (no response)": { en: "Scanner won't scan (no response)", ar: "الماسح لا يستجيب" },
       "Scanned image is weird or cut off": { en: "Scanned image is weird or cut off", ar: "الصورة الممسوحة غير مكتملة أو مقطوعة" },
       "Scanned documents come out blurry": { en: "Scanned documents come out blurry", ar: "المستندات الممسوحة غير واضحة" },
       "The pages are blank / empty": { en: "The pages are blank / empty", ar: "الصفحات فارغة / لا تحتوي على محتوى" },
@@ -1370,25 +1390,25 @@ const translatedTitle =
         ar: "أخطاء في خدمة الطباعة (الطباعة عالقة)"
       },
 
-      "Scanner won’t turn on (no lights/noise)": { en: "Scanner won’t turn on (no lights/noise)", ar: "الماسح لا يعمل (لا أضواء أو صوت)" },
+      "Scanner won't turn on (no lights/noise)": { en: "Scanner won't turn on (no lights/noise)", ar: "الماسح لا يعمل (لا أضواء أو صوت)" },
       "Scanner not detected": { en: "Scanner not detected", ar: "الماسح غير مكتشف" },
       "\"Driver not found\" error": { en: "\"Driver not found\" error", ar: "خطأ \"لم يتم العثور على التعريف\"" },
       "Scanner not showing up in the list": { en: "Scanner not showing up in the list", ar: "الماسح لا يظهر في القائمة" },
       "Scanner makes loud grinding noises": { en: "Scanner makes loud grinding noises", ar: "الماسح يصدر أصوات طحن عالية" },
       "Scanner light flickers or stays off": { en: "Scanner light flickers or stays off", ar: "ضوء الماسح يومض أو لا يعمل" },
-      "Scanner makes noise but doesn’t scan": { en: "Scanner makes noise but doesn’t scan", ar: "الماسح يصدر صوتًا لكنه لا يعمل" },
+      "Scanner makes noise but doesn't scan": { en: "Scanner makes noise but doesn't scan", ar: "الماسح يصدر صوتًا لكنه لا يعمل" },
       "Scanner is busy error (even when not in use)": { en: "Scanner is busy error (even when not in use)", ar: "خطأ: الماسح مشغول (حتى عند عدم الاستخدام)" },
-      "Scanner won’t grab the paper (no movement)": { en: "Scanner won’t grab the paper (no movement)", ar: "الماسح لا يسحب الورق (لا حركة)" },
+      "Scanner won't grab the paper (no movement)": { en: "Scanner won't grab the paper (no movement)", ar: "الماسح لا يسحب الورق (لا حركة)" },
       "Paper jams while scanning": { en: "Paper jams while scanning", ar: "الورق ينحشر أثناء المسح" },
       "Paper gets stuck or crumpled": { en: "Paper gets stuck or crumpled", ar: "الورق يتعطل أو يتكرمش" },
       "Scanner pulls multiple pages at once": { en: "Scanner pulls multiple pages at once", ar: "الماسح يسحب عدة صفحات دفعة واحدة" },
-      "Printer works but scanner doesn’t": { en: "Printer works but scanner doesn’t", ar: "الطابعة تعمل ولكن الماسح لا يعمل" },
+      "Printer works but scanner doesn't": { en: "Printer works but scanner doesn't", ar: "الطابعة تعمل ولكن الماسح لا يعمل" },
       "Scanner disconnects randomly (USB/Wi-Fi)": { en: "Scanner disconnects randomly (USB/Wi-Fi)", ar: "الماسح ينفصل عشوائيًا (USB/واي فاي)" },
       "Scanning software freezes or crashes": { en: "Scanning software freezes or crashes", ar: "برنامج المسح يتجمد أو يتعطل" },
       "Scanner button does nothing (on all-in-one machines)": { en: "Scanner button does nothing (on all-in-one machines)", ar: "زر الماسح لا يستجيب (في الأجهزة متعددة الوظائف)" },
       "Scanned document saves as blank/black": { en: "Scanned document saves as blank/black", ar: "المستند الممسوح يُحفظ فارغًا أو أسود" },
       "Only scans part of the page (cuts off edges)": { en: "Only scans part of the page (cuts off edges)", ar: "يمسح جزءًا من الصفحة فقط (يقطع الحواف)" },
-      "Scanned file won’t save": { en: "Scanned file won’t save", ar: "الملف الممسوح لا يُحفظ" },
+      "Scanned file won't save": { en: "Scanned file won't save", ar: "الملف الممسوح لا يُحفظ" },
       "File format is wrong (e.g., saves as .BMP instead of .PDF)": { en: "File format is wrong (e.g., saves as .BMP instead of .PDF)", ar: "صيغة الملف غير صحيحة (مثل: .BMP بدلاً من .PDF)" },
       "Scanned image is blurry": { en: "Scanned image is blurry", ar: "الصورة الممسوحة غير واضحة" },
       "Dark or faded scans (too light/too dark)": { en: "Dark or faded scans (too light/too dark)", ar: "الصور الممسوحة باهتة جدًا أو مظلمة" },
@@ -1402,8 +1422,8 @@ const translatedTitle =
 
   function normalizeKey(text) {
     return text
-      .replace(/[“”]/g, '"')        // اقتباسات ذكية إلى عادية
-      .replace(/[‘’]/g, "'")        // اقتباسات مفردة ذكية
+      .replace(/[""]/g, '"')        // اقتباسات ذكية إلى عادية
+      .replace(/['']/g, "'")        // اقتباسات مفردة ذكية
       .replace(/[^A-Za-z0-9\s]/g, "") // نحذف الرموز
       .toLowerCase()
       .trim();
@@ -1450,6 +1470,9 @@ const translatedTitle =
   // ✅ دعم توليد PDF بلغتين (عربية / إنجليزية)
 
   document.getElementById("generate-pdf-btn")?.addEventListener("click", async () => {
+    console.log("assigned_to_raw:", reportData.assigned_to_raw);
+console.log("assigned_to:", reportData.assigned_to);
+console.log("عنصر الصفحة:", document.getElementById("assigned-to")?.textContent);
     document.getElementById("pdf-options-modal").style.display = "none";
 
     const msLogoImg = document.querySelector(".ms-logo img");
@@ -1488,8 +1511,8 @@ const translatedTitle =
     // ✅ عنوان التقرير مع دعم الترجمة واللغة
     function normalizeText(text) {
       return text
-        .replace(/[“”]/g, '"')
-        .replace(/[‘’]/g, "'")
+        .replace(/[""]/g, '"')
+        .replace(/['']/g, "'")
         .replace(/[^A-Za-z\u0600-\u06FF0-9\s]/g, "") // إنجليزي + عربي + أرقام
         .toLowerCase()
         .trim();
@@ -1557,6 +1580,10 @@ const translatedTitle =
     const translatedDepartment = (lang === "ar")
       ? (arPart || enPart)
       : enPart;
+    
+    // معالجة اسم المهندس بنفس طريقة القسم
+    const translatedAssignedTo = getAssignedTo(reportData, lang) || "N/A";
+
     const translatedPriority = reverseTranslate(rawPriority, translations.priority, lang);
     const translatedDeviceType = reverseTranslate(rawDeviceType, translations.deviceType, lang);
     const translatedCategory = reverseTranslate(rawCategory, translations.category, lang);
@@ -1566,7 +1593,7 @@ const translatedTitle =
       [L.report_id, document.getElementById("report-id")?.textContent],
       showPriority && [L.priority, translatedPriority],
       showDeviceType && [L.device_type, translatedDeviceType],
-      [L.assigned_to, document.getElementById("assigned-to")?.textContent],
+      [L.assigned_to, translatedAssignedTo],
       [L.department, translatedDepartment],
       [L.category, translatedCategory]
     ].filter(Boolean);
@@ -1610,14 +1637,14 @@ const translatedTitle =
         // يدعم التقسيم بناءً على الشرطة (-) أو النقطتين أو أسطر جديدة
         items = rawDesc
           .split(/[\n\r\-•]+/g)
-          .map(s => s.replace(/^["“”']?|["“”']?$/g, "").trim())
+          .map(s => s.replace(/^["""]?|["""]?$/g, "").trim())
           .filter(Boolean);
       }
 
       function normalizeKey(text) {
         return text
-          .replace(/[“”]/g, '"')        // اقتباسات ذكية
-          .replace(/[‘’]/g, "'")        // اقتباسات مفردة
+          .replace(/[""]/g, '"')        // اقتباسات ذكية
+          .replace(/['']/g, "'")        // اقتباسات مفردة
           .replace(/^[^A-Za-z\u0600-\u06FF0-9]+/, "") // نحذف الرموز من بداية النص فقط
           .replace(/[^A-Za-z\u0600-\u06FF0-9\s]/g, "") // نحذف باقي الرموز
           .toLowerCase()
@@ -1890,7 +1917,7 @@ function createSelectElement(options, currentId, currentRawText, fieldId) {
 
   // 1) حدد currentText المعروض
   let currentText;
-  if (fieldId === "department") {
+  if (fieldId === "department" || fieldId === "assigned-to") {
     const parts = (currentRawText||"").split("|").map(p=>p.trim());
     currentText = languageManager.currentLang === "ar" ? (parts[1]||parts[0]) : parts[0];
   } else {
@@ -1928,6 +1955,7 @@ function createSelectElement(options, currentId, currentRawText, fieldId) {
     let raw;
     switch (fieldId) {
       case "department":
+      case "assigned-to":
         const parts = (opt.fullName||"").split("|");
         raw = (languageManager.currentLang === "ar"
                ? (parts[1]||parts[0])
@@ -2225,7 +2253,7 @@ noteEl.dataset.oldText = noteEl.textContent.trim();
 
 
   document.querySelector(".save-btn")?.addEventListener("click", async () => {
-    // أولاً، جب الـ <select> حق “المسؤول”:
+    // أولاً، جب الـ <select> حق "المسؤول":
     const engSelect = document.getElementById("assigned-to-select");
 
     const oldEngineerId = engSelect.dataset.oldId || reportData.assigned_to_id || null;
@@ -2253,10 +2281,13 @@ noteEl.dataset.oldText = noteEl.textContent.trim();
 
     // 👇 جيب القيمة الجديدة
     const newEngineerId = engSelect.value || null;
+    const selectedOption = engSelect.options[engSelect.selectedIndex];
+    const fullName = selectedOption?.dataset.fullname?.trim() || selectedOption?.text?.trim() || null;
 
     if (newEngineerId !== oldEngineerId) {
       updatedData.engineer_id = newEngineerId;
-      updatedData.assigned_to = engSelect.options[engSelect.selectedIndex]?.text || null;
+      updatedData.assigned_to = fullName;
+      updatedData.technical_engineer = fullName;
     }
 
 
@@ -2283,7 +2314,7 @@ noteEl.dataset.oldText = noteEl.textContent.trim();
 
       const backendField = getLookupField(cfg.fieldId, reportData.maintenance_type);
 
-      if (cfg.fieldId === "department") {
+      if (cfg.fieldId === "department" || cfg.fieldId === "assigned-to") {
         updatedData[backendField] = opt.dataset.fullname?.trim() || null;
       }
       else if (cfg.fieldId === "category") {
