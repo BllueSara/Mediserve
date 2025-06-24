@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IT Device Management Dashboard</title>
+    <title data-i18n="it_device_management_dashboard">IT Device Management Dashboard</title>
     <link rel="stylesheet" href="details.css">
+  <link rel="stylesheet" href="/Language/Language.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -12,26 +13,26 @@
 <body>
    <!-- Navigation buttons section (Back & Home) -->
   <div class="nav-buttons">
-    <!-- Back button -->
     <div class="back-button">
       <a href="#" onclick="goBack()">
-        <img src="/icon/Back.png" alt="Back Icon" class="back-icon" /> <span data-i18n="back">Back</span>
+        <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> <span data-i18n="back">Back</span>
       </a>
     </div>
-    <!-- Home button -->
     <div class="Home-button">
-      <a href="../../Home/Home.html">
-        <img src="/icon/Home.png" alt="Home Icon" class="Home-icon" /> <span data-i18n="home">Home</span>
+            <a href="../../Home/Home.html">
+        <img src="/icon/Home.png" alt="Home Icon" class="Home-icon"> <span data-i18n="home">Home</span>
       </a>
     </div>
   </div>
 
-  <!-- Header section (Logos) -->
+  <!-- Header (Logos) -->
   <header>
-    <!-- MS logo -->
-    <div class="ms-logo"><img src="/icon/MS Logo.png" alt="MS Logo" /></div>
-    <!-- Hospital logo -->
-    <div class="hospital-logo"><img src="/icon/hospital-logo.png" alt="King Abdulaziz Hospital" /></div>
+    <div class="ms-logo">
+      <img src="/icon/MS Logo.png" alt="MS Logo">
+    </div>
+    <div class="hospital-logo">
+      <img src="/icon/hospital-logo.png" alt="King Abdulaziz Hospital">
+    </div>
   </header>
 
     <div class="dashboard-container">
@@ -56,28 +57,28 @@
         <section class="overview-cards">
             <div class="card">
                 <div class="card-info">
-                    <div class="card-title">Total Devices</div>
+                    <div class="card-title" data-i18n="total_devices">Total Devices</div>
                     <div class="card-value">847</div>
                 </div>
                 <i class="fas fa-desktop card-icon"></i>
             </div>
             <div class="card">
                  <div class="card-info">
-                    <div class="card-title">Total PCs</div>
+                    <div class="card-title" data-i18n="total_pcs">Total PCs</div>
                     <div class="card-value">612</div>
                  </div>
                 <i class="fas fa-laptop card-icon"></i>
             </div>
             <div class="card">
                  <div class="card-info">
-                    <div class="card-title">Total Scanners</div>
+                    <div class="card-title" data-i18n="total_scanners">Total Scanners</div>
                     <div class="card-value">124</div>
                  </div>
                 <i class="fas fa-scanner card-icon"></i>
             </div>
             <div class="card">
                 <div class="card-info">
-                    <div class="card-title">Total Printers</div>
+                    <div class="card-title" data-i18n="total_printers">Total Printers</div>
                     <div class="card-value">111</div>
                 </div>
                 <i class="fas fa-print card-icon"></i>
@@ -88,65 +89,65 @@
         <section class="main-content-grid">
             <div class="charts-section">
                 <div class="chart-card">
-                    <h2>Device RAM Distribution</h2>
+                    <h2 data-i18n="device_ram_distribution">Device RAM Distribution</h2>
                     <canvas id="ramDistributionChart"></canvas>
                 </div>
                 <div class="chart-card">
-                    <h2>CPU Generation Overview</h2>
+                    <h2 data-i18n="cpu_generation_overview">CPU Generation Overview</h2>
                     <canvas id="cpuGenerationChart"></canvas>
                 </div>
             </div>
             <div class="sidebar">
                 <div class="outdated-os-section">
-                    <h2><i class="fas fa-exclamation-triangle"></i> Outdated OS Versions</h2>
+                    <h2><i class="fas fa-exclamation-triangle"></i> <span data-i18n="outdated_os_versions">Outdated OS Versions</span></h2>
                     <div class="os-list">
                         <div class="os-item">
                             <span>Windows 7</span>
-                            <span class="device-count">45 devices</span>
+                            <span class="device-count">45 <span data-i18n="devices">devices</span></span>
                         </div>
                         <div class="os-item outdated">
                             <span>Windows 8</span>
-                            <span class="device-count">28 devices</span>
+                            <span class="device-count">28 <span data-i18n="devices">devices</span></span>
                         </div>
                         <div class="os-item">
                             <span>Windows 8.1</span>
-                            <span class="device-count">15 devices</span>
+                            <span class="device-count">15 <span data-i18n="devices">devices</span></span>
                         </div>
                          <div class="os-item">
                             <span>Windows 10</span>
-                            <span class="device-count">12 devices</span>
+                            <span class="device-count">12 <span data-i18n="devices">devices</span></span>
                         </div>
                     </div>
                 </div>
                 <div class="filters-section">
-                    <h2>Filters</h2>
+                    <h2 data-i18n="filters">Filters</h2>
                     <div class="filter-dropdown">
-                        <label for="department-filter">Filter by Department</label>
+                        <label for="department-filter" data-i18n="filter_by_department">Filter by Department</label>
                         <select id="department-filter">
-                            <option value="">All</option>
+                            <option value="" data-i18n="all">All</option>
                         </select>
                     </div>
                     <div class="filter-dropdown">
-                        <label for="cpu-filter">Filter by CPU Gen</label>
+                        <label for="cpu-filter" data-i18n="filter_by_cpu_gen">Filter by CPU Gen</label>
                         <select id="cpu-filter">
-                             <option value="">All</option>
+                             <option value="" data-i18n="all">All</option>
                         </select>
                     </div>
                     <div class="filter-dropdown">
-                        <label for="os-filter">Filter by OS Version</label>
+                        <label for="os-filter" data-i18n="filter_by_os_version">Filter by OS Version</label>
                         <select id="os-filter">
-                             <option value="">All</option>
+                             <option value="" data-i18n="all">All</option>
                         </select>
                     </div>
                     <div class="filter-dropdown">
-                        <label for="ram-filter">Filter by RAM Size</label>
+                        <label for="ram-filter" data-i18n="filter_by_ram_size">Filter by RAM Size</label>
                         <select id="ram-filter">
-                            <option value="">All</option>
+                            <option value="" data-i18n="all">All</option>
                         </select>
                     </div>
                     <div class="filter-buttons">
-                        <button class="apply-filters-btn">Apply Filters</button>
-                        <button class="clear-filters-btn">Clear All</button>
+                        <button class="apply-filters-btn" data-i18n="apply_filters">Apply Filters</button>
+                        <button class="clear-filters-btn" data-i18n="clear_all">Clear All</button>
                     </div>
                 </div>
             </div>
@@ -154,58 +155,58 @@
 
         <!-- Placeholder for Needs Replacement Table -->
         <section class="needs-replacement">
-            <h2>Needs Replacement</h2>
+            <h2 data-i18n="needs_replacement">Needs Replacement</h2>
             <table>
                 <thead>
                     <tr>
-                        <th>Device Name</th>
-                        <th>Department</th>
-                        <th>RAM</th>
-                        <th>CPU Generation</th>
-                        <th>OS Version</th>
-                        <th>Status</th>
+                        <th data-i18n="device_name">Device Name</th>
+                        <th data-i18n="department">Department</th>
+                        <th data-i18n="ram">RAM</th>
+                        <th data-i18n="cpu_generation">CPU Generation</th>
+                        <th data-i18n="os_version">OS Version</th>
+                        <th data-i18n="status">Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>DESKTOP-001</td>
-                        <td>Engineering</td>
+                        <td data-i18n="engineering">Engineering</td>
                         <td>4GB</td>
                         <td>6th Gen</td>
                         <td>Windows 7</td>
-                        <td>Replace Soon</td>
+                        <td data-i18n="replace_soon">Replace Soon</td>
                     </tr>
                     <tr>
                         <td>DESKTOP-002</td>
-                        <td>Marketing</td>
+                        <td data-i18n="marketing">Marketing</td>
                         <td>8GB</td>
                         <td>7th Gen</td>
                         <td>Windows 8</td>
-                        <td>Replace Soon</td>
+                        <td data-i18n="replace_soon">Replace Soon</td>
                     </tr>
                      <tr>
                         <td>DESKTOP-003</td>
-                        <td>Sales</td>
+                        <td data-i18n="sales">Sales</td>
                         <td>16GB</td>
                         <td>9th Gen</td>
                         <td>Windows 10</td>
-                        <td>OK</td>
+                        <td data-i18n="ok">OK</td>
                     </tr>
                     <tr>
                         <td>DESKTOP-004</td>
-                        <td>HR</td>
+                        <td data-i18n="hr">HR</td>
                         <td>4GB</td>
                         <td>6th Gen</td>
                         <td>Windows 7</td>
-                        <td>Replace Soon</td>
+                        <td data-i18n="replace_soon">Replace Soon</td>
                     </tr>
                     <tr>
                         <td>DESKTOP-005</td>
-                        <td>Finance</td>
+                        <td data-i18n="finance">Finance</td>
                         <td>8GB</td>
                         <td>8th Gen</td>
                         <td>Windows 10</td>
-                        <td>OK</td>
+                        <td data-i18n="ok">OK</td>
                     </tr>
                 </tbody>
             </table>

@@ -222,9 +222,11 @@
 <!-- النافذة المنبثقة -->
 <div id="userModal" class="modal" style="display: none;">
   <div class="modal-content">
+    <label data-i18n="full_name_en">Full Name (English)</label>
+    <input type="text" id="modal_name_en" data-i18n-placeholder="full_name_en" placeholder="Full Name (English)" />
 
-    <label data-i18n="full_name">Full Name</label>
-    <input type="text" id="modal_name" data-i18n-placeholder="full_name" placeholder="Full Name" />
+    <label data-i18n="full_name_ar">Full Name (Arabic)</label>
+    <input type="text" id="modal_name_ar" data-i18n-placeholder="full_name_ar" placeholder="الاسم الكامل (عربي)" />
 
     <label data-i18n="email">Email</label>
     <input type="email" id="modal_email" data-i18n-placeholder="email" placeholder="Email" />
@@ -233,7 +235,11 @@
     <input type="password" id="modal_password" data-i18n-placeholder="password" placeholder="Password" />
 
     <label data-i18n="department">Department</label>
-    <input type="text" id="modal_department" data-i18n-placeholder="department" placeholder="Department" />
+    <div class="dropdown" id="department-dropdown">
+      <div id="selected-department" class="dropdown-selected" data-i18n="department-select">Select Department</div>
+      <div id="department-options" class="dropdown-options" style="display:none;"></div>
+    </div>
+    <input type="hidden" id="modal_department" />
 
     <label data-i18n="employee_id">Employee ID</label>
     <input type="text" id="modal_employee_id" data-i18n-placeholder="employee_id" placeholder="Employee ID" />
@@ -244,7 +250,7 @@
 </div>
 
 
-  <script src="/permmision/permmison.js"></script>
-  <script src="/Language/Language.js"></script>
+<script src="/Language/Language.js"></script>
+<script src="/permmision/permmison.js"></script>
 </body>
 </html>

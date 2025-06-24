@@ -291,3 +291,58 @@ html[dir="rtl"] .modal-content {
   direction: rtl;
   text-align: right;
 }
+
+/* تحسين الدروب داون للأقسام */
+#department-dropdown {
+  position: relative;
+  margin-bottom: 10px;
+}
+#selected-department {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  min-width: 180px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: border 0.2s, box-shadow 0.2s;
+}
+#selected-department:hover {
+  border-color: #3DA9E0;
+  box-shadow: 0 2px 8px rgba(61,169,224,0.10);
+}
+#department-options {
+  position: absolute;
+  top: 110%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+  z-index: 10;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+.dropdown-option {
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  font-size: 15px;
+}
+.dropdown-option:hover {
+  background: #e0f2fe;
+  color: #2563eb;
+}
+html[lang="ar"] select {
+  font-family: 'Tajawal', sans-serif;
+}
+html[lang="ar"] 
+#department-dropdown,
+html[lang="ar"] 
+#selected-department,
+html[lang="ar"] 
+.dropdown-option {
+  font-family: 'Tajawal', sans-serif;
+}
