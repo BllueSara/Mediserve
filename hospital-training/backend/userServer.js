@@ -5,9 +5,22 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 
+
+const XLSX = require('xlsx');
+
+
+
+const fs = require('fs');
+
+const path = require('path');
+
+
+
+
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
-const path = require('path');
+
+
 
 // تقديم ملفات HTML من مجلد AuthPage
 const transporter = nodemailer.createTransport({
@@ -974,6 +987,201 @@ app.get('/api/maintenance/monthly-closed', authenticateToken, async (req, res) =
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+
+//يحتاج احلال
+app.get('/api/all-device-specs', authenticateToken, async (req, res) => {
+  try {
+    const [devices] = await db.promise().query(`SELECT * FROM Maintenance_Devices`);
+
+    const results = [];
+
+    for (const device of devices) {
+      const type = device.device_type?.toLowerCase().trim();
+      const serial = device.serial_number;
+
+      let baseData = {
+        id: device.id,
+        name: device.device_name,
+        Device_Type: device.device_type,
+        Serial_Number: device.serial_number,
+        Governmental_Number: device.governmental_number,
+        MAC_Address: device.mac_address,
+        IP_Address: device.ip_address,
+        Department: null,
+      };
+
+      // القسم
+      const [deptRow] = await db.promise().query(`SELECT name FROM Departments WHERE id = ?`, [device.department_id]);
+      if (deptRow.length > 0) baseData.Department = deptRow[0].name;
+
+      if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(type)) {
+        const [pcRows] = await db.promise().query(`
+          SELECT 
+            pm.model_name AS Model,
+            os.os_name AS OS,
+            cpu.cpu_name AS Processor,
+            ram.ram_type AS RAM,
+            gen.generation_number AS Generation,
+            drive.drive_type AS Hard_Drive,
+            ram_size.ram_size AS RAM_Size
+          FROM PC_info pc
+          LEFT JOIN PC_Model pm ON pc.Model_id = pm.id
+          LEFT JOIN OS_Types os ON pc.OS_id = os.id
+          LEFT JOIN CPU_Types cpu ON pc.Processor_id = cpu.id
+          LEFT JOIN RAM_Types ram ON pc.RAM_id = ram.id
+          LEFT JOIN Processor_Generations gen ON pc.Generation_id = gen.id
+          LEFT JOIN Hard_Drive_Types drive ON pc.Drive_id = drive.id
+          LEFT JOIN RAM_Sizes ram_size ON pc.RamSize_id = ram_size.id
+          WHERE pc.Serial_Number = ?
+        `, [serial]);
+        baseData = { ...baseData, ...(pcRows[0] || {}) };
+      }
+
+      else if (type === "printer") {
+        const [printerRows] = await db.promise().query(`
+          SELECT 
+            pm.model_name AS Model,
+            pt.printer_type AS Printer_Type,
+            it.ink_type AS Ink_Type,
+            iser.serial_number AS Ink_Serial_Number
+          FROM Printer_info pi
+          LEFT JOIN Printer_Model pm ON pi.Model_id = pm.id
+          LEFT JOIN Printer_Types pt ON pi.PrinterType_id = pt.id
+          LEFT JOIN Ink_Types it ON pi.InkType_id = it.id
+          LEFT JOIN Ink_Serials iser ON pi.InkSerial_id = iser.id
+          WHERE pi.Serial_Number = ?
+        `, [serial]);
+        baseData = { ...baseData, ...(printerRows[0] || {}) };
+      }
+
+      else if (type === "scanner") {
+        const [scannerRows] = await db.promise().query(`
+          SELECT 
+            sm.model_name AS Model,
+            st.scanner_type AS Scanner_Type
+          FROM Scanner_info si
+          LEFT JOIN Scanner_Model sm ON si.Model_id = sm.id
+          LEFT JOIN Scanner_Types st ON si.ScannerType_id = st.id
+          WHERE si.Serial_Number = ?
+        `, [serial]);
+        baseData = { ...baseData, ...(scannerRows[0] || {}) };
+      }
+
+      else {
+        const [modelRows] = await db.promise().query(`
+          SELECT model_name FROM Maintance_Device_Model WHERE id = ?
+        `, [device.model_id]);
+        if (modelRows.length > 0) baseData.Model = modelRows[0].model_name;
+      }
+
+      results.push(baseData);
+    }
+
+    res.json(results);
+  } catch (err) {
+    console.error("❌ Error in /api/all-device-specs:", err);
+    res.status(500).json({ error: "❌ حدث خطأ أثناء جلب البيانات" });
+  }
+});
+
+
+
+
+
+
+
+app.get('/api/replacement-report', authenticateToken, async (req, res) => {
+  try {
+    const [devices] = await db.promise().query(`SELECT * FROM Maintenance_Devices`);
+    const results = [];
+
+    for (const device of devices) {
+      const type = device.device_type?.toLowerCase().trim();
+      const serial = device.serial_number;
+
+      let ram = '', generation = '', os = '';
+
+      if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(type)) {
+        const [pcRows] = await db.promise().query(`
+          SELECT 
+            os.os_name AS OS,
+            ram_size.ram_size AS RAM,
+            gen.generation_number AS Generation
+          FROM PC_info pc
+          LEFT JOIN OS_Types os ON pc.OS_id = os.id
+          LEFT JOIN RAM_Sizes ram_size ON pc.RamSize_id = ram_size.id
+          LEFT JOIN Processor_Generations gen ON pc.Generation_id = gen.id
+          WHERE pc.Serial_Number = ?
+        `, [serial]);
+
+        const info = pcRows[0] || {};
+        ram = info.RAM || '';
+        generation = info.Generation || '';
+        os = info.OS || '';
+      }
+
+      const genNum = parseInt(generation?.replace(/\D/g, '')) || 0;
+      const ramNum = parseInt(ram?.replace(/\D/g, '')) || 0;
+      const osClean = (os || '').toLowerCase();
+
+      const isOldGen = genNum < 8;
+      const isLowRam = ramNum < 4;
+      const isOldOS = osClean.includes('windows') && !osClean.includes('10') && !osClean.includes('11');
+
+      const needsReplacement = isOldGen || isLowRam || isOldOS;
+
+      if (needsReplacement) {
+        results.push([
+          serial,
+          os || 'Unknown',
+          generation || 'Unknown',
+          ram || 'Unknown',
+          '8th Gen+, 4GB+ RAM, Win 10/11',
+          'Needs Replacement'
+        ]);
+      }
+    }
+
+    if (results.length === 0) {
+      return res.status(200).json({ message: 'No devices needing replacement.' });
+    }
+
+    const worksheetData = [
+      ['Serial Number', 'Windows Version', 'Generation', 'RAM', 'Microsoft Requirements', 'Replacement Status'],
+      ...results
+    ];
+
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+
+    // توسيع الأعمدة يدويًا
+    const colWidths = [
+      { wch: 20 }, // Serial Number
+      { wch: 20 }, // Windows Version
+      { wch: 15 }, // Generation
+      { wch: 10 }, // RAM
+      { wch: 35 }, // Microsoft Requirements
+      { wch: 20 }  // Replacement Status
+    ];
+    worksheet['!cols'] = colWidths;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Replacement Report');
+
+    const filePath = path.join(__dirname, 'reports', 'Replacement_Report.xlsx');
+    XLSX.writeFile(workbook, filePath);
+
+    res.download(filePath, 'Devices_Replacement_Report.xlsx', err => {
+      if (err) console.error('Download error:', err);
+      else fs.unlink(filePath, () => {});
+    });
+
+  } catch (err) {
+    console.error('❌ Error generating report:', err);
+    res.status(500).json({ message: 'Error generating report' });
+  }
+});
+
 
 
 
