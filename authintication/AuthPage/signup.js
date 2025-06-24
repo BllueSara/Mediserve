@@ -27,8 +27,6 @@ signInButton.addEventListener('click', () => {
 
 
 
-
-
 // Toggle dropdown visibility
 function toggleDropdown(trigger) {
     const dropdownContent = trigger.nextElementSibling;
@@ -46,44 +44,76 @@ function filterDropdown(input) {
     });
 }
 
+// متغير لتخزين بيانات الأقسام
+let departmentsData = [];
 
-// Load departments into custom searchable dropdown
 function loadDepartmentsDropdown() {
     fetch("http://localhost:4000/Departments")
         .then((response) => response.json())
         .then((data) => {
-            const sectionOptions = document.getElementById("section-options");
-
-            data.forEach((dep) => {
-                const optionDiv = document.createElement("div");
-                optionDiv.classList.add("dropdown-option");
-                optionDiv.textContent = dep.name;
-                optionDiv.onclick = () => {
-                    document.getElementById("selected-section").textContent = dep.name;
-                    document.getElementById("section").value = dep.name;
-                    sectionOptions.parentElement.style.display = "none";
-                };
-                sectionOptions.appendChild(optionDiv);
-            });
+            departmentsData = data; // خزّن البيانات لاستخدامها عند تغيير اللغة
+            renderDepartmentsDropdown();
         })
         .catch((err) => {
             console.error("Error loading departments:", err);
         });
 }
 
+function renderDepartmentsDropdown() {
+    const sectionOptions = document.getElementById("section-options");
+    sectionOptions.innerHTML = "";
+    // استخدم اللغة الحالية من العنصر <html lang="...">
+    const lang = document.documentElement.lang || 'en';
+    departmentsData.forEach((dep) => {
+        // قسم الاسم بناءً على وجود |
+        let nameEn = dep.name, nameAr = dep.name;
+        if (dep.name.includes("|")) {
+            const parts = dep.name.split("|");
+            nameEn = parts[0].trim();
+            nameAr = parts[1].trim();
+        }
+        const optionDiv = document.createElement("div");
+        optionDiv.classList.add("dropdown-option");
+        optionDiv.textContent = lang === "ar" ? nameAr : nameEn;
+        optionDiv.onclick = () => {
+            document.getElementById("selected-section").textContent = lang === "ar" ? nameAr : nameEn;
+            document.getElementById("section").value = nameAr + "|" + nameEn;
+            sectionOptions.parentElement.style.display = "none";
+        };
+        sectionOptions.appendChild(optionDiv);
+    });
+}
+
+// عند تحميل الصفحة
 window.addEventListener("DOMContentLoaded", () => {
     loadDepartmentsDropdown();
+    
 });
 
-
-
+// دعم إعادة تحميل القائمة عند تغيير اللغة
+if (window.switchLanguage) {
+    const oldSwitch = window.switchLanguage;
+    window.switchLanguage = function() {
+        oldSwitch();
+        renderDepartmentsDropdown();
+    };
+} else {
+    // إذا لم تكن موجودة، راقب تغيير lang
+    const observer = new MutationObserver(() => {
+        renderDepartmentsDropdown();
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+}
+console.log(translations);
+console.log(translations.en.usernameEn, translations.ar.usernameEn);
 // Handle signup form submission
 // Handle signup form submission
 document.getElementById("signupForm").addEventListener("submit", function (event) {
     event.preventDefault(); // Prevent default form submission
 
     // Gather input values
-    const name = document.getElementById("signupUsername").value.trim();
+    const nameEn = document.getElementById("signupUsernameEn").value.trim();
+    const nameAr = document.getElementById("signupUsernameAr").value.trim();
     const email = document.getElementById("signupEmail").value.trim();
     const password = document.getElementById("signupPassword").value.trim();
     const phone = document.getElementById("signupPhone").value.trim();
@@ -91,10 +121,12 @@ document.getElementById("signupForm").addEventListener("submit", function (event
     const employee_id = document.getElementById("employeeID").value.trim();
     const errorMessage = document.getElementById("signupError");
 
-    const isAdmin = name.toLowerCase() === "admin";
+    // الاسم الكامل بصيغة انجليزي|عربي
+    const name = nameEn + '|' + nameAr;
+    const isAdmin = nameEn.toLowerCase() === "admin" || nameAr === "مشرف";
 
     // ✅ Validation
-    if (!name || !email || !password || (!isAdmin && (!phone || !department || !employee_id))) {
+    if (!nameEn || !nameAr || !email || !password || (!isAdmin && (!phone || !department || !employee_id))) {
         errorMessage.textContent = "All fields are required!";
         return;
     }
@@ -117,7 +149,7 @@ document.getElementById("signupForm").addEventListener("submit", function (event
 
     // ✅ Construct payload dynamically
     const payload = {
-        name,
+        name, // ← الاسم بصيغة انجليزي|عربي
         email,
         password
     };
@@ -159,39 +191,75 @@ document.getElementById("signupForm").addEventListener("submit", function (event
 
 
 
-
 document.getElementById("loginForm").addEventListener("submit", function (event) {
     event.preventDefault();
 
-    const email = document.getElementById("loginEmail").value.trim();
+    const emailInput = document.getElementById("loginEmail").value.trim();
     const password = document.getElementById("loginPassword").value.trim();
     const errorMessage = document.getElementById("loginError");
 
-    if (!email || !password) {
+    if (!emailInput || !password) {
         errorMessage.textContent = "Both email and password are required.";
         return;
     }
 
+    // المحاولة الأولى: جرب مباشرة كما هو
     fetch("http://localhost:4000/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email: emailInput, password })
     })
         .then(res => res.json())
         .then(data => {
             if (data.token) {
                 localStorage.setItem("token", data.token);
-                localStorage.setItem("userRole", data.role); 
+                localStorage.setItem("userRole", data.role);
                 localStorage.setItem("userName", data.user.name);
                 localStorage.setItem("userEmail", data.user.email);
-                localStorage.setItem("userId", data.user.id); // ⬅️ مهم جداً
-
-
-
+                localStorage.setItem("userId", data.user.id);
                 window.location.href = "/Home/Home.html";
-
             } else {
-                errorMessage.textContent = data.message || "Login failed.";
+                // إذا فشل، جرب البحث عن الاسم الكامل
+                fetch("http://localhost:4000/users")
+                    .then(res => res.json())
+                    .then(users => {
+                        const found = users.find(u => {
+                            if (!u.name) return false;
+                            const [en, ar] = u.name.split("|").map(s => s.trim());
+                            return emailInput === en || emailInput === ar;
+                        });
+                        if (!found) {
+                            errorMessage.textContent = data.message || "Login failed.";
+                            return;
+                        }
+                        // جرب تسجيل الدخول بالاسم الكامل
+                        fetch("http://localhost:4000/login", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ email: found.name, password })
+                        })
+                            .then(res => res.json())
+                            .then(data2 => {
+                                if (data2.token) {
+                                    localStorage.setItem("token", data2.token);
+                                    localStorage.setItem("userRole", data2.role);
+                                    localStorage.setItem("userName", data2.user.name);
+                                    localStorage.setItem("userEmail", data2.user.email);
+                                    localStorage.setItem("userId", data2.user.id);
+                                    window.location.href = "/Home/Home.html";
+                                } else {
+                                    errorMessage.textContent = data2.message || "Login failed.";
+                                }
+                            })
+                            .catch(err => {
+                                console.error("Login error:", err);
+                                errorMessage.textContent = "Server error. Please try again later.";
+                            });
+                    })
+                    .catch(err => {
+                        console.error("User fetch error:", err);
+                        errorMessage.textContent = "Server error. Please try again later.";
+                    });
             }
         })
         .catch(err => {

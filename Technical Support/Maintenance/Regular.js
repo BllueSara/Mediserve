@@ -1,3 +1,4 @@
+// regular
 const deviceTypeSelect = document.getElementById("device-type");
 const deviceSpecSelect = document.getElementById("device-spec");
 const popup = document.getElementById("popup-modal");
@@ -880,15 +881,25 @@ console.log("currentLang:", currentLang);
     },
 
 onSelectOption: (localizedValue, fullItem) => {
+  // fullItem.fullName = "dwq|دوق" (ما خزّنناه من قاعدة البيانات)
+  // لن نفصلها هنا (نحتفظ بها كاملة)، لأننا نريد إرسالها كلّها لاحقًا.
+
   // نحفظ الـ fullName كاملًا في sessionStorage
   sessionStorage.setItem("department-full", fullItem.fullName);
 
   // بعد ذلك نبيّن الجزء المختار ظاهريًا للمستخدم:
   document.getElementById(`selected-section`).textContent = localizedValue;
 
-  // نخزّن في الحقل المخفي #section القيمة الكاملة fullName
+  // إذا كنت تريد إضافيًّا الحقل المخفي للقيمة المنظّفة:
+  // (مثلاً للبحث في API حالياً)
+  const parts = fullItem.fullName.split("|");
+  const enPart = parts[0].trim().replace(/\s*\[en\]$/i, "").trim();
+  const arPart = (parts[1] || "").trim().replace(/\s*\[ar\]$/i, "").trim();
+
+  // نخزّن في الحقل المخفي #section القسم المنظَّف (عربي أو إنجليزي) لطلبات fetch
   const hiddenSection = document.getElementById("section");
-  hiddenSection.value = fullItem.fullName;
+  hiddenSection.value = arPart; 
+  // أو: hiddenSection.value = (languageManager.currentLang === "ar" ? arPart : enPart);
 
   // وأخيرًا نستدعي جلب مواصفات الجهاز
   fetchDeviceSpecsByTypeAndDepartment();
@@ -1521,59 +1532,57 @@ function fetchTechnicalStatus(callback) {
     displayId: "selected-technical-status",
     inputId: "technical-status",
     labelKey: "technical",
-    itemKey: (item) => ({ id: item.id, name: item.Engineer_Name || item.name || "N/A" }),
+    itemKey: (item) => ({ id: item.id, name: item.Engineer_Name || item.name || "N/A", fullName: item.Engineer_Name || item.name || "N/A" }),
     storageKey: "technical-status",
-
-    // ✅ فلترة حسب اللغة
-    // transformData: (items) => {
-    //   const currentLang = languageManager.currentLang;
-
-    //   return items
-    //     .filter(item => {
-    //       const rawName = item.Engineer_Name || item.name || "";
-    //       const isArabic = rawName.trim().endsWith("[ar]");
-    //       const isEnglish = rawName.trim().endsWith("[en]");
-    //       const isUnlabeled = !isArabic && !isEnglish;
-
-    //       // ✅ عرض بناءً على اللغة الحالية
-    //       if (currentLang === "ar") return isArabic || isUnlabeled;
-    //       return isEnglish || isUnlabeled;
-    //     })
-    //     .map(item => {
-    //       const rawName = item.Engineer_Name || item.name || "";
-    //       const cleanedName = rawName.replace(/\s*\[(ar|en)\]$/i, ""); // إزالة الوسم من العرض
-
-    //       return {
-    //         ...item,
-    //         name: cleanedName
-    //       };
-    //     });
-    // },
-transformData: (items) => {
-  return items.map(item => {
-    const rawName = item.Engineer_Name || item.name || "";
-    const cleanedName = rawName.replace(/\s*\[(ar|en)\]$/i, ""); // 🧼 إزالة الوسم فقط من العرض
-
-    return {
-      ...item,
-      name: cleanedName
-    };
-  });
-},
-
-
-
-
+    transformData: (items) => {
+      const currentLang = languageManager.currentLang;
+      return items.map(item => {
+        const raw = item.Engineer_Name || item.name || "";
+        const parts = raw.split("|");
+        const enPart = parts[0]?.trim() || "";
+        const arPart = parts[1]?.trim() || "";
+        let displayName = currentLang === "ar" ? arPart : enPart;
+        if (!displayName) displayName = enPart || arPart;
+        return {
+          ...item,
+          name: displayName,
+          fullName: raw
+        };
+      });
+    },
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "technical-status");
       openAddTechnicalPopup();
     },
-    onEditOption: (oldVal) => {
-      const newVal = prompt("Edit Technical:", oldVal);
-      if (newVal && newVal.trim() !== oldVal) {
-        editOption("technical-status", oldVal, newVal);
+onEditOption: (oldVal) => {
+  fetch("http://localhost:5050/Technical")
+    .then(res => res.json())
+    .then(items => {
+      const found = items.find(item => {
+        const raw = item.Engineer_Name || item.name || "";
+        const parts = raw.split("|").map(p => p.trim());
+        const en = parts[0] || "";
+        const ar = parts[1] || "";
+        const currentLang = languageManager.currentLang;
+        const display = currentLang === "ar" ? (ar || en) : en;
+        return display === oldVal;
+      });
+      const fullName = found ? (found.Engineer_Name || found.name || oldVal) : oldVal;
+      let newVal = prompt("Edit Technical (English|عربي):", fullName);
+      if (newVal) {
+        // نظف أي وسم لغة من النهاية
+        newVal = newVal.replace(/\s*\[(ar|en)\]$/i, "").trim();
+        // تأكد أن فيه |
+        if (!newVal.includes("|")) {
+          alert("❌ الرجاء إدخال الاسم بصيغة: English Name|Arabic Name");
+          return;
+        }
+        if (newVal !== fullName) {
+          editOption("technical-status", fullName, newVal);
+        }
       }
-    },
+    });
+},
     onDeleteOption: (val) => {
       if (confirm(`Delete "${val}"?`)) {
         deleteOption("technical-status", val);
@@ -1581,7 +1590,6 @@ transformData: (items) => {
     },
     onSelectOption: () => { },
   });
-
   if (typeof callback === "function") callback();
 }
 
@@ -1594,8 +1602,8 @@ function openAddTechnicalPopup() {
   popup.innerHTML = `
     <div class="popup-content">
       <h3>${t['add_new']} ${t['technical']}</h3>
-      <label for="new-technical-name">${t['technical_name']}:</label>
-      <input type="text" id="new-technical-name" placeholder="${t['enter']} ${t['technical_name'].toLowerCase()}..." />
+      <label for="new-technical-name">${t['technical_name']} (English|Arabic):</label>
+      <input type="text" id="new-technical-name" placeholder="e.g. Ahmed|أحمد" />
       <div class="popup-buttons">
         <button type="button" onclick="saveNewTechnical()">${t['save']}</button>
         <button type="button" onclick="closeGenericPopup()">${t['cancel']}</button>
@@ -1608,14 +1616,10 @@ function openAddTechnicalPopup() {
 function saveNewTechnical() {
   const t = languageManager.translations[languageManager.currentLang];
   const rawName = document.getElementById("new-technical-name").value.trim();
-  if (!rawName) {
-    alert(`${t['please_enter_valid_value']}`);
+  if (!rawName || !rawName.includes("|")) {
+    alert("❌ الرجاء إدخال اسم المهندس بصيغة 'English|Arabic'");
     return;
   }
-
-  // 1) استخراج وسم اللغة [ar]/[en]
-  const langTag = detectLangTag(rawName);
-  const nameWithTag = `${rawName} [${langTag}]`; // مثال: "أحمد محمد [ar]"
 
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
@@ -1625,7 +1629,7 @@ function saveNewTechnical() {
     },
     body: JSON.stringify({
       target: "technical",
-      value: nameWithTag
+      value: rawName
     })
   })
     .then(res => {
@@ -1636,34 +1640,21 @@ function saveNewTechnical() {
       if (result.error) {
         alert(result.error);
       } else {
-        // 2) خزني الاسم المنظف (بدون [ar]/[en]) في sessionStorage
-        const cleanedName = rawName;
-        sessionStorage.setItem("technical-status", cleanedName);
-
-        // 3) أعد رسم قائمة المهندسين ثم انتظر 100ms قبل قراءة dataset.id
+        // بعد الإضافة، أعد تحميل قائمة المهندسين وحدد الجديد تلقائياً
         fetchTechnicalStatus(() => {
           setTimeout(() => {
             const techInput = document.getElementById("technical-status");
             const displaySpan = document.getElementById("selected-technical-status");
-
-            const chosenId = techInput?.dataset?.id;
-            const chosenName = techInput?.dataset?.name;
-
-            console.log("🐞 بعد انتهاء render وانتظار 100ms:");
-            console.log("Name:", chosenName);
-            console.log("ID:", chosenId);
-
-            // عيّن displaySpan و input.value إذا تريدين
-            if (displaySpan && chosenName) {
-              displaySpan.textContent = chosenName;
-            }
-            if (techInput && chosenId) {
-              techInput.value = chosenId;
-            }
-          }, 100);
+            // فلترة الاسم حسب اللغة
+            const parts = rawName.split("|").map(s => s.trim());
+            const en = parts[0] || "";
+            const ar = parts[1] || "";
+            const lang = languageManager.currentLang;
+            const displayName = lang === "ar" ? (ar || en) : en;
+            if (displaySpan) displaySpan.textContent = displayName;
+            if (techInput) techInput.value = rawName;
+          }, 200);
         });
-
-        // 4) أغلق نافذة إضافة المهندس
         closeGenericPopup();
       }
     })
@@ -2741,7 +2732,7 @@ async function editOption(selectId, updatedDevice, newValue = null, type = null)
     const target = mapSelectIdToServerTarget(selectId);
     let valueToSend;
 
-    if (selectId === "section") {
+if (selectId === "section" || selectId === "technical-status") {
       // إذا القسم، لا نضيف أي تاج لغة، نأخذ newValue كما هو
       valueToSend = newValue.trim();
     } else {
