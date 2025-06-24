@@ -1,4 +1,3 @@
-//search report
 // ← 1) دالة لاستدعاء Google Translate عند غياب المفتاح في القاموس
 async function translateWithGoogle(text, targetLang, sourceLang = "en") {
   if (!text || !targetLang) return text;
@@ -89,7 +88,7 @@ async function translateTextBlock(text) {
 function normalizeKey(str) {
   return str
     .toLowerCase()
-    .replace(/[“”"']/g, "")       // يشيل علامات التنصيص الذكية
+    .replace(/[""]/g, "")       // يشيل علامات التنصيص الذكية
     .replace(/[^\w\s]/g, "")      // يشيل الرموز مثل () وغيرها
     .replace(/\s+/g, " ")         // يوحد الفراغات
     .trim();
@@ -110,6 +109,10 @@ async function loadReports(page = 1) {
       headers: { "Authorization": `Bearer ${token}` }
     });
     data = await res.json();
+    console.log('Fetched reports:', data);
+    if (data && data.length > 0) {
+      console.log('Sample device:', data[0]);
+    }
   } catch (err) {
     console.error("❌ Error fetching reports:", err);
     document.getElementById("report-list").innerHTML = `<p>${t('error_loading_reports')}</p>`;
@@ -135,7 +138,6 @@ const searchQuery      = document.getElementById("search-input").value.trim().to
 const dateFrom         = document.getElementById("filter-date-from").value;
 const dateTo           = document.getElementById("filter-date-to").value;
 
-// 2.2) طبّق الفلاتر على data
 // 2.2) طبّق الفلاتر على data
 const filtered = data.filter(report => {
   // —— 1) فلترة حسب النوع:
@@ -226,7 +228,7 @@ const paginated = filtered.slice(startIndex, startIndex + reportsPerPage);
     const card = document.createElement("div");
     card.className = "report-card";
 
-    // ——— إذا كان تقرير جديد “New”
+    // ——— إذا كان تقرير جديد "New"
     if (isNewReport) {
       card.innerHTML = `
         <div class="report-card-header">
@@ -272,6 +274,10 @@ switch (report.maintenance_type) {
   case "Internal":
     baseLabelKey = 'internal_ticket';        // "تذكرة داخلية"
     iconSrc      = "/icon/ticket.png";
+    break;
+  case "External":
+    baseLabelKey = 'external_maintenance';   // "صيانة خارجية"
+    iconSrc      = "/icon/maintenance.png";
     break;
   default:
     baseLabelKey = 'general_maintenance';    // "صيانة عامة"
@@ -344,7 +350,6 @@ if (isTicketOnly) {
         `;
       }
     }
-    
     else {
       // ترجمة Selected Issue و Initial Diagnosis باستخدام دالة translateTextBlock
       let issueTxt     = report.issue_summary || "";
@@ -355,6 +360,7 @@ if (isTicketOnly) {
 
       const translatedIssueList     = issueTxt ? await translateTextBlock(issueTxt) : "";
       const translatedDiagnosisList = diagnosisTxt 
+
 
       issueHtml = `
         <div class="report-issue-line" style="text-align:${isArabic ? "right" : "left"};">
@@ -543,9 +549,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const page = parseInt(urlParams.get('page')) || 1;
   loadReports(page);
 
-  document.querySelector(".new-report-btn")?.addEventListener("click", () => {
-    window.location.href = "Newreport.html";
-  });
+  // زر تحميل تقرير الاستبدال
+  const replacementBtn = document.getElementById('download-replacement-report');
+  if (replacementBtn) {
+    replacementBtn.addEventListener('click', downloadReplacementReport);
+  }
 
   document.querySelectorAll(".pagination .page-btn[data-page]").forEach(button => {
     button.addEventListener("click", () => {
@@ -606,7 +614,337 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     localStorage.removeItem("reportStatusFilter");
   }
+
+  // زر إضافة تقرير جديد
+  const newReportBtn = document.querySelector('.new-report-btn[data-i18n="new_report_btn"]');
+  if (newReportBtn) {
+    newReportBtn.addEventListener('click', () => {
+      window.location.href = "Newreport.html";
+    });
+  }
 });
 
 // مساعدة الترجمة العامة
 t = (key, fallback = '') => languageManager.translations[languageManager.currentLang]?.[key] || fallback || key;
+
+// ===================== دالة تحميل تقرير الأجهزة المطلوب استبدالها =====================
+
+// دالة لتحميل تقرير الأجهزة المطلوب استبدالها
+async function downloadReplacementReport() {
+  console.log('📥 Replacement report button clicked!');
+  const token = localStorage.getItem('token');
+  const button = document.getElementById('download-replacement-report');
+  const originalText = button.innerHTML;
+
+  try {
+    button.disabled = true;
+    button.innerHTML = `<span>Generating Report...</span>`;
+
+    // جرب التحميل عبر fetch + blob (إذا لم يعمل، استخدم نافذة جديدة)
+    const response = await fetch('http://localhost:4000/api/replacement-report', {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (!response.ok) {
+      showCenterNotification('❌ Error downloading report', 'error');
+      button.disabled = false;
+      button.innerHTML = originalText;
+      return;
+    }
+
+    // جرب التحميل كـ blob
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Devices_Replacement_Report.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    }, 100);
+    showCenterNotification('✅ Report generated and downloaded successfully!', 'success');
+  } catch (error) {
+    console.error('❌ Error downloading replacement report:', error);
+    // fallback: افتح الرابط في نافذة جديدة (قد لا يرسل التوكن)
+    window.open('http://localhost:5050/api/replacement-report', '_blank');
+    showCenterNotification('❌ Error downloading report (fallback to new tab)', 'error');
+  } finally {
+    button.disabled = false;
+    button.innerHTML = originalText;
+  }
+}
+
+
+// دالة حساب عمر الجهاز
+function calculateDeviceAge(installationDate) {
+  if (!installationDate) return 0;
+  const installDate = new Date(installationDate);
+  const currentDate = new Date();
+  const diffTime = Math.abs(currentDate - installDate);
+  const diffYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
+  return Math.floor(diffYears);
+}
+
+// دالة عد تقارير الصيانة للجهاز
+function countMaintenanceReports(deviceId, allReports) {
+  return allReports.filter(report => 
+    report.device_id === deviceId && 
+    (report.maintenance_type === 'Regular' || report.maintenance_type === 'Internal')
+  ).length;
+}
+
+// دالة فحص وجود مشاكل حرجة في تاريخ الجهاز
+function hasCriticalIssuesInHistory(deviceId, allReports, criticalIssues) {
+  const deviceReports = allReports.filter(report => report.device_id === deviceId);
+  return deviceReports.some(report => {
+    const description = (report.full_description || '').toLowerCase();
+    const issueSummary = (report.issue_summary || '').toLowerCase();
+    return criticalIssues.some(issue => 
+      description.includes(issue) || issueSummary.includes(issue)
+    );
+  });
+}
+
+// دالة فحص وجود كلمات مفتاحية في الحالة تشير إلى الحاجة للاستبدال
+function hasReplacementKeywordsInStatus(report, keywords) {
+  const status = (report.status || '').toLowerCase();
+  const description = (report.full_description || '').toLowerCase();
+  return keywords.some(keyword => 
+    status.includes(keyword) || description.includes(keyword)
+  );
+}
+
+// دالة إنشاء تقرير الاستبدال
+async function generateReplacementReport() {
+  const token = localStorage.getItem('token');
+  const response = await fetch('http://localhost:5050/api/all-device-specs', {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+
+  if (!response.ok) {
+    alert('❌ فشل في جلب البيانات');
+    return;
+  }
+
+  const allDevices = await response.json();
+
+  const filteredDevices = allDevices.filter(device => {
+    const gen = parseInt(device.Generation?.replace(/\D/g, '')) || 0;
+    const ram = parseInt(device.RAM_Size?.replace(/\D/g, '')) || 0;
+    const os = (device.OS || '').toLowerCase();
+
+    const isOldGeneration = gen < 8;
+    const isLowRAM = ram < 4;
+    const isOldWindows = os.includes('windows') && !os.includes('10') && !os.includes('11');
+
+    return isOldGeneration || isLowRAM || isOldWindows;
+  });
+
+  if (filteredDevices.length === 0) {
+    alert('✅ لا توجد أجهزة تنطبق عليها شروط الإحلال.');
+    return;
+  }
+
+  const csvRows = [
+    'Device Name,Serial Number,Gov Number,Type,Model,Department,Generation,RAM,OS',
+    ...filteredDevices.map(d => [
+      d.name, d.Serial_Number, d.Governmental_Number, d.Device_Type, d.Model,
+      d.Department, d.Generation, d.RAM_Size, d.OS
+    ].map(value => `"${value || ''}"`).join(','))
+  ];
+
+  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Devices_Replacement_Report.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+
+// دالة تحديد سبب الحاجة للاستبدال
+function getReplacementReason(device, criteria) {
+  const deviceAge = calculateDeviceAge(device.device_installation_date || device.created_at);
+  const maintenanceCount = countMaintenanceReports(device.device_id, [device]);
+  
+  if (deviceAge >= criteria.ageThreshold) {
+    return `Device age (${deviceAge} years) exceeds threshold (${criteria.ageThreshold} years)`;
+  }
+  if (maintenanceCount >= criteria.maintenanceFrequency) {
+    return `Maintenance count (${maintenanceCount}) exceeds threshold (${criteria.maintenanceFrequency})`;
+  }
+  if (device.status?.toLowerCase().includes('replacement needed')) {
+    return 'Replacement needed as identified by technician';
+  }
+  return 'Recurring technical issues';
+}
+
+// دالة تحديد مستوى الأولوية
+function getPriorityLevel(device, criteria) {
+  const deviceAge = calculateDeviceAge(device.device_installation_date || device.created_at);
+  const maintenanceCount = countMaintenanceReports(device.device_id, [device]);
+  
+  if (deviceAge >= criteria.ageThreshold + 2 || maintenanceCount >= criteria.maintenanceFrequency + 2) {
+    return 'Very High';
+  }
+  if (deviceAge >= criteria.ageThreshold || maintenanceCount >= criteria.maintenanceFrequency) {
+    return 'High';
+  }
+  return 'Medium';
+}
+
+// دالة تحميل التقرير كملف CSV
+function downloadReportAsCSV(reportData, filename) {
+  console.log('downloadReportAsCSV called with:', reportData, filename);
+  if (reportData.length === 0) {
+    showCenterNotification('No devices require replacement', 'info');
+    return;
+  }
+  // تحويل البيانات إلى ورقة عمل Excel
+  const ws = XLSX.utils.json_to_sheet(reportData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Replacement Report');
+  // توليد ملف Excel وتحميله
+  XLSX.writeFile(wb, `${filename}.xlsx`);
+}
+
+// دالة إظهار الإشعارات في الوسط
+function showCenterNotification(message, type = 'info') {
+  // إنشاء عنصر الإشعار
+  const notification = document.createElement('div');
+  notification.className = `center-notification center-notification-${type}`;
+  notification.innerHTML = `
+    <div class="center-notification-content">
+      <span class="center-notification-message">${message}</span>
+      <button class="center-notification-close">&times;</button>
+    </div>
+  `;
+  
+  // إضافة الأنماط
+  notification.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
+    color: white;
+    padding: 20px 30px;
+    border-radius: 10px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    z-index: 10000;
+    max-width: 500px;
+    min-width: 300px;
+    text-align: center;
+    animation: fadeInScale 0.3s ease;
+  `;
+  
+  // إضافة الأنماط للعناصر الداخلية
+  const content = notification.querySelector('.center-notification-content');
+  content.style.cssText = `
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+  `;
+  
+  const messageSpan = notification.querySelector('.center-notification-message');
+  messageSpan.style.cssText = `
+    font-size: 16px;
+    font-weight: 500;
+    flex: 1;
+  `;
+  
+  const closeBtn = notification.querySelector('.center-notification-close');
+  closeBtn.style.cssText = `
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    line-height: 1;
+  `;
+  
+  // إضافة أحداث
+  closeBtn.addEventListener('click', () => {
+    notification.remove();
+  });
+  
+  // إضافة الإشعار للصفحة
+  document.body.appendChild(notification);
+  
+  // إزالة الإشعار تلقائياً بعد 4 ثوان
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.remove();
+    }
+  }, 4000);
+}
+
+// إضافة CSS للرسوم المتحركة
+const centerNotificationStyles = `
+  @keyframes fadeInScale {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.8);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+`;
+
+const centerStyle = document.createElement('style');
+centerStyle.textContent = centerNotificationStyles;
+document.head.appendChild(centerStyle);
+
+// إضافة مستمع الحدث للزر عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', () => {
+  const downloadButton = document.getElementById('download-replacement-report');
+  if (downloadButton) {
+    downloadButton.addEventListener('click', downloadReplacementReport);
+  }
+});
+
+// عدل دالة الفلترة لتعيد true دائمًا (عرض كل الأجهزة)
+function deviceNeedsReplacement(device) {
+  return true;
+}
+
+function getWindowsRequirementText(device) {
+  const ram = parseInt(device.ram_size) || 0;
+  const gen = parseInt(device.generation_number) || 0;
+  const os = (device.os_name || '').toLowerCase();
+  let winVersion = 0;
+  if (os.includes('windows')) {
+    const match = os.match(/windows\s*(\d+)/);
+    if (match && match[1]) {
+      winVersion = parseInt(match[1]);
+    }
+  }
+  let reqs = [];
+  if (ram < 4) reqs.push('RAM must be > 4GB');
+  if (gen < 8) reqs.push('Processor generation must be >= 8');
+  if (winVersion && winVersion < 10) reqs.push('Windows version must be >= 10');
+  if (reqs.length === 0) return 'Meets all requirements';
+  return reqs.join('; ');
+}
+
+// دالة اختبار تحميل CSV يدويًا
+window.testDownload = function() {
+  const csvContent = "data:text/csv;charset=utf-8,ID,Name\n1,Test\n2,Another";
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", "test_file.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  console.log('Manual test download triggered');
+};
