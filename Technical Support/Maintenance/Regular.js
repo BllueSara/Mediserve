@@ -2140,13 +2140,40 @@ async function setSelectedOption(inputId, value, attempts = 10) {
       // طباعة قيمة الأصلية
       console.log(`🔍 setSelectedOption: inputId = ${inputId}, original value = "${value}"`);
 
-      // إذا كانت القيمة فيها [ar] أو [en] اطبع تنبيه خاص
-      if (/\[(ar|en)\]$/i.test(value)) {
-        console.log(`⚠️ القيمة تحتوي على تاج لغة: "${value}"`);
+      // تنظيف القيمة من وسوم اللغة للعرض
+      let displayValue = value;
+      
+      // إزالة وسوم اللغة [ar] و [en]
+      displayValue = displayValue.replace(/\s*\[(ar|en)\]$/i, "").trim();
+      
+      // معالجة خاصة للأقسام (إذا كانت تحتوي على |)
+      if (inputId.includes("department") && displayValue.includes("|")) {
+        const parts = displayValue.split("|").map(s => s.trim());
+        const currentLang = languageManager.currentLang;
+        if (currentLang === "ar") {
+          displayValue = parts[1] || parts[0]; // الجزء العربي أو الإنجليزي كبديل
+        } else {
+          displayValue = parts[0]; // الجزء الإنجليزي
+        }
+      }
+      
+      // معالجة خاصة للموديلات والمعالجات والرام إلخ
+      if (inputId.includes("model") || inputId.includes("cpu") || inputId.includes("ram") || 
+          inputId.includes("drive") || inputId.includes("os") || inputId.includes("generation") ||
+          inputId.includes("printer-type") || inputId.includes("ink-type") || inputId.includes("scanner-type")) {
+        // إزالة وسوم اللغة من هذه الحقول أيضاً
+        displayValue = displayValue.replace(/\s*\[(ar|en)\]$/i, "").trim();
       }
 
+      // إذا كانت القيمة فيها [ar] أو [en] اطبع تنبيه خاص
+      if (/\[(ar|en)\]$/i.test(value)) {
+        console.log(`⚠️ القيمة تحتوي على تاج لغة: "${value}" -> تم تنظيفها إلى: "${displayValue}"`);
+      }
+
+      // حفظ القيمة الأصلية في الحقل المخفي
       input.value = value;
-      span.textContent = value;
+      // عرض القيمة المنظفة في العنصر الظاهر
+      span.textContent = displayValue;
       return;
     } 
 
