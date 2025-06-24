@@ -1181,7 +1181,7 @@ app.get('/api/replacement-report', authenticateToken, async (req, res) => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Replacement Report');
 
-    const filePath = path.join(__dirname, 'reports', 'Replacement_Report.xlsx');
+const filePath = path.join(__dirname, 'Replacement_Report.xlsx');
     XLSX.writeFile(workbook, filePath);
 
     res.download(filePath, 'Devices_Replacement_Report.xlsx', err => {
