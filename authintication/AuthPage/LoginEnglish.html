@@ -53,7 +53,19 @@
         <h1 class="align-left" data-translate="createAccount">Create Account</h1> <!-- Main title -->
         <h2 class="align-left" data-translate="enterInfo">Please enter your information</h2> <!-- Subtitle -->
         <br />
-        <input type="text" id="signupUsername" data-translate-placeholder="username" placeholder="Username" /> <!-- Username input -->
+<input
+  type="text"
+  id="signupUsernameEn"
+  data-translate-placeholder="usernameEn"
+  placeholder="Username (English)"
+  required
+/>       <input
+  type="text"
+  id="signupUsernameAr"
+  data-translate-placeholder="usernameAr"
+  placeholder="اسم المستخدم (عربي)"
+  required
+/> <!-- Username Arabic input -->
         <input type="text" id="employeeID" data-translate-placeholder="employeeID" placeholder="Employee ID" /> <!-- Employee ID input -->
         <input type="text" id="signupPhone" data-translate-placeholder="phonePlaceholder" placeholder="Phone Number" />
 
@@ -142,6 +154,7 @@
 
     // Initialize with English font
     document.body.className = 'font-english';
+
   </script>
 
 </body>

@@ -22,7 +22,10 @@ const translations = {
         loginTitle: "Login",
         loginSubtitle: "If you already have an account",
         signupTitle: "Create Account",
-        signupSubtitle: "If you're new here, create an account"
+        signupSubtitle: "If you're new here, create an account",
+          usernameEn: "Username (English)",
+    usernameAr: "Username (Arabic)",
+
     },
     ar: {
         welcome: "مرحباً",
@@ -47,6 +50,8 @@ employeeID: "الرقم الوظيفي",
         loginTitle: "تسجيل الدخول",
         loginSubtitle: "إذا كان لديك حساب بالفعل",
         signupTitle: "إنشاء حساب",
-        signupSubtitle: "إذا كنت جديداً هنا، قم بإنشاء حساب"
+        signupSubtitle: "إذا كنت جديداً هنا، قم بإنشاء حساب",
+    usernameEn: "اسم المستخدم بالإنجليزي",
+    usernameAr: "اسم المستخدم بالعربي",
     }
 }; 

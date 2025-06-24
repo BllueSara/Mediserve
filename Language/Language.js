@@ -38,6 +38,8 @@ const languageManager = {
 
 
 
+
+
             // Home Page
             'enterprise_solutions': 'Enterprise Technology Solutions',
             'comprehensive_services': 'Comprehensive technical services for modern businesses, empowering your digital transformation with cutting-edge solutions.',
@@ -614,6 +616,9 @@ const languageManager = {
             'search_scanner_type': "Search scanner type...",
             'search_department': "Search department...",
             'search_model': "Search model...",
+            'usernameEn' : "Username (English)",
+            'usernameAr' : "Username (Arabic)",
+
 
             // Error Messages
             'please_select_valid_option': "Please select a valid option",
@@ -817,6 +822,7 @@ const languageManager = {
             'password_update_failed': "فشل في تحديث كلمة المرور",
             'change_role': "تغيير الصلاحيات",
             // Navigation
+
             'home': 'الرئيسية',
             'profile': 'الملف الشخصي',
             'notifications': 'الإشعارات',
@@ -1417,6 +1423,8 @@ const languageManager = {
             'search_scanner_type': "ابحث عن نوع ماسح...",
             'search_department': "ابحث عن قسم...",
             'search_model': "ابحث عن موديل...",
+            'usernameEn': "اسم المستخدم (انجليزي)",
+            'usernameAr': "اسم المستخدم (عربي)",
 
             // Error Messages
             'please_select_valid_option': "الرجاء اختيار خيار صحيح",
@@ -1495,6 +1503,7 @@ const languageManager = {
             'edit_model': "تعديل موديل",
             'add_section': "إضافة قسم",
             'edit_section': "تعديل قسم",
+
             'for': "For",
 
             // Saved Devices Page

@@ -62,11 +62,12 @@ function authenticateToken(req, res, next) {
   });
 }
 
+
 // تسجيل المستخدم الجديد
 app.post('/register', async (req, res) => {
   const { name, email, password, phone, department, employee_id } = req.body;
 
-  const isAdmin = name?.toLowerCase() === 'admin';
+  const isAdmin = name?.toLowerCase() === 'admin|مشرف';
   const isEngineer = department?.toLowerCase().includes('technology') || department?.includes('تقنية');
 
   if (!name || !email || !password || (!isAdmin && !employee_id)) {
@@ -75,7 +76,10 @@ app.post('/register', async (req, res) => {
 
   if (isAdmin) {
     db.query(`SELECT * FROM users WHERE role = 'admin'`, (err, checkAdmin) => {
-      if (err) return res.status(500).json({ message: 'Database error' });
+if (err) {
+  console.error('💥 Register DB error:', err);
+  return res.status(500).json({ message: err.message });
+}
       if (checkAdmin.length > 0) {
         return res.status(400).json({ message: 'Admin already exists' });
       }
@@ -194,6 +198,15 @@ app.post('/register', async (req, res) => {
   }
 });
 
+app.get('/users', (req, res) => {
+    db.query('SELECT id, name, email, employee_id FROM users', (err, results) => {
+        if (err) {
+            console.error('Error fetching users:', err);
+            return res.status(500).json({ error: 'Database error' });
+        }
+        res.json(results);
+    });
+});
 
 app.get('/me/status', authenticateToken, (req, res) => {
   const userId = req.user.id;

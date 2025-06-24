@@ -1383,68 +1383,62 @@ function fetchTechnicalStatus(callback) {
     displayId: "selected-technical-status",
     inputId: "technical-status",
     labelKey: "technical",
-    itemKey: (item) => item.name || "N/A",
+    itemKey: (item) => {
+      // نعرض الجزء المناسب حسب اللغة
+      const raw = item.Engineer_Name || item.name || "";
+      const parts = raw.split("|").map(p => p.trim());
+      const en = parts[0] || "";
+      const ar = parts[1] || "";
+      return languageManager.currentLang === "ar" ? (ar || en) : en;
+    },
     storageKey: "technical",
-
-    //  // ✅ فلترة حسب اللغة
-    // transformData: (items) => {
-    //   const currentLang = languageManager.currentLang;
-
-    //   return items
-    //     .filter(item => {
-    //       const rawName = item.Engineer_Name || item.name || "";
-    //       const isArabic = rawName.trim().endsWith("[ar]");
-    //       const isEnglish = rawName.trim().endsWith("[en]");
-    //       const isUnlabeled = !isArabic && !isEnglish;
-
-    //       // ✅ عرض بناءً على اللغة الحالية
-    //       if (currentLang === "ar") return isArabic || isUnlabeled;
-    //       return isEnglish || isUnlabeled;
-    //     })
-    //     .map(item => {
-    //       const rawName = item.Engineer_Name || item.name || "";
-    //       const cleanedName = rawName.replace(/\s*\[(ar|en)\]$/i, ""); // إزالة الوسم من العرض
-
-    //       return {
-    //         ...item,
-    //         name: cleanedName
-    //       };
-    //     });
-    // },
-transformData: (items) => {
-  return items.map(item => {
-    const rawName = item.Engineer_Name || item.name || "";
-    const cleanedName = rawName.replace(/\s*\[(ar|en)\]$/i, ""); // 🧼 إزالة الوسم فقط من العرض
-
-    return {
-      ...item,
-      name: cleanedName
-    };
-  });
-},
-
-
+    transformData: (items) => {
+      window.lastTechnicalOptions = items; // ← حفظ القائمة كاملة
+      const currentLang = languageManager.currentLang;
+      return items.map(item => {
+        const raw = item.Engineer_Name || item.name || "";
+        const parts = raw.split("|").map(p => p.trim());
+        const en = parts[0] || "";
+        const ar = parts[1] || "";
+        return {
+          ...item,
+          name: currentLang === "ar" ? (ar || en) : en,
+          fullName: raw
+        };
+      });
+    },
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "technical-status");
       openAddTechnicalPopup();
     },
-
     onEditOption: (oldVal) => {
-      const newVal = prompt("Edit Technical:", oldVal);
-      if (newVal && newVal.trim() !== oldVal) {
-        editOption("technical-status", oldVal, newVal);
-      }
+      // ابحث عن العنصر الأصلي (fullName)
+      fetch("http://localhost:5050/Technical")
+        .then(res => res.json())
+        .then(items => {
+          const found = items.find(item => {
+            const raw = item.Engineer_Name || item.name || "";
+            const parts = raw.split("|").map(p => p.trim());
+            const en = parts[0] || "";
+            const ar = parts[1] || "";
+            const currentLang = languageManager.currentLang;
+            const display = currentLang === "ar" ? (ar || en) : en;
+            return display === oldVal;
+          });
+          const fullName = found ? (found.Engineer_Name || found.name || oldVal) : oldVal;
+          const newVal = prompt("Edit Technical (English|عربي):", fullName);
+          if (newVal && newVal !== fullName) {
+            editOption("technical-status", fullName, newVal);
+          }
+        });
     },
-
     onDeleteOption: (val) => {
       if (confirm(`Delete "${val}"?`)) {
         deleteOption("technical-status", val);
       }
     },
-
     onSelectOption: () => {},
   });
-
   if (typeof callback === "function") callback();
 }
 
@@ -1458,8 +1452,8 @@ function openAddTechnicalPopup() {
   popup.innerHTML = `
     <div class="popup-contentt">
       <h3>${t['add_new']} ${t['technical']}</h3>
-      <label for="new-technical-name">${t['technical_name']}:</label>
-      <input type="text" id="new-technical-name" placeholder="${t['enter']} ${t['technical_name'].toLowerCase()}..." />
+      <label for="new-technical-name">${t['technical_name']} (English|Arabic):</label>
+      <input type="text" id="new-technical-name" placeholder="English|عربي" />
       <div class="popup-buttons">
         <button type="button" onclick="saveNewTechnical()">${t['save']}</button>
         <button type="button" onclick="closeGenericPopup()">${t['cancel']}</button>
@@ -1471,12 +1465,10 @@ function openAddTechnicalPopup() {
 function saveNewTechnical() {
   const t = languageManager.translations[languageManager.currentLang];
   const name = document.getElementById("new-technical-name").value.trim();
-  if (!name) {
-    alert(`${t['please_enter_valid_value']}`);
+  if (!name || !name.includes("|")) {
+    alert("❌ الرجاء إدخال اسم المهندس بصيغة 'English|عربي'");
     return;
   }
-  const langTag = detectLangTag(name); // 👈 استخرج اللغة
-  const nameWithTag = `${name} [${langTag}]`; // 👈 أضف الوسم
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
     headers: {
@@ -1485,7 +1477,7 @@ function saveNewTechnical() {
     },
     body: JSON.stringify({
       target: "technical",
-      value: nameWithTag
+      value: name
     })
   })
     .then(res => res.status === 204 ? {} : res.json())
@@ -1493,11 +1485,16 @@ function saveNewTechnical() {
       if (result.error) {
         alert(result.error);
       } else {
+        // ✅ بعد الإضافة، أظهر الجزء المناسب حسب اللغة
+        const parts = name.split("|").map(p => p.trim());
+        const en = parts[0] || "";
+        const ar = parts[1] || "";
+        const displayName = languageManager.currentLang === "ar" ? (ar || en) : en;
         fetchTechnicalStatus(() => {
           const displaySpan = document.getElementById("selected-technical-status");
           const hiddenInput = document.getElementById("technical-status");
-          displaySpan.textContent = name;
-          hiddenInput.value = name;
+          displaySpan.textContent = displayName;
+          hiddenInput.value = displayName;
         });
         closeGenericPopup();
       }
@@ -2415,7 +2412,7 @@ async function editOption(selectId, updatedDevice, newValue = null, type = null)
     const target = mapSelectIdToServerTarget(selectId);
     let valueToSend;
 
-    if (selectId === "section") {
+if (selectId === "section" || selectId === "technical-status") {
       // إذا القسم، لا نضيف أي تاج لغة، نأخذ newValue كما هو
       valueToSend = newValue.trim();
     } else {
@@ -3309,6 +3306,23 @@ const getRaw   = id  => (document.getElementById(id)?.value || "").trim();
 
   const techInput = document.getElementById("technical-status");
 
+  // اجلب الاسم الكامل للمهندس من قائمة الخيارات
+  let fullTechnical = "";
+  if (techInput) {
+    const selectedVal = techInput.value;
+    // ابحث في قائمة المهندسين عن الاسم الكامل
+    const options = window.lastTechnicalOptions || [];
+    const found = options.find(item => {
+      const raw = item.Engineer_Name || item.name || "";
+      const parts = raw.split("|").map(p => p.trim());
+      const en = parts[0] || "";
+      const ar = parts[1] || "";
+      const display = languageManager.currentLang === "ar" ? (ar || en) : en;
+      return display === selectedVal;
+    });
+    fullTechnical = found ? (found.Engineer_Name || found.name || selectedVal) : selectedVal;
+  }
+
   const data = {
     DeviceType: getValue("device-type"),
     DeviceID: getValue("device-spec"),
@@ -3321,7 +3335,7 @@ const getRaw   = id  => (document.getElementById(id)?.value || "").trim();
     CustomerName: getValueByName("CustomerName"),
     IDNumber: getValueByName("IDNumber"),
     Extension: getValueByName("ExtNumber"),
-    Technical: techInput?.dataset?.id || getValue("technical-status")
+    Technical: fullTechnical
   };
 
   const token = localStorage.getItem("token");
@@ -3658,17 +3672,16 @@ async function renderDropdownOptions({
   onEditOption,
   onDeleteOption,
   onSelectOption,
-      transformData // ← أضف هذا
-
+  transformData // ← أضف هذا
 }) {
   const permissions = await checkUserPermissions();
   const res = await fetch(endpoint);
-let data = await res.json();
+  let data = await res.json();
 
-// ✅ دعم التحويل (الترجمة)
-if (typeof transformData === "function") {
-  data = transformData(data);
-}
+  // ✅ دعم التحويل (الترجمة)
+  if (typeof transformData === "function") {
+    data = transformData(data);
+  }
   const container = document.getElementById(containerId);
   const display = document.getElementById(displayId);
   const input = document.getElementById(inputId);
@@ -3697,34 +3710,29 @@ if (typeof transformData === "function") {
 
   // ✅ العناصر
   data.forEach(item => {
-const value = typeof itemKey === 'function' ? itemKey(item) : item[itemKey];
-const displayText = typeof value === 'object' ? value.name : value;
-const actualValue = typeof value === 'object' ? value.name : value;
+    const value = typeof itemKey === 'function' ? itemKey(item) : item[itemKey];
+    const displayText = typeof value === 'object' ? value.name : value;
+    const actualValue = typeof value === 'object' ? value.name : value;
 
-const row = document.createElement("div");
-row.className = "dropdown-option-row";
+    const row = document.createElement("div");
+    row.className = "dropdown-option-row";
 
-const text = document.createElement("div");
-text.className = "dropdown-option-text";
-text.textContent = displayText;
+    const text = document.createElement("div");
+    text.className = "dropdown-option-text";
+    text.textContent = displayText;
 
-
-text.onclick = () => {
-  display.textContent = displayText;
-
-  // إذا كان العنصر خاص بـ technical-status → احفظ ID فقط
-
-    input.value = actualValue; // الاسم العادي
-
-
-  if (onSelectOption) onSelectOption(actualValue, item);
-
-  cleanDropdownError(input);
-  closeAllDropdowns();
-};
-
-
-
+    text.onclick = () => {
+      display.textContent = displayText;
+      // إذا كان العنصر خاص بـ technical-status → احفظ fullName
+      if (inputId === "technical-status" && item.fullName) {
+        input.value = item.fullName;
+      } else {
+        input.value = actualValue;
+      }
+      if (onSelectOption) onSelectOption(actualValue, item);
+      cleanDropdownError(input);
+      closeAllDropdowns();
+    };
 
     const icons = document.createElement("div");
     icons.className = "dropdown-actions-icons";

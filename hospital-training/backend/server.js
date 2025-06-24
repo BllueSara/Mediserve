@@ -3059,8 +3059,6 @@ if (userRole !== 'admin') {
   };
 
 
-
-
 app.post("/update-report-full", authenticateToken, upload.fields([
   { name: "attachment", maxCount: 1 },
   { name: "signature", maxCount: 1 }
@@ -3080,8 +3078,8 @@ app.post("/update-report-full", authenticateToken, upload.fields([
 let departmentId = null;
 
   let {
-    id,  ticket_number,      // ← هنا
- issue_summary, full_description, priority, status, device_type,
+    id,        // ← هنا
+ issue_summary,ticket_number, full_description, priority, status, device_type,
     assigned_to, department_name, category, source,
     device_id, device_name, serial_number, governmental_number,
     cpu_name, ram_type, ram_size, os_name, generation_number,
@@ -3256,26 +3254,34 @@ if(source === "external-legacy"){
   );}
 
 if (source === "external-new") {
-  console.log('external-new: updating ticket', { id, engName });
+  // جلب ticket_number إذا لم يكن موجودًا
+  let ticketNum = ticket_number;
+  if (!ticketNum) {
+    const [[row]] = await db.promise().query(
+      `SELECT report_number FROM Maintenance_Reports WHERE id = ?`,
+      [id]
+    );
+    ticketNum = row?.ticket_number;
+  }
+
+  console.log('external-new: updating ticket', { id, engName, ticketNum });
 
   try {
     const [result] = await db.promise().query(
       `UPDATE External_Tickets
        SET assigned_to = ?
        WHERE ticket_number = ?`,
-      [engName, ticket_number]
+      [engName, ticketNum]
     );
     console.log('external-new affectedRows =', result.affectedRows);
 
     if (result.affectedRows === 0) {
-      // ممكن تسجل خطأ أو ترسل رسبونس مختلف
-      console.warn(`No ticket found with id=${ticket_number} in External_Tickets.`);
+      console.warn(`No ticket found with ticket_number=${ticketNum} in External_Tickets.`);
     }
   } catch (err) {
     console.error('Error updating External_Tickets:', err);
   }
 }
-
 
 
     // 🎯 استخراج أسماء الملفات السابقة
@@ -3580,15 +3586,20 @@ if (signatureFile) {
     `uploads/${signatureFile.filename}`  // مسار التوقيع داخل مجلد uploads
   );
 }
-    // 2. ابني جملة الـ SQL بشكل صحيح
-    const updateReportSql = `
-      UPDATE Maintenance_Reports
-      SET ${setFields.join(", ")}
-      WHERE id = ?`;
-    reportValues.push(id);
-
-    // 3. نفذ التحديث
-    await db.promise().query(updateReportSql, reportValues);
+if (attachmentFile) {
+  setFields.push("attachment_path = ?");
+  reportValues.push(
+    `uploads/${attachmentFile.filename}`  // مسار التوقيع داخل مجلد uploads
+  );
+}
+if (setFields.length > 0) {
+  const updateReportSql = `
+    UPDATE Maintenance_Reports
+    SET ${setFields.join(", ")}
+    WHERE id = ?`;
+  reportValues.push(id);
+  await db.promise().query(updateReportSql, reportValues);
+}
     await updateExternalMaintenanceInfo(reportOld.id, updatedData);
 
     console.log(

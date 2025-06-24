@@ -1426,7 +1426,7 @@ function openAddTechnicalPopup() {
     <div class="popup-contentt">
       <h3>${t['add_new']} ${t['technical']}</h3>
       <label for="new-technical-name">${t['technical_name']}:</label>
-      <input type="text" id="new-technical-name" placeholder="${t['enter']} ${t['technical_name'].toLowerCase()}..." />
+      <input type="text" id="new-technical-name" placeholder="English|عربي" />
       <div class="popup-buttons">
         <button type="button" onclick="saveNewTechnical()">${t['save']}</button>
         <button type="button" onclick="closeGenericPopup()">${t['cancel']}</button>
@@ -2149,7 +2149,7 @@ async function editOption(selectId, updatedDevice, newValue = null, type = null)
     const target = mapSelectIdToServerTarget(selectId);
     let valueToSend;
 
-    if (selectId === "section") {
+if (selectId === "section" || selectId === "technical-status") {
       // إذا القسم، لا نضيف أي تاج لغة، نأخذ newValue كما هو
       valueToSend = newValue.trim();
     } else {
@@ -2895,59 +2895,42 @@ function fetchReporterNames() {
     labelKey: "reporter",
     itemKey: (item) => item.Engineer_Name || item.name || "Unnamed",
     storageKey: "technical",
-
-
-    // ✅ فلترة حسب اللغة
-    // transformData: (items) => {
-    //   const currentLang = languageManager.currentLang;
-
-    //   return items
-    //     .filter(item => {
-    //       const rawName = item.Engineer_Name || item.name || "";
-    //       const isArabic = rawName.trim().endsWith("[ar]");
-    //       const isEnglish = rawName.trim().endsWith("[en]");
-    //       const isUnlabeled = !isArabic && !isEnglish;
-
-    //       // ✅ عرض بناءً على اللغة الحالية
-    //       if (currentLang === "ar") return isArabic || isUnlabeled;
-    //       return isEnglish || isUnlabeled;
-    //     })
-    //     .map(item => {
-    //       const rawName = item.Engineer_Name || item.name || "";
-    //       const cleanedName = rawName.replace(/\s*\[(ar|en)\]$/i, ""); // إزالة الوسم من العرض
-
-    //       return {
-    //         ...item,
-    //         name: cleanedName
-    //       };
-    //     });
-    // },
-transformData: (items) => {
-  return items.map(item => {
-    const rawName = item.Engineer_Name || item.name || "";
-    const cleanedName = rawName.replace(/\s*\[(ar|en)\]$/i, ""); // 🧼 إزالة الوسم فقط من العرض
-
-    return {
-      ...item,
-      name: cleanedName
-    };
-  });
-},
-
+    transformData: (items) => {
+      // خزّن القائمة كاملة لاستخدامها لاحقًا إذا احتجت
+      window.lastTechnicalOptions = items;
+      const currentLang = languageManager.currentLang;
+      return items.map(item => {
+        const rawName = item.Engineer_Name || item.name || "";
+        const parts = rawName.split("|").map(p => p.trim());
+        const en = parts[0] || "";
+        const ar = parts[1] || "";
+        const displayName = currentLang === "ar" ? (ar || en) : en;
+        return {
+          ...item,
+          name: displayName,
+          fullName: rawName
+        };
+      });
+    },
     onAddNew: () => {
       openAddTechnicalPopup();
     },
-
     onEditOption: (oldVal) => {
       const newVal = prompt("Edit Reporter Name:", oldVal);
       if (newVal && newVal.trim() !== oldVal) {
         editOption("technical-status", oldVal, newVal.trim());
       }
     },
-
     onDeleteOption: (val) => {
       if (confirm(`Delete "${val}"?`)) {
         deleteOption("technical-status", val);
+      }
+    },
+    onSelectOption: (actualValue, item) => {
+      // عند اختيار المهندس، خزّن fullName في الحقل المخفي
+      const input = document.getElementById("technical");
+      if (input && item.fullName) {
+        input.value = item.fullName;
       }
     }
   });
@@ -3028,7 +3011,7 @@ const getRaw   = id  => (document.getElementById(id)?.value || "").trim();
       device_specifications: getVal("device-spec"),
       section: getRaw("section"),
       maintenance_manager: getVal("maintenance-manager"),
-      reporter_name: getVal("technical"),
+      reporter_name: document.getElementById("technical")?.value || getVal("technical"),
       initial_diagnosis: getVal("initial-diagnosis"),
       final_diagnosis: getVal("final-diagnosis")
     };
