@@ -349,6 +349,8 @@ const languageManager = {
             'normal': 'NORMAL',
             'warning': 'WARNING',
             'critical': 'CRITICAL',
+            'Renewing device': 'Renewing device',
+            'show_more_details': 'Show More Details',
 
             // Reports Page
             'general_reports': 'General Reports',
@@ -1174,6 +1176,8 @@ const languageManager = {
             'normal': 'طبيعي',
             'warning': 'تحذير',
             'critical': 'حرج',
+            'Renewing device': 'الأجهزة المقترح تجديدها',
+            'show_more_details': 'عرض التفاصيل',
 
             // Reports Page
             'general_reports': 'التقارير العامة',
