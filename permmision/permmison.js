@@ -1,4 +1,31 @@
+// تعريف دالة i18n لاستخراج الترجمة من languageManager
+function i18n(key) {
+  const lang = languageManager.currentLang;
+  return (languageManager.translations[lang] && languageManager.translations[lang][key]) || key;
+}
+
+// تعريف دالة applyTranslations لتحديث النصوص والعناوين
+function applyTranslations() {
+  // لكل عنصر فيه data-i18n
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    el.textContent = i18n(key);
+  });
+
+  // لكل عنصر فيه data-i18n-placeholder
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    const text = i18n(key);
+    if ('placeholder' in el) {
+      el.placeholder = text;            // لو هو input/textarea
+    } else {
+      el.textContent = text;            // لو هو div أو span
+    }
+  });
+}
+
 const radios = document.querySelectorAll('.radio-wrapper input[type="radio"]');
+
 document.addEventListener('DOMContentLoaded', () => {
   loadUsers(); // تحميل المستخدمين عند تشغيل الصفحة
 
@@ -62,6 +89,53 @@ document.querySelectorAll('.radio-wrapper input[type="radio"]').forEach(radio =>
     radio.parentElement.classList.add('active');
   }
 });
+
+// --- قسم الأقسام Dropdown ---
+let departmentsData = [];
+
+function loadDepartmentsDropdown() {
+    fetch("http://localhost:4000/Departments")
+        .then((response) => response.json())
+        .then((data) => {
+            departmentsData = data;
+            renderDepartmentsDropdown();
+        })
+        .catch((err) => {
+            console.error("Error loading departments:", err);
+        });
+}
+
+function renderDepartmentsDropdown() {
+    const sectionOptions = document.getElementById("department-options");
+    sectionOptions.innerHTML = "";
+    const lang = document.documentElement.lang || 'en';
+    departmentsData.forEach((dep) => {
+        let nameEn = dep.name, nameAr = dep.name;
+        if (dep.name.includes("|")) {
+            const parts = dep.name.split("|");
+            nameEn = parts[0].trim();
+            nameAr = parts[1].trim();
+        }
+        const optionDiv = document.createElement("div");
+        optionDiv.classList.add("dropdown-option");
+        optionDiv.textContent = lang === "ar" ? nameAr : nameEn;
+        optionDiv.onclick = () => {
+            document.getElementById("selected-department").textContent = lang === "ar" ? nameAr : nameEn;
+            document.getElementById("modal_department").value = nameAr + "|" + nameEn;
+            sectionOptions.style.display = "none";
+        };
+        sectionOptions.appendChild(optionDiv);
+    });
+}
+
+// إظهار/إخفاء الدروب داون عند الضغط
+if (document.getElementById("selected-department")) {
+  document.getElementById("selected-department").onclick = function() {
+    const options = document.getElementById("department-options");
+    options.style.display = options.style.display === "block" ? "none" : "block";
+  };
+}
+
 async function loadUsers() {
   const res = await fetch('http://localhost:4000/users', {
     headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
@@ -71,13 +145,21 @@ async function loadUsers() {
   const container = document.querySelector('.sidebar');
 
   // إعادة بناء القائمة
+  container.innerHTML = `<input type="text" data-i18n-placeholder="search_users" placeholder="Search users...">
+  <button class="add-user" data-i18n="add_new_user" onclick="openUserModal()">+ Add New User</button>`;
+  if (window.applyTranslations) applyTranslations();
 
-
+  const lang = document.documentElement.lang || (localStorage.getItem('lang') || 'en');
   users.forEach(user => {
+    let name = user.name;
+    if (name && name.includes('|')) {
+      const parts = name.split('|');
+      name = lang === 'ar' ? (parts[1] || parts[0]) : parts[0];
+    }
     const item = document.createElement('div');
     item.className = 'user-item flex justify-between items-center px-2 py-1 hover:bg-gray-100 cursor-pointer';
     item.innerHTML = `
-      <span>${user.name}</span>
+      <span>${name}</span>
       <span class="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
     `;
     item.onclick = () => loadUserDetails(user.id);
@@ -119,7 +201,12 @@ async function loadUserDetails(userId) {
     }
 
     // 4. تحديث الواجهة
-    document.getElementById('user-name').textContent = user.name;
+    let name = user.name;
+    if (name && name.includes('|')) {
+      const parts = name.split('|');
+      name = (document.documentElement.lang === 'ar') ? (parts[1] || parts[0]) : parts[0];
+    }
+    document.getElementById('user-name').textContent = name;
     document.getElementById('user-email').textContent = user.email;
 
     const infoBox = document.getElementById('user-extra-info');
@@ -261,6 +348,7 @@ async function toggleStatus(userId, currentStatus) {
 }
 function openUserModal() {
   document.getElementById("userModal").style.display = "flex";
+  loadDepartmentsDropdown();
   applyTranslations(); // ← يدعم الترجمة
 }
 
@@ -269,13 +357,15 @@ function closeUserModal() {
 }
 
 function submitUser() {
-  const name = document.getElementById("modal_name").value.trim();
+  const nameEn = document.getElementById("modal_name_en").value.trim();
+  const nameAr = document.getElementById("modal_name_ar").value.trim();
+  const name = nameEn + '|' + nameAr;
   const email = document.getElementById("modal_email").value.trim();
   const password = document.getElementById("modal_password").value.trim();
   const department = document.getElementById("modal_department").value.trim();
   const employee_id = document.getElementById("modal_employee_id").value.trim();
 
-  if (!name || !email || !password) {
+  if (!nameEn || !nameAr || !email || !password) {
     alert(i18n("error.requiredFields"));
     return;
   }
@@ -348,4 +438,15 @@ async function changeUserRole(userId, currentRole) {
   } catch (err) {
     alert("❌ فشل تغيير الدور: " + err.message);
   }
+}
+
+// دعم تحديث القائمة عند تغيير اللغة
+if (window.languageManager) {
+  languageManager.onChange = () => {
+    // يعيد ترجمة كل شيء بعد تغيير اللغة
+    applyTranslations();
+    // وإعادة تحميل القوائم لو تطلّب الأمر
+    loadUsers();
+    renderDepartmentsDropdown();
+  };
 }

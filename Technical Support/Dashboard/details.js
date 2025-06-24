@@ -97,10 +97,66 @@ function updateOutdatedOsList(data) {
     // Example: Loop through data.outdatedOs and create/append .os-item elements
 }
 
-// Placeholder function to populate filter dropdowns
+// Function to populate filter dropdowns with translated content
 function populateFilters(data) {
      console.log('Populating filters with data:', data);
-    // Implement logic to populate dropdowns (department, cpu, os, ram) based on data
+    
+    // Get current language
+    const currentLang = languageManager.currentLang || 'en';
+    
+    // Populate department filter
+    const departmentFilter = document.getElementById('department-filter');
+    if (departmentFilter && data.filters?.departments) {
+        // Clear existing options except "All"
+        departmentFilter.innerHTML = '<option value="" data-i18n="all">All</option>';
+        
+        data.filters.departments.forEach(dept => {
+            const option = document.createElement('option');
+            option.value = dept;
+            // Use translation function for department names
+            option.textContent = translateDepartmentName(dept);
+            departmentFilter.appendChild(option);
+        });
+    }
+    
+    // Populate CPU generation filter
+    const cpuFilter = document.getElementById('cpu-filter');
+    if (cpuFilter && data.filters?.cpuGens) {
+        cpuFilter.innerHTML = '<option value="" data-i18n="all">All</option>';
+        data.filters.cpuGens.forEach(gen => {
+            const option = document.createElement('option');
+            option.value = gen;
+            option.textContent = gen;
+            cpuFilter.appendChild(option);
+        });
+    }
+    
+    // Populate OS version filter
+    const osFilter = document.getElementById('os-filter');
+    if (osFilter && data.filters?.osVersions) {
+        osFilter.innerHTML = '<option value="" data-i18n="all">All</option>';
+        data.filters.osVersions.forEach(os => {
+            const option = document.createElement('option');
+            option.value = os;
+            option.textContent = os;
+            osFilter.appendChild(option);
+        });
+    }
+    
+    // Populate RAM size filter
+    const ramFilter = document.getElementById('ram-filter');
+    if (ramFilter && data.filters?.ramSizes) {
+        ramFilter.innerHTML = '<option value="" data-i18n="all">All</option>';
+        data.filters.ramSizes.forEach(ram => {
+            const option = document.createElement('option');
+            option.value = ram;
+            option.textContent = ram;
+            ramFilter.appendChild(option);
+        });
+    }
+    
+    // Apply language after populating
+    languageManager.applyLanguage();
 }
 
 // Function to populate Needs Replacement table
@@ -175,17 +231,17 @@ async function loadDashboardData() {
             { version: 'Windows 10', count: 12, outdated: false }
         ],
         filters: {
-            departments: ['Engineering', 'Marketing', 'Sales', 'HR', 'Finance'],
+            departments: ['Laboratory Department', 'Internal Medicine Nursing (Men\'s Ward)', 'Intensive Care Unit (ICU) Nursing', 'Nursing Services Administration', 'Daily Procedures Unit Nursing'],
             cpuGens: ['3rd Gen', '5th Gen', '6th Gen', '7th Gen', '8th Gen', '9th Gen', '10th Gen'],
             osVersions: ['Windows 7', 'Windows 8', 'Windows 8.1', 'Windows 10'],
             ramSizes: ['4GB', '8GB', '16GB', '32GB']
         },
         needsReplacement: [
-            { name: 'DESKTOP-001', department: 'Engineering', ram: '4GB', cpu: '6th Gen', os: 'Windows 7', status: 'Replace Soon' },
-            { name: 'DESKTOP-002', department: 'Marketing', ram: '8GB', cpu: '7th Gen', os: 'Windows 8', status: 'Replace Soon' },
-            { name: 'DESKTOP-003', department: 'Sales', ram: '16GB', cpu: '9th Gen', os: 'Windows 10', status: 'OK' },
-            { name: 'DESKTOP-004', department: 'HR', ram: '4GB', cpu: '6th Gen', os: 'Windows 7', status: 'Replace Soon' },
-            { name: 'DESKTOP-005', department: 'Finance', ram: '8GB', cpu: '8th Gen', os: 'Windows 10', status: 'OK' }
+            { name: 'DESKTOP-001', department: 'Laboratory Department', ram: '4GB', cpu: '6th Gen', os: 'Windows 7', status: 'Replace Soon' },
+            { name: 'DESKTOP-002', department: 'Internal Medicine Nursing (Men\'s Ward)', ram: '8GB', cpu: '7th Gen', os: 'Windows 8', status: 'Replace Soon' },
+            { name: 'DESKTOP-003', department: 'Intensive Care Unit (ICU) Nursing', ram: '16GB', cpu: '9th Gen', os: 'Windows 10', status: 'OK' },
+            { name: 'DESKTOP-004', department: 'Nursing Services Administration', ram: '4GB', cpu: '6th Gen', os: 'Windows 7', status: 'Replace Soon' },
+            { name: 'DESKTOP-005', department: 'Daily Procedures Unit Nursing', ram: '8GB', cpu: '8th Gen', os: 'Windows 10', status: 'OK' }
         ]
     };
 
