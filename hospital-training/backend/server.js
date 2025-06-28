@@ -936,7 +936,7 @@ const problem_status = Array.isArray(rawProblemStatus)
       ticketId,
       deviceSpec,
       checklist,
-      notes || "Routine periodic maintenance performed.",
+      notes || "",
       "Open",
       "Regular",
       deviceInfo.mac_address,
@@ -3144,7 +3144,12 @@ if (device_type && model_id) {
       `SELECT * FROM ${source === 'new' ? 'New_Maintenance_Report' : 'Maintenance_Reports'} WHERE id = ?`,
       [id]
     );
+
         const reportOld = oldReportRows[0] || {};
+        updatedData.device_specifications = reportOld.device_specifications;
+
+updatedData.technician_name = reportOld.technician_name;
+// }
   if (!Object.prototype.hasOwnProperty.call(updatedData, 'status')) {
     updatedData.status = reportOld.status;
   }
@@ -3209,7 +3214,46 @@ const { maintenance_type: reportType, device_id: deviceId, ticket_id: ticketId }
   }
 
   // تشخيص قيمة oldAssigned قبل المقارنة
-  const { engineer_id: engId, assigned_to: engName }        = updatedData;
+  // 🔧 إصلاح: استخراج البيانات الصحيحة حسب نوع الصيانة
+  let engId = null;
+  let engName = null;
+  
+  if (reportType === "Regular") {
+    engId = updatedData.technical_engineer_id;
+    engName = updatedData.technical_engineer;
+  } else if (reportType === "General") {
+    engId = updatedData.technician_id;
+    engName = updatedData.technician_name;
+  } else if (reportType === "Internal" || reportType === "External") {
+    engId = updatedData.assigned_to_id;
+    engName = updatedData.assigned_to;
+  } else {
+    // fallback للحقول العامة
+    engId = updatedData.engineer_id;
+    engName = updatedData.assigned_to;
+  }
+
+  console.log("🔍 Backend Engineer Data:", {
+    reportType,
+    engId,
+    engName,
+    technical_engineer_id: updatedData.technical_engineer_id,
+    technician_id: updatedData.technician_id,
+    assigned_to_id: updatedData.assigned_to_id
+  });
+
+  // 🔧 إضافة validation للتأكد من أن engId رقم صحيح
+  if (reportType === "Regular" && engId) {
+    const numericId = Number(engId);
+    if (isNaN(numericId) || numericId <= 0) {
+      console.error("❌ Invalid technical_engineer_id:", engId);
+      return res.status(400).json({ 
+        error: "Invalid engineer ID", 
+        details: `Expected numeric ID, got: ${engId}` 
+      });
+    }
+    engId = numericId; // تأكد من أنه رقم
+  }
 
   switch (reportType) {
     case "Regular":
@@ -3600,7 +3644,6 @@ if (setFields.length > 0) {
   reportValues.push(id);
   await db.promise().query(updateReportSql, reportValues);
 }
-    await updateExternalMaintenanceInfo(reportOld.id, updatedData);
 
     console.log(
       "✅ Maintenance_Reports updated with attachment:",
@@ -3616,6 +3659,7 @@ if (setFields.length > 0) {
   }
 }
 
+const isExternal = source === "external-legacy";
 
 // خذ ID الجهاز من التقرير نفسه
 let actualDeviceId = reportOld.device_id;
@@ -3629,7 +3673,7 @@ if (actualDeviceId) {
   oldDevice = rows[0] || {};
 }
 
-if (actualDeviceId) {
+if (actualDeviceId && !isExternal) {
   const oldSerial = oldDevice.serial_number?.trim();
   const newSerial = serial_number?.trim();
 
@@ -3847,7 +3891,9 @@ await db.promise().query(
 
    
  }
+  updatedData.device_specifications = reportOld.device_specifications;
 
+  await updateExternalMaintenanceInfo(actualDeviceId, updatedData);
 
 
     // تحديث Scanner_info
@@ -3916,35 +3962,55 @@ if (changes.length > 0) {
 
 });
 
-// تحديث مواصفات الجهاز في جدول External_Maintenance
-async function updateExternalMaintenanceInfo(reportId, data) {
-  const map = {
-    device_name: data.device_name,
-    serial_number: data.serial_number,
-    governmental_number: data.governmental_number,
-    model_name: data.model_name,
-    department_name: data.department_name,
-    mac_address: data.mac_address,
-    ip_address: data.ip_address,
-    scanner_type: data.scanner_type,
-    printer_type: data.printer_type,
-    ink_type: data.ink_type,
-    ink_serial_number: data.ink_serial_number
-  };
-  const fields = Object.keys(map).filter(k => map[k] !== undefined);
-  const updates = fields.map(k => `${k} = ?`);
-  const values = fields.map(k => map[k]);
-  console.log('🟢 UPDATE External_Maintenance:', updates, values);
-  if (updates.length) {
-    values.push(reportId);
-    await db.promise().query(`UPDATE External_Maintenance SET ${updates.join(", ")} WHERE id = ?`, values);
-    console.log('✅ External_Maintenance updated');
+// توقيع محدث: ناخذ reportId برقم التقرير ثم data
+
+ // خليه ياخذ reportId و data
+
+// نعيد تعريفها لتأخذ الـ deviceSpecId مباشرة
+async function updateExternalMaintenanceInfo(deviceSpecId, data) {
+  if (!deviceSpecId) {
+    console.warn("⚠️ missing deviceSpecId → cannot sync External_Maintenance");
+    return;
   }
+
+  // 1) جهّز خريطة الحقول اللي بنحدثها
+  const map = {
+    device_name:        data.device_name,
+    serial_number:      data.serial_number,
+    governmental_number:data.governmental_number,
+    model_name:         data.model_name,
+    department_name:    data.department_name,
+    cpu_name:           data.cpu_name,
+    ram_type:           data.ram_type,
+    os_name:            data.os_name,
+    generation_number:  data.generation_number,
+    drive_type:         data.drive_type,
+    ram_size:           data.ram_size,
+    mac_address:        data.mac_address,
+    ink_type:           data.ink_type,
+    ink_serial_number:  data.ink_serial_number,
+    printer_type:       data.printer_type,
+    scanner_type:       data.scanner_type,
+    ip_address:         data.ip_address
+  };
+
+  // 2) صفّي الحقول والقيم
+  const fields  = Object.keys(map).filter(k => data[k] !== undefined);
+  const updates = fields.map(k => `${k} = ?`);
+  const values  = fields.map(k => map[k]);
+
+  // 3) أضف deviceSpecId في الأخير كعامل WHERE
+  values.push(deviceSpecId);
+
+  // 4) نفّذ التحديث بناءً على device_specifications
+  const [result] = await db.promise().query(
+    `UPDATE External_Maintenance
+        SET ${updates.join(", ")}
+      WHERE device_specifications = ?`,
+    values
+  );
+  console.log("✅ External_Maintenance affectedRows =", result.affectedRows);
 }
-
-
-
-
 
 async function getOrCreateId(table, column, value) {
   if (!value || value.toString().trim() === "") return null;
@@ -4373,7 +4439,7 @@ app.post("/update-option-general", (req, res) => {
 });
 
 
-// ✅ تعديل خيار عام + تحديث الجداول المرتبطة تلقائيًا
+// ✅ تعديل خيار عام تحديث الجداول المرتبطة تلقائيًا
 app.post("/edit-option-general", (req, res) => {
   const { target, oldValue, newValue, type } = req.body;
 
@@ -4839,10 +4905,7 @@ app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
 
-// افترض أنّ لديك بالفعل تهيئة لـ express و mysql2/promise و authenticateToken و logActivity
-// لاحظ تضمين db كـ instance من mysql2/promise: 
-//   const mysql = require('mysql2');
-//   const db = mysql.createPool({ /* بيانات الاتصال */ });
+
 
 app.post("/delete-option-complete", authenticateToken, async (req, res) => {
   const { target, value, type } = req.body;
@@ -4991,7 +5054,7 @@ app.post("/delete-option-complete", authenticateToken, async (req, res) => {
     },
     "technical": {
       table: "Engineers",
-      column: "name",
+      column: "name", // لا نستخدمه مباشرة للحذف؛ نستخدم ID بعد البحث
       referencedTables: [
         { table: "General_Maintenance", column: "technician_name" },
         { table: "Regular_Maintenance", column: "technical_engineer_id" }
@@ -5016,6 +5079,7 @@ app.post("/delete-option-complete", authenticateToken, async (req, res) => {
 
   try {
     let departmentId = null;
+    let engineerId = null;
 
     // 1) إذا كان الهدف حذف قسم ("section")، نبحث أولًا عن الـ ID الصحيح
     if (target === "section") {
@@ -5036,6 +5100,25 @@ app.post("/delete-option-complete", authenticateToken, async (req, res) => {
       departmentId = deptRows[0].id;
     }
 
+    // 1) إذا كان الهدف حذف مهندس ("technical")، نبحث أولًا عن الـ ID الصحيح
+    if (target === "technical") {
+      // البحث في جدول Engineers عن أي صفّ يطابق الاسم العربي أو الإنجليزي
+      const [engineerRows] = await db.promise().query(
+        `
+        SELECT id
+        FROM Engineers
+        WHERE TRIM(SUBSTRING_INDEX(name, '|', 1)) = ?
+           OR TRIM(SUBSTRING_INDEX(name, '|', -1)) = ?
+        LIMIT 1
+        `,
+        [value.trim(), value.trim()]
+      );
+      if (!engineerRows.length) {
+        return res.status(400).json({ error: `❌ Engineer "${value}" not found.` });
+      }
+      engineerId = engineerRows[0].id;
+    }
+
     // 2) التحقق ما إذا كانت القيمة (أو المعرف) مستخدمة في الجداول الأخرى
     for (const ref of mapping.referencedTables) {
       let query = "";
@@ -5045,6 +5128,10 @@ app.post("/delete-option-complete", authenticateToken, async (req, res) => {
         // إذا كان ref.column هو department_id في Maintenance_Devices
         query = `SELECT COUNT(*) AS count FROM ${ref.table} WHERE ${ref.column} = ?`;
         param = departmentId;
+      } else if (target === "technical" && ref.column === "technical_engineer_id") {
+        // إذا كان ref.column هو technical_engineer_id في Regular_Maintenance
+        query = `SELECT COUNT(*) AS count FROM ${ref.table} WHERE ${ref.column} = ?`;
+        param = engineerId;
       } else {
         // في باقي الحقول، نتحقق عبر القيمة النصية value.trim()
         query = `SELECT COUNT(*) AS count FROM ${ref.table} WHERE ${ref.column} = ?`;
@@ -5068,6 +5155,15 @@ app.post("/delete-option-complete", authenticateToken, async (req, res) => {
       );
       if (delRes.affectedRows === 0) {
         return res.status(404).json({ error: "❌ Department not found or already deleted." });
+      }
+    } else if (target === "technical") {
+      // حذف السطر اعتمادًا على engineerId
+      const [delRes] = await db.promise().query(
+        `DELETE FROM Engineers WHERE id = ?`,
+        [engineerId]
+      );
+      if (delRes.affectedRows === 0) {
+        return res.status(404).json({ error: "❌ Engineer not found or already deleted." });
       }
     } else {
       // الحذف في حالات أخرى حسب العمود والتحقق إذا لزم الأمر
@@ -5107,10 +5203,14 @@ app.post("/delete-option-complete", authenticateToken, async (req, res) => {
 app.post("/update-option-complete", authenticateToken, async (req, res) => {
   const { target, oldValue, newValue, type } = req.body;
 
+  console.log(`🔍 update-option-complete called with:`, { target, oldValue, newValue, type });
+
   if (!target || !oldValue || !newValue) {
+    console.log(`❌ Missing fields: target=${target}, oldValue=${oldValue}, newValue=${newValue}`);
     return res.status(400).json({ error: "❌ Missing fields" });
   }
   if (oldValue.trim() === newValue.trim()) {
+    console.log(`❌ Same value - no update needed: "${oldValue}" = "${newValue}"`);
     return res.status(400).json({ error: "❌ Same value - no update needed" });
   }
 
@@ -5189,53 +5289,91 @@ app.post("/update-option-complete", authenticateToken, async (req, res) => {
 
     if (target === "section") {
       // 1) أولاً: نبحث في جدول Departments عن السطر الذي يحوي oldValue
-      //    نعتبر oldValue إمّا الجزء الإنجليزي أو الجزء العربي.
+      //    نعتبر oldValue إمّا الجزء الإنجليزي أو الجزء العربي أو الاسم الكامل.
       const [deptRows] = await conn.query(
         `
         SELECT id, name
         FROM Departments
         WHERE
-          TRIM(SUBSTRING_INDEX(name, '|', 1)) = ?
-          OR TRIM(SUBSTRING_INDEX(name, '|', -1)) = ?
+          name = ? OR
+          TRIM(SUBSTRING_INDEX(name, '|', 1)) = ? OR
+          TRIM(SUBSTRING_INDEX(name, '|', -1)) = ?
+          OR name LIKE ?
         LIMIT 1
         `,
-        [oldValue.trim(), oldValue.trim()]
+        [oldValue.trim(), oldValue.trim(), oldValue.trim(), `%${oldValue.trim()}%`]
       );
       if (!deptRows.length) {
-        throw new Error("❌ Old Department not found");
+        // إذا لم نجد، جرب البحث بطريقة أخرى
+        const [deptRows2] = await conn.query(
+          `
+          SELECT id, name
+          FROM Departments
+          WHERE name LIKE ? OR name LIKE ?
+          LIMIT 1
+          `,
+          [`%${oldValue.trim()}%`, `%${oldValue.trim()}%`]
+        );
+        if (!deptRows2.length) {
+          throw new Error(`❌ Old Department "${oldValue}" not found`);
+        }
+        deptRows[0] = deptRows2[0];
       }
 
       const oldDeptId = deptRows[0].id;
       const fullNameOld = deptRows[0].name; // مثلاً "man|رجل"
 
+      console.log(`🔍 Found department: "${fullNameOld}" for search value: "${oldValue}"`);
+
       // 2) نفصل الصيغة القديمة إلى الجزأين
-      const [enOld, arOld] = fullNameOld.split("|").map(s => s.trim());
+      const parts = fullNameOld.split("|").map(s => s.trim());
+      const enOld = parts[0] || "";
+      const arOld = parts[1] || "";
 
       // 3) نحدّد إذا كان oldValue يطابق الجزء العربي (arOld) أو الإنجليزي (enOld)
-      //    ونفصل newValue إلى الجزء الجديد (مهما كان بحسب المستخدم).
-      //    نفترض أن العميل مرّر newValue كـ نصٍ بلا فاصل "|" (جزء واحد فقط).
-      //    فإذا كان oldValue === arOld إذًا نقوم بتغيير الجانب العربي فقط.
-      //    وإلا إذا oldValue === enOld نغيّر الجانب الإنجليزي فقط.
+      //    أو إذا كان oldValue هو الاسم الكامل نفسه
       let enNew = enOld;
       let arNew = arOld;
       const newTrim = newValue.trim();
 
-      if (oldValue.trim() === arOld) {
+      if (oldValue.trim() === fullNameOld) {
+        // العميل مرّر الاسم الكامل، نفترض أنه يريد تغيير كامل الصيغة
+        const newParts = newTrim.split("|").map(s => s.trim());
+        if (newParts.length === 2) {
+          enNew = newParts[0];
+          arNew = newParts[1];
+        } else {
+          // إذا مرّر جزء واحد فقط، نضعه في الجزء المناسب حسب اللغة
+          const isArabic = /[\u0600-\u06FF]/.test(newTrim);
+          if (isArabic) {
+            arNew = newTrim;
+            enNew = enOld; // نحتفظ بالإنجليزي القديم
+          } else {
+            enNew = newTrim;
+            arNew = arOld; // نحتفظ بالعربي القديم
+          }
+        }
+      } else if (oldValue.trim() === arOld) {
         // العميل غيّر الجزء العربي فقط
         arNew = newTrim;
+        enNew = enOld; // نحتفظ بالإنجليزي القديم
       } else if (oldValue.trim() === enOld) {
         // العميل غيّر الجزء الإنجليزي فقط
         enNew = newTrim;
+        arNew = arOld; // نحتفظ بالعربي القديم
       } else {
-        // في حالات أخرى، ربما مرّر التطبيق كامل الصيغة "EN_NEW|AR_NEW"
-        const parts = newTrim.split("|").map(s => s.trim());
-        if (parts.length === 2) {
-          enNew = parts[0];
-          arNew = parts[1];
+        // في حالات أخرى، نفترض أن العميل يريد تغيير الجزء المناسب حسب اللغة
+        const isArabic = /[\u0600-\u06FF]/.test(newTrim);
+        if (isArabic) {
+          arNew = newTrim;
+          enNew = enOld; // نحتفظ بالإنجليزي القديم
         } else {
-          throw new Error("❌ Unable to parse newValue for section");
+          enNew = newTrim;
+          arNew = arOld; // نحتفظ بالعربي القديم
         }
       }
+
+      console.log(`🔄 Updating department from "${fullNameOld}" to "${enNew}|${arNew}"`);
 
       // 4) Propagate: تحديث الجداول الأخرى التي تخزن department_name (النصي)
       for (const { table, column } of mapping.propagate) {
@@ -5244,10 +5382,12 @@ app.post("/update-option-complete", authenticateToken, async (req, res) => {
           continue;
         }
         // نُحدّث أي جدول يخزن الاسم النصيّ القديم (arOld) إلى النصي الجديد (arNew)
-        await conn.query(
-          `UPDATE ${table} SET ${column} = ? WHERE ${column} = ?`,
-          [arNew, arOld]
-        );
+        if (arOld && arNew) {
+          await conn.query(
+            `UPDATE ${table} SET ${column} = ? WHERE ${column} = ?`,
+            [arNew, arOld]
+          );
+        }
       }
 
       // 5) تحديث اسم القسم في جدول Departments إلى الصيغة الكاملة الجديدة "enNew|arNew"
@@ -5278,6 +5418,77 @@ app.post("/update-option-complete", authenticateToken, async (req, res) => {
       await conn.query(
         `DELETE FROM ${mapping.table} WHERE ${mapping.column} = ?`,
         [oldValue.trim()]
+      );
+
+    } else if (target === "technical") {
+      // 1) أولاً: نبحث في جدول Engineers عن السطر الذي يحوي oldValue
+      //    نعتبر oldValue إمّا الجزء الإنجليزي أو الجزء العربي.
+      const [engineerRows] = await conn.query(
+        `
+        SELECT id, name
+        FROM Engineers
+        WHERE
+          TRIM(SUBSTRING_INDEX(name, '|', 1)) = ?
+          OR TRIM(SUBSTRING_INDEX(name, '|', -1)) = ?
+          OR name LIKE ?
+        LIMIT 1
+        `,
+        [oldValue.trim(), oldValue.trim(), `%${oldValue.trim()}%`]
+      );
+      if (!engineerRows.length) {
+        throw new Error("❌ Old Engineer not found");
+      }
+
+      const oldEngineerId = engineerRows[0].id;
+      const fullNameOld = engineerRows[0].name; // مثلاً "John|أحمد"
+
+      // 2) نفصل الصيغة القديمة إلى الجزأين
+      const [enOld, arOld] = fullNameOld.split("|").map(s => s.trim());
+
+      // 3) نحدّد إذا كان oldValue يطابق الجزء العربي (arOld) أو الإنجليزي (enOld)
+      //    ونفصل newValue إلى الجزء الجديد (مهما كان بحسب المستخدم).
+      //    نفترض أن العميل مرّر newValue كـ نصٍ بلا فاصل "|" (جزء واحد فقط).
+      //    فإذا كان oldValue === arOld إذًا نقوم بتغيير الجانب العربي فقط.
+      //    وإلا إذا oldValue === enOld نغيّر الجانب الإنجليزي فقط.
+      let enNew = enOld;
+      let arNew = arOld;
+      const newTrim = newValue.trim();
+
+      if (oldValue.trim() === arOld) {
+        // العميل غيّر الجزء العربي فقط
+        arNew = newTrim;
+      } else if (oldValue.trim() === enOld) {
+        // العميل غيّر الجزء الإنجليزي فقط
+        enNew = newTrim;
+      } else {
+        // في حالات أخرى، ربما مرّر التطبيق كامل الصيغة "EN_NEW|AR_NEW"
+        const parts = newTrim.split("|").map(s => s.trim());
+        if (parts.length === 2) {
+          enNew = parts[0];
+          arNew = parts[1];
+        } else {
+          throw new Error("❌ Unable to parse newValue for technical");
+        }
+      }
+
+      // 4) Propagate: تحديث الجداول الأخرى التي تخزن technician_name (النصي)
+      for (const { table, column } of mapping.propagate) {
+        if (column === "technical_engineer_id") {
+          // technical_engineer_id رقمي، لا يتغيّر—يتبقى oldEngineerId نفسه
+          continue;
+        }
+        // نُحدّث أي جدول يخزن الاسم النصيّ القديم (arOld) إلى النصي الجديد (arNew)
+        await conn.query(
+          `UPDATE ${table} SET ${column} = ? WHERE ${column} = ?`,
+          [arNew, arOld]
+        );
+      }
+
+      // 5) تحديث اسم المهندس في جدول Engineers إلى الصيغة الكاملة الجديدة "enNew|arNew"
+      const fullNameNew = `${enNew}|${arNew}`;
+      await conn.query(
+        `UPDATE ${mapping.table} SET ${mapping.column} = ? WHERE id = ?`,
+        [fullNameNew, oldEngineerId]
       );
 
     } else {
@@ -5316,6 +5527,91 @@ app.post("/update-option-complete", authenticateToken, async (req, res) => {
     await conn.query("ROLLBACK");
     console.error("❌ Error during update-option-complete:", err);
     return res.status(500).json({ error: err.message || "Internal server error" });
+  }
+});
+
+// إضافة endpoint جديد لجلب الاسم الكامل للمهندس والقسم
+app.post("/get-full-name", authenticateToken, async (req, res) => {
+  const { target, value } = req.body;
+
+  if (!target || !value) {
+    return res.status(400).json({ error: "❌ Missing fields" });
+  }
+
+  console.log(`🔍 get-full-name request: target=${target}, value="${value}"`);
+
+  try {
+    let query = "";
+    let params = [];
+
+    if (target === "section") {
+      // البحث في جدول Departments
+      query = `
+        SELECT id, name
+        FROM Departments
+        WHERE name = ? 
+           OR TRIM(SUBSTRING_INDEX(name, '|', 1)) = ?
+           OR TRIM(SUBSTRING_INDEX(name, '|', -1)) = ?
+           OR name LIKE ?
+        LIMIT 1
+      `;
+      params = [value.trim(), value.trim(), value.trim(), `%${value.trim()}%`];
+    } else if (target === "technical") {
+      // البحث في جدول Engineers
+      query = `
+        SELECT id, name
+        FROM Engineers
+        WHERE name = ?
+           OR TRIM(SUBSTRING_INDEX(name, '|', 1)) = ?
+           OR TRIM(SUBSTRING_INDEX(name, '|', -1)) = ?
+           OR name LIKE ?
+        LIMIT 1
+      `;
+      params = [value.trim(), value.trim(), value.trim(), `%${value.trim()}%`];
+    } else {
+      return res.status(400).json({ error: "❌ Invalid target field" });
+    }
+
+    console.log(`🔍 Executing query: ${query} with params: [${params.join(', ')}]`);
+
+    const [rows] = await db.promise().query(query, params);
+    
+    console.log(`🔍 Query returned ${rows.length} rows`);
+    
+    if (!rows.length) {
+      // ✅ جلب جميع الأقسام/المهندسين للمساعدة في التشخيص
+      let allQuery = "";
+      if (target === "section") {
+        allQuery = "SELECT id, name FROM Departments LIMIT 10";
+      } else if (target === "technical") {
+        allQuery = "SELECT id, name FROM Engineers LIMIT 10";
+      }
+      
+      if (allQuery) {
+        const [allRows] = await db.promise().query(allQuery);
+        console.log(`🔍 Available ${target}s:`, allRows.map(r => r.name));
+      }
+      
+      return res.status(404).json({ 
+        error: `❌ ${target === "section" ? "Department" : "Engineer"} "${value}" not found.` 
+      });
+    }
+
+    const fullName = rows[0].name;
+    const parts = fullName.split("|").map(s => s.trim());
+    
+    const result = {
+      id: rows[0].id,
+      fullName: fullName,
+      englishName: parts[0] || "",
+      arabicName: parts[1] || ""
+    };
+
+    console.log(`✅ Found ${target}:`, result);
+    return res.json(result);
+  } catch (err) {
+    console.error("❌ Error getting full name:", err.sqlMessage || err.message || err);
+    return res.status(500).json({ error: err.sqlMessage || "Server error getting full name." });
   }
 });
 
