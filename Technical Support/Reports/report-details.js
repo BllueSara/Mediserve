@@ -97,26 +97,62 @@ let userDrewOnCanvas = false;
 function getAssignedTo(report, lang) {
   lang = lang || (languageManager?.currentLang || 'en');
   let raw = '';
+  
+  console.log("🔍 getAssignedTo called with:", {
+    maintenance_type: report.maintenance_type,
+    technical_engineer: report.technical_engineer,
+    technician_name: report.technician_name,
+    technical: report.technical,
+    assigned_to: report.assigned_to,
+    reporter_name: report.reporter_name
+  });
+  
   switch (report.maintenance_type) {
     case "Regular":
       raw = report.technical_engineer || '';
       break;
     case "General":
-      raw = report.technician_name || '';
+      // 🔧 إصلاح: للـ General استخدم technician_name
+      raw = report.technician_name || report.technical_engineer || '';
       break;
     case "Internal":
       raw = report.technical || report.technician_name || '';
       break;
+    case "External":
+      raw = report.technical_engineer || report.assigned_to || '';
+      break;
     default:
       raw = report.assigned_to || report.reporter_name || report.technical_engineer || '';
   }
+  
+  console.log("🔍 getAssignedTo raw value:", raw);
+  
   if (raw.includes("|")) {
     const parts = raw.split("|");
     const en = parts[0] || "";
     const ar = parts[1] || "";
-    return lang === "ar" ? (ar || en) : en;
+    const result = lang === "ar" ? (ar || en) : en;
+    console.log("🔍 getAssignedTo result (with pipe):", result);
+    return result;
   }
+  
+  console.log("🔍 getAssignedTo result (no pipe):", raw);
   return raw;
+}
+
+// 🔧 إضافة دالة جديدة للحصول على ID المهندس
+function getAssignedToId(report) {
+  switch (report.maintenance_type) {
+    case "Regular":
+      return report.technical_engineer_id || report.assigned_to_id || null;
+    case "General":
+      // 🔧 إصلاح: للـ General استخدم technician_id
+      return report.technician_id || report.assigned_to_id || null;
+    case "Internal":
+      return report.assigned_to_id || report.technical || report.technician_id || null;
+    default:
+      return report.assigned_to_id || report.technical || report.technician_id || null;
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -140,17 +176,73 @@ document.addEventListener("DOMContentLoaded", () => {
       // بعد cleanReport(rawReport) وقبل apply اللغة والترجمة:
       const map = {
         'device-type': report.device_type,       // raw English key
-        'assigned-to': report.assigned_to_id,    // مثلا رقم المهندس المسؤول
+        'assigned-to': (() => {
+          // 🔧 إصلاح: اختر الحقل الصحيح بناءً على نوع الصيانة
+          switch (report.maintenance_type) {
+            case "General":
+              return report.technician_id || report.assigned_to_id || report.technical;
+            case "Regular":
+              return report.assigned_to_id || report.technical;
+            case "Internal":
+              return report.assigned_to_id || report.technical || report.technician_id;
+            case "External":
+              return report.assigned_to_id || report.technical;
+            default:
+              return report.assigned_to_id || report.technical || report.technician_id;
+          }
+        })(),
         'department': report.department_id,     // مثلا رقم القسم
         'category': report.maintenance_type,  // أو الحقل اللي تحدده
       };
 
       const rawMap = {
         'device-type': report.device_type_raw,   // مثلا "scanner|ماسح ضوئي"
-        'assigned-to': report.assigned_to_raw,   // مثلا "rawad|راود"
+        'assigned-to': (() => {
+          // 🔧 إصلاح: اختر الحقل الصحيح بناءً على نوع الصيانة
+          switch (report.maintenance_type) {
+            case "General":
+              return report.assigned_to_raw || report.technician_name || report.technical_engineer;
+            case "Regular":
+              return report.assigned_to_raw || report.technical_engineer;
+            case "Internal":
+              return report.assigned_to_raw || report.technical || report.technician_name;
+            case "External":
+              return report.assigned_to_raw || report.technical_engineer || report.assigned_to;
+            default:
+              return report.assigned_to_raw || report.assigned_to || report.technical_engineer || report.technician_name;
+          }
+        })(),
         'department': report.department_raw,    // مثلا "e|ي"
         'category': report.category_raw,      // مثلا "Regular|دورية"
       };
+
+      // 🔧 إضافة logging للتشخيص
+      console.log("🔍 Initial Engineer Data:", {
+        assigned_to_id: report.assigned_to_id,
+        assigned_to_raw: report.assigned_to_raw,
+        assigned_to: report.assigned_to,
+        technical_engineer: report.technical_engineer,
+        technician_name: report.technician_name,
+        technical: report.technical,
+        technician_id: report.technician_id
+      });
+
+      console.log("🔍 Mapped Engineer Data:", {
+        'assigned-to-id': map['assigned-to'],
+        'assigned-to-raw': rawMap['assigned-to']
+      });
+
+      // 🔧 إضافة logging مفصل لتشخيص المشكلة
+      console.log("🔍 Detailed Engineer Mapping:", {
+        maintenance_type: report.maintenance_type,
+        assigned_to_raw: report.assigned_to_raw,
+        technician_name: report.technician_name,
+        technical_engineer: report.technical_engineer,
+        technical: report.technical,
+        assigned_to: report.assigned_to,
+        'rawMap-assigned-to': rawMap['assigned-to'],
+        'map-assigned-to': map['assigned-to']
+      });
 
       Object.keys(map).forEach(fieldId => {
         const el = document.getElementById(fieldId);
@@ -235,10 +327,32 @@ document.addEventListener("DOMContentLoaded", () => {
       // معالجة المهندس بنفس طريقة القسم
       const assignedToEl = document.getElementById("assigned-to");
       const translatedAssignedTo = getAssignedTo(reportData, lang) || "N/A";
+      const engineerId = getAssignedToId(reportData);
+
+      console.log("🔍 Setting assigned-to element:", {
+        element: assignedToEl,
+        translatedValue: translatedAssignedTo,
+        engineerId: engineerId,
+        rawData: {
+          assigned_to_id: reportData.assigned_to_id,
+          assigned_to_raw: reportData.assigned_to_raw,
+          assigned_to: reportData.assigned_to,
+          technical: reportData.technical,
+          technical_engineer: reportData.technical_engineer
+        }
+      });
 
       assignedToEl.textContent = translatedAssignedTo;
       assignedToEl.dataset.key = translatedAssignedTo;
       assignedToEl.dataset.rawtext = translatedAssignedTo;
+      // 🔧 إضافة ID المهندس الصحيح حسب نوع الصيانة
+      if (reportData.maintenance_type === "Regular") {
+        assignedToEl.dataset.id = reportData.technical_engineer_id || '';
+      } else if (reportData.maintenance_type === "General") {
+        assignedToEl.dataset.id = reportData.technician_id || '';
+      } else {
+        assignedToEl.dataset.id = engineerId || '';
+      }
 
 
       let translatedCategory;
@@ -1225,7 +1339,7 @@ const translatedTitle =
       'General Maintenance': { en: "General Maintenance", ar: "صيانة عامة" },
       'Regular': { en: "Regular ", ar: "صيانة دورية" },
       'Regular Maintenance': { en: "Regular Maintenance", ar: "صيانة دورية" },
-      "External Maintenance": { en: "External Maintenance", ar: "صيانة خارجية" },
+      "External": { en: "External Maintenance", ar: "صيانة خارجية" },
       "Incident / Report": { en: "Incident / Report", ar: "بلاغ داخلي / بلاغ عادي" },
       "Incident": { en: "Incident", ar: "بلاغ داخلي / بلاغ عادي" },
       "Follow-Up": { en: "FollowUp", ar: "متابعة" },
@@ -1903,6 +2017,13 @@ console.log("عنصر الصفحة:", document.getElementById("assigned-to")?.te
 
   // قبل:
 function createSelectElement(options, currentId, currentRawText, fieldId) {
+  console.log("🔍 createSelectElement called:", {
+    fieldId: fieldId,
+    currentId: currentId,
+    currentRawText: currentRawText,
+    optionsCount: options.length
+  });
+  
   const select = document.createElement("select");
   select.style.minWidth = "140px";
   select.style.padding  = "4px";
@@ -1927,27 +2048,79 @@ function createSelectElement(options, currentId, currentRawText, fieldId) {
   // 2) إذا ما عندنا currentId، جرّب تطابق currentText مع options
   let effectiveId = currentId;
   if (!effectiveId) {
-    const match = options.find(opt =>
-      clean(opt.fullName||opt.name||"") === currentText
-    );
+    const match = options.find(opt => {
+      // 🔧 إصلاح: تطابق أكثر دقة للمهندسين
+      if (fieldId === "assigned-to") {
+        const optFullName = opt.fullName || opt.technician_name || opt.name || "";
+        const optParts = optFullName.split("|");
+        const optEn = optParts[0]?.trim() || "";
+        const optAr = optParts[1]?.trim() || "";
+        
+        // تطابق مع النص الحالي
+        return optEn === currentText || optAr === currentText || optFullName === currentText;
+      } else {
+        return clean(opt.fullName||opt.name||"") === currentText;
+      }
+    });
     if (match) effectiveId = String(match.id);
   }
+
+  console.log("🔍 createSelectElement processing:", {
+    currentText: currentText,
+    effectiveId: effectiveId,
+    fieldId: fieldId
+  });
 
   // 3) بناء خيار الـ placeholder بالقيمة الصحيحة
   if (currentText) {
     const optCurr = document.createElement("option");
-    optCurr.value       = effectiveId || "";
+    // 🔧 إصلاح: تأكد من أن value يحتوي على ID صحيح
+    optCurr.value = effectiveId || "";
     optCurr.textContent = currentText;
-    optCurr.selected    = true;
-    optCurr.dataset.fullname    = currentRawText || currentText;
+    optCurr.selected = true;
+    
+    // 🔧 إصلاح: احفظ الاسم الكامل في dataset.fullname
+    if (fieldId === "assigned-to") {
+      // للمهندسين، ابحث عن الاسم الكامل في قائمة الخيارات
+      let fullNameToUse = currentRawText || currentText;
+      
+      // 🔧 ابحث عن الخيار المطابق في options للحصول على الاسم الكامل
+      const matchingOption = options.find(opt => {
+        const optFullName = opt.fullName || opt.technician_name || opt.name || "";
+        const optParts = optFullName.split("|");
+        const optEn = optParts[0]?.trim() || "";
+        const optAr = optParts[1]?.trim() || "";
+        
+        // تطابق مع النص الحالي أو الاسم الكامل
+        return optEn === currentText || optAr === currentText || optFullName === currentText || optFullName === currentRawText;
+      });
+      
+      if (matchingOption && matchingOption.fullName && matchingOption.fullName.includes("|")) {
+        fullNameToUse = matchingOption.fullName;
+        console.log("🔍 Found matching option for current engineer:", {
+          currentText: currentText,
+          matchingFullName: fullNameToUse
+        });
+      }
+      
+      optCurr.dataset.fullname = fullNameToUse;
+    } else {
+      optCurr.dataset.fullname = currentRawText || currentText;
+    }
 
     select.appendChild(optCurr);
 
     // خزّن الـ effectiveId والمؤشرات كلها
-    select.dataset.oldId        = effectiveId || "";
-    select.dataset.currentId    = effectiveId || "";
-    select.dataset.oldText      = currentRawText || "";
-    select.dataset.currentName  = currentText;
+    select.dataset.oldId = effectiveId || "";
+    select.dataset.currentId = effectiveId || "";
+    select.dataset.oldText = currentRawText || "";
+    select.dataset.currentName = currentText;
+    
+    console.log("🔍 Created current option:", {
+      value: optCurr.value,
+      textContent: optCurr.textContent,
+      fullname: optCurr.dataset.fullname
+    });
   }
 
   // 4) بناء بقية الخيارات
@@ -1978,10 +2151,32 @@ function createSelectElement(options, currentId, currentRawText, fieldId) {
     if (String(opt.id) === select.dataset.currentId || raw === currentText) return;
 
     const o = document.createElement("option");
-    o.value           = String(opt.id);
-    o.textContent     = raw;
+    // 🔧 إصلاح: تأكد من أن value يحتوي على ID صحيح
+    o.value = String(opt.id);
+    o.textContent = raw;
     o.dataset.fullname = opt.fullName||opt.name||raw;
     select.appendChild(o);
+  });
+
+  // 🔧 إضافة event listener لتحديث dataset عند تغيير الاختيار
+  select.addEventListener("change", function() {
+    const selectedOption = this.options[this.selectedIndex];
+    if (selectedOption) {
+      this.dataset.currentId = selectedOption.value;
+      this.dataset.currentName = selectedOption.textContent;
+      console.log("🔍 Select changed:", {
+        fieldId: fieldId,
+        newValue: selectedOption.value,
+        newText: selectedOption.textContent
+      });
+    }
+  });
+
+  console.log("🔍 Final select created:", {
+    fieldId: fieldId,
+    optionsCount: select.options.length,
+    selectedIndex: select.selectedIndex,
+    selectedValue: select.options[select.selectedIndex]?.value
   });
 
   return select;
@@ -1990,11 +2185,14 @@ function createSelectElement(options, currentId, currentRawText, fieldId) {
 
 
   async function fetchOptions(apiUrl) {
+    console.log("🔍 Fetching options from:", apiUrl);
     const res = await fetch(apiUrl);
     if (!res.ok) throw new Error("فشل جلب البيانات من " + apiUrl);
     const rawData = await res.json();
+    
+    console.log("🔍 Raw data from API:", rawData);
 
-    return rawData.map(opt => ({
+    const processedData = rawData.map(opt => ({
       ...opt,
       fullName:
         opt.fullName ||
@@ -2006,6 +2204,9 @@ function createSelectElement(options, currentId, currentRawText, fieldId) {
         opt.ink_type ||
         ""
     }));
+    
+    console.log("🔍 Processed data:", processedData);
+    return processedData;
   }
 
   async function populateModelDropdown(deviceTypeName, currentLang = "en") {
@@ -2152,6 +2353,32 @@ noteEl.dataset.oldText = noteEl.textContent.trim();
 
       const currentId = spanEl.dataset.id || "";
       const currentRawText = spanEl.dataset.rawtext || spanEl.textContent.trim();
+      
+      // 🔧 إضافة logging خاص للمهندس
+      if (cfg.fieldId === "assigned-to") {
+        console.log("🔍 Creating assigned-to select:", {
+          currentId: currentId,
+          currentRawText: currentRawText,
+          spanText: spanEl.textContent,
+          dataset: {
+            id: spanEl.dataset.id,
+            rawtext: spanEl.dataset.rawtext,
+            key: spanEl.dataset.key
+          }
+        });
+        
+        // 🔧 إضافة logging مفصل للبيانات الأصلية
+        console.log("🔍 Original report data for engineer:", {
+          maintenance_type: reportData.maintenance_type,
+          technician_name: reportData.technician_name,
+          technical_engineer: reportData.technical_engineer,
+          assigned_to: reportData.assigned_to,
+          assigned_to_raw: reportData.assigned_to_raw,
+          assigned_to_id: reportData.assigned_to_id,
+          technician_id: reportData.technician_id
+        });
+      }
+      
       let options;
       try { options = await fetchOptions(cfg.api); }
       catch { continue; }
@@ -2167,6 +2394,7 @@ noteEl.dataset.oldText = noteEl.textContent.trim();
       // لو الحقل هو "assigned-to" (المهندس) خزن الـ id القديم
       if (cfg.fieldId === "assigned-to") {
         select.dataset.oldId = currentId;
+        console.log("🔍 Set assigned-to oldId:", currentId);
       }
 
       spanEl.dataset.oldText = spanEl.textContent;
@@ -2258,15 +2486,10 @@ noteEl.dataset.oldText = noteEl.textContent.trim();
 
     const oldEngineerId = engSelect.dataset.oldId || reportData.assigned_to_id || null;
 
-
-// مباشرة خذ الحالة القديمة:
-
-
     // نجمع الحقول الأساسية
     const updatedData = {
       id: reportData.id,
-        technical_notes: reportData.technical_notes,  // ← احتفظ بقيمة الملاحظة القديمة
-
+      technical_notes: reportData.technical_notes,  // ← احتفظ بقيمة الملاحظة القديمة
       engineer_id: oldEngineerId,
       printer_type_id: reportData.printer_type_id,
       printer_type: reportData.printer_type,
@@ -2275,22 +2498,100 @@ noteEl.dataset.oldText = noteEl.textContent.trim();
       scanner_type_id: reportData.scanner_type_id,
       scanner_type: reportData.scanner_type,
       status : reportData.status,
-        full_description: reportData.full_description,   // ← أضفته
-  priority: reportData.priority,                   // ← أضفته
+      full_description: reportData.full_description,   // ← أضفته
+      priority: reportData.priority,                   // ← أضفته
     };
 
-    // 👇 جيب القيمة الجديدة
-    const newEngineerId = engSelect.value || null;
+    // 👇 جيب القيمة الجديدة للمهندس
     const selectedOption = engSelect.options[engSelect.selectedIndex];
-    const fullName = selectedOption?.dataset.fullname?.trim() || selectedOption?.text?.trim() || null;
-
-    if (newEngineerId !== oldEngineerId) {
-      updatedData.engineer_id = newEngineerId;
-      updatedData.assigned_to = fullName;
-      updatedData.technical_engineer = fullName;
+    
+    // 🔧 إصلاح: احصل على الاسم الكامل من الخيار المحدد
+    let fullName = selectedOption.dataset.fullname?.trim() || selectedOption.textContent.trim() || null;
+    
+    console.log("🔍 Initial fullName from selectedOption:", {
+      dataset_fullname: selectedOption.dataset.fullname,
+      textContent: selectedOption.textContent,
+      fullName: fullName
+    });
+    
+    // 🔧 إذا كان الخيار المحدد هو الخيار الأول (الحالي)، استخدم الاسم الكامل من البيانات الأصلية
+    if (engSelect.selectedIndex === 0 && engSelect.dataset.oldText) {
+      fullName = engSelect.dataset.oldText;
+      console.log("🔍 Using oldText for first option:", engSelect.dataset.oldText);
+    }
+    
+    // 🔧 إذا لم نجد الاسم الكامل، ابحث عنه في قائمة الخيارات
+    if (!fullName || !fullName.includes("|")) {
+      console.log("🔍 Searching for full name in options...");
+      for (let i = 0; i < engSelect.options.length; i++) {
+        const opt = engSelect.options[i];
+        console.log(`🔍 Option ${i}:`, {
+          value: opt.value,
+          textContent: opt.textContent,
+          dataset_fullname: opt.dataset.fullname,
+          matches: opt.value === selectedOption.value
+        });
+        
+        if (opt.value === selectedOption.value && opt.dataset.fullname && opt.dataset.fullname.includes("|")) {
+          fullName = opt.dataset.fullname;
+          console.log("🔍 Found full name in option:", fullName);
+          break;
+        }
+      }
     }
 
+    // 🔧 إصلاح: استخدم value من الخيار المحدد مباشرة
+    const selectedEngineerId = selectedOption.value || engSelect.dataset.oldId || reportData.assigned_to_id || null;
 
+    console.log("🔧 Engineer Debug:", {
+      selectedIndex: engSelect.selectedIndex,
+      selectedValue: selectedOption.value,
+      selectedText: selectedOption.textContent,
+      fullName: fullName,
+      oldId: engSelect.dataset.oldId,
+      reportId: reportData.assigned_to_id,
+      finalId: selectedEngineerId
+    });
+
+    // 🔧 إضافة validation
+    if (!selectedEngineerId && selectedOption.value !== "") {
+      console.warn("⚠️ Warning: No engineer ID found but option has value:", selectedOption.value);
+    }
+
+    updatedData.engineer_id = selectedEngineerId;
+    updatedData.assigned_to = fullName;
+    updatedData.technical_engineer = fullName;
+
+    // 🔧 إصلاح: إضافة الحقول الصحيحة حسب نوع الصيانة
+    if (reportData.maintenance_type === "Regular") {
+      updatedData.technical_engineer_id = selectedEngineerId;  // ← إضافة ID للمهندس
+      updatedData.technical_engineer = fullName;               // ← الاسم الكامل
+      console.log("🔧 Regular Maintenance - Engineer fields:", {
+        technical_engineer_id: selectedEngineerId,
+        technical_engineer: fullName
+      });
+    } else if (reportData.maintenance_type === "General") {
+      updatedData.technician_id = selectedEngineerId;          // ← ID للفني
+      updatedData.technician_name = fullName;                  // ← اسم الفني
+      console.log("🔧 General Maintenance - Technician fields:", {
+        technician_id: selectedEngineerId,
+        technician_name: fullName
+      });
+    } else if (reportData.maintenance_type === "Internal") {
+      updatedData.assigned_to_id = selectedEngineerId;         // ← ID للمسؤول
+      updatedData.assigned_to = fullName;                      // ← اسم المسؤول
+      console.log("🔧 Internal Maintenance - Assigned fields:", {
+        assigned_to_id: selectedEngineerId,
+        assigned_to: fullName
+      });
+    } else if (reportData.maintenance_type === "External") {
+      updatedData.assigned_to_id = selectedEngineerId;         // ← ID للمسؤول
+      updatedData.assigned_to = fullName;                      // ← اسم المسؤول
+      console.log("🔧 External Maintenance - Assigned fields:", {
+        assigned_to_id: selectedEngineerId,
+        assigned_to: fullName
+      });
+    }
 
     for (const cfg of lookupConfig) {
       if (cfg.fieldId === 'assigned-to') continue;
@@ -2541,9 +2842,37 @@ for (const { key } of specConfig) {
 
     console.log("🚀 إرسال التحديث:", updatedData);
 
+    // 🔧 إضافة logging مفصل للبيانات المرسلة
+    console.log("🔍 Final Payload Analysis:", {
+      maintenance_type: reportData.maintenance_type,
+      engineer_fields: {
+        engineer_id: updatedData.engineer_id,
+        assigned_to: updatedData.assigned_to,
+        technical_engineer: updatedData.technical_engineer,
+        technical_engineer_id: updatedData.technical_engineer_id,
+        technician_id: updatedData.technician_id,
+        technician_name: updatedData.technician_name,
+        assigned_to_id: updatedData.assigned_to_id
+      },
+      selectedEngineerId: selectedEngineerId,
+      fullName: fullName
+    });
+
     // 8) تجهيز FormData
     const formData = new FormData();
     formData.append("data", JSON.stringify(updatedData));
+
+    // إضافة logging إضافي للتشخيص
+    console.log("🔍 Final Engineer Data:", {
+      engineer_id: updatedData.engineer_id,
+      assigned_to: updatedData.assigned_to,
+      technical_engineer: updatedData.technical_engineer
+    });
+
+    // 🔧 إضافة validation نهائي
+    if (!updatedData.engineer_id && updatedData.assigned_to) {
+      console.warn("⚠️ Warning: No engineer_id but assigned_to exists:", updatedData.assigned_to);
+    }
 
     // إرفاق الملفات
     const file = document.getElementById("attachment-input")?.files[0];
@@ -2566,12 +2895,15 @@ for (const { key } of specConfig) {
 
     // 9) الإرسال
     try {
+      console.log("🚀 Sending request to server...");
       const res = await fetch("http://localhost:5050/update-report-full", {
         method: "POST",
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         body: formData
       });
       const result = await res.json();
+
+      console.log("🔍 Server response:", result);
 
       if (result.message) {
         alert("✅ تم الحفظ بنجاح.");
@@ -2589,7 +2921,11 @@ for (const { key } of specConfig) {
         if (cancelBtn) cancelBtn.style.display = "none";
         if (editBtn) editBtn.style.display = "inline-block";
 
-        location.reload();
+        // 🔧 إضافة تأخير قصير قبل إعادة التحميل
+        setTimeout(() => {
+          console.log("🔄 Reloading page...");
+          location.reload();
+        }, 500);
       } else {
         throw new Error("❌ لم يتم الحفظ");
       }
