@@ -47,28 +47,16 @@ function fetchAndRenderModels(deviceType, dropdownId) {
     itemKey: "model_name",
     storageKey: dropdownId,
 
-    // ✅ فلترة حسب لغة النظام (بدون تعديل الداتابيس)
-transformData: (items) => {
-  const currentLang = languageManager.currentLang;
-
-  return items
-.filter(item => {
-  const name = item.model_name?.trim() || "";
-  const isArabic = name.endsWith("[ar]");
-  const isEnglish = name.endsWith("[en]");
-  const isUnlabeled = !isArabic && !isEnglish;
-
-  return currentLang === "ar" ? isArabic || isUnlabeled : isEnglish || isUnlabeled;
-})
-.map(item => {
-  const cleanedName = item.model_name.replace(/\s*\[(ar|en)\]$/, "");
-  return {
-    ...item,
-    model_name: cleanedName
-  };
-});
-
-},
+    // ✅ إزالة التاجات من الموديلات - تظهر في كل اللغات
+    transformData: (items) => {
+      return items.map(item => {
+        const cleanedName = item.model_name?.replace(/\s*\[(ar|en)\]$/, "").trim() || "";
+        return {
+          ...item,
+          model_name: cleanedName
+        };
+      });
+    },
 
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", dropdownId);
@@ -563,6 +551,7 @@ deviceData.department = departmentFullName;
       console.error("❌ خطأ أثناء الاتصال بالسيرفر:", err);
     });
 }
+
 function createLangAwareTransform(field) {
   return (items) => {
     const currentLang = languageManager.currentLang;
@@ -588,6 +577,7 @@ function createLangAwareTransform(field) {
       });
   };
 }
+
 function fetchScannerTypes() {
   renderDropdownOptions({
     endpoint: "http://localhost:5050/Scanner_Types",
@@ -597,18 +587,23 @@ function fetchScannerTypes() {
     labelKey: "scanner_type",
     itemKey: "scanner_type",
     storageKey: "scanner-type",
-transformData: createLangAwareTransform("scanner_type"),
-
+    // ✅ إزالة التاجات من أنواع الماسحات
+    transformData: (items) => {
+      return items.map(item => {
+        const cleanedName = item.scanner_type?.replace(/\s*\[(ar|en)\]$/, "").trim() || "";
+        return {
+          ...item,
+          scanner_type: cleanedName
+        };
+      });
+    },
 
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "scanner-type");
       openAddOptionPopup("scanner-type");
     },
     onEditOption: (oldValue) => {
-      const newValue = prompt("Edit Scanner Type:", oldValue);
-      if (newValue && newValue.trim() !== oldValue) {
-        editOption("scanner-type", oldValue, newValue.trim());
-      }
+      openAddTechnicalPopup(oldValue);
     },
     onDeleteOption: (val) => {
       if (confirm(`Delete "${val}"?`)) {
@@ -628,18 +623,23 @@ function fetchPrinterTypes() {
     labelKey: "printer_type",
     itemKey: "printer_type",
     storageKey: "printer-type", 
-transformData: createLangAwareTransform("printer_type")
+    // ✅ إزالة التاجات من أنواع الطابعات
+    transformData: (items) => {
+      return items.map(item => {
+        const cleanedName = item.printer_type?.replace(/\s*\[(ar|en)\]$/, "").trim() || "";
+        return {
+          ...item,
+          printer_type: cleanedName
+        };
+      });
+    },
 
-,
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "printer-type");
       openAddOptionPopup("printer-type");
     },
     onEditOption: (oldValue) => {
-      const newValue = prompt("Edit Printer Type:", oldValue);
-      if (newValue && newValue.trim() !== oldValue) {
-        editOption("printer-type", oldValue, newValue.trim());
-      }
+      openAddTechnicalPopup(oldValue);
     },
     onDeleteOption: (val) => {
       if (confirm(`Delete "${val}"?`)) {
@@ -658,18 +658,23 @@ function fetchInkTypes() {
     labelKey: "ink_type",
     itemKey: "ink_type",
     storageKey: "ink-type",
-transformData: createLangAwareTransform("ink_type")
+    // ✅ إزالة التاجات من أنواع الحبر
+    transformData: (items) => {
+      return items.map(item => {
+        const cleanedName = item.ink_type?.replace(/\s*\[(ar|en)\]$/, "").trim() || "";
+        return {
+          ...item,
+          ink_type: cleanedName
+        };
+      });
+    },
 
-,
     onAddNew: () => {
       sessionStorage.setItem("lastDropdownOpened", "ink-type");
       openAddOptionPopup("ink-type");
     },
     onEditOption: (oldValue) => {
-      const newValue = prompt("Edit Ink Type:", oldValue);
-      if (newValue && newValue.trim() !== oldValue) {
-        editOption("ink-type", oldValue, newValue.trim());
-      }
+      openAddTechnicalPopup(oldValue);
     },
     onDeleteOption: (val) => {
       if (confirm(`Delete "${val}"?`)) {
@@ -722,10 +727,7 @@ console.log("currentLang:", currentLang);
     },
 
     onEditOption: (oldFullName) => {
-      const newVal = prompt("Edit Section (enter 'English|Arabic'):", oldFullName);
-      if (newVal && newVal !== oldFullName) {
-        editOption("section", oldFullName, newVal, "Department");
-      }
+      openAddSectionPopup(selectId, oldFullName);
     },
 
     onDeleteOption: (fullName) => {
@@ -767,13 +769,39 @@ onSelectOption: (localizedValue, fullItem) => {
 
 
 function saveNewSection() {
-  const combined = document.getElementById("new-section-name").value.trim();
-
-  // 2) تأكّد أنها ليست فارغة وأنها تحتوي '|'
-  if (!combined || !combined.includes("|")) {
-    alert("❌ الرجاء إدخال القسم بصيغة 'EnglishText|ArabicText'");
+  const t = languageManager.translations[languageManager.currentLang];
+  const en = document.getElementById("new-section-en").value.trim();
+  const ar = document.getElementById("new-section-ar").value.trim();
+  if (!en || !ar) {
+    alert("❌ الرجاء إدخال اسم القسم بالإنجليزي والعربي.");
     return;
   }
+  const combined = `${en}|${ar}`;
+  
+  // ✅ تحديد إذا كان تعديل أم إضافة جديدة
+  const oldValue = document.getElementById("old-section-value")?.value;
+  const isEdit = oldValue && oldValue.trim() !== "";
+  
+  if (isEdit) {
+    // ✅ استخدام الدالة الجديدة للتعديل
+    console.log(`🔄 Editing section from "${oldValue}" to "${combined}"`);
+    editOptionWithFullName("section", oldValue, combined).then(success => {
+      if (success) {
+        // ✅ إعادة تحميل قائمة الأقسام
+        const selectId = sessionStorage.getItem("lastDepartmentSelectId") || "section";
+        fetchDepartments(selectId);
+        
+        // ✅ تنظيف وإغلاق
+        sessionStorage.removeItem("lastDepartmentSelectId");
+        sessionStorage.removeItem("returnToPopup");
+        document.getElementById("generic-popup").style.display = "none";
+      }
+    });
+    return;
+  }
+  
+  // ✅ إضافة جديدة
+  console.log(`➕ Adding new section: "${combined}"`);
 
   fetch("http://localhost:5050/add-department", {
     method: "POST",
@@ -796,7 +824,7 @@ function saveNewSection() {
 
       // ===== 2) خزن الجزء المناسب للعرض فقط =====
       //    صيغة combined = "EnglishText|ArabicText"
-      const [enPart, arPart] = combined.split("|");
+      const [enPart, arPart] = combined.split("|").map(s => s.trim());
       const toStore = (languageManager.currentLang === "ar" ? arPart : enPart) || enPart;
       sessionStorage.setItem(selectId, toStore);
 
@@ -874,155 +902,202 @@ function saveNewSection() {
     });
 }
 
-function fetchDrives() {
-  renderDropdownOptions({
-    endpoint: "http://localhost:5050/Hard_Drive_Types",
-    containerId: "drive-select-options",
-    displayId: "selected-drive-select",
-    inputId: "drive-select",
-    labelKey: "hard_drive",
-    itemKey: "drive_type",
-    storageKey: "drive-select",
-transformData: createLangAwareTransform("drive_type")
-,
-    onAddNew: () => {
-      sessionStorage.setItem("lastDropdownOpened", "drive-select");
-      openAddOptionPopup("drive-select");
+
+function saveNewModel() {
+  const deviceType = document.getElementById("device-type").value.trim().toLowerCase();
+  const token = localStorage.getItem("token");
+  const modelName = document.getElementById("new-model-name").value.trim();
+  const t = languageManager.translations[languageManager.currentLang];
+  
+  if (!modelName) {
+    alert("❌ Please enter a model name");
+    return;
+  }
+
+  // ✅ لا نضيف تاجات لغة للموديلات - تظهر في كل اللغات
+  const nameToSave = modelName;
+
+  fetch("http://localhost:5050/add-device-model", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + token
     },
-    onEditOption: (oldVal) => {
-      const newVal = prompt("Edit Hard Drive:", oldVal);
-      if (newVal) editOption("drive-select", oldVal, newVal);
-    },
-    onDeleteOption: (val) => {
-      if (confirm(`Delete "${val}"?`)) deleteOption("drive-select", val);
-    }
-  });
+    body: JSON.stringify({ model_name: nameToSave, device_type_name: deviceType })
+  })
+    .then(res => res.json())
+    .then(result => {
+      if (result.error) {
+        alert(result.error);
+        return;
+      }
+
+      sessionStorage.setItem(`model-${deviceType}`, modelName);
+      fetchAndRenderModels(deviceType, `model-${deviceType}`);
+      sessionStorage.setItem("spec-model", modelName);
+
+      const isSpecContext = sessionStorage.getItem("returnToPopup") === "true";
+      if (isSpecContext) {
+        fetchAndRenderModels(deviceType, "spec-model");
+
+        setTimeout(() => {
+          const displaySpan = document.getElementById(`selected-spec-model`);
+          const hiddenInput = document.getElementById(`spec-model`);
+          if (displaySpan && hiddenInput) {
+            displaySpan.textContent = modelName;
+            hiddenInput.value = modelName;
+          }
+        }, 300);
+      }
+
+      document.getElementById("generic-popup").style.display = "none";
+      sessionStorage.removeItem("returnToPopup");
+
+      if (!["pc", "printer", "scanner"].includes(deviceType)) {
+        setTimeout(() => {
+          openGenericPopup("device_specifications", "device-spec");
+        }, 150);
+      }
+    })
+    .catch(err => {
+      console.error("❌ Failed to save model:", err);
+      alert(t['failed_to_save_model']);
+    });
 }
 
-function fetchCPU() {
-  renderDropdownOptions({
-    endpoint: "http://localhost:5050/CPU_Types",
-    containerId: "cpu-select-options",
-    displayId: "selected-cpu-select",
-    inputId: "cpu-select",
-    labelKey: "processor",
-    itemKey: "cpu_name",
-    storageKey: "cpu-select",
-    transformData: createLangAwareTransform("cpu_name")
-,
-    onAddNew: () => {
-      sessionStorage.setItem("lastDropdownOpened", "cpu-select");
-      openAddOptionPopup("cpu-select");
-    },
-    onEditOption: (oldVal) => {
-      const newVal = prompt("Edit CPU:", oldVal);
-      if (newVal) editOption("cpu-select", oldVal, newVal);
-    },
-    onDeleteOption: (val) => {
-      if (confirm(`Delete "${val}"?`)) deleteOption("cpu-select", val);
+
+
+function saveDeviceSpecification() {
+
+
+  const lang = languageManager.currentLang;
+  const t = languageManager.translations[lang];
+
+  const requiredFields = [
+    { id: "spec-ministry", label: t['ministry_number'] },
+    { id: "spec-name", label: t['device_name'] },
+    { id: "spec-model", label: t['model'] },
+    { id: "spec-serial", label: t['serial_number'] },
+    { id: "spec-department", label: t['section'] }
+  ];
+
+  let hasError = false;
+
+  requiredFields.forEach(({ id }) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    input.classList.remove("input-error");
+
+    const next = input.nextElementSibling;
+    if (next?.classList.contains("input-error-message")) {
+      next.remove();
+    }
+
+    if (input.type === "hidden") {
+      const visible = input.closest(".form-field")?.querySelector(".dropdown-toggle");
+      if (visible) {
+        visible.style.border = "";
+        visible.style.borderRadius = "";
+      }
     }
   });
-}
 
-function fetchRAM() {
-  renderDropdownOptions({
-    endpoint: "http://localhost:5050/RAM_Types",
-    containerId: "ram-select-options",
-    displayId: "selected-ram-select",
-    inputId: "ram-select",
-    labelKey: "ram",
-    itemKey: "ram_type",
-    storageKey: "ram-select",
-    transformData: createLangAwareTransform("ram_type")
-,
-    onAddNew: () => {
-      sessionStorage.setItem("lastDropdownOpened", "ram-select");
-      openAddOptionPopup("ram-select");
-    },
-    onEditOption: (oldVal) => {
-      const newVal = prompt("Edit RAM Type:", oldVal);
-      if (newVal) editOption("ram-select", oldVal, newVal);
-    },
-    onDeleteOption: (val) => {
-      if (confirm(`Delete "${val}"?`)) deleteOption("ram-select", val);
+  requiredFields.forEach(({ id, label }) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+
+    if (!input.value.trim()) {
+      hasError = true;
+
+      if (input.type === "hidden") {
+        const visible = document.querySelector(`#${id}-dropdown-wrapper .dropdown-toggle`);
+        if (visible) {
+          visible.style.border = "1px solid red";
+          visible.style.borderRadius = "4px";
+        }
+
+        const msg = document.createElement("div");
+        msg.className = "input-error-message";
+        msg.textContent = `${label} ${t['is_required']}`;
+
+        const wrapper = document.getElementById(`${id}-dropdown-wrapper`);
+        if (wrapper && !wrapper.nextElementSibling?.classList.contains("input-error-message")) {
+          wrapper.insertAdjacentElement("afterend", msg);
+        }
+      } else {
+        input.classList.add("input-error");
+
+        const msg = document.createElement("div");
+        msg.className = "input-error-message";
+        msg.textContent = `${label} ${t['is_required']}`;
+        input.insertAdjacentElement("afterend", msg);
+      }
     }
   });
+
+  const deviceType = document.getElementById("device-type").value.toLowerCase();
+  const dropdown = document.getElementById("device-spec");
+
+  if (!deviceType) {
+    alert(t['device_type_not_selected']);
+    return;
+  }
+
+  if (hasError) return;
+
+  function cleanLangTag(value) {
+    return value.replace(/\s*\[(ar|en)\]$/i, "").trim();
+  }
+
+ const specData = {
+    "ministry-id": cleanLangTag(document.getElementById("spec-ministry").value.trim()),
+    "device-name": cleanLangTag(document.getElementById("spec-name").value.trim()),
+    model: cleanLangTag(document.getElementById("spec-model").value.trim()),
+    serial: cleanLangTag(document.getElementById("spec-serial").value.trim()),
+   department:   sessionStorage.getItem("department-full") ||
+                  document.getElementById("spec-department").value.trim()
+    
+  };
+
+
+  fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
+    body: JSON.stringify(specData)
+  })
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+      return res.json();
+    })
+    .then(result => {
+      if (result.message) {
+        sessionStorage.setItem("spec-saved", "true");
+
+        const option = document.createElement("option");
+        option.value = result.insertedId;
+        option.textContent = `${specData["device-name"]} | ${specData.serial} | ${specData["ministry-id"]}`;
+        dropdown.appendChild(option);
+        dropdown.value = result.insertedId;
+
+        const displaySpan = document.getElementById("selected-device-spec");
+        if (displaySpan) displaySpan.textContent = option.textContent;
+
+        sessionStorage.removeItem("returnToPopup");
+
+        fetchDeviceSpecsByTypeAndDepartment();
+
+        requiredFields.forEach(({ id }) => document.getElementById(id).value = "");
+
+        document.getElementById("generic-popup").style.display = "none";
+      } else {
+        alert(t['save_failed'] + ": " + result.error);
+      }
+    })
+    .catch(err => {
+      console.error("❌ Error saving device_specifications:", err);
+      alert(t['error_saving_specifications']);
+    });
 }
-
-function fetchOS() {
-  renderDropdownOptions({
-    endpoint: "http://localhost:5050/OS_Types",
-    containerId: "os-select-options",
-    displayId: "selected-os-select",
-    inputId: "os-select",
-    labelKey: "operating_system",
-    itemKey: "os_name",
-    storageKey: "os-select",
-    transformData: createLangAwareTransform("os_name")
-,
-    onAddNew: () => {
-      sessionStorage.setItem("lastDropdownOpened", "os-select");
-      openAddOptionPopup("os-select");
-    },
-    onEditOption: (oldVal) => {
-      const newVal = prompt("Edit OS:", oldVal);
-      if (newVal) editOption("os-select", oldVal, newVal);
-    },
-    onDeleteOption: (val) => {
-      if (confirm(`Delete "${val}"?`)) deleteOption("os-select", val);
-    }
-  });
-}
-
-function fetchProcessorGen() {
-  renderDropdownOptions({
-    endpoint: "http://localhost:5050/Processor_Generations",
-    containerId: "generation-select-options",
-    displayId: "selected-generation-select",
-    inputId: "generation-select",
-    labelKey: "processor_generation",
-    itemKey: "generation_number",
-    storageKey: "generation-select",
-    transformData: createLangAwareTransform("generation_number"),
-
-    onAddNew: () => {
-      sessionStorage.setItem("lastDropdownOpened", "generation-select");
-      openAddOptionPopup("generation-select");
-    },
-    onEditOption: (oldVal) => {
-      const newVal = prompt("Edit Generation:", oldVal);
-      if (newVal) editOption("generation-select", oldVal, newVal);
-    },
-    onDeleteOption: (val) => {
-      if (confirm(`Delete "${val}"?`)) deleteOption("generation-select", val);
-    }
-  });
-}
-function fetchRAMSize() {
-  renderDropdownOptions({
-    endpoint: "http://localhost:5050/RAM_Sizes",
-    containerId: "ram-size-select-options",
-    displayId: "selected-ram-size-select",
-    inputId: "ram-size-select",
-    labelKey: "ram_size",
-    itemKey: "ram_size",
-    storageKey: "ram-size-select",
-    transformData: createLangAwareTransform("ram_size"),
-
-    onAddNew: () => {
-      sessionStorage.setItem("lastDropdownOpened", "ram-size-select");
-      openAddOptionPopup("ram-size-select");
-    },
-    onEditOption: (oldVal) => {
-      const newVal = prompt("Edit RAM Size:", oldVal);
-      if (newVal) editOption("ram-size-select", oldVal, newVal);
-    },
-    onDeleteOption: (val) => {
-      if (confirm(`Delete "${val}"?`)) deleteOption("ram-size-select", val);
-    }
-  });
-}
-
 
 
 function closeGenericPopup(cancelled = false) {
@@ -1172,9 +1247,8 @@ function saveOptionForSelect() {
 
   if (!rawValue || !dropdown) return;
 
-  const isArabic = isArabicText(rawValue); // ✅ تحديد اللغة من شكل النص
-  const tag = isArabic ? "[ar]" : "[en]";
-  const value = `${rawValue} ${tag}`; // ✅ أضف الوسم الصحيح
+  // ✅ لا نضيف تاجات لغة - نحفظ القيمة كما هي
+  const value = rawValue;
 
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
@@ -1412,25 +1486,7 @@ function fetchTechnicalStatus(callback) {
       openAddTechnicalPopup();
     },
     onEditOption: (oldVal) => {
-      // ابحث عن العنصر الأصلي (fullName)
-      fetch("http://localhost:5050/Technical")
-        .then(res => res.json())
-        .then(items => {
-          const found = items.find(item => {
-            const raw = item.Engineer_Name || item.name || "";
-            const parts = raw.split("|").map(p => p.trim());
-            const en = parts[0] || "";
-            const ar = parts[1] || "";
-            const currentLang = languageManager.currentLang;
-            const display = currentLang === "ar" ? (ar || en) : en;
-            return display === oldVal;
-          });
-          const fullName = found ? (found.Engineer_Name || found.name || oldVal) : oldVal;
-          const newVal = prompt("Edit Technical (English|عربي):", fullName);
-          if (newVal && newVal !== fullName) {
-            editOption("technical-status", fullName, newVal);
-          }
-        });
+      openAddTechnicalPopup(oldVal);
     },
     onDeleteOption: (val) => {
       if (confirm(`Delete "${val}"?`)) {
@@ -1443,17 +1499,178 @@ function fetchTechnicalStatus(callback) {
 }
 
 
+function fetchDrives() {
+  renderDropdownOptions({
+    endpoint: "http://localhost:5050/Hard_Drive_Types",
+    containerId: "drive-select-options",
+    displayId: "selected-drive-select",
+    inputId: "drive-select",
+    labelKey: "hard_drive",
+    itemKey: "drive_type",
+    storageKey: "drive-select",
+transformData: createLangAwareTransform("drive_type")
+,
+    onAddNew: () => {
+      sessionStorage.setItem("lastDropdownOpened", "drive-select");
+      openAddOptionPopup("drive-select");
+    },
+    onEditOption: (oldVal) => {
+      const newVal = prompt("Edit Hard Drive:", oldVal);
+      if (newVal) editOption("drive-select", oldVal, newVal);
+    },
+    onDeleteOption: (val) => {
+      if (confirm(`Delete "${val}"?`)) deleteOption("drive-select", val);
+    }
+  });
+}
+
+function fetchCPU() {
+  renderDropdownOptions({
+    endpoint: "http://localhost:5050/CPU_Types",
+    containerId: "cpu-select-options",
+    displayId: "selected-cpu-select",
+    inputId: "cpu-select",
+    labelKey: "processor",
+    itemKey: "cpu_name",
+    transformData: createLangAwareTransform("cpu_name")
+,
+    onAddNew: () => {
+      sessionStorage.setItem("lastDropdownOpened", "cpu-select");
+      openAddOptionPopup("cpu-select");
+    },
+    onEditOption: (oldVal) => {
+      const newVal = prompt("Edit CPU:", oldVal);
+      if (newVal) editOption("cpu-select", oldVal, newVal);
+    },
+    onDeleteOption: (val) => {
+      if (confirm(`Delete "${val}"?`)) deleteOption("cpu-select", val);
+    }
+  });
+}
+
+function fetchRAM() {
+  renderDropdownOptions({
+    endpoint: "http://localhost:5050/RAM_Types",
+    containerId: "ram-select-options",
+    displayId: "selected-ram-select",
+    inputId: "ram-select",
+    labelKey: "ram",
+    itemKey: "ram_type",
+    storageKey: "ram-select",
+    transformData: createLangAwareTransform("ram_type")
+,
+    onAddNew: () => {
+      sessionStorage.setItem("lastDropdownOpened", "ram-select");
+      openAddOptionPopup("ram-select");
+    },
+    onEditOption: (oldVal) => {
+      const newVal = prompt("Edit RAM Type:", oldVal);
+      if (newVal) editOption("ram-select", oldVal, newVal);
+    },
+    onDeleteOption: (val) => {
+      if (confirm(`Delete "${val}"?`)) deleteOption("ram-select", val);
+    }
+  });
+}
+
+function fetchOS() {
+  renderDropdownOptions({
+    endpoint: "http://localhost:5050/OS_Types",
+    containerId: "os-select-options",
+    displayId: "selected-os-select",
+    inputId: "os-select",
+    labelKey: "operating_system",
+    itemKey: "os_name",
+    storageKey: "os-select",
+    transformData: createLangAwareTransform("os_name")
+,
+    onAddNew: () => {
+      sessionStorage.setItem("lastDropdownOpened", "os-select");
+      openAddOptionPopup("os-select");
+    },
+    onEditOption: (oldVal) => {
+      const newVal = prompt("Edit OS:", oldVal);
+      if (newVal) editOption("os-select", oldVal, newVal);
+    },
+    onDeleteOption: (val) => {
+      if (confirm(`Delete "${val}"?`)) deleteOption("os-select", val);
+    }
+  });
+}
+
+function fetchProcessorGen() {
+  renderDropdownOptions({
+    endpoint: "http://localhost:5050/Processor_Generations",
+    containerId: "generation-select-options",
+    displayId: "selected-generation-select",
+    inputId: "generation-select",
+    labelKey: "processor_generation",
+    itemKey: "generation_number",
+    storageKey: "generation-select",
+    transformData: createLangAwareTransform("generation_number"),
+
+    onAddNew: () => {
+      sessionStorage.setItem("lastDropdownOpened", "generation-select");
+      openAddOptionPopup("generation-select");
+    },
+    onEditOption: (oldVal) => {
+      const newVal = prompt("Edit Generation:", oldVal);
+      if (newVal) editOption("generation-select", oldVal, newVal);
+    },
+    onDeleteOption: (val) => {
+      if (confirm(`Delete "${val}"?`)) deleteOption("generation-select", val);
+    }
+  });
+}
+function fetchRAMSize() {
+  renderDropdownOptions({
+    endpoint: "http://localhost:5050/RAM_Sizes",
+    containerId: "ram-size-select-options",
+    displayId: "selected-ram-size-select",
+    inputId: "ram-size-select",
+    labelKey: "ram_size",
+    itemKey: "ram_size",
+    storageKey: "ram-size-select",
+    transformData: createLangAwareTransform("ram_size"),
+
+    onAddNew: () => {
+      sessionStorage.setItem("lastDropdownOpened", "ram-size-select");
+      openAddOptionPopup("ram-size-select");
+    },
+    onEditOption: (oldVal) => {
+      const newVal = prompt("Edit RAM Size:", oldVal);
+      if (newVal) editOption("ram-size-select", oldVal, newVal);
+    },
+    onDeleteOption: (val) => {
+      if (confirm(`Delete "${val}"?`)) deleteOption("ram-size-select", val);
+    }
+  });
+}
 
 
-function openAddTechnicalPopup() {
+function openAddTechnicalPopup(oldValue = "") {
   const t = languageManager.translations[languageManager.currentLang];
-
+  let enVal = "", arVal = "";
+  if (oldValue && oldValue.includes("|")) {
+    [enVal, arVal] = oldValue.split("|").map(s => s.trim());
+  } else if (oldValue) {
+    // إذا القيمة قديمة ولكن ليست مفصولة |
+    const isArabic = /[\u0600-\u06FF]/.test(oldValue);
+    if (isArabic) {
+      arVal = oldValue;
+    } else {
+      enVal = oldValue;
+    }
+  }
   const popup = document.getElementById("generic-popup");
   popup.innerHTML = `
     <div class="popup-contentt">
       <h3>${t['add_new']} ${t['technical']}</h3>
-      <label for="new-technical-name">${t['technical_name']} (English|Arabic):</label>
-      <input type="text" id="new-technical-name" placeholder="English|عربي" />
+      <label>${t['technical_name']} (English):</label>
+      <input type="text" id="new-technical-en" placeholder="${t['technical_name']} (English)" value="${enVal || ''}" />
+      <label>${t['technical_name']} (عربي):</label>
+      <input type="text" id="new-technical-ar" placeholder="${t['technical_name']} (عربي)" value="${arVal || ''}" />
+      <input type="hidden" id="old-technical-value" value="${oldValue || ''}" />
       <div class="popup-buttons">
         <button type="button" onclick="saveNewTechnical()">${t['save']}</button>
         <button type="button" onclick="closeGenericPopup()">${t['cancel']}</button>
@@ -1462,13 +1679,54 @@ function openAddTechnicalPopup() {
   `;
   popup.style.display = "flex";
 }
+
 function saveNewTechnical() {
   const t = languageManager.translations[languageManager.currentLang];
-  const name = document.getElementById("new-technical-name").value.trim();
-  if (!name || !name.includes("|")) {
-    alert("❌ الرجاء إدخال اسم المهندس بصيغة 'English|عربي'");
+  const en = document.getElementById("new-technical-en").value.trim();
+  const ar = document.getElementById("new-technical-ar").value.trim();
+  const oldValue = document.getElementById("old-technical-value")?.value.trim();
+  if (!en || !ar) {
+    alert("❌ الرجاء إدخال اسم المهندس بالإنجليزي والعربي.");
     return;
   }
+  const rawName = `${en}|${ar}`;
+  // إذا يوجد قيمة قديمة، أرسل تحديث
+  if (oldValue) {
+    // تحديث
+    fetch("http://localhost:5050/update-option-complete", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + localStorage.getItem("token")
+      },
+      body: JSON.stringify({
+        target: "technical",
+        oldValue: oldValue,
+        newValue: rawName
+      })
+    })
+      .then(res => res.json())
+      .then(result => {
+        if (result.error) {
+          alert(result.error);
+        } else {
+          fetchTechnicalStatus(() => {
+            const displaySpan = document.getElementById("selected-technical-status");
+            const hiddenInput = document.getElementById("technical-status");
+            const displayName = languageManager.currentLang === "ar" ? ar : en;
+            if (displaySpan) displaySpan.textContent = displayName;
+            if (hiddenInput) hiddenInput.value = displayName;
+          });
+          closeGenericPopup();
+        }
+      })
+      .catch(err => {
+        console.error("❌ Error updating engineer:", err);
+        alert(t['failed_to_save'] || "Failed to update engineer");
+      });
+    return;
+  }
+  // إضافة جديدة
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
     headers: {
@@ -1477,7 +1735,7 @@ function saveNewTechnical() {
     },
     body: JSON.stringify({
       target: "technical",
-      value: name
+      value: rawName
     })
   })
     .then(res => res.status === 204 ? {} : res.json())
@@ -1486,7 +1744,7 @@ function saveNewTechnical() {
         alert(result.error);
       } else {
         // ✅ بعد الإضافة، أظهر الجزء المناسب حسب اللغة
-        const parts = name.split("|").map(p => p.trim());
+        const parts = rawName.split("|").map(p => p.trim());
         const en = parts[0] || "";
         const ar = parts[1] || "";
         const displayName = languageManager.currentLang === "ar" ? (ar || en) : en;
@@ -1692,9 +1950,8 @@ function openAddProblemStatusPopup(deviceType) {
 function saveNewProblemStatus(deviceType) {
   const t = languageManager.translations[languageManager.currentLang];
   const name = document.getElementById("new-problem-status-name").value.trim();
-const isArabic = isArabicText(name);
-const langLabel = isArabic ? "[ar]" : "[en]";
-const labeledName = `${name} ${langLabel}`;
+  // ✅ لا نضيف تاجات لغة للمشاكل
+  const labeledName = name;
   if (!name) {
     alert(t['please_enter_valid_value']);
     return;
@@ -2420,69 +2677,6 @@ function appendLangTagIfMissing(value) {
 
 
 
-async function editOption(selectId, updatedDevice, newValue = null, type = null) {
-  const lang = languageManager.currentLang;
-  const t = languageManager.translations[lang];
-
-  if (!updatedDevice || (selectId !== "device-spec" && (!updatedDevice || !newValue))) {
-    alert(t['please_select_and_enter_valid_value']);
-    return false;
-  }
-
-  const isDeviceSpec = selectId === "device-spec";
-  const url = isDeviceSpec
-    ? "http://localhost:5050/update-device-specification"
-    : "http://localhost:5050/update-option-complete";
-
-  let body;
-  if (isDeviceSpec) {
-    body = updatedDevice;
-  } else {
-    const target = mapSelectIdToServerTarget(selectId);
-    let valueToSend;
-
-if (selectId === "section" || selectId === "technical-status") {
-      // إذا القسم، لا نضيف أي تاج لغة، نأخذ newValue كما هو
-      valueToSend = newValue.trim();
-    } else {
-      // لأي حقل آخر (غير device-spec و section) نستخدم appendLangTagIfMissing
-      valueToSend = appendLangTagIfMissing(newValue.trim(), lang);
-    }
-
-    body = {
-      target,
-      oldValue: updatedDevice,
-      newValue: valueToSend,
-      type
-    };
-  }
-
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify(body)
-    });
-    const result = await res.json();
-
-    if (result.error) {
-      alert(result.error);
-      return false;
-    } else {
-      if (!isDeviceSpec) refreshDropdown(selectId);
-      return true;
-    }
-  } catch (err) {
-    console.error("❌ Error editing option:", err);
-    alert(t['failed_to_edit_option']);
-    return false;
-  }
-}
-
-
 function attachEditDeleteHandlers(optionsContainerId, type = null) {
   const optionsContainer = document.getElementById(optionsContainerId);
 
@@ -2508,9 +2702,22 @@ function attachEditDeleteHandlers(optionsContainerId, type = null) {
       editIcon.onclick = (e) => {
         e.stopPropagation();
         const oldValue = textEl.textContent.trim();
-        const newValue = prompt(`Edit "${oldValue}"`, oldValue);
-        if (newValue && newValue.trim() !== oldValue) {
-          editOption(optionsContainerId.replace("-options", ""), oldValue, newValue.trim(), type);
+        const selectId = optionsContainerId.replace("-options", "");
+        
+        console.log(`✏️ Edit clicked for ${selectId}: "${oldValue}"`);
+        
+        // استخدام الدالة الجديدة للمهندس والقسم
+        if (selectId === "section" || selectId === "spec-department" || selectId === "technical-status") {
+          console.log(`🔄 Using enhanced edit for ${selectId}`);
+          // استخدم النص المعروض للبحث عن الاسم الكامل
+          editOptionWithFullName(selectId, oldValue, null, type);
+        } else {
+          // للمجالات الأخرى، استخدم المنطق العادي
+          console.log(`📝 Using standard edit for ${selectId}`);
+          const newValue = prompt(`Edit "${oldValue}"`, oldValue);
+          if (newValue && newValue.trim() !== oldValue) {
+            editOption(selectId, oldValue, newValue.trim(), type);
+          }
         }
       };
 
@@ -2521,8 +2728,9 @@ function attachEditDeleteHandlers(optionsContainerId, type = null) {
       deleteIcon.onclick = (e) => {
         e.stopPropagation();
         const valueToDelete = textEl.textContent.trim();
-        deleteOption(optionsContainerId.replace("-options", ""), valueToDelete, type);
-
+        const selectId = optionsContainerId.replace("-options", "");
+        console.log(`🗑️ Delete clicked for ${selectId}: "${valueToDelete}"`);
+        deleteOption(selectId, valueToDelete, type);
       };
 
       iconsContainer.appendChild(editIcon);
@@ -2691,10 +2899,8 @@ function saveGenericOption() {
 
   if (!rawValue || !dropdown) return;
 
-  // ✅ كشف اللغة من النص نفسه وليس من لغة الموقع
-  const isArabic = isArabicText(rawValue);
-  const tag = isArabic ? "[ar]" : "[en]";
-  const labeledValue = `${rawValue} ${tag}`;
+  // ✅ لا نضيف تاجات لغة - نحفظ القيمة كما هي
+  const value = rawValue;
 
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
@@ -2702,7 +2908,7 @@ function saveGenericOption() {
       "Content-Type": "application/json",
       "Authorization": "Bearer " + localStorage.getItem("token")
     },
-    body: JSON.stringify({ target: targetId, value: labeledValue })
+    body: JSON.stringify({ target: targetId, value: value })
   })
     .then(res => res.json())
     .then(result => {
@@ -2710,7 +2916,7 @@ function saveGenericOption() {
         alert(t[result.error] || result.error);
       } else {
         if (targetId === "device-type") {
-          sessionStorage.setItem("device-type", labeledValue);
+          sessionStorage.setItem("device-type", value);
           fetchDeviceTypes(); // ✅ إعادة تحميل DeviceType بعد الإضافة
         }
         sessionStorage.removeItem("returnToPopup");
@@ -2748,24 +2954,107 @@ function openAddModelPopup() {
     </div>
   `;
   popup.style.display = "flex";
-}function openAddSectionPopup(contextId = "section") {
+}function openAddSectionPopup(contextId = "section", oldValue = "") {
   const lang = languageManager.currentLang;
   const t = languageManager.translations[lang];
-
   sessionStorage.setItem("addSectionContext", contextId);
-
   const origin = document.getElementById("generic-popup-target-id")?.value;
   if (origin === "device-spec") {
     sessionStorage.setItem("returnToPopup", "true");
     sessionStorage.setItem("popupContext", "device-spec");
   }
-
+  
   const popup = document.getElementById("generic-popup");
+  const isEdit = oldValue && oldValue.trim() !== "";
+  
+if (isEdit) {
+  // ✅ عند التعديل، جلب الاسم الكامل أولاً
+  console.log(` Opening edit popup for section: "${oldValue}"`);
+  
+  // استخراج الجزء المناسب من الاسم إذا كان فيه "|"
+  let searchValue = oldValue;
+  if (oldValue && oldValue.includes("|")) {
+    const parts = oldValue.split("|").map(s => s.trim());
+    const currentLang = languageManager.currentLang;
+    searchValue = currentLang === "ar" ? (parts[1] || parts[0]) : parts[0];
+    console.log(`🔍 Using local part for search: "${searchValue}" (from "${oldValue}")`);
+  }
+  
+  // عرض رسالة تحميل
   popup.innerHTML = `
     <div class="popup-contentt">
-      <h3>${t['add_new']} ${t['section']}</h3>
-      <label>${t['section_name']}:</label>
-      <input type="text" id="new-section-name" placeholder="${t['enter_section_name']}" />
+      <h3>${t['loading'] || 'Loading...'}</h3>
+      <p>${t['loading_section_data'] || 'Loading section data...'}</p>
+    </div>
+  `;
+  popup.style.display = "flex";
+  
+  // جلب الاسم الكامل باستخدام الجزء المحلي
+  getFullName("section", searchValue).then(fullNameData => {
+    if (!fullNameData) {
+      alert(`❌ Could not find section "${searchValue}". Please check the spelling.`);
+      popup.style.display = "none";
+      return;
+    }
+    
+    console.log(`✅ Found section data:`, fullNameData);
+    
+    // ✅ معالجة القيمة القديمة - الآن لدينا الاسم الكامل
+    const enVal = fullNameData.englishName || "";
+    const arVal = fullNameData.arabicName || "";
+    
+    const title = t['edit'] + " " + t['section'];
+    
+    popup.innerHTML = `
+      <div class="popup-contentt">
+        <h3>${title}</h3>
+        <label>${t['section_name']} (English):</label>
+        <input type="text" id="new-section-en" placeholder="${t['enter_section_name']} (English)" value="${enVal}" />
+        <label>${t['section_name']} (عربي):</label>
+        <input type="text" id="new-section-ar" placeholder="${t['enter_section_name']} (عربي)" value="${arVal}" />
+        <input type="hidden" id="old-section-value" value="${fullNameData.fullName}" />
+        <input type="hidden" id="generic-popup-target-id" value="section" />
+        <div class="popup-buttons">
+          <button onclick="saveNewSection()">${t['save']}</button>
+          <button onclick="closeGenericPopup(true); event.stopPropagation()">${t['cancel']}</button>
+        </div>
+      </div>
+    `;
+  }).catch(err => {
+    console.error("❌ Error loading section data:", err);
+    alert("❌ Error loading section data. Please try again.");
+    popup.style.display = "none";
+  });
+  
+  return;
+}
+  
+  // ✅ إضافة جديدة - المنطق العادي
+  let enVal = "", arVal = "";
+  if (oldValue) {
+    if (oldValue.includes("|")) {
+      [enVal, arVal] = oldValue.split("|").map(s => s.trim());
+    } else {
+      // تحقق إذا كانت القيمة عربية أم إنجليزية
+      const isArabic = /[\u0600-\u06FF]/.test(oldValue);
+      if (isArabic) {
+        arVal = oldValue;
+      } else {
+        enVal = oldValue;
+      }
+    }
+  }
+  
+  const title = t['add_new'] + " " + t['section'];
+  
+  popup.innerHTML = `
+    <div class="popup-contentt">
+      <h3>${title}</h3>
+      <label>${t['section_name']} (English):</label>
+      <input type="text" id="new-section-en" placeholder="${t['enter_section_name']} (English)" value="${enVal || ''}" />
+      <label>${t['section_name']} (عربي):</label>
+      <input type="text" id="new-section-ar" placeholder="${t['enter_section_name']} (عربي)" value="${arVal || ''}" />
+      <input type="hidden" id="old-section-value" value="${oldValue || ''}" />
       <input type="hidden" id="generic-popup-target-id" value="section" />
       <div class="popup-buttons">
         <button onclick="saveNewSection()">${t['save']}</button>
@@ -2779,22 +3068,25 @@ function openAddModelPopup() {
 
 function saveNewModel() {
   const deviceType = document.getElementById("device-type").value.trim().toLowerCase();
-  const token = localStorage.getItem("token"); // ✅ استرجاع التوكن
+  const token = localStorage.getItem("token");
   const modelName = document.getElementById("new-model-name").value.trim();
-  const langTag = detectLangTag(modelName);
-  const nameWithTag = `${modelName} [${langTag}]`;
+  const t = languageManager.translations[languageManager.currentLang];
+  
   if (!modelName) {
     alert("❌ Please enter a model name");
     return;
   }
 
+  // ✅ لا نضيف تاجات لغة للموديلات - تظهر في كل اللغات
+  const nameToSave = modelName;
+
   fetch("http://localhost:5050/add-device-model", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": "Bearer " + token // ✅ مهم جدًا
+      "Authorization": "Bearer " + token
     },
-    body: JSON.stringify({ model_name: nameWithTag, device_type_name: deviceType })
+    body: JSON.stringify({ model_name: nameToSave, device_type_name: deviceType })
   })
     .then(res => res.json())
     .then(result => {
@@ -2803,10 +3095,9 @@ function saveNewModel() {
         return;
       }
 
-      sessionStorage.setItem(`model-${deviceType}`, modelName); // 👈 حفظ الاسم بمفتاح متوافق مع renderDropdownOptions
+      sessionStorage.setItem(`model-${deviceType}`, modelName);
       fetchAndRenderModels(deviceType, `model-${deviceType}`);
-      sessionStorage.setItem("spec-model", modelName); // 👈 للموديل داخل المواصفات
-
+      sessionStorage.setItem("spec-model", modelName);
 
       const isSpecContext = sessionStorage.getItem("returnToPopup") === "true";
       if (isSpecContext) {
@@ -3447,12 +3738,16 @@ document.addEventListener("DOMContentLoaded", () => {
           if (permissions.full_access || permissions.edit_items) {
             const editIcon = document.createElement("i");
             editIcon.className = "fas fa-edit";
-            editIcon.title = t['edit'];
+            editIcon.title = t['edit'] || "Edit";
             editIcon.onclick = (e) => {
               e.stopPropagation();
-              const newValue = prompt(`${t['edit']} ${t[config.labelKey]}:`, value);
-              if (newValue && newValue !== value) {
-                editOption(config.id, value, newValue);
+              // تمرير القيمة الكاملة عند التعديل
+              if (inputId === "section" || inputId === "spec-department") {
+                onEditOption?.(item.fullName || actualValue);
+              } else if (inputId === "technical-status") {
+                onEditOption?.(item.fullName || actualValue);
+              } else {
+                onEditOption?.(actualValue);
               }
             };
             icons.appendChild(editIcon);
@@ -3526,9 +3821,8 @@ function saveNewOption(selectId, labelKey) {
     return;
   }
 
-  const isArabic = isArabicText(rawValue);
-  const tag = isArabic ? "[ar]" : "[en]";
-  const value = `${rawValue} ${tag}`; // ✅ إضافة الوسم الصحيح
+  // ✅ لا نضيف تاجات لغة - نحفظ القيمة كما هي
+  const value = rawValue;
 
   fetch("http://localhost:5050/add-option-general", {
     method: "POST",
@@ -3554,7 +3848,7 @@ function saveNewOption(selectId, labelKey) {
         // ✅ تحديد ما يتم تحديثه بعد الإضافة
         switch (selectId) {
           case "floor":
-            sessionStorage.setItem("floor", rawValue); // نحفظ القيمة الأصلية
+            sessionStorage.setItem("floor", rawValue);
             fetchFloors();
             break;
 
@@ -3570,7 +3864,7 @@ function saveNewOption(selectId, labelKey) {
             break;
 
           default:
-            document.dispatchEvent(new Event("DOMContentLoaded")); // أو نحدث يدويًا
+            document.dispatchEvent(new Event("DOMContentLoaded"));
         }
       }
     })
@@ -3590,38 +3884,36 @@ function fetchFloors() {
     itemKey: "FloorNum",
     storageKey: "floor",
 
-transformData: (items) => {
-  const currentLang = languageManager.currentLang;
+    transformData: (items) => {
+      const currentLang = languageManager.currentLang;
 
-  return items
-    .filter(item => {
-      const original = item.FloorNum?.trim() || "";
-      const translated = translateFloorName(original); // 🔍 الترجمة
+      return items
+        .filter(item => {
+          const original = item.FloorNum?.trim() || "";
+          const translated = translateFloorName(original); // 🔍 الترجمة
 
-      const isTranslated = translated !== original;
-      const isArabicTag = original.endsWith("[ar]");
-      const isEnglishTag = original.endsWith("[en]");
-      const isUnlabeled = !isArabicTag && !isEnglishTag;
+          const isTranslated = translated !== original;
+          const isArabicTag = original.endsWith("[ar]");
+          const isEnglishTag = original.endsWith("[en]");
+          const isUnlabeled = !isArabicTag && !isEnglishTag;
 
-      // ✅ نعرض العناصر المترجمة دائمًا
-      if (isTranslated) return true;
+          // ✅ نعرض العناصر المترجمة دائمًا
+          if (isTranslated) return true;
 
-      // ✅ نعرض العناصر حسب لغة الموقع
-      if (currentLang === "ar") return isArabicTag || isUnlabeled;
-      return isEnglishTag || isUnlabeled;
-    })
-    .map(item => {
-      const original = item.FloorNum?.trim() || "";
-      const translated = translateFloorName(original);
-      const cleaned = translated.replace(/\s*\[(ar|en)\]$/i, "").trim(); // إزالة الوسم بعد الترجمة
-      return {
-        ...item,
-        FloorNum: cleaned
-      };
-    });
-},
-
-
+          // ✅ نعرض العناصر حسب لغة الموقع
+          if (currentLang === "ar") return isArabicTag || isUnlabeled;
+          return isEnglishTag || isUnlabeled;
+        })
+        .map(item => {
+          const original = item.FloorNum?.trim() || "";
+          const translated = translateFloorName(original);
+          const cleaned = translated.replace(/\s*\[(ar|en)\]$/i, "").trim(); // إزالة الوسم بعد الترجمة
+          return {
+            ...item,
+            FloorNum: cleaned
+          };
+        });
+    },
 
     onAddNew: () => {
       openAddNewOptionPopup({ id: "floor", labelKey: "floor" });
@@ -3773,7 +4065,14 @@ async function renderDropdownOptions({
       editIcon.title = t['edit'] || "Edit";
       editIcon.onclick = (e) => {
         e.stopPropagation();
-        onEditOption?.(value);
+        // تمرير القيمة الكاملة عند التعديل
+        if (inputId === "section" || inputId === "spec-department") {
+          onEditOption?.(item.fullName || actualValue);
+        } else if (inputId === "technical-status") {
+          onEditOption?.(item.fullName || actualValue);
+        } else {
+          onEditOption?.(actualValue);
+        }
       };
       icons.appendChild(editIcon);
     }
@@ -3824,4 +4123,214 @@ if (saved) {
 // ✅ دالة إغلاق كل الدروب داون
 function closeAllDropdowns() {
   document.querySelectorAll(".dropdown-content").forEach(drop => drop.style.display = "none");
+}
+
+// دالة لجلب الاسم الكامل للمهندس والقسم عند التعديل
+async function getFullName(target, value) {
+  try {
+    console.log(`🔍 Fetching full name for ${target}: "${value}"`);
+    
+    const response = await fetch("http://localhost:5050/get-full-name", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ target, value })
+    });
+
+    if (!response.ok) {
+      console.error(`❌ HTTP Error: ${response.status} ${response.statusText}`);
+      return null;
+    }
+
+    const result = await response.json();
+    
+    if (result.error) {
+      console.error("❌ Server error getting full name:", result.error);
+      return null;
+    }
+
+    console.log(`✅ Full name data received:`, result);
+    return result;
+  } catch (err) {
+    console.error("❌ Network error getting full name:", err);
+    return null;
+  }
+}
+
+// دالة محسنة للتعديل تدعم جلب الاسم الكامل
+async function editOptionWithFullName(selectId, oldValue, newValue = null, type = null) {
+  const lang = languageManager.currentLang;
+  const t = languageManager.translations[lang];
+
+  console.log(`🔍 editOptionWithFullName called with:`, { selectId, oldValue, newValue, type });
+
+  if (!oldValue) {
+    alert(t['please_select_and_enter_valid_value']);
+    return false;
+  }
+
+  // تحديد نوع الهدف
+  let target;
+  if (selectId === "section" || selectId === "spec-department") {
+    target = "section";
+  } else if (selectId === "technical-status") {
+    target = "technical";
+  } else {
+    // للمجالات الأخرى، استخدم المنطق العادي
+    return editOption(selectId, oldValue, newValue, type);
+  }
+
+  // تنظيف القيمة المرسلة واستخراج الجزء المناسب
+  let searchValue = oldValue.trim();
+  if (searchValue.includes("|")) {
+    const parts = searchValue.split("|").map(s => s.trim());
+    const currentLang = languageManager.currentLang;
+    searchValue = currentLang === "ar" ? (parts[1] || parts[0]) : parts[0];
+  }
+
+  console.log(`🔍 Searching for ${target} with value: "${searchValue}"`);
+
+  // جلب الاسم الكامل القديم
+  const fullNameData = await getFullName(target, searchValue);
+  if (!fullNameData) {
+    alert(`❌ Could not find ${target === "section" ? "department" : "engineer"} information.`);
+    return false;
+  }
+
+  console.log(`✅ Found full name data:`, fullNameData);
+
+  // إذا لم يتم تمرير newValue، اطلب من المستخدم إدخاله
+  let enVal = fullNameData.englishName || "";
+  let arVal = fullNameData.arabicName || "";
+  if (!newValue) {
+    const currentLang = languageManager.currentLang;
+    const currentName = currentLang === "ar" ? arVal : enVal;
+    const otherName = currentLang === "ar" ? enVal : arVal;
+    const promptMessage = `Edit ${target === "section" ? "Department" : "Engineer"} Name\n\nCurrent ${currentLang === "ar" ? "Arabic" : "English"}: ${currentName}\nCurrent ${currentLang === "ar" ? "English" : "Arabic"}: ${otherName}\n\nEnter new ${currentLang === "ar" ? "Arabic" : "English"} name:`;
+    newValue = prompt(promptMessage, currentName);
+    if (!newValue || newValue.trim() === "") {
+      return false;
+    }
+  }
+
+  // بناء الاسم الكامل الجديد
+  let fullNameNew = "";
+  const cleanNewValue = newValue.trim();
+  if (cleanNewValue.includes("|")) {
+    // إذا أدخل المستخدم الاسمين معًا
+    const parts = cleanNewValue.split("|").map(s => s.trim());
+    if (parts.length === 2) {
+      fullNameNew = `${parts[0]}|${parts[1]}`;
+    } else {
+      alert("❌ Please enter both English and Arabic names separated by | e.g. en|عربي");
+      return false;
+    }
+  } else {
+    // إذا أدخل المستخدم جزء واحد فقط
+    if (lang === "ar") {
+      fullNameNew = `${enVal}|${cleanNewValue}`;
+    } else {
+      fullNameNew = `${cleanNewValue}|${arVal}`;
+    }
+  }
+
+  console.log(`🔄 Sending update request:`, {
+    target,
+    oldValue: fullNameData.fullName,
+    newValue: fullNameNew
+  });
+
+  // إرسال الطلب للباكند
+  try {
+    const response = await fetch("http://localhost:5050/update-option-complete", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        target,
+        oldValue: fullNameData.fullName, // إرسال الاسم الكامل بدلاً من الجزء المحلي
+        newValue: fullNameNew, // الاسم الكامل الجديد
+        type
+      })
+    });
+    const result = await response.json();
+    if (result.error) {
+      alert(result.error);
+      return false;
+    } else {
+      console.log(`✅ Update successful:`, result);
+      refreshDropdown(selectId);
+      return true;
+    }
+  } catch (err) {
+    console.error("❌ Error in editOptionWithFullName:", err);
+    alert(t['failed_to_edit_option']);
+    return false;
+  }
+}
+
+async function editOption(selectId, updatedDevice, newValue = null, type = null) {
+  const lang = languageManager.currentLang;
+  const t = languageManager.translations[lang];
+
+  if (!updatedDevice || (selectId !== "device-spec" && (!updatedDevice || !newValue))) {
+    alert(t['please_select_and_enter_valid_value']);
+    return false;
+  }
+
+  const isDeviceSpec = selectId === "device-spec";
+  const url = isDeviceSpec
+    ? "http://localhost:5050/update-device-specification"
+    : "http://localhost:5050/update-option-complete";
+
+  let body;
+  if (isDeviceSpec) {
+    body = updatedDevice;
+  } else {
+    const target = mapSelectIdToServerTarget(selectId);
+    let valueToSend;
+
+if (selectId === "section" || selectId === "technical-status") {
+      // إذا القسم، لا نضيف أي تاج لغة، نأخذ newValue كما هو
+      valueToSend = newValue.trim();
+    } else {
+      // لأي حقل آخر (غير device-spec و section) نستخدم appendLangTagIfMissing
+      valueToSend = (newValue.trim());
+    }
+
+    body = {
+      target,
+      oldValue: updatedDevice,
+      newValue: valueToSend,
+      type
+    };
+  }
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(body)
+    });
+    const result = await res.json();
+
+    if (result.error) {
+      alert(result.error);
+      return false;
+    } else {
+      if (!isDeviceSpec) refreshDropdown(selectId);
+      return true;
+    }
+  } catch (err) {
+    console.error("❌ Error editing option:", err);
+    alert(t['failed_to_edit_option']);
+    return false;
+  }
 }

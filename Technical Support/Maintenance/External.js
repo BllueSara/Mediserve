@@ -715,10 +715,7 @@ console.log("currentLang:", currentLang);
     },
 
     onEditOption: (oldFullName) => {
-      const newVal = prompt("Edit Section (enter 'English|Arabic'):", oldFullName);
-      if (newVal && newVal !== oldFullName) {
-        editOption("section", oldFullName, newVal, "Department");
-      }
+      openAddSectionPopup(selectId, oldFullName);
     },
 
     onDeleteOption: (fullName) => {
@@ -760,13 +757,39 @@ onSelectOption: (localizedValue, fullItem) => {
 
 
 function saveNewSection() {
-  const combined = document.getElementById("new-section-name").value.trim();
-
-  // 2) تأكّد أنها ليست فارغة وأنها تحتوي '|'
-  if (!combined || !combined.includes("|")) {
-    alert("❌ الرجاء إدخال القسم بصيغة 'EnglishText|ArabicText'");
+  const t = languageManager.translations[languageManager.currentLang];
+  const en = document.getElementById("new-section-en").value.trim();
+  const ar = document.getElementById("new-section-ar").value.trim();
+  if (!en || !ar) {
+    alert("❌ الرجاء إدخال اسم القسم بالإنجليزي والعربي.");
     return;
   }
+  const combined = `${en}|${ar}`;
+  
+  // ✅ تحديد إذا كان تعديل أم إضافة جديدة
+  const oldValue = document.getElementById("old-section-value")?.value;
+  const isEdit = oldValue && oldValue.trim() !== "";
+  
+  if (isEdit) {
+    // ✅ استخدام الدالة الجديدة للتعديل
+    console.log(`🔄 Editing section from "${oldValue}" to "${combined}"`);
+    editOptionWithFullName("section", oldValue, combined).then(success => {
+      if (success) {
+        // ✅ إعادة تحميل قائمة الأقسام
+        const selectId = sessionStorage.getItem("lastDepartmentSelectId") || "section";
+        fetchDepartments(selectId);
+        
+        // ✅ تنظيف وإغلاق
+        sessionStorage.removeItem("lastDepartmentSelectId");
+        sessionStorage.removeItem("returnToPopup");
+        document.getElementById("generic-popup").style.display = "none";
+      }
+    });
+    return;
+  }
+  
+  // ✅ إضافة جديدة
+  console.log(`➕ Adding new section: "${combined}"`);
 
   fetch("http://localhost:5050/add-department", {
     method: "POST",
@@ -789,7 +812,7 @@ function saveNewSection() {
 
       // ===== 2) خزن الجزء المناسب للعرض فقط =====
       //    صيغة combined = "EnglishText|ArabicText"
-      const [enPart, arPart] = combined.split("|");
+      const [enPart, arPart] = combined.split("|").map(s => s.trim());
       const toStore = (languageManager.currentLang === "ar" ? arPart : enPart) || enPart;
       sessionStorage.setItem(selectId, toStore);
 
@@ -1116,7 +1139,7 @@ function closeGenericPopup(cancelled = false) {
   sessionStorage.removeItem("returnToPopup");
   sessionStorage.removeItem("popupContext");
 
-  ["spec-ministry", "spec-name", "spec-serial", "spec-model", "spec-department", "lastAddedModel"]
+  ["spec-ministry", "spec-name", "spec-serial", "spec-model", "spec-department", "lastAddedModel", "old-section-value"]
     .forEach(k => sessionStorage.removeItem(k));
 }
 
@@ -1165,15 +1188,14 @@ function saveOptionForSelect() {
 
   if (!rawValue || !dropdown) return;
 
-  const isArabic = isArabicText(rawValue); // ✅ تحديد اللغة من شكل النص
-  const tag = isArabic ? "[ar]" : "[en]";
-  const value = `${rawValue} ${tag}`; // ✅ أضف الوسم الصحيح
+  // لا تضف أي تاجات لغة، فقط احفظ القيمة كما هي
+  const value = rawValue;
 
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${localStorage.getItem('token')}`
+      "Authorization": "Bearer " + localStorage.getItem("token")
     },
     body: JSON.stringify({ target: targetId, value })
   })
@@ -1194,7 +1216,7 @@ function saveOptionForSelect() {
           case "scanner-type": fetchScannerTypes(); break;
         }
 
-        sessionStorage.setItem(targetId, rawValue); // ✅ حفظ القيمة بدون الوسم
+        sessionStorage.setItem(targetId, rawValue); // ✅ حفظ القيمة كما هي
         closeGenericPopup();
       }
     })
@@ -1414,19 +1436,141 @@ function cleanDropdownError(hiddenInput) {
     }
   }
 }
+function openAddSectionPopup(contextId = "section", oldValue = "") {
+  const lang = languageManager.currentLang;
+  const t = languageManager.translations[lang];
+  sessionStorage.setItem("addSectionContext", contextId);
+  const origin = document.getElementById("generic-popup-target-id")?.value;
+  if (origin === "device-spec") {
+    sessionStorage.setItem("returnToPopup", "true");
+    sessionStorage.setItem("popupContext", "device-spec");
+  }
+  
+  const popup = document.getElementById("generic-popup");
+  const isEdit = oldValue && oldValue.trim() !== "";
+  
+if (isEdit) {
+  // ✅ عند التعديل، جلب الاسم الكامل أولاً
+  console.log(` Opening edit popup for section: "${oldValue}"`);
+  
+  // استخراج الجزء المناسب من الاسم إذا كان فيه "|"
+  let searchValue = oldValue;
+  if (oldValue && oldValue.includes("|")) {
+    const parts = oldValue.split("|").map(s => s.trim());
+    const currentLang = languageManager.currentLang;
+    searchValue = currentLang === "ar" ? (parts[1] || parts[0]) : parts[0];
+    console.log(`🔍 Using local part for search: "${searchValue}" (from "${oldValue}")`);
+  }
+  
+  // عرض رسالة تحميل
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>${t['loading'] || 'Loading...'}</h3>
+      <p>${t['loading_section_data'] || 'Loading section data...'}</p>
+    </div>
+  `;
+  popup.style.display = "flex";
+  
+  // جلب الاسم الكامل باستخدام الجزء المحلي
+  getFullName("section", searchValue).then(fullNameData => {
+    if (!fullNameData) {
+      alert(`❌ Could not find section "${searchValue}". Please check the spelling.`);
+      popup.style.display = "none";
+      return;
+    }
+    
+    console.log(`✅ Found section data:`, fullNameData);
+    
+    // ✅ معالجة القيمة القديمة - الآن لدينا الاسم الكامل
+    const enVal = fullNameData.englishName || "";
+    const arVal = fullNameData.arabicName || "";
+    
+    const title = t['edit'] + " " + t['section'];
+    
+    popup.innerHTML = `
+      <div class="popup-content">
+        <h3>${title}</h3>
+        <label>${t['section_name']} (English):</label>
+        <input type="text" id="new-section-en" placeholder="${t['enter_section_name']} (English)" value="${enVal}" />
+        <label>${t['section_name']} (عربي):</label>
+        <input type="text" id="new-section-ar" placeholder="${t['enter_section_name']} (عربي)" value="${arVal}" />
+        <input type="hidden" id="old-section-value" value="${fullNameData.fullName}" />
+        <input type="hidden" id="generic-popup-target-id" value="section" />
+        <div class="popup-buttons">
+          <button onclick="saveNewSection()">${t['save']}</button>
+          <button onclick="closeGenericPopup(true); event.stopPropagation()">${t['cancel']}</button>
+        </div>
+      </div>
+    `;
+  }).catch(err => {
+    console.error("❌ Error loading section data:", err);
+    alert("❌ Error loading section data. Please try again.");
+    popup.style.display = "none";
+  });
+  
+  return;
+}
+  
+  // ✅ إضافة جديدة - المنطق العادي
+  let enVal = "", arVal = "";
+  if (oldValue) {
+    if (oldValue.includes("|")) {
+      [enVal, arVal] = oldValue.split("|").map(s => s.trim());
+    } else {
+      // تحقق إذا كانت القيمة عربية أم إنجليزية
+      const isArabic = /[\u0600-\u06FF]/.test(oldValue);
+      if (isArabic) {
+        arVal = oldValue;
+      } else {
+        enVal = oldValue;
+      }
+    }
+  }
+  
+  const title = t['add_new'] + " " + t['section'];
+  
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>${title}</h3>
+      <label>${t['section_name']} (English):</label>
+      <input type="text" id="new-section-en" placeholder="${t['enter_section_name']} (English)" value="${enVal || ''}" />
+      <label>${t['section_name']} (عربي):</label>
+      <input type="text" id="new-section-ar" placeholder="${t['enter_section_name']} (عربي)" value="${arVal || ''}" />
+      <input type="hidden" id="old-section-value" value="${oldValue || ''}" />
+      <input type="hidden" id="generic-popup-target-id" value="section" />
+      <div class="popup-buttons">
+        <button onclick="saveNewSection()">${t['save']}</button>
+        <button onclick="closeGenericPopup(true); event.stopPropagation()">${t['cancel']}</button>
+      </div>
+    </div>
+  `;
+  popup.style.display = "flex";
+}
 
 
-
-
-function openAddTechnicalPopup() {
+function openAddTechnicalPopup(oldValue = "") {
   const t = languageManager.translations[languageManager.currentLang];
-
+  let enVal = "", arVal = "";
+  if (oldValue && oldValue.includes("|")) {
+    [enVal, arVal] = oldValue.split("|").map(s => s.trim());
+  } else if (oldValue) {
+    // إذا القيمة قديمة ولكن ليست مفصولة |
+    const isArabic = /[\u0600-\u06FF]/.test(oldValue);
+    if (isArabic) {
+      arVal = oldValue;
+    } else {
+      enVal = oldValue;
+    }
+  }
   const popup = document.getElementById("generic-popup");
   popup.innerHTML = `
     <div class="popup-contentt">
       <h3>${t['add_new']} ${t['technical']}</h3>
-      <label for="new-technical-name">${t['technical_name']}:</label>
-      <input type="text" id="new-technical-name" placeholder="English|عربي" />
+      <label>${t['technical_name']} (English):</label>
+      <input type="text" id="new-technical-en" placeholder="${t['technical_name']} (English)" value="${enVal || ''}" />
+      <label>${t['technical_name']} (عربي):</label>
+      <input type="text" id="new-technical-ar" placeholder="${t['technical_name']} (عربي)" value="${arVal || ''}" />
+      <input type="hidden" id="old-technical-value" value="${oldValue || ''}" />
       <div class="popup-buttons">
         <button type="button" onclick="saveNewTechnical()">${t['save']}</button>
         <button type="button" onclick="closeGenericPopup()">${t['cancel']}</button>
@@ -1438,13 +1582,51 @@ function openAddTechnicalPopup() {
 
 function saveNewTechnical() {
   const t = languageManager.translations[languageManager.currentLang];
-  const name = document.getElementById("new-technical-name").value.trim();
-  if (!name) {
-    alert(`${t['please_enter_valid_value']}`);
+  const en = document.getElementById("new-technical-en").value.trim();
+  const ar = document.getElementById("new-technical-ar").value.trim();
+  const oldValue = document.getElementById("old-technical-value")?.value.trim();
+  if (!en || !ar) {
+    alert("❌ الرجاء إدخال اسم المهندس بالإنجليزي والعربي.");
     return;
   }
-  const langTag = detectLangTag(name); // 👈 استخرج اللغة
-  const nameWithTag = `${name} [${langTag}]`; // 👈 أضف الوسم
+  const rawName = `${en}|${ar}`;
+  // إذا يوجد قيمة قديمة، أرسل تحديث
+  if (oldValue) {
+    // تحديث
+    fetch("http://localhost:5050/update-option-complete", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + localStorage.getItem("token")
+      },
+      body: JSON.stringify({
+        target: "technical",
+        oldValue: oldValue,
+        newValue: rawName
+      })
+    })
+      .then(res => res.json())
+      .then(result => {
+        if (result.error) {
+          alert(result.error);
+        } else {
+          fetchTechnicalStatus(() => {
+            const displaySpan = document.getElementById("selected-technical-status");
+            const hiddenInput = document.getElementById("technical-status");
+            const displayName = languageManager.currentLang === "ar" ? ar : en;
+            if (displaySpan) displaySpan.textContent = displayName;
+            if (hiddenInput) hiddenInput.value = displayName;
+          });
+          closeGenericPopup();
+        }
+      })
+      .catch(err => {
+        console.error("❌ Error updating engineer:", err);
+        alert(t['failed_to_save'] || "Failed to update engineer");
+      });
+    return;
+  }
+  // إضافة جديدة
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
     headers: {
@@ -1453,7 +1635,7 @@ function saveNewTechnical() {
     },
     body: JSON.stringify({
       target: "technical",
-      value: nameWithTag
+      value: rawName
     })
   })
     .then(res => res.status === 204 ? {} : res.json())
@@ -1461,11 +1643,16 @@ function saveNewTechnical() {
       if (result.error) {
         alert(result.error);
       } else {
+        // ✅ بعد الإضافة، أظهر الجزء المناسب حسب اللغة
+        const parts = rawName.split("|").map(p => p.trim());
+        const en = parts[0] || "";
+        const ar = parts[1] || "";
+        const displayName = languageManager.currentLang === "ar" ? (ar || en) : en;
         fetchTechnicalStatus(() => {
           const displaySpan = document.getElementById("selected-technical-status");
           const hiddenInput = document.getElementById("technical-status");
-          displaySpan.textContent = name;
-          hiddenInput.value = name;
+          displaySpan.textContent = displayName;
+          hiddenInput.value = displayName;
         });
         closeGenericPopup();
       }
@@ -1475,7 +1662,6 @@ function saveNewTechnical() {
       alert(t['failed_to_save'] || "Failed to save engineer");
     });
 }
-
 
 
 function toggleDropdown(toggleEl) {
@@ -1651,7 +1837,7 @@ async function fetchDeviceSpecsByTypeAndDepartment() {
           if (permissions.full_access || permissions.edit_items) {
             const editIcon = document.createElement("i");
             editIcon.className = "fas fa-edit";
-            editIcon.title = t['edit'];
+            editIcon.title = t['edit'] || "Edit";
             editIcon.onclick = async (e) => {
               e.stopPropagation();
               const deviceId = device.id;
@@ -1695,7 +1881,7 @@ async function fetchDeviceSpecsByTypeAndDepartment() {
           if (permissions.full_access || permissions.delete_items) {
             const deleteIcon = document.createElement("i");
             deleteIcon.className = "fas fa-trash";
-            deleteIcon.title = t['delete'];
+            deleteIcon.title = t['delete'] || "Delete";
             deleteIcon.onclick = async (e) => {
               e.stopPropagation();
               if (confirm(`${t['confirm_delete']} "${device.name}"?`)) {
@@ -2158,67 +2344,6 @@ function appendLangTagIfMissing(value) {
 
 
 
-async function editOption(selectId, updatedDevice, newValue = null, type = null) {
-  const lang = languageManager.currentLang;
-  const t = languageManager.translations[lang];
-
-  if (!updatedDevice || (selectId !== "device-spec" && (!updatedDevice || !newValue))) {
-    alert(t['please_select_and_enter_valid_value']);
-    return false;
-  }
-
-  const isDeviceSpec = selectId === "device-spec";
-  const url = isDeviceSpec
-    ? "http://localhost:5050/update-device-specification"
-    : "http://localhost:5050/update-option-complete";
-
-  let body;
-  if (isDeviceSpec) {
-    body = updatedDevice;
-  } else {
-    const target = mapSelectIdToServerTarget(selectId);
-    let valueToSend;
-
-if (selectId === "section" || selectId === "technical-status") {
-      // إذا القسم، لا نضيف أي تاج لغة، نأخذ newValue كما هو
-      valueToSend = newValue.trim();
-    } else {
-      // لأي حقل آخر (غير device-spec و section) نستخدم appendLangTagIfMissing
-      valueToSend = appendLangTagIfMissing(newValue.trim(), lang);
-    }
-
-    body = {
-      target,
-      oldValue: updatedDevice,
-      newValue: valueToSend,
-      type
-    };
-  }
-
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify(body)
-    });
-    const result = await res.json();
-
-    if (result.error) {
-      alert(result.error);
-      return false;
-    } else {
-      if (!isDeviceSpec) refreshDropdown(selectId);
-      return true;
-    }
-  } catch (err) {
-    console.error("❌ Error editing option:", err);
-    alert(t['failed_to_edit_option']);
-    return false;
-  }
-}
 
 function attachEditDeleteHandlers(optionsContainerId, type = null) {
   const optionsContainer = document.getElementById(optionsContainerId);
@@ -2245,9 +2370,22 @@ function attachEditDeleteHandlers(optionsContainerId, type = null) {
       editIcon.onclick = (e) => {
         e.stopPropagation();
         const oldValue = textEl.textContent.trim();
-        const newValue = prompt(`Edit "${oldValue}"`, oldValue);
-        if (newValue && newValue.trim() !== oldValue) {
-          editOption(optionsContainerId.replace("-options", ""), oldValue, newValue.trim(), type);
+        const selectId = optionsContainerId.replace("-options", "");
+        
+        console.log(`✏️ Edit clicked for ${selectId}: "${oldValue}"`);
+        
+        // استخدام الدالة الجديدة للمهندس والقسم
+        if (selectId === "section" || selectId === "spec-department" || selectId === "technical-status") {
+          console.log(`🔄 Using enhanced edit for ${selectId}`);
+          // استخدم النص المعروض للبحث عن الاسم الكامل
+          editOptionWithFullName(selectId, oldValue, null, type);
+        } else {
+          // للمجالات الأخرى، استخدم المنطق العادي
+          console.log(`📝 Using standard edit for ${selectId}`);
+          const newValue = prompt(`Edit "${oldValue}"`, oldValue);
+          if (newValue && newValue.trim() !== oldValue) {
+            editOption(selectId, oldValue, newValue.trim(), type);
+          }
         }
       };
 
@@ -2258,9 +2396,9 @@ function attachEditDeleteHandlers(optionsContainerId, type = null) {
       deleteIcon.onclick = (e) => {
         e.stopPropagation();
         const valueToDelete = textEl.textContent.trim();
-        if (confirm(`❗ Are you sure you want to delete "${valueToDelete}"?`)) {
-          deleteOption(optionsContainerId.replace("-options", ""), valueToDelete, type);
-        }
+        const selectId = optionsContainerId.replace("-options", "");
+        console.log(`🗑️ Delete clicked for ${selectId}: "${valueToDelete}"`);
+        deleteOption(selectId, valueToDelete, type);
       };
 
       iconsContainer.appendChild(editIcon);
@@ -2269,7 +2407,6 @@ function attachEditDeleteHandlers(optionsContainerId, type = null) {
     }
   });
 }
-
 
 
 function openGenericPopup(labelKey, targetId) {
@@ -2448,24 +2585,43 @@ function openAddModelPopup() {
     </div>
   `;
   popup.style.display = "flex";
-}function openAddSectionPopup(contextId = "section") {
+}function openAddSectionPopup(contextId = "section", oldValue = "") {
   const lang = languageManager.currentLang;
   const t = languageManager.translations[lang];
-
   sessionStorage.setItem("addSectionContext", contextId);
-
   const origin = document.getElementById("generic-popup-target-id")?.value;
   if (origin === "device-spec") {
     sessionStorage.setItem("returnToPopup", "true");
     sessionStorage.setItem("popupContext", "device-spec");
   }
-
+  // ✅ معالجة القيمة القديمة - قد تكون القيمة الكاملة أو المحلية
+  let enVal = "", arVal = "";
+  if (oldValue) {
+    if (oldValue.includes("|")) {
+      [enVal, arVal] = oldValue.split("|").map(s => s.trim());
+    } else {
+      // تحقق إذا كانت القيمة عربية أم إنجليزية
+      const isArabic = /[\u0600-\u06FF]/.test(oldValue);
+      if (isArabic) {
+        arVal = oldValue;
+      } else {
+        enVal = oldValue;
+      }
+    }
+  }
+  
+  // ✅ تحديد العنوان المناسب
+  const title = oldValue ? t['edit'] + " " + t['section'] : t['add_new'] + " " + t['section'];
+  
   const popup = document.getElementById("generic-popup");
   popup.innerHTML = `
     <div class="popup-contentt">
-      <h3>${t['add_new']} ${t['section']}</h3>
-      <label>${t['section_name']}:</label>
-      <input type="text" id="new-section-name" placeholder="${t['enter_section_name']}" />
+      <h3>${title}</h3>
+      <label>${t['section_name']} (English):</label>
+      <input type="text" id="new-section-en" placeholder="${t['enter_section_name']} (English)" value="${enVal || ''}" />
+      <label>${t['section_name']} (عربي):</label>
+      <input type="text" id="new-section-ar" placeholder="${t['enter_section_name']} (عربي)" value="${arVal || ''}" />
+      <input type="hidden" id="old-section-value" value="${oldValue || ''}" />
       <input type="hidden" id="generic-popup-target-id" value="section" />
       <div class="popup-buttons">
         <button onclick="saveNewSection()">${t['save']}</button>
@@ -2481,12 +2637,13 @@ function saveNewModel() {
   const deviceType = document.getElementById("device-type").value.trim().toLowerCase();
   const token = localStorage.getItem("token"); // ✅ استرجاع التوكن
   const modelName = document.getElementById("new-model-name").value.trim();
-  const langTag = detectLangTag(modelName);
-  const nameWithTag = `${modelName} [${langTag}]`;
   if (!modelName) {
     alert("❌ Please enter a model name");
     return;
   }
+
+  // لا تضف أي تاجات لغة، فقط احفظ القيمة كما هي
+  const nameWithTag = modelName;
 
   fetch("http://localhost:5050/add-device-model", {
     method: "POST",
@@ -2506,7 +2663,6 @@ function saveNewModel() {
       sessionStorage.setItem(`model-${deviceType}`, modelName); // 👈 حفظ الاسم بمفتاح متوافق مع renderDropdownOptions
       fetchAndRenderModels(deviceType, `model-${deviceType}`);
       sessionStorage.setItem("spec-model", modelName); // 👈 للموديل داخل المواصفات
-
 
       const isSpecContext = sessionStorage.getItem("returnToPopup") === "true";
       if (isSpecContext) {
@@ -2772,20 +2928,9 @@ function closeGenericPopup(cancelled = false) {
   sessionStorage.removeItem("returnToPopup");
   sessionStorage.removeItem("popupContext");
 
-  ["spec-ministry", "spec-name", "spec-serial", "spec-model", "spec-department", "lastAddedModel"]
+  ["spec-ministry", "spec-name", "spec-serial", "spec-model", "spec-department", "lastAddedModel", "old-section-value"]
     .forEach(k => sessionStorage.removeItem(k));
 }
-
-
-
-
-
-
-
-
-
-
-
 function prependAddNewOption(selectElement, value = "add-new", text = "+ Add New") {
   if (!selectElement) return;
 
@@ -3202,14 +3347,20 @@ text.onclick = () => {
     const icons = document.createElement("div");
     icons.className = "dropdown-actions-icons";
 
-    // ✏️ تعديل
     if (permissions.full_access || permissions.edit_items) {
       const editIcon = document.createElement("i");
       editIcon.className = "fas fa-edit";
       editIcon.title = t['edit'] || "Edit";
       editIcon.onclick = (e) => {
         e.stopPropagation();
-        onEditOption?.(value);
+        // تمرير القيمة الكاملة عند التعديل
+        if (inputId === "section" || inputId === "spec-department") {
+          onEditOption?.(item.fullName || actualValue);
+        } else if (inputId === "technical-status") {
+          onEditOption?.(item.fullName || actualValue);
+        } else {
+          onEditOption?.(actualValue);
+        }
       };
       icons.appendChild(editIcon);
     }
@@ -3253,3 +3404,221 @@ if (saved) {
 
   attachEditDeleteHandlers(containerId, t[labelKey] || labelKey);
 }
+
+
+// دالة لجلب الاسم الكامل للمهندس والقسم عند التعديل
+async function getFullName(target, value) {
+  try {
+    console.log(`🔍 Fetching full name for ${target}: "${value}"`);
+    
+    const response = await fetch("http://localhost:5050/get-full-name", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ target, value })
+    });
+
+    if (!response.ok) {
+      console.error(`❌ HTTP Error: ${response.status} ${response.statusText}`);
+      return null;
+    }
+
+    const result = await response.json();
+    
+    if (result.error) {
+      console.error("❌ Server error getting full name:", result.error);
+      return null;
+    }
+
+    console.log(`✅ Full name data received:`, result);
+    return result;
+  } catch (err) {
+    console.error("❌ Network error getting full name:", err);
+    return null;
+  }
+}
+
+// دالة محسنة للتعديل تدعم جلب الاسم الكامل
+async function editOptionWithFullName(selectId, oldValue, newValue = null, type = null) {
+  const lang = languageManager.currentLang;
+  const t = languageManager.translations[lang];
+
+  console.log(`🔍 editOptionWithFullName called with:`, { selectId, oldValue, newValue, type });
+
+  if (!oldValue) {
+    alert(t['please_select_and_enter_valid_value']);
+    return false;
+  }
+
+  // تحديد نوع الهدف
+  let target;
+  if (selectId === "section" || selectId === "spec-department") {
+    target = "section";
+  } else if (selectId === "technical-status") {
+    target = "technical";
+  } else {
+    // للمجالات الأخرى، استخدم المنطق العادي
+    return editOption(selectId, oldValue, newValue, type);
+  }
+
+  // تنظيف القيمة المرسلة واستخراج الجزء المناسب
+  let searchValue = oldValue.trim();
+  if (searchValue.includes("|")) {
+    const parts = searchValue.split("|").map(s => s.trim());
+    const currentLang = languageManager.currentLang;
+    searchValue = currentLang === "ar" ? (parts[1] || parts[0]) : parts[0];
+  }
+
+  console.log(`🔍 Searching for ${target} with value: "${searchValue}"`);
+
+  // جلب الاسم الكامل القديم
+  const fullNameData = await getFullName(target, searchValue);
+  if (!fullNameData) {
+    alert(`❌ Could not find ${target === "section" ? "department" : "engineer"} information.`);
+    return false;
+  }
+
+  console.log(`✅ Found full name data:`, fullNameData);
+
+  // إذا لم يتم تمرير newValue، اطلب من المستخدم إدخاله
+  let enVal = fullNameData.englishName || "";
+  let arVal = fullNameData.arabicName || "";
+  if (!newValue) {
+    const currentLang = languageManager.currentLang;
+    const currentName = currentLang === "ar" ? arVal : enVal;
+    const otherName = currentLang === "ar" ? enVal : arVal;
+    const promptMessage = `Edit ${target === "section" ? "Department" : "Engineer"} Name\n\nCurrent ${currentLang === "ar" ? "Arabic" : "English"}: ${currentName}\nCurrent ${currentLang === "ar" ? "English" : "Arabic"}: ${otherName}\n\nEnter new ${currentLang === "ar" ? "Arabic" : "English"} name:`;
+    newValue = prompt(promptMessage, currentName);
+    if (!newValue || newValue.trim() === "") {
+      return false;
+    }
+  }
+
+  // بناء الاسم الكامل الجديد
+  let fullNameNew = "";
+  const cleanNewValue = newValue.trim();
+  if (cleanNewValue.includes("|")) {
+    // إذا أدخل المستخدم الاسمين معًا
+    const parts = cleanNewValue.split("|").map(s => s.trim());
+    if (parts.length === 2) {
+      fullNameNew = `${parts[0]}|${parts[1]}`;
+    } else {
+      alert("❌ Please enter both English and Arabic names separated by | e.g. en|عربي");
+      return false;
+    }
+  } else {
+    // إذا أدخل المستخدم جزء واحد فقط
+    if (lang === "ar") {
+      fullNameNew = `${enVal}|${cleanNewValue}`;
+    } else {
+      fullNameNew = `${cleanNewValue}|${arVal}`;
+    }
+  }
+
+  console.log(`🔄 Sending update request:`, {
+    target,
+    oldValue: fullNameData.fullName,
+    newValue: fullNameNew
+  });
+
+  // إرسال الطلب للباكند
+  try {
+    const response = await fetch("http://localhost:5050/update-option-complete", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        target,
+        oldValue: fullNameData.fullName, // إرسال الاسم الكامل بدلاً من الجزء المحلي
+        newValue: fullNameNew, // الاسم الكامل الجديد
+        type
+      })
+    });
+    const result = await response.json();
+    if (result.error) {
+      alert(result.error);
+      return false;
+    } else {
+      console.log(`✅ Update successful:`, result);
+      refreshDropdown(selectId);
+      return true;
+    }
+  } catch (err) {
+    console.error("❌ Error in editOptionWithFullName:", err);
+    alert(t['failed_to_edit_option']);
+    return false;
+  }
+}
+
+async function editOption(selectId, updatedDevice, newValue = null, type = null) {
+  const lang = languageManager.currentLang;
+  const t = languageManager.translations[lang];
+
+  if (!updatedDevice || (selectId !== "device-spec" && (!updatedDevice || !newValue))) {
+    alert(t['please_select_and_enter_valid_value']);
+    return false;
+  }
+
+  const isDeviceSpec = selectId === "device-spec";
+  const url = isDeviceSpec
+    ? "http://localhost:5050/update-device-specification"
+    : "http://localhost:5050/update-option-complete";
+
+  let body;
+  if (isDeviceSpec) {
+    body = updatedDevice;
+  } else {
+    const target = mapSelectIdToServerTarget(selectId);
+    let valueToSend;
+
+if (selectId === "section" || selectId === "technical-status") {
+      // إذا القسم، لا نضيف أي تاج لغة، نأخذ newValue كما هو
+      valueToSend = newValue.trim();
+    } else {
+      // لأي حقل آخر (غير device-spec و section) نستخدم appendLangTagIfMissing
+      valueToSend = (newValue.trim());
+    }
+
+    body = {
+      target,
+      oldValue: updatedDevice,
+      newValue: valueToSend,
+      type
+    };
+  }
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(body)
+    });
+    const result = await res.json();
+
+    if (result.error) {
+      alert(result.error);
+      return false;
+    } else {
+      if (!isDeviceSpec) refreshDropdown(selectId);
+      return true;
+    }
+  } catch (err) {
+    console.error("❌ Error editing option:", err);
+    alert(t['failed_to_edit_option']);
+    return false;
+  }
+}
+
+
+
+
+
+
+
