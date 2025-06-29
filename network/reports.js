@@ -9,6 +9,24 @@ function goBack() {
 
 const API_BASE_URL = 'http://localhost:3000/api';
 
+function filterEngineerNameByLang(text, lang) {
+  if (!text || typeof text !== 'string') return text;
+  // فلترة أي اسم فيه | حتى لو جاء بعد كلمات مثل engineer أو user أو غيرها
+  // أمثلة: to engineer Sara|سارة, assigned to user Ali|علي
+  return text.replace(/([A-Za-zء-ي0-9_\-]+\|[A-Za-zء-ي0-9_\-]+)/g, (match) => {
+    const parts = match.split('|').map(s => s.trim());
+    if (parts.length === 2) {
+      return lang === 'ar' ? (parts[1] || parts[0]) : parts[0];
+    }
+    return match;
+  });
+}
+
+// Function to get translated text
+function getTranslatedText(key) {
+    const lang = languageManager.currentLang || 'en';
+    return languageManager.translations[lang][key] || key;
+}
 
 // Function to format date
 function formatDate(date) {
@@ -48,7 +66,7 @@ function createReportCard(ip, ipHistory) { // Accept IP and the full history arr
 
     const title = document.createElement('div');
     title.className = 'report-title';
-    title.textContent = `Report for ${ip || 'Unknown IP'}`;
+    title.textContent = `${getTranslatedText('report_for')} ${ip || getTranslatedText('unknown_ip')}`;
 
     const date = document.createElement('div');
     date.className = 'report-date';
@@ -63,20 +81,20 @@ function createReportCard(ip, ipHistory) { // Accept IP and the full history arr
     // Add details from the latest report result
     const details = [
         { 
-            label: 'Status', 
-            value: latestReportResult.status,
+            label: getTranslatedText('status'), 
+            value: getTranslatedText(latestReportResult.status.toLowerCase()),
             class: getStatusClass(latestReportResult.status)
         },
         { 
-            label: 'Latency', 
+            label: getTranslatedText('latency'), 
             value: latestReportResult.latency ? `${latestReportResult.latency}ms` : 'N/A'
         },
          { 
-            label: 'Packet Loss', 
+            label: getTranslatedText('packet_loss'), 
             value: latestReportResult.packetLoss != null ? `${latestReportResult.packetLoss}%` : 'N/A'
         },
         { 
-            label: 'Timeouts', 
+            label: getTranslatedText('timeouts'), 
             value: latestReportResult.timeouts != null ? latestReportResult.timeouts.toString() : '0'
         }
         // Add other details like circuit name, ISP, location, speed if available in the first result of history
@@ -110,7 +128,7 @@ function createReportCard(ip, ipHistory) { // Accept IP and the full history arr
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
             <circle cx="12" cy="12" r="3"></circle>
         </svg>
-        View Details
+        ${getTranslatedText('view_details')}
     `;
     viewButton.onclick = () => viewReportDetails(ipHistory); // Pass the full history
 
@@ -122,7 +140,7 @@ function createReportCard(ip, ipHistory) { // Accept IP and the full history arr
             <polyline points="7 10 12 15 17 10"></polyline>
             <line x1="12" y1="15" x2="12" y2="3"></line>
         </svg>
-        Download
+        ${getTranslatedText('download')}
     `;
     downloadButton.onclick = () => downloadReport(ipHistory); // Pass the full history
 
@@ -151,7 +169,7 @@ function renderReports(reportsToRender) {
                     <line x1="16" y1="17" x2="8" y2="17"></line>
                     <polyline points="10 9 9 9 8 9"></polyline>
                 </svg>
-                <p data-i18n="no_reports_available">No reports available</p>
+                <p data-i18n="no_reports_available">${getTranslatedText('no_reports_available')}</p>
             </div>
         `;
         // updateContent(); // Removed explicit call here
@@ -370,8 +388,7 @@ async function loadSavedReports() {
   
     const title = document.createElement('div');
     title.className = 'report-title';
-   title.textContent = ' Network Report';
-
+    title.textContent = getTranslatedText('network_reports');
   
     const date = document.createElement('div');
     date.className = 'report-date';
@@ -383,14 +400,20 @@ async function loadSavedReports() {
     const info = document.createElement('div');
     info.className = 'report-info';
   
+    // Get current language from localStorage
+    const currentLang = localStorage.getItem('language') || 'en';
+    
+    // Apply language filtering to owner name
+    const filteredOwnerName = report.owner_name ? filterEngineerNameByLang(report.owner_name, currentLang) : null;
+  
     const items = [
       {
         label: 'IPs',
         value: `${report.device_count || 0}`
       },
-      ...(report.owner_name ? [{
+      ...(filteredOwnerName ? [{
         label: 'Owner',
-        value: report.owner_name
+        value: filteredOwnerName
       }] : [])
     ];
   
@@ -416,12 +439,12 @@ async function loadSavedReports() {
   
     const viewBtn = document.createElement('button');
     viewBtn.className = 'action-button view-button';
-    viewBtn.textContent = 'View Details';
+    viewBtn.textContent = getTranslatedText('view_details');
     viewBtn.onclick = () => viewReportDetails(report.report_id);
   
     const downloadBtn = document.createElement('button');
     downloadBtn.className = 'action-button download-button';
-    downloadBtn.textContent = 'Download';
+    downloadBtn.textContent = getTranslatedText('download');
     downloadBtn.onclick = () => downloadFullReport(report.report_id); 
   
     actions.appendChild(viewBtn);

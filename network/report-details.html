@@ -24,6 +24,7 @@
                 <img src="/icon/Home.png" alt="Home Icon" class="Home-icon"> <span data-i18n="home">Home</span>
             </a>
         </div>
+        <!-- Language Switch Button -->
     </div>
 
     <!-- Header (Logos) - Using reports.css styles -->
@@ -37,20 +38,35 @@
     </header>
 
     <main class="details-container">
-        <h1 data-i18n="report_details_for">Report Details for <span id="ipAddress"></span></h1>
+        <div class="report-header">
+            <h1 data-i18n="report_details_for">
+                 <span id="ipAddress"></span></h1>
+            <div class="action-buttons">
+                <button id="downloadReportBtn" class="download-btn" data-i18n="download_pdf">
+                    <img src="/icon/download.png" alt="Download" class="download-icon">
+                    <span data-i18n="download_excel">Download Excel</span>
+                </button>
+            </div>
+        </div>
         
-        <table id="reportDetailsTable">
-            <thead id="reportDetailsHead">
-                <!-- Will be filled dynamically by JS -->
-            </thead>
-            <tbody id="reportDetailsBody">
-                <!-- Data rows inserted here -->
-            </tbody>
-        </table>
+        <div class="table-container">
+            <table id="reportDetailsTable">
+                <thead id="reportDetailsHead">
+                    <!-- Will be filled dynamically by JS -->
+                </thead>
+                <tbody id="reportDetailsBody">
+                    <!-- Data rows inserted here -->
+                </tbody>
+            </table>
+        </div>
         
+        <div class="no-data-message" id="noDataMessage" style="display: none;">
+            <p data-i18n="no_data_found">No data found for this report.</p>
+        </div>
     </main>
 
     <script src="/Language/Language.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="report-details.js"></script> <!-- We will create this file next -->
 </body>
 </html> 
