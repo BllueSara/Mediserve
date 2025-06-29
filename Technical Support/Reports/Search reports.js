@@ -1,20 +1,23 @@
-// ← 1) دالة لاستدعاء Google Translate عند غياب المفتاح في القاموس
-async function translateWithGoogle(text, targetLang, sourceLang = "en") {
-  if (!text || !targetLang) return text;
-  const encoded = encodeURIComponent(text);
-  const url =
-    `https://translate.googleapis.com/translate_a/single?client=gtx` +
-    `&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encoded}`;
-
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Failed to fetch Google Translate");
-    const data = await res.json();
-    return data?.[0]?.[0]?.[0] || text;
-  } catch (err) {
-    console.warn("⚠️ translateWithGoogle error:", err);
-    return text;
+// دالة مساعدة لتقسيم النصوص حسب اللغة
+function splitTextByLanguage(text, currentLang) {
+  if (!text || typeof text !== 'string') return text;
+  
+  // إذا كان النص يحتوي على "|" نقسمه
+  if (text.includes('|')) {
+    const parts = text.split('|');
+    const englishPart = parts[0]?.trim() || "";
+    const arabicPart = parts[1]?.trim() || "";
+    
+    // نختار الجزء المناسب حسب اللغة الحالية
+    if (currentLang === "ar") {
+      return arabicPart || englishPart; // إذا لم يوجد الجزء العربي، نعرض الإنجليزي
+    } else {
+      return englishPart || arabicPart; // إذا لم يوجد الجزء الإنجليزي، نعرض العربي
+    }
   }
+  
+  // إذا لم يحتوي على "|" نعيد النص كما هو
+  return text;
 }
 
 // 🔙 زر الرجوع
@@ -77,8 +80,9 @@ async function translateTextBlock(text) {
     if (key) {
       listItems.push(`<li style="margin: 2px 0;">${dict[key][lang]}</li>`);
     } else {
-      const googleTranslated = await translateWithGoogle(cleanedOriginal, lang, "en");
-      listItems.push(`<li style="margin: 2px 0;">${googleTranslated}</li>`);
+      // إذا لم نجده في القاموس، نطبق splitTextByLanguage على النص الأصلي
+      const splitText = splitTextByLanguage(cleanedOriginal, lang);
+      listItems.push(`<li style="margin: 2px 0;">${splitText}</li>`);
     }
   }
 
@@ -299,8 +303,8 @@ if (isTicketOnly) {
       issueHtml = `
         <div style="background:#e8f4ff;padding:10px;border-radius:6px">
           <strong>${t('ticket_number')}:</strong> ${report.ticket_number}<br>
-          <strong>${t('device_name')}:</strong> ${report.device_name || "N/A"}<br>
-          <strong>${t('department')}:</strong> ${report.department_name || "N/A"}
+          <strong>${t('device_name')}:</strong> ${splitTextByLanguage(report.device_name, lang) || "N/A"}<br>
+          <strong>${t('department')}:</strong> ${splitTextByLanguage(report.department_name, lang) || "N/A"}
         </div>
       `;
     }
@@ -326,9 +330,9 @@ if (isTicketOnly) {
           if (key) {
             listItems.push(`<li style="margin:0;padding:2px 0;">${dict[key][languageManager.currentLang]}</li>`);
           } else {
-            // إذا لم نجده في القاموس → نترجمه من Google
-            const googleTranslated = await translateWithGoogle(cleanedItem, languageManager.currentLang, "en");
-            listItems.push(`<li style="margin:0;padding:2px 0;">${googleTranslated}</li>`);
+            // إذا لم نجده في القاموس، نطبق splitTextByLanguage على النص الأصلي
+            const splitText = splitTextByLanguage(cleanedItem, languageManager.currentLang);
+            listItems.push(`<li style="margin:0;padding:2px 0;">${splitText}</li>`);
           }
         }
         issueHtml = `<ul style="
@@ -345,22 +349,21 @@ if (isTicketOnly) {
       if (report.full_description) {
         issueHtml += `
           <div style="margin-top:10px;background:#f2f2f2;padding:8px;border-radius:6px">
-            <strong>${t('notes')}:</strong><br>${report.full_description}
+            <strong>${t('notes')}:</strong><br>${splitTextByLanguage(report.full_description, lang)}
           </div>
         `;
       }
     }
     else {
       // ترجمة Selected Issue و Initial Diagnosis باستخدام دالة translateTextBlock
-      let issueTxt     = report.issue_summary || "";
-      let diagnosisTxt = report.full_description || "";
+      let issueTxt     = splitTextByLanguage(report.issue_summary, lang) || "";
+      let diagnosisTxt = splitTextByLanguage(report.full_description, lang) || "";
 
       issueTxt     = issueTxt.replace(/^selected issue:\s*/i, "").trim();
       diagnosisTxt = diagnosisTxt.replace(/^initial diagnosis:\s*/i, "").trim();
 
       const translatedIssueList     = issueTxt ? await translateTextBlock(issueTxt) : "";
-      const translatedDiagnosisList = diagnosisTxt 
-
+      const translatedDiagnosisList = diagnosisTxt ? await translateTextBlock(diagnosisTxt) : "";
 
       issueHtml = `
         <div class="report-issue-line" style="text-align:${isArabic ? "right" : "left"};">
@@ -442,7 +445,7 @@ if (report.department_name) {
         ? `<p style="text-align:${align}"><strong>${t('ticket_number')}:</strong> ${ticketNumber}</p>`
         : ""}
       ${report.device_name
-        ? `<p style="text-align:${align}"><strong>${t('device_name')}:</strong> ${report.device_name}</p>`
+        ? `<p style="text-align:${align}"><strong>${t('device_name')}:</strong> ${splitTextByLanguage(report.device_name, lang)}</p>`
         : ""}
       ${report.department_name
         ? `<p style="text-align:${align}"><strong>${t('department')}:</strong> ${translatedDeptName}</p>`

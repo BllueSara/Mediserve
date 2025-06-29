@@ -3676,7 +3676,16 @@ if (actualDeviceId) {
 if (actualDeviceId && !isExternal) {
   const oldSerial = oldDevice.serial_number?.trim();
   const newSerial = serial_number?.trim();
+  const isValidMac = (mac) => /^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$/i.test(mac);
+  const isValidIp = (ip) => /^((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(\.|$)){4}$/.test(ip);
 
+  if (ip_address && !isValidIp(ip_address)) {
+    return res.status(400).json({ error: " عنوان IP غير صالح. مثال صحيح: 192.168.1.1" });
+  }
+
+  if (mac_address && !isValidMac(mac_address)) {
+    return res.status(400).json({ error: " عنوان MAC غير صالح. مثال صحيح: 00:1A:2B:3C:4D:5E" });
+  }
   // ✅ طباعة لتأكيد الفرق
   console.log("🧾 Comparing old vs new serial");
   console.log("🔴 old:", oldSerial);
@@ -5100,6 +5109,21 @@ app.post("/delete-option-complete", authenticateToken, async (req, res) => {
       departmentId = deptRows[0].id;
     }
 
+    // 2c) problem-status → lookup statusId
+    if (target === "problem-status") {
+      const [statusRows] = await db.promise().query(
+        `SELECT id
+         FROM ${mapping.table}
+         WHERE TRIM(SUBSTRING_INDEX(${mapping.column}, '|', 1)) = ?
+            OR TRIM(SUBSTRING_INDEX(${mapping.column}, '|', -1)) = ?
+         LIMIT 1`,
+        [value.trim(), value.trim()]
+      );
+      if (!statusRows.length) {
+        return res.status(400).json({ error: `❌ Status "${value}" not found.` });
+      }
+      statusId = statusRows[0].id;
+    }
     // 1) إذا كان الهدف حذف مهندس ("technical")، نبحث أولًا عن الـ ID الصحيح
     if (target === "technical") {
       // البحث في جدول Engineers عن أي صفّ يطابق الاسم العربي أو الإنجليزي
@@ -5132,7 +5156,11 @@ app.post("/delete-option-complete", authenticateToken, async (req, res) => {
         // إذا كان ref.column هو technical_engineer_id في Regular_Maintenance
         query = `SELECT COUNT(*) AS count FROM ${ref.table} WHERE ${ref.column} = ?`;
         param = engineerId;
-      } else {
+      } else if (target === "problem-status" && ref.column.includes("_status_id")) {
+        query = `SELECT COUNT(*) AS count FROM ${ref.table} WHERE ${ref.column} = ?`;
+        param = statusId;
+      }
+       else {
         // في باقي الحقول، نتحقق عبر القيمة النصية value.trim()
         query = `SELECT COUNT(*) AS count FROM ${ref.table} WHERE ${ref.column} = ?`;
         param = value.trim();
@@ -5177,7 +5205,11 @@ app.post("/delete-option-complete", authenticateToken, async (req, res) => {
         deleteQuery = `DELETE FROM ${mapping.table} WHERE ${mapping.column} = ?`;
         params = [value.trim()];
       }
-
+    // if you ever need to scope by type for other targets, handle it here
+      if (target === "problem-status" && type && !["pc","printer","scanner"].includes(type)) {
+        sql += ` AND device_type_name = ?`;
+        params.push(type);
+      }
       const [result] = await db.promise().query(deleteQuery, params);
       if (result.affectedRows === 0) {
         return res.status(404).json({ error: "❌ Value not found or already deleted." });
@@ -5271,10 +5303,22 @@ app.post("/update-option-complete", authenticateToken, async (req, res) => {
     "floor":         { table: "floors",             column: "FloorNum",  propagate: [
                         { table: "General_Maintenance", column: "floor" }
                       ] },
-    "problem-status":{ table: "problem_status",      column: "status_name", propagate: [
-                        { table: "General_Maintenance", column: "problem_status" },
-                        { table: "Regular_Maintenance", column: "problem_status" }
-                      ] },
+ "problem-status": {
+  table: (type === "pc")      ? "ProblemStates_Pc"
+       : (type === "printer") ? "ProblemStates_Printer"
+       : (type === "scanner") ? "ProblemStates_Scanner"
+       :                         "problemStates_Maintance_device",
+  column: (type === "pc" || type === "printer" || type === "scanner")
+            ? "problem_text"
+            : "problemStates_Maintance_device_name",
+  propagate: [
+    { table: "General_Maintenance", column: "problem_status" },
+    { table: "Regular_Maintenance", column: "problem_status" },
+    { table: "Internal_Tickets", column: "issue_description" },
+    { table: "Maintenance_Reports", column: "issue_summary" }
+  ]
+},
+
     "technical":     { table: "Engineers",           column: "name",      propagate: [] }
   };
 
@@ -5490,8 +5534,101 @@ app.post("/update-option-complete", authenticateToken, async (req, res) => {
         `UPDATE ${mapping.table} SET ${mapping.column} = ? WHERE id = ?`,
         [fullNameNew, oldEngineerId]
       );
+} else if (target === "problem-status") {
+  // 1) جلب السطر القديم
+  const [rows] = await conn.query(
+    `SELECT id, ${mapping.column} AS fullname
+       FROM ${mapping.table}
+      WHERE
+        ${mapping.column} = ?
+        OR TRIM(SUBSTRING_INDEX(${mapping.column}, '|', 1)) = ?
+        OR TRIM(SUBSTRING_INDEX(${mapping.column}, '|', -1)) = ?
+        OR ${mapping.column} LIKE ?
+      LIMIT 1`,
+    [oldValue.trim(), oldValue.trim(), oldValue.trim(), `%${oldValue.trim()}%`]
+  );
+  if (!rows.length) throw new Error(`❌ Old Status "${oldValue}" not found`);
+  const oldId   = rows[0].id;
+  const fullOld = rows[0].fullname.trim();               // مثال: "Turns on… | يعمل…"
+  const [enOld, arOld] = fullOld.split("|").map(s => s.trim());
 
-    } else {
+  // 2) تحديد enNew و arNew من newValue
+  const newTrim = newValue.trim();
+  let enNew = enOld, arNew = arOld;
+  if (newTrim.includes("|")) {
+    [enNew, arNew] = newTrim.split("|").map(s => s.trim());
+  } else if (oldValue.trim() === enOld) {
+    enNew = newTrim;
+  } else if (oldValue.trim() === arOld) {
+    arNew = newTrim;
+  } else {
+    // fallback: اكتشاف اللغة
+    if (/[\u0600-\u06FF]/.test(newTrim)) arNew = newTrim;
+    else                                  enNew = newTrim;
+  }
+
+  // 3) بناء fullNew ثنائي الجانب
+  const fullNew = `${enNew} | ${arNew}`;
+
+  // 4) التحديث على الجداول الفرعية
+  for (const { table, column } of mapping.propagate) {
+    console.log(`🔄 Scanning ${table}.${column}`);
+
+    // 4.1) جلب كل الصفوف
+    const [childRows] = await conn.query(
+      `SELECT id, ${column} AS raw FROM ${table}`
+    );
+
+    for (const row of childRows) {
+      // 4.2) تحويل النص إلى array (JSON أو CSV)
+      let arr;
+      try {
+        arr = JSON.parse(row.raw);
+        if (!Array.isArray(arr)) throw 0;
+      } catch {
+        arr = row.raw.split(",").map(s => s.trim()).filter(Boolean);
+      }
+
+      // 4.3) استبدال بناءً على الجزء الإنجليزي الثابت (enOld)
+      let changed = false;
+      const newArr = arr.map(el => {
+        const [ePart, aPart] = el.split("|").map(s => s.trim());
+        if (ePart === enOld) {
+          changed = true;
+          return fullNew;
+        }
+        return el;
+      });
+
+      if (!changed) continue;
+
+      // 4.4) إعادة بناء السلسلة
+      const newRaw = row.raw.trim().startsWith("[")
+        ? JSON.stringify(newArr)
+        : newArr.join(", ");
+
+      // 4.5) تنفيذ التحديث للصفّ هذا
+      const [upd] = await conn.query(
+        `UPDATE ${table} SET ${column} = ? WHERE id = ?`,
+        [newRaw, row.id]
+      );
+      console.log(`  → ${table}#${row.id} updated (affectedRows=${upd.affectedRows})`);
+    }
+  }
+
+  // 5) تحديث جدول ProblemStates_Pc نفسه
+  await conn.query(
+    `UPDATE ${mapping.table}
+       SET ${mapping.column} = ?
+     WHERE id = ?`,
+    [fullNew, oldId]
+  );
+  console.log(`✅ ${mapping.table}#${oldId} updated to "${fullNew}"`);
+}
+
+
+
+     else {
       // باقي الحقول: Propagate ثم تحديث الجدول الرئيسي
       for (const { table, column } of mapping.propagate) {
         await conn.query(
@@ -5568,32 +5705,75 @@ app.post("/get-full-name", authenticateToken, async (req, res) => {
         LIMIT 1
       `;
       params = [value.trim(), value.trim(), value.trim(), `%${value.trim()}%`];
-    } else {
+    } 
+else if (target === "problem-status") {
+      // 1) نتحقّق من وجود نوع الجهاز
+      if (!type) {
+        return res.status(400).json({ error: "❌ Missing device type for problem-status" });
+      }
+
+      // 2) نختار الجدول والعمود حسب نوع الجهاز
+      let tableName, columnName;
+      switch (type) {
+        case "pc":
+          tableName  = "ProblemStates_Pc";
+          columnName = "problem_text";
+          break;
+        case "printer":
+          tableName  = "ProblemStates_Printer";
+          columnName = "problem_text";
+          break;
+        case "scanner":
+          tableName  = "ProblemStates_Scanner";
+          columnName = "problem_text";
+          break;
+        default:
+          tableName  = "problemStates_Maintance_device";
+          columnName = "problemStates_Maintance_device_name";
+      }
+
+      // 3) نبني استعلام البحث
+      query = `
+        SELECT id, ${columnName} AS name
+        FROM ${tableName}
+        WHERE
+          ${columnName} = ?
+          OR TRIM(SUBSTRING_INDEX(${columnName}, '|', 1)) = ?
+          OR TRIM(SUBSTRING_INDEX(${columnName}, '|', -1)) = ?
+          OR ${columnName} LIKE ?
+        LIMIT 1
+      `;
+      params = [
+        value.trim(),
+        value.trim(),
+        value.trim(),
+        `%${value.trim()}%`
+      ];
+    }
+    else {
       return res.status(400).json({ error: "❌ Invalid target field" });
     }
 
-    console.log(`🔍 Executing query: ${query} with params: [${params.join(', ')}]`);
-
+    console.log(`🔍 Executing query on "${target}":`, query, params);
     const [rows] = await db.promise().query(query, params);
-    
     console.log(`🔍 Query returned ${rows.length} rows`);
-    
+
     if (!rows.length) {
-      // ✅ جلب جميع الأقسام/المهندسين للمساعدة في التشخيص
-      let allQuery = "";
+      // لو ما وجدنا، نجلب بعض الأمثلة للتشخيص
+      let allQuery = "", allRows;
       if (target === "section") {
         allQuery = "SELECT id, name FROM Departments LIMIT 10";
       } else if (target === "technical") {
         allQuery = "SELECT id, name FROM Engineers LIMIT 10";
+      } else if (target === "problem-status") {
+        allQuery = `SELECT id, ${columnName} AS name FROM ${tableName} LIMIT 10`;
       }
-      
       if (allQuery) {
-        const [allRows] = await db.promise().query(allQuery);
+        [allRows] = await db.promise().query(allQuery);
         console.log(`🔍 Available ${target}s:`, allRows.map(r => r.name));
       }
-      
-      return res.status(404).json({ 
-        error: `❌ ${target === "section" ? "Department" : "Engineer"} "${value}" not found.` 
+      return res.status(404).json({
+        error: `❌ ${target === "section" ? "Department" : target === "technical" ? "Engineer" : "Status"} "${value}" not found.`
       });
     }
 
@@ -5683,6 +5863,16 @@ app.post("/update-device-specification", authenticateToken, async (req, res) => 
     return res.status(400).json({ error: "❌ Missing required fields" });
   }
 
+  const isValidMac = (mac) => /^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$/i.test(mac);
+  const isValidIp = (ip) => /^((25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(\.|$)){4}$/.test(ip);
+
+  if (IP_Address && !isValidIp(IP_Address)) {
+    return res.status(400).json({ error: " عنوان IP غير صالح. مثال صحيح: 192.168.1.1" });
+  }
+
+  if (MAC_Address && !isValidMac(MAC_Address)) {
+    return res.status(400).json({ error: " عنوان MAC غير صالح. مثال صحيح: 00:1A:2B:3C:4D:5E" });
+  }
   try {
     const getId = async (table, column, value) => {
       if (!value) return null;

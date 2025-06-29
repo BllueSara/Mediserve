@@ -404,8 +404,32 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("category").textContent = "New";
         document.getElementById("report-status").textContent = report.status || "Open";
         document.getElementById("submitted-date").textContent = `Submitted on ${new Date(report.created_at).toLocaleString()}`;
-        document.getElementById("description").textContent = report.description || "No description.";
-        document.getElementById("note").innerHTML = `<strong>Note:</strong><br>${report.details || "No notes."}`;
+        
+        // 🔧 إصلاح: معالجة problem_status في حالة new reports
+        let descriptionText = report.description || "No description.";
+        if (typeof report.problem_status === "string" && report.problem_status.trim().startsWith("[")) {
+          try {
+            const problemArray = JSON.parse(report.problem_status);
+            if (Array.isArray(problemArray) && problemArray.length > 0) {
+              const processedItems = problemArray.map(item => {
+                if (typeof item === "string" && item.includes("|")) {
+                  const parts = item.split("|").map(p => p.trim());
+                  return lang === "ar" ? (parts[1] || parts[0]) : parts[0];
+                }
+                return item;
+              });
+              descriptionText = processedItems.map(item => '• ' + item).join('<br>');
+            }
+          } catch (e) {
+            console.warn("⚠️ Failed to parse new report problem_status JSON:", e);
+            descriptionText = processPipeText(report.description, lang) || "No description.";
+          }
+        } else {
+          descriptionText = processPipeText(report.description, lang) || "No description.";
+        }
+        
+        document.getElementById("description").innerHTML = descriptionText;
+        document.getElementById("note").innerHTML = `<strong>Note:</strong><br>${processPipeText(report.details, lang) || ""}`;
 
         const specsContainer = document.getElementById("device-specs");
         specsContainer.innerHTML = "";
@@ -698,26 +722,49 @@ const translatedTitle =
       document.getElementById("report-status").textContent = report.status || "Pending";
       document.getElementById("submitted-date").textContent = `Submitted on ${new Date(report.created_at).toLocaleString()}`;
 
-      const problem = (report.problem_status || "").trim();
-      const summary = (report.issue_summary || report.initial_diagnosis || "").trim();
+      const problem = processPipeText((report.problem_status || "").trim(), lang);
+      const summary = processPipeText((report.issue_summary || report.initial_diagnosis || "").trim(), lang);
 
       let descriptionHtml = "";
       if (isInternalTicket) {
         descriptionHtml = summary || "No description.";
       } else {
-        const normalizedProblem = problem.toLowerCase();
+        // 🔧 إصلاح: معالجة problem_status كـ JSON array
+        let processedProblem = problem;
+        if (typeof report.problem_status === "string" && report.problem_status.trim().startsWith("[")) {
+          try {
+            const problemArray = JSON.parse(report.problem_status);
+            if (Array.isArray(problemArray) && problemArray.length > 0) {
+              // معالجة كل عنصر في المصفوفة
+              const processedItems = problemArray.map(item => {
+                if (typeof item === "string" && item.includes("|")) {
+                  // نص ثنائي اللغة، اختر الجزء المناسب
+                  const parts = item.split("|").map(p => p.trim());
+                  return lang === "ar" ? (parts[1] || parts[0]) : parts[0];
+                }
+                return item;
+              });
+              processedProblem = processedItems.map(item => '• ' + item).join('<br>');
+            }
+          } catch (e) {
+            console.warn("⚠️ Failed to parse problem_status JSON:", e);
+            processedProblem = problem;
+          }
+        }
+
+        const normalizedProblem = processedProblem.toLowerCase();
         const normalizedSummary = summary.toLowerCase();
 
-        if (problem && summary) {
+        if (processedProblem && summary) {
           if (normalizedSummary.includes(normalizedProblem)) {
             descriptionHtml = summary;
           } else if (normalizedProblem.includes(normalizedSummary)) {
-            descriptionHtml = problem;
+            descriptionHtml = processedProblem;
           } else {
-            descriptionHtml = `${summary}<br>${problem}`;
+            descriptionHtml = `${summary}<br>${processedProblem}`;
           }
-        } else if (problem) {
-          descriptionHtml = problem;
+        } else if (processedProblem) {
+          descriptionHtml = processedProblem;
         } else if (summary) {
           descriptionHtml = summary;
         } else {
@@ -726,11 +773,112 @@ const translatedTitle =
       }
 
       if (report.maintenance_type === "General") {
-        descriptionHtml = report.issue_description || report.issue_summary || "No description.";
+        // 🔧 إصلاح: معالجة problem_status للـ General Maintenance
+        console.log("🔍 General Maintenance - problem_status:", report.problem_status);
+        console.log("🔍 General Maintenance - issue_description:", report.issue_description);
+        console.log("🔍 General Maintenance - issue_summary:", report.issue_summary);
+        
+        let generalDescription = report.issue_description || report.issue_summary || "No description.";
+        if (typeof report.problem_status === "string" && report.problem_status.trim().startsWith("[")) {
+          try {
+            const problemArray = JSON.parse(report.problem_status);
+            console.log("🔍 General Maintenance - parsed problemArray:", problemArray);
+            if (Array.isArray(problemArray) && problemArray.length > 0) {
+              const processedItems = problemArray.map(item => {
+                if (typeof item === "string" && item.includes("|")) {
+                  const parts = item.split("|").map(p => p.trim());
+                  return lang === "ar" ? (parts[1] || parts[0]) : parts[0];
+                }
+                return item;
+              });
+              console.log("🔍 General Maintenance - processedItems:", processedItems);
+              generalDescription = processedItems.map(item => '• ' + item).join('<br>');
+              console.log("🔍 General Maintenance - final generalDescription:", generalDescription);
+            }
+          } catch (e) {
+            console.warn("⚠️ Failed to parse General problem_status JSON:", e);
+            generalDescription = processPipeText(report.issue_description || report.issue_summary || "No description.", lang);
+          }
+        } else {
+          generalDescription = processPipeText(report.issue_description || report.issue_summary || "No description.", lang);
+        }
+        descriptionHtml = generalDescription;
+        console.log("🔍 General Maintenance - final descriptionHtml:", descriptionHtml);
       }
 
       if (report.maintenance_type === "Regular") {
-        descriptionHtml = report.problem_status || report.issue_summary || "No description.";
+        // 🔧 إصلاح: معالجة problem_status للـ Regular Maintenance
+        let regularProblem = report.problem_status || report.issue_summary || "No description.";
+        if (typeof regularProblem === "string" && regularProblem.trim().startsWith("[")) {
+          try {
+            const problemArray = JSON.parse(regularProblem);
+            if (Array.isArray(problemArray) && problemArray.length > 0) {
+              const processedItems = problemArray.map(item => {
+                if (typeof item === "string" && item.includes("|")) {
+                  const parts = item.split("|").map(p => p.trim());
+                  return lang === "ar" ? (parts[1] || parts[0]) : parts[0];
+                }
+                return item;
+              });
+              regularProblem = processedItems.map(item => '• ' + item).join('<br>');
+            }
+          } catch (e) {
+            console.warn("⚠️ Failed to parse Regular problem_status JSON:", e);
+          }
+        }
+        descriptionHtml = processPipeText(regularProblem, lang);
+      }
+
+      // 🔧 إضافة معالجة خاصة للـ new reports
+      if (report.source === "new") {
+        let newDescription = report.description || "No description.";
+        if (typeof report.problem_status === "string" && report.problem_status.trim().startsWith("[")) {
+          try {
+            const problemArray = JSON.parse(report.problem_status);
+            if (Array.isArray(problemArray) && problemArray.length > 0) {
+              const processedItems = problemArray.map(item => {
+                if (typeof item === "string" && item.includes("|")) {
+                  const parts = item.split("|").map(p => p.trim());
+                  return lang === "ar" ? (parts[1] || parts[0]) : parts[0];
+                }
+                return item;
+              });
+              newDescription = processedItems.map(item => '• ' + item).join('<br>');
+            }
+          } catch (e) {
+            console.warn("⚠️ Failed to parse new report problem_status JSON:", e);
+            newDescription = processPipeText(report.description, lang) || "No description.";
+          }
+        } else {
+          newDescription = processPipeText(report.description, lang) || "No description.";
+        }
+        descriptionHtml = newDescription;
+      }
+
+      // 🔧 إضافة معالجة خاصة للـ Internal tickets
+      if (report.maintenance_type === "Internal") {
+        let internalSummary = report.issue_summary || report.initial_diagnosis || "No description.";
+        if (typeof internalSummary === "string" && internalSummary.trim().startsWith("[")) {
+          try {
+            const summaryArray = JSON.parse(internalSummary);
+            if (Array.isArray(summaryArray) && summaryArray.length > 0) {
+              const processedItems = summaryArray.map(item => {
+                if (typeof item === "string" && item.includes("|")) {
+                  const parts = item.split("|").map(p => p.trim());
+                  return lang === "ar" ? (parts[1] || parts[0]) : parts[0];
+                }
+                return item;
+              });
+              internalSummary = processedItems.map(item => '• ' + item).join('<br>');
+            }
+          } catch (e) {
+            console.warn("⚠️ Failed to parse Internal issue_summary JSON:", e);
+            internalSummary = processPipeText(report.issue_summary, lang) || "No description.";
+          }
+        } else {
+          internalSummary = processPipeText(report.issue_summary, lang) || "No description.";
+        }
+        descriptionHtml = internalSummary;
       }
 
       descriptionHtml = descriptionHtml
@@ -738,46 +886,60 @@ const translatedTitle =
         .replace(/\s*\[(ar|en)\]/gi, "")
         .trim();
 
-      // 🔄 تحويل النصوص إلى مصفوفة عناصر items
-      let items = [];
-      try {
-        const parsed = JSON.parse(descriptionHtml);
-        if (Array.isArray(parsed)) {
-          items = parsed;
-        } else {
-          throw new Error("Not array");
-        }
-      } catch {
-        items = descriptionHtml
-          .replace(/^\[|\]$/g, "")
-          .split(/[\n,،]+/)
-          .map(s =>
-            s
-              .replace(/^["""]?|["""]?$/g, "")
-              .replace(/\s*\[(ar|en)\]$/i, "")
-              .trim()
-          )
-          .filter(Boolean);
+      // 🔧 إصلاح: معالجة أفضل للنصوص غير المكتملة
+      let cleanedDescription = descriptionHtml;
+      
+      // إذا كان النص يبدأ بـ [ وينتهي بـ ]، احذفهم
+      if (cleanedDescription.startsWith("[") && cleanedDescription.endsWith("]")) {
+        cleanedDescription = cleanedDescription.slice(1, -1);
       }
-
-      // — 4) ترجمة كل عنصر في items بالقاموس أو Google إذا لم يوجد
-      const translatedItems = [];
-      for (const text of items) {
-        const cleanedText = text.replace(/[""]/g, '"').trim();
-        const dict = translations.description || {};
-        const foundKey = Object.keys(dict).find(key => key.trim() === cleanedText);
-
-        if (foundKey) {
-          translatedItems.push(`- ${dict[foundKey][lang]}`);
-        } else {
-          const googleTranslated = await translateWithGoogle(cleanedText, lang, "en");
-          translatedItems.push(`- ${googleTranslated}`);
-        }
+      // إذا كان النص يبدأ بـ [ فقط، احذف القوس الأول
+      else if (cleanedDescription.startsWith("[")) {
+        cleanedDescription = cleanedDescription.slice(1);
       }
-      const finalTranslated = translatedItems.join("<br>");
+      // إذا كان النص ينتهي بـ ] فقط، احذف القوس الأخير
+      else if (cleanedDescription.endsWith("]")) {
+        cleanedDescription = cleanedDescription.slice(0, -1);
+      }
+      
+      // احذف علامات التنصيص من البداية والنهاية
+      cleanedDescription = cleanedDescription.replace(/^["""]?|["""]?$/g, "").trim();
 
+      // 🔧 إصلاح: عرض الوصف بشكل مباشر
       const descEl = document.getElementById("description");
-      descEl.innerHTML = finalTranslated || "No description.";
+      
+      console.log("🔍 Final cleanedDescription:", cleanedDescription);
+      console.log("🔍 Final cleanedDescription includes <br>:", cleanedDescription.includes('<br>'));
+      console.log("🔍 descEl element:", descEl);
+      
+      // إذا كان النص يحتوي على HTML tags مثل <br>، اعرضه مباشرة
+      if (cleanedDescription.includes('<br>')) {
+        descEl.innerHTML = cleanedDescription || "No description.";
+        console.log("🔍 Displaying with innerHTML (contains <br>):", cleanedDescription);
+        console.log("🔍 After setting innerHTML, descEl.innerHTML:", descEl.innerHTML);
+        console.log("🔍 After setting innerHTML, descEl.textContent:", descEl.textContent);
+      } else {
+        // إذا كان النص يحتوي على "|"، طبق processPipeText
+        const processedDescription = processPipeText(cleanedDescription, lang);
+        
+        // إذا كان النص يحتوي على أسطر متعددة، اعرضه مع فواصل
+        if (processedDescription.includes("\n") || processedDescription.includes(",")) {
+          const items = processedDescription
+            .split(/[\n,،]+/)
+            .map(item => item.trim())
+            .filter(Boolean)
+            .map(item => `- ${item}`)
+            .join("<br>");
+          
+          descEl.innerHTML = items || "No description.";
+          console.log("🔍 Displaying with split items:", items);
+        } else {
+          // نص عادي، اعرضه كما هو
+          descEl.innerHTML = processedDescription || "No description.";
+          console.log("🔍 Displaying with processedDescription:", processedDescription);
+        }
+      }
+      
       descEl.style.textAlign = lang === 'ar' ? 'right' : 'left';
 
       if (report.maintenance_type === "General") {
@@ -795,8 +957,8 @@ const translatedTitle =
   .map(item => {
     const tmap = languageManager.translations?.[lang] || {};
     const translatedLabel = tmap[item.i18n] || item.label;
-    // هنا نستخدم القيمة الأصلية بدون ترجمة جوجل
-    const displayValue = item.value || "N/A";
+    // 🔧 إصلاح: معالجة النصوص التي تحتوي على "|" مثل القسم
+    const displayValue = processPipeText(item.value, lang) || "N/A";
     return `
       <div class="info-row">
         <span class="info-label" data-i18n="${item.i18n}">${translatedLabel}</span>
@@ -817,15 +979,15 @@ const translatedTitle =
       else {
          // new: أولاً technical_notes، بعدين fallbacks
  const baseNote = isExternal
-   ? (report.final_diagnosis || report.technical_notes || report.full_description)
-   : (report.technical_notes || report.full_description || report.final_diagnosis);
+   ? processPipeText(report.final_diagnosis || report.technical_notes || report.full_description, lang)
+   : processPipeText(report.technical_notes || report.full_description || report.final_diagnosis, lang);
  let noteHtml = `
    <div class="info-box">
      <div class="info-title" data-i18n="${isExternal ? 'final_diagnosis' : 'technical_notes'}">
        ${isExternal ? "Final Diagnosis" : "Technical Team Notes"}:
      </div>
      <div class="info-row">
-       <span class="info-value">${baseNote || "No notes."}</span>
+       <span class="info-value">${baseNote || ""}</span>
      </div>
    </div>
  `;
@@ -835,7 +997,7 @@ const translatedTitle =
             <div class="info-box" style="margin-top:10px;">
               <div class="info-title" data-i18n="issue_summary">Issue Summary:</div>
               <div class="info-row">
-                <span class="info-value">${report.issue_description}</span>
+                <span class="info-value">${processPipeText(report.issue_description, lang)}</span>
               </div>
             </div>
           `;
@@ -847,7 +1009,7 @@ const translatedTitle =
               <div class="info-box" style="margin-top:10px;">
                 <div class="info-title" data-i18n="final_diagnosis">Final Diagnosis:</div>
                 <div class="info-row">
-                  <span class="info-value">${report.final_diagnosis}</span>
+                  <span class="info-value">${processPipeText(report.final_diagnosis, lang)}</span>
                 </div>
               </div>
             `;
@@ -857,7 +1019,7 @@ const translatedTitle =
               <div class="info-box" style="margin-top:10px;">
                 <div class="info-title" data-i18n="maintenance_manager">Maintenance Manager:</div>
                 <div class="info-row">
-                  <span class="info-value">${report.maintenance_manager}</span>
+                  <span class="info-value">${processPipeText(report.maintenance_manager, lang)}</span>
                 </div>
               </div>
             `;
@@ -1736,23 +1898,320 @@ console.log("عنصر الصفحة:", document.getElementById("assigned-to")?.te
       y += 6;
 
       const descEl = document.getElementById("description");
-      let rawDesc = descEl?.textContent?.trim() || "";
+      let rawDesc = reportData.problem_status || reportData.issue_description || reportData.description || "";
+
+      // 🔧 إصلاح: معالجة أفضل للنصوص غير المكتملة
+      if (typeof rawDesc === "string" && rawDesc.trim().startsWith("[")) {
+        try {
+          // جرب JSON.parse أولاً
+          const arr = JSON.parse(rawDesc);
+          if (Array.isArray(arr) && arr.length > 0) {
+            rawDesc = arr[0];
+          }
+        } catch {
+          // إذا فشل، استخرج النص من داخل الأقواس المربعة
+          let cleaned = rawDesc.replace(/^\[/, "").replace(/\]$/, "");
+          
+          // إذا كان النص يحتوي على فاصلة، خذ أول جزء
+          if (cleaned.includes(",")) {
+            rawDesc = cleaned.split(",")[0];
+          } 
+          // إذا كان النص يحتوي على سطر جديد، خذ أول سطر
+          else if (cleaned.includes("\n")) {
+            rawDesc = cleaned.split("\n")[0];
+          } 
+          // إذا كان النص يحتوي على علامة تنصيص، خذ أول جزء
+          else if (cleaned.includes('"')) {
+            rawDesc = cleaned.split('"')[0];
+          } 
+          // وإلا خذ كل النص داخل الأقواس
+          else {
+            rawDesc = cleaned;
+          }
+          
+          // تنظيف إضافي للنص المستخرج
+          rawDesc = rawDesc.replace(/^["""]?|["""]?$/g, "").trim();
+        }
+      } else if (typeof rawDesc === "string" && rawDesc.includes('"') && rawDesc.includes(']')) {
+        // 🔧 إصلاح: معالجة الحالات مثل 'اسدي"]'
+        rawDesc = rawDesc.replace(/["""]?\]$/, "").trim();
+      }
+
+      // الآن طبق دالة اللغة
+      rawDesc = processPipeText(rawDesc, lang);
 
       if (rawDesc.startsWith("Selected Issue:")) {
         rawDesc = rawDesc.replace(/^Selected Issue:\s*/i, "").trim();
       }
 
+      // 🔧 إصلاح: استخدم البيانات الأصلية من reportData بدلاً من العنصر في الصفحة
+      let originalDescription = "";
+      
+      // 🔧 إضافة معالجة خاصة للـ new reports
+      if (reportData.source === "new") {
+        let newDescription = reportData.description || "";
+        if (typeof reportData.problem_status === "string" && reportData.problem_status.trim().startsWith("[")) {
+          try {
+            const problemArray = JSON.parse(reportData.problem_status);
+            if (Array.isArray(problemArray) && problemArray.length > 0) {
+              const processedItems = problemArray.map(item => {
+                if (typeof item === "string" && item.includes("|")) {
+                  const parts = item.split("|").map(p => p.trim());
+                  return lang === "ar" ? (parts[1] || parts[0]) : parts[0];
+                }
+                return item;
+              });
+              originalDescription = processedItems.join("\n");
+            }
+          } catch (e) {
+            console.warn("⚠️ Failed to parse new report problem_status JSON in PDF:", e);
+            originalDescription = newDescription;
+          }
+        } else {
+          originalDescription = newDescription;
+        }
+      } else if (reportData.maintenance_type === "General") {
+        // 🔧 إصلاح: معالجة problem_status للـ General Maintenance في PDF
+        let generalProblem = reportData.problem_status || reportData.issue_description || reportData.issue_summary || "";
+        if (typeof generalProblem === "string" && generalProblem.trim().startsWith("[")) {
+          try {
+            const problemArray = JSON.parse(generalProblem);
+            if (Array.isArray(problemArray) && problemArray.length > 0) {
+              const processedItems = problemArray.map(item => {
+                if (typeof item === "string" && item.includes("|")) {
+                  const parts = item.split("|").map(p => p.trim());
+                  return lang === "ar" ? (parts[1] || parts[0]) : parts[0];
+                }
+                return item;
+              });
+              originalDescription = processedItems.join("\n");
+            }
+          } catch (e) {
+            console.warn("⚠️ Failed to parse General problem_status JSON in PDF:", e);
+            originalDescription = generalProblem;
+          }
+        } else {
+          originalDescription = generalProblem;
+        }
+      } else if (reportData.maintenance_type === "Regular") {
+        // 🔧 إصلاح: معالجة problem_status للـ Regular Maintenance في PDF
+        let regularProblem = reportData.problem_status || reportData.issue_summary || "";
+        if (typeof regularProblem === "string" && regularProblem.trim().startsWith("[")) {
+          try {
+            const problemArray = JSON.parse(regularProblem);
+            if (Array.isArray(problemArray) && problemArray.length > 0) {
+              const processedItems = problemArray.map(item => {
+                if (typeof item === "string" && item.includes("|")) {
+                  const parts = item.split("|").map(p => p.trim());
+                  return lang === "ar" ? (parts[1] || parts[0]) : parts[0];
+                }
+                return item;
+              });
+              originalDescription = processedItems.join("\n");
+            }
+          } catch (e) {
+            console.warn("⚠️ Failed to parse Regular problem_status JSON in PDF:", e);
+            originalDescription = regularProblem;
+          }
+        } else {
+          originalDescription = regularProblem;
+        }
+      } else if (reportData.maintenance_type === "Internal") {
+        // 🔧 إصلاح: معالجة issue_summary للـ Internal Maintenance في PDF
+        let internalSummary = reportData.issue_summary || reportData.initial_diagnosis || "";
+        if (typeof internalSummary === "string" && internalSummary.trim().startsWith("[")) {
+          try {
+            const summaryArray = JSON.parse(internalSummary);
+            if (Array.isArray(summaryArray) && summaryArray.length > 0) {
+              const processedItems = summaryArray.map(item => {
+                if (typeof item === "string" && item.includes("|")) {
+                  const parts = item.split("|").map(p => p.trim());
+                  return lang === "ar" ? (parts[1] || parts[0]) : parts[0];
+                }
+                return item;
+              });
+              originalDescription = processedItems.join("\n");
+            }
+          } catch (e) {
+            console.warn("⚠️ Failed to parse Internal issue_summary JSON in PDF:", e);
+            originalDescription = internalSummary;
+          }
+        } else {
+          originalDescription = internalSummary;
+        }
+      } else {
+        // 🔧 إصلاح: معالجة problem_status للأنواع الأخرى
+        let problem = reportData.problem_status || "";
+        if (typeof problem === "string" && problem.trim().startsWith("[")) {
+          try {
+            const problemArray = JSON.parse(problem);
+            if (Array.isArray(problemArray) && problemArray.length > 0) {
+              const processedItems = problemArray.map(item => {
+                if (typeof item === "string" && item.includes("|")) {
+                  const parts = item.split("|").map(p => p.trim());
+                  return lang === "ar" ? (parts[1] || parts[0]) : parts[0];
+                }
+                return item;
+              });
+              problem = processedItems.join("\n");
+            }
+          } catch (e) {
+            console.warn("⚠️ Failed to parse problem_status JSON in PDF:", e);
+          }
+        }
+        
+        const summary = reportData.issue_summary || reportData.initial_diagnosis || "";
+        
+        if (problem && summary) {
+          const normalizedProblem = problem.toLowerCase();
+          const normalizedSummary = summary.toLowerCase();
+          
+          if (normalizedSummary.includes(normalizedProblem)) {
+            originalDescription = summary;
+          } else if (normalizedProblem.includes(normalizedSummary)) {
+            originalDescription = problem;
+          } else {
+            originalDescription = `${summary}\n${problem}`;
+          }
+        } else if (problem) {
+          originalDescription = problem;
+        } else if (summary) {
+          originalDescription = summary;
+        }
+      }
+
+      // 🔧 إضافة معالجة خاصة للـ new reports في PDF
+      if (reportData.source === "new") {
+        let newDescription = reportData.description || "";
+        if (typeof reportData.problem_status === "string" && reportData.problem_status.trim().startsWith("[")) {
+          try {
+            const problemArray = JSON.parse(reportData.problem_status);
+            if (Array.isArray(problemArray) && problemArray.length > 0) {
+              const processedItems = problemArray.map(item => {
+                if (typeof item === "string" && item.includes("|")) {
+                  const parts = item.split("|").map(p => p.trim());
+                  return lang === "ar" ? (parts[1] || parts[0]) : parts[0];
+                }
+                return item;
+              });
+              originalDescription = processedItems.join("\n");
+            }
+          } catch (e) {
+            console.warn("⚠️ Failed to parse new report problem_status JSON in PDF:", e);
+            originalDescription = newDescription;
+          }
+        } else {
+          originalDescription = newDescription;
+        }
+      }
+
+      // 🔧 إصلاح: معالجة النصوص التي تحتوي على "|" مثل القسم
+      originalDescription = processPipeText(originalDescription, lang);
+
       let items = [];
 
-      try {
-        items = JSON.parse(rawDesc);
-        if (!Array.isArray(items)) throw new Error();
-      } catch {
-        // يدعم التقسيم بناءً على الشرطة (-) أو النقطتين أو أسطر جديدة
-        items = rawDesc
-          .split(/[\n\r\-•]+/g)
-          .map(s => s.replace(/^["""]?|["""]?$/g, "").trim())
-          .filter(Boolean);
+      // 🔧 إضافة معالجة خاصة للـ General reports في PDF
+      if (reportData.maintenance_type === "General") {
+        console.log("🔍 PDF General Maintenance - reportData.problem_status:", reportData.problem_status);
+        let generalProblem = reportData.problem_status || "";
+        if (typeof generalProblem === "string" && generalProblem.trim().startsWith("[")) {
+          try {
+            const problemArray = JSON.parse(generalProblem);
+            console.log("🔍 PDF General Maintenance - parsed problemArray:", problemArray);
+            if (Array.isArray(problemArray) && problemArray.length > 0) {
+              const processedItems = problemArray.map(item => {
+                if (typeof item === "string" && item.includes("|")) {
+                  const parts = item.split("|").map(p => p.trim());
+                  return lang === "ar" ? (parts[1] || parts[0]) : parts[0];
+                }
+                return item;
+              });
+              console.log("🔍 PDF General Maintenance - processedItems:", processedItems);
+              items = processedItems;
+            }
+          } catch (e) {
+            console.warn("⚠️ Failed to parse General problem_status JSON in PDF:", e);
+            items = [originalDescription];
+          }
+        } else {
+          console.log("🔍 PDF General Maintenance - using originalDescription:", originalDescription);
+          items = [originalDescription];
+        }
+        console.log("🔍 PDF General Maintenance - final items:", items);
+      } else if (reportData.maintenance_type === "Internal") {
+        console.log("🔍 PDF Internal Maintenance - reportData.issue_summary:", reportData.issue_summary);
+        let internalSummary = reportData.issue_summary || "";
+        if (typeof internalSummary === "string" && internalSummary.trim().startsWith("[")) {
+          try {
+            const summaryArray = JSON.parse(internalSummary);
+            console.log("🔍 PDF Internal Maintenance - parsed summaryArray:", summaryArray);
+            if (Array.isArray(summaryArray) && summaryArray.length > 0) {
+              const processedItems = summaryArray.map(item => {
+                if (typeof item === "string" && item.includes("|")) {
+                  const parts = item.split("|").map(p => p.trim());
+                  return lang === "ar" ? (parts[1] || parts[0]) : parts[0];
+                }
+                return item;
+              });
+              console.log("🔍 PDF Internal Maintenance - processedItems:", processedItems);
+              items = processedItems;
+            }
+          } catch (e) {
+            console.warn("⚠️ Failed to parse Internal issue_summary JSON in PDF:", e);
+            items = [originalDescription];
+          }
+        } else {
+          console.log("🔍 PDF Internal Maintenance - using originalDescription:", originalDescription);
+          items = [originalDescription];
+        }
+        console.log("🔍 PDF Internal Maintenance - final items:", items);
+      } else if (reportData.source === "new") {
+        let newDescription = reportData.description || "";
+        if (typeof reportData.problem_status === "string" && reportData.problem_status.trim().startsWith("[")) {
+          try {
+            const problemArray = JSON.parse(reportData.problem_status);
+            if (Array.isArray(problemArray) && problemArray.length > 0) {
+              const processedItems = problemArray.map(item => {
+                if (typeof item === "string" && item.includes("|")) {
+                  const parts = item.split("|").map(p => p.trim());
+                  return lang === "ar" ? (parts[1] || parts[0]) : parts[0];
+                }
+                return item;
+              });
+              newDescription = processedItems.join("\n");
+            }
+          } catch (e) {
+            console.warn("⚠️ Failed to parse new report problem_status JSON:", e);
+            newDescription = processPipeText(report.description, lang) || "No description.";
+          }
+        } else {
+          newDescription = processPipeText(report.description, lang) || "No description.";
+        }
+        originalDescription = newDescription;
+      } else {
+        try {
+          items = JSON.parse(originalDescription);
+          if (!Array.isArray(items)) throw new Error();
+        } catch {
+          // 🔧 إصلاح: معالجة أفضل للنصوص غير المكتملة
+          let cleanedDesc = originalDescription;
+          
+          // إذا كان النص يبدأ بـ [ وينتهي بـ ]، احذفهم
+          if (cleanedDesc.startsWith("[") && cleanedDesc.endsWith("]")) {
+            cleanedDesc = cleanedDesc.slice(1, -1);
+          }
+          // إذا كان النص يبدأ بـ [ فقط، احذف القوس الأول
+          else if (cleanedDesc.startsWith("[")) {
+            cleanedDesc = cleanedDesc.slice(1);
+          }
+          
+          // يدعم التقسيم بناءً على الشرطة (-) أو النقطتين أو أسطر جديدة
+          items = cleanedDesc
+            .replace(/^["""]?|["""]?$/g, "") // احذف علامات التنصيص من البداية والنهاية
+            .split(/[\n\r\-•]+/g)
+            .map(s => s.replace(/^["""]?|["""]?$/g, "").trim())
+            .filter(Boolean);
+        }
       }
 
       function normalizeKey(text) {
@@ -1782,14 +2241,19 @@ console.log("عنصر الصفحة:", document.getElementById("assigned-to")?.te
       items.forEach(text => {
         const normalizedInput = normalizeKey(text);
         const originalKey = findOriginalKeyByAnyLang(text);
+        
+        // 🔧 إصلاح: معالجة النصوص التي تحتوي على "|" مثل القسم
+        const processedText = processPipeText(text, lang);
+        
         const translated = originalKey
           ? translations.description[originalKey][lang]
-          : text;
+          : processedText; // 🔧 استخدم النص المعالج بدلاً من النص الأصلي
 
         console.log("--------");
         console.log("Raw Text:", text);
         console.log("Normalized Input:", normalizedInput);
         console.log("Detected Original Key:", originalKey);
+        console.log("Processed Text:", processedText);
         console.log("Translated Text:", translated);
         console.log("Language:", lang);
 
@@ -2904,6 +3368,10 @@ for (const { key } of specConfig) {
       const result = await res.json();
 
       console.log("🔍 Server response:", result);
+  if (!res.ok || result.error) {
+    const msg = result.error || result.message || `خطأ HTTP ${res.status}`;
+    throw new Error(msg);
+  }
 
       if (result.message) {
         alert("✅ تم الحفظ بنجاح.");
@@ -2929,10 +3397,12 @@ for (const { key } of specConfig) {
       } else {
         throw new Error("❌ لم يتم الحفظ");
       }
-    } catch (err) {
-      console.error("❌ فشل الحفظ:", err);
-      alert("❌ حدث خطأ أثناء الحفظ");
-    }
+
+} catch (err) {
+  console.error("❌ فشل الحفظ:", err);
+  // הצגת ההודעה שהגיעה מהשרת
+  alert("❌ حدث خطأ أثناء الحفظ: " + err.message);
+}
 
 
     // 7.2) إعادة .spec-box إلى spans الأصلية أو استبدال الـ selects داخلها
@@ -3104,3 +3574,25 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 });
+
+// دالة مساعدة لمعالجة النصوص التي تحتوي على "|" مثل القسم
+function processPipeText(text, lang) {
+  if (!text || typeof text !== 'string') return text;
+  
+  // إذا كان النص يحتوي على "|"، اقسمه واختر الجزء المناسب
+  if (text.includes("|")) {
+    const parts = text.split("|").map(p => p.trim());
+    const enPart = parts[0] || "";
+    const arPart = parts[1] || "";
+    
+    // اختر الجزء المناسب حسب اللغة
+    if (lang === "ar") {
+      return arPart || enPart;
+    } else {
+      return enPart;
+    }
+  }
+  
+  // إذا لم يحتوي على "|"، ارجع النص كما هو
+  return text;
+}
