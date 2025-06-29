@@ -1806,65 +1806,70 @@ async function fetchProblemStatus(deviceType, onFinished) {
       return;
     }
 
+    // ✅ متغير لتخزين المشاكل المختارة
     let selectedProblems = [];
 
+    data.forEach(item => {
+      const originalText = item.problem_text || item.problemStates_Maintance_device_name || "Unnamed Problem";
+      
+      // ✅ معالجة خاصة للمشاكل التي تحتوي على "|" (إنجليزي|عربي)
+      let displayName = originalText;
+      if (originalText.includes("|")) {
+        const parts = originalText.split("|").map(s => s.trim());
+        const currentLang = languageManager.currentLang;
+        if (currentLang === "ar") {
+          displayName = parts[1] || parts[0]; // الجزء العربي أو الإنجليزي كبديل
+        } else {
+          displayName = parts[0]; // الجزء الإنجليزي
+        }
+      } else {
+        // ✅ للمشاكل العادية، استخدم الترجمة
+        const translated = translateProblemText(deviceType, originalText);
+        displayName = translated.replace(/\s*\[(ar|en)\]$/i, "").trim();
+      }
 
-data.forEach(item => {
-  const originalText = item.problem_text || item.problemStates_Maintance_device_name || "Unnamed Problem";
-  const translated = translateProblemText(deviceType, originalText);
-  const value = originalText;
+      const value = originalText;
 
-  const currentLang = languageManager.currentLang;
-  const isTranslated = translated !== originalText;
-  const isUserAddedArabic = !isTranslated && isArabicText(originalText);
+      const currentLang = languageManager.currentLang;
+      const isTranslated = translateProblemText(deviceType, originalText) !== originalText;
+      const isUserAddedArabic = !isTranslated && isArabicText(originalText);
 
-  const hasArTag = /\[ar\]$/i.test(originalText);
-  const hasEnTag = /\[en\]$/i.test(originalText);
+      const hasArTag = /\[ar\]$/i.test(originalText);
+      const hasEnTag = /\[en\]$/i.test(originalText);
 
-  // ✅ فلترة حسب اللغة الحالية والوسم
-  if (currentLang === "ar" && hasEnTag) return;
-  if (currentLang === "en" && hasArTag) return;
+      // ✅ فلترة حسب اللغة الحالية والوسم
+      if (currentLang === "ar" && hasEnTag) return;
+      if (currentLang === "en" && hasArTag) return;
 
-  // ✅ تجاهل العربي الغير مترجم أو غير موسوم عند اللغة الإنجليزية
-  if (currentLang === "en" && !hasArTag && !hasEnTag && isUserAddedArabic) return;
+      // ✅ تجاهل العربي الغير مترجم أو غير موسوم عند اللغة الإنجليزية
+      if (currentLang === "en" && !hasArTag && !hasEnTag && isUserAddedArabic) return;
 
-  const row = document.createElement("div");
-  row.className = "dropdown-option-row";
+      const row = document.createElement("div");
+      row.className = "dropdown-option-row";
 
-  const text = document.createElement("div");
-  text.className = "dropdown-option-text";
+      const text = document.createElement("div");
+      text.className = "dropdown-option-text";
 
-  const mappedDeviceType = mapDeviceType(deviceType);
+      text.textContent = isAllDevices
+        ? `${displayName} (${item.device_type || deviceType})`
+        : displayName;
 
-  // ✅ إزالة الوسم من الاسم المعروض
-  const cleanTranslated = translated.replace(/\s*\[(ar|en)\]$/i, "").trim();
+      // ✅ منطق الاختيار المتعدد - نفس general.js
+      text.onclick = () => {
+        const existingIndex = selectedProblems.findIndex(p => p.value === value);
 
-  text.textContent = isAllDevices
-    ? `${cleanTranslated} (${item.device_type || deviceType})`
-    : cleanTranslated;
+        if (existingIndex === -1) {
+          selectedProblems.push({ value, label: displayName });
+          text.style.backgroundColor = "#d0f0fd";
+        } else {
+          selectedProblems.splice(existingIndex, 1);
+          text.style.backgroundColor = "";
+        }
 
-  console.log("✅ Looking up:", {
-    originalDeviceType: deviceType,
-    mappedDeviceType,
-    text: originalText,
-    found: languageManager.problemStatuses?.[mappedDeviceType]?.[originalText]
-  });
-
-  text.onclick = () => {
-    const existingIndex = selectedProblems.findIndex(p => p.value === value);
-
-    if (existingIndex === -1) {
-      selectedProblems.push({ value, label: cleanTranslated });
-      text.style.backgroundColor = "#d0f0fd";
-    } else {
-      selectedProblems.splice(existingIndex, 1);
-      text.style.backgroundColor = "";
-    }
-
-    displaySpan.textContent = selectedProblems.map(p => p.label).join(", ");
-    hiddenInput.value = JSON.stringify(selectedProblems.map(p => p.value));
-    cleanDropdownError(hiddenInput);
-  };
+        displaySpan.textContent = selectedProblems.map(p => p.label).join(", ");
+        hiddenInput.value = JSON.stringify(selectedProblems.map(p => p.value));
+        cleanDropdownError(hiddenInput);
+      };
 
       row.appendChild(text);
 
@@ -1878,10 +1883,7 @@ data.forEach(item => {
           editIcon.title = t['edit'];
           editIcon.onclick = (e) => {
             e.stopPropagation();
-            const newValue = prompt(`${t['edit']} ${t['problem_status']}:`, value);
-            if (newValue && newValue.trim() !== value) {
-              editOption("problem-status", value, newValue.trim(), deviceType);
-            }
+            openAddProblemStatusPopup(deviceType, originalText);
           };
           icons.appendChild(editIcon);
         }
@@ -1892,8 +1894,8 @@ data.forEach(item => {
           deleteIcon.title = t['delete'];
           deleteIcon.onclick = (e) => {
             e.stopPropagation();
-            if (confirm(`${t['confirm_delete']} "${value}"?`)) {
-              deleteOption("problem-status", value, deviceType);
+            if (confirm(`${t['confirm_delete']} "${displayName}"?`)) {
+              deleteOption("problem-status", originalText, deviceType);
             }
           };
           icons.appendChild(deleteIcon);
@@ -1923,17 +1925,37 @@ data.forEach(item => {
 
 
 
-function openAddProblemStatusPopup(deviceType) {
+function openAddProblemStatusPopup(deviceType, oldValue = "") {
   const t = languageManager.translations[languageManager.currentLang];
+  
+  let enVal = "", arVal = "";
+  if (oldValue && oldValue.includes("|")) {
+    [enVal, arVal] = oldValue.split("|").map(s => s.trim());
+  } else if (oldValue) {
+    // إذا القيمة قديمة ولكن ليست مفصولة |
+    const isArabic = /[\u0600-\u06FF]/.test(oldValue);
+    if (isArabic) {
+      arVal = oldValue;
+    } else {
+      enVal = oldValue;
+    }
+  }
 
   const popup = document.getElementById("generic-popup");
+  const isEdit = oldValue && oldValue.trim() !== "";
+  const title = isEdit ? `${t['edit']} ${t['problem_status']}` : `${t['add_new']} ${t['problem_status']}`;
+  
   popup.innerHTML = `
     <div class="popup-content">
-      <h3>${t['add_new']} ${t['problem_status']}</h3>
-      <label for="new-problem-status-name">${t['problem_status']}:</label>
-      <input type="text" id="new-problem-status-name" placeholder="${t['enter']} ${t['problem_status'].toLowerCase()}..." />
+      <h3>${title}</h3>
+      <label>${t['problem_status']} (English):</label>
+      <input type="text" id="new-problem-status-en" placeholder="${t['problem_status']} (English)" value="${enVal || ''}" />
+      <label>${t['problem_status']} (عربي):</label>
+      <input type="text" id="new-problem-status-ar" placeholder="${t['problem_status']} (عربي)" value="${arVal || ''}" />
+      <input type="hidden" id="old-problem-status-value" value="${oldValue || ''}" />
+      <input type="hidden" id="problem-status-device-type" value="${deviceType}" />
       <div class="popup-buttons">
-        <button type="button" onclick="saveNewProblemStatus('${deviceType}')">${t['save']}</button>
+        <button type="button" onclick="saveNewProblemStatus()">${t['save']}</button>
         <button type="button" onclick="closeGenericPopup()">${t['cancel']}</button>
       </div>
     </div>
@@ -1941,46 +1963,134 @@ function openAddProblemStatusPopup(deviceType) {
   popup.style.display = "flex";
 }
 
-function saveNewProblemStatus(deviceType) {
+function saveNewProblemStatus() {
   const t = languageManager.translations[languageManager.currentLang];
-  const name = document.getElementById("new-problem-status-name").value.trim();
-  // ✅ لا نضيف تاجات لغة للمشاكل
-  const labeledName = name;
-  if (!name) {
-    alert(t['please_enter_valid_value']);
+  const en = document.getElementById("new-problem-status-en").value.trim();
+  const ar = document.getElementById("new-problem-status-ar").value.trim();
+  const oldValue = document.getElementById("old-problem-status-value")?.value.trim();
+  const deviceType = document.getElementById("problem-status-device-type")?.value;
+  
+  if (!en || !ar) {
+    alert("❌ الرجاء إدخال المشكلة بالإنجليزي والعربي.");
     return;
   }
-
+  
+  const rawName = `${en}|${ar}`;
+  
+  // إذا يوجد قيمة قديمة، أرسل تحديث
+  if (oldValue) {
+    // تحديث
+    fetch("http://localhost:5050/update-option-complete", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + localStorage.getItem("token")
+      },
+      body: JSON.stringify({
+        target: "problem-status",
+        oldValue: oldValue,
+        newValue: rawName,
+        type: deviceType
+      })
+    })
+      .then(res => res.json())
+      .then(result => {
+        if (result.error) {
+          alert(result.error);
+        } else {
+          fetchProblemStatus(deviceType, () => {
+            const displaySpan = document.getElementById("selected-problem-status");
+            const hiddenInput = document.getElementById("problem-status");
+            const displayName = languageManager.currentLang === "ar" ? ar : en;
+            if (displaySpan) displaySpan.textContent = displayName;
+            // ✅ للمشاكل المتعددة، نحتفظ بالقيم الموجودة ونضيف الجديدة
+            if (hiddenInput) {
+              let currentProblems = [];
+              try {
+                const currentValue = hiddenInput.value;
+                if (currentValue) {
+                  currentProblems = JSON.parse(currentValue);
+                }
+              } catch (e) {
+                currentProblems = [];
+              }
+              
+              // ✅ استبدال المشكلة القديمة بالجديدة
+              const oldIndex = currentProblems.indexOf(oldValue);
+              if (oldIndex !== -1) {
+                currentProblems[oldIndex] = rawName;
+              } else {
+                // ✅ إذا لم نجد المشكلة القديمة، نضيف الجديدة
+                currentProblems.push(rawName);
+              }
+              
+              hiddenInput.value = JSON.stringify(currentProblems);
+            }
+          });
+          closeGenericPopup();
+        }
+      })
+      .catch(err => {
+        console.error("❌ Error updating problem status:", err);
+        alert(t['failed_to_save'] || "Failed to update problem status");
+      });
+    return;
+  }
+  
+  // إضافة جديدة
   fetch("http://localhost:5050/add-options-regular", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "Authorization": "Bearer " + localStorage.getItem("token")
     },
-body: JSON.stringify({
-  target: "problem-status",
-  value: labeledName,
-  type: deviceType
-})
+    body: JSON.stringify({
+      target: "problem-status",
+      value: rawName,
+      type: deviceType
+    })
   })
     .then(res => res.status === 204 ? {} : res.json())
     .then(result => {
       if (result.error) {
         alert(result.error);
       } else {
-        // ✅ أعد تحميل القائمة وحدد العنصر المضاف
+        // ✅ بعد الإضافة، أظهر الجزء المناسب حسب اللغة
+        const parts = rawName.split("|").map(p => p.trim());
+        const en = parts[0] || "";
+        const ar = parts[1] || "";
+        const displayName = languageManager.currentLang === "ar" ? (ar || en) : en;
+        
         fetchProblemStatus(deviceType, () => {
           const displaySpan = document.getElementById("selected-problem-status");
           const hiddenInput = document.getElementById("problem-status");
-          displaySpan.textContent = name;
-          hiddenInput.value = JSON.stringify([name]);
+          displaySpan.textContent = displayName;
+          // ✅ للمشاكل المتعددة، نحتفظ بالقيم الموجودة ونضيف الجديدة
+          if (hiddenInput) {
+            let currentProblems = [];
+            try {
+              const currentValue = hiddenInput.value;
+              if (currentValue) {
+                currentProblems = JSON.parse(currentValue);
+              }
+            } catch (e) {
+              currentProblems = [];
+            }
+            
+            // ✅ إضافة المشكلة الجديدة إذا لم تكن موجودة
+            if (!currentProblems.includes(rawName)) {
+              currentProblems.push(rawName);
+            }
+            
+            hiddenInput.value = JSON.stringify(currentProblems);
+          }
         });
         closeGenericPopup();
       }
     })
     .catch(err => {
       console.error("❌ Error saving problem status:", err);
-      alert(t['failed_to_save']);
+      alert(t['failed_to_save'] || "Failed to save problem status");
     });
 }
 
@@ -2572,6 +2682,33 @@ document.querySelector("form").addEventListener("submit", function (e) {
     if (key === "section") {
       // اذا كان المفتاح هو "section" (القسم)، نخزّن القيمة كما هي 
       data[key] = value; 
+    } else if (key === "problem-status") {
+      // ✅ للمشاكل، نحول JSON string إلى string مفصولة بفواصل
+      console.log("🔍 Original problem-status value:", value);
+      console.log("🔍 Type of value:", typeof value);
+      console.log("🔍 Is Array:", Array.isArray(value));
+      
+      // تحويل مباشر إلى نص مفصول بفواصل
+      if (Array.isArray(value)) {
+        data["problem_status"] = value.join(", ");
+      } else if (typeof value === "string") {
+        try {
+          // محاولة تحويل JSON string إلى array
+          const parsed = JSON.parse(value);
+          if (Array.isArray(parsed)) {
+            data["problem_status"] = parsed.join(", ");
+          } else {
+            data["problem_status"] = value;
+          }
+        } catch (e) {
+          // إذا فشل التحويل، استخدم القيمة كما هي
+          data["problem_status"] = value;
+        }
+      } else {
+        data["problem_status"] = String(value);
+      }
+      
+      console.log("🔍 Final problem_status:", data["problem_status"]);
     } else {
       // لبقية الحقول نطبّق التنظيف كالمعتاد
       data[key] = cleanLangTag(value);
@@ -2588,11 +2725,20 @@ document.querySelector("form").addEventListener("submit", function (e) {
   console.log("🧪 id:", techInput?.dataset?.id);
 if (techInput?.dataset?.id) {
   data["technical-status"] = techInput.dataset.id;
+  data["technical_engineer_id"] = techInput.dataset.id; // ✅ استخدام الاسم الصحيح للسيرفر
 } else {
   console.warn("❌ لم يتم العثور على ID للمهندس");
 }
 
   console.log("📤 البيانات المرسلة للسيرفر:", data);
+  console.log("🟢 سيتم إرسال problem_status:", data["problem_status"]);
+
+  // ✅ معالجة إضافية للمشاكل قبل الإرسال
+  if (data["problem_status"] && Array.isArray(data["problem_status"])) {
+    console.log("🔧 تحويل problem_status من array إلى string");
+    data["problem_status"] = data["problem_status"].join(", ");
+    console.log("🔧 problem_status بعد التحويل:", data["problem_status"]);
+  }
 
   submitRegularMaintenance(data);
 });
@@ -2803,7 +2949,7 @@ function attachEditDeleteHandlers(optionsContainerId, type = null) {
         console.log(`✏️ Edit clicked for ${selectId}: "${oldValue}"`);
         
         // استخدام الدالة الجديدة للمهندس والقسم
-        if (selectId === "section" || selectId === "spec-department" || selectId === "technical-status") {
+        if (selectId === "section" || selectId === "spec-department" || selectId === "technical-status" || selectId === "problem-status") {
           console.log(`🔄 Using enhanced edit for ${selectId}`);
           // استخدم النص المعروض للبحث عن الاسم الكامل
           editOptionWithFullName(selectId, oldValue, null, type);
@@ -3628,6 +3774,16 @@ function cleanDropdownError(hiddenInput) {
       toggleInside.style.borderRadius = "";
     }
   }
+
+  // ✅ معالجة خاصة للمشاكل المتعددة
+  if (visibleId === "problem-status") {
+    // ✅ نظف أي أخطاء من قائمة المشاكل
+    const problemOptionsContainer = document.getElementById("problem-status-options");
+    if (problemOptionsContainer) {
+      const errorMessages = problemOptionsContainer.querySelectorAll(".input-error-message");
+      errorMessages.forEach(err => err.remove());
+    }
+  }
 }
 function initInputFieldValidation(formElement) {
   if (!formElement) return;
@@ -3767,15 +3923,13 @@ async function renderDropdownOptions({
 
     // عند الضغط على اسم المهندس
 text.onclick = () => {
+  // ✅ للحقول الأخرى، استخدم المنطق العادي
   display.textContent = displayText;
 
   if (inputId === "technical-status") {
     input.dataset.id = internalId || "";
     input.dataset.name = actualValue;
-
-    // ✏️ هذا السطر يضيف القيمة الفعلية (ID المهندس) لحقل input.value
     input.value = internalId || "";
-
     console.log("✅ تم تحديد المهندس:", actualValue, "ID:", internalId);
   } else {
     input.value = actualValue;
@@ -3909,6 +4063,8 @@ async function editOptionWithFullName(selectId, oldValue, newValue = null, type 
     target = "section";
   } else if (selectId === "technical-status") {
     target = "technical";
+  } else if (selectId === "problem-status") {
+    target = "problem-status";
   } else {
     // للمجالات الأخرى، استخدم المنطق العادي
     return editOption(selectId, oldValue, newValue, type);
@@ -3927,7 +4083,10 @@ async function editOptionWithFullName(selectId, oldValue, newValue = null, type 
   // جلب الاسم الكامل القديم
   const fullNameData = await getFullName(target, searchValue);
   if (!fullNameData) {
-    alert(`❌ Could not find ${target === "section" ? "department" : "engineer"} information.`);
+    const itemType = target === "section" ? "department" : 
+                    target === "technical" ? "engineer" : 
+                    target === "problem-status" ? "problem" : "item";
+    alert(`❌ Could not find ${itemType} information.`);
     return false;
   }
 
@@ -3940,7 +4099,10 @@ async function editOptionWithFullName(selectId, oldValue, newValue = null, type 
     const currentLang = languageManager.currentLang;
     const currentName = currentLang === "ar" ? arVal : enVal;
     const otherName = currentLang === "ar" ? enVal : arVal;
-    const promptMessage = `Edit ${target === "section" ? "Department" : "Engineer"} Name\n\nCurrent ${currentLang === "ar" ? "Arabic" : "English"}: ${currentName}\nCurrent ${currentLang === "ar" ? "English" : "Arabic"}: ${otherName}\n\nEnter new ${currentLang === "ar" ? "Arabic" : "English"} name:`;
+    const itemType = target === "section" ? "Department" : 
+                    target === "technical" ? "Engineer" : 
+                    target === "problem-status" ? "Problem" : "Item";
+    const promptMessage = `Edit ${itemType} Name\n\nCurrent ${currentLang === "ar" ? "Arabic" : "English"}: ${currentName}\nCurrent ${currentLang === "ar" ? "English" : "Arabic"}: ${otherName}\n\nEnter new ${currentLang === "ar" ? "Arabic" : "English"} name:`;
     newValue = prompt(promptMessage, currentName);
     if (!newValue || newValue.trim() === "") {
       return false;

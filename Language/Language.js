@@ -1676,7 +1676,7 @@ const languageManager = {
         }
     },
      description: {
-    "Computer won't turn on at all (no lights/sound)": { en: "Computer won't turn on at all (no lights/sound)", ar: "الكمبيوتر لا يعمل إطلاقًا (لا أضواء/أصوات)" },
+    "Computer won’t turn on at all (no lights/sound)": { en: "Computer won't turn on at all (no lights/sound)", ar: "الكمبيوتر لا يعمل إطلاقًا (لا أضواء/أصوات)" },
     "Turns on but screen stays black": { en: "Turns on but screen stays black", ar: "يعمل ولكن تبقى الشاشة سوداء" },
     "Black screen / Blue screen with white error text (crashes suddenly)": { en: "Black screen / Blue screen with white error text (crashes suddenly)", ar: "شاشة سوداء أو زرقاء برسالة خطأ (يتعطل فجأة)" },
     "Stuck on loading screen (Windows/macOS won't start)": { en: "Stuck on loading screen (Windows/macOS won't start)", ar: "عالق في شاشة التحميل (ويندوز/ماك لا يقلع)" },
