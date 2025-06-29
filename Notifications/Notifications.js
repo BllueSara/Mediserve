@@ -5,6 +5,12 @@ const notifPopup   = document.getElementById('notifications-popup');
 const notifList    = document.getElementById('notifications-list');
 const notifButton  = document.querySelector('a[href="/Notifications/Notifications.html"]');
 
+// نظام فلترة النصوص حسب اللغة:
+// 1. النصوص داخل قوسين []: (["Printer driver error pops up| يظهر خطأ في برنامج تشغيل الطابعة"])
+// 2. الأسماء المفصولة بـ |: "Ahmed Al-Khuzai|احمد الخزاعي", "admin|مشرف"
+// 3. أسماء المهندسين باللغتين: "assigned to engineer Mohammed محمد مشاط"
+// يتم فلترة النص حسب اللغة المحددة في languageManager.currentLang
+
 function cleanTag(text) {
   return typeof text === 'string'
     ? text.replace(/\s*\[(ar|en)\]/gi, '').trim()
@@ -115,6 +121,59 @@ function filterEngineerNameByLang(text, lang) {
   });
 }
 
+// دالة للتعامل مع النصوص داخل قوسين [] التي تحتوي على | لفصل اللغتين
+function filterBracketedTextByLang(text, lang) {
+  if (!text || typeof text !== 'string') return text;
+  
+  // البحث عن نصوص داخل قوسين [] تحتوي على | لفصل اللغتين
+  // مثال: (["Printer driver error pops up| يظهر خطأ في برنامج تشغيل الطابعة"])
+  return text.replace(/\(\["([^"]+)\|([^"]+)"\]\)/g, (match, englishPart, arabicPart) => {
+    const english = englishPart.trim();
+    const arabic = arabicPart.trim();
+    
+    // التحقق من أن الجزء العربي يحتوي على أحرف عربية
+    const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(arabic);
+    
+    if (lang === 'ar') {
+      return hasArabicChars ? arabic : english; // إذا كانت اللغة عربية، نعرض الجزء العربي إذا كان يحتوي على أحرف عربية
+    } else {
+      return english || arabic; // إذا كانت اللغة إنجليزية، نعرض الجزء الإنجليزي، وإلا الجزء العربي
+    }
+  });
+}
+
+// دالة للتعامل مع أسماء المهندسين التي تأتي باللغتين معًا
+function filterEngineerNamesByLang(text, lang) {
+  if (!text || typeof text !== 'string') return text;
+  
+  // البحث عن أسماء مهندسين تأتي باللغتين معًا
+  // مثال: "assigned to engineer Mohammed محمد مشاط"
+  return text.replace(/(\b[A-Za-z]+\s+)([A-Za-zء-ي0-9_\-]+\s+[ء-ي0-9_\-]+)/g, (match, prefix, namePart) => {
+    const parts = namePart.trim().split(/\s+/);
+    
+    // البحث عن الجزء الإنجليزي والجزء العربي
+    let englishName = '';
+    let arabicName = '';
+    
+    for (const part of parts) {
+      // التحقق من أن الجزء يحتوي على أحرف عربية
+      const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(part);
+      
+      if (hasArabicChars) {
+        arabicName = part;
+      } else {
+        englishName = part;
+      }
+    }
+    
+    if (lang === 'ar') {
+      return prefix + (arabicName || englishName); // إذا كانت اللغة عربية، نعرض الاسم العربي إذا وجد
+    } else {
+      return prefix + (englishName || arabicName); // إذا كانت اللغة إنجليزية، نعرض الاسم الإنجليزي إذا وجد
+    }
+  });
+}
+
 async function renderNotifications() {
   notifList.innerHTML = '';
   const notificationsToShow = showingAll ? allNotifications : allNotifications.slice(0, 4);
@@ -127,8 +186,12 @@ async function renderNotifications() {
 
   for (const n of notificationsToShow) {
     let rawMessage = cleanTag(n.message);
-    // فلترة اسم المهندس حسب اللغة
+    // فلترة النصوص داخل قوسين [] أولاً
+    rawMessage = filterBracketedTextByLang(rawMessage, lang);
+    // ثم فلترة الأسماء المفصولة بـ |
     rawMessage = filterEngineerNameByLang(rawMessage, lang);
+    // ثم فلترة أسماء المهندسين باللغتين معًا
+    rawMessage = filterEngineerNamesByLang(rawMessage, lang);
     const displayMessage = rawMessage;
 
     // جلب العنوان الأصلي من getTypeLabel فقط (بدون ترجمة)
