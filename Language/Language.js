@@ -550,6 +550,9 @@ const languageManager = {
             'report_language': 'Report Language',
             'select_language': 'Select Language',
 
+            'network_reports': 'Network Reports',
+            'upload_excel': 'Upload Excel File',
+
             // Report Details Page
             'maintenance_report': 'Maintenance Report',
             'download_pdf': 'Download PDF',
@@ -1212,6 +1215,7 @@ const languageManager = {
             'server_backup': 'نسخ احتياطي للخادم',
             'system_updates': 'تحديثات النظام',
             'network_maintenance': 'صيانة الشبكة',
+            'network_reports': 'تقارير الشبكة',
             'high': 'عالية',
             'medium': 'متوسطة',
             'low': 'منخفضة',
@@ -1274,6 +1278,8 @@ const languageManager = {
             'phone_number': 'رقم الهاتف',
             'loginError': 'بيانات الدخول غير صحيحة',
             'inactive:': '🚫 حسابك غير نشط. الرجاء التواصل مع المشرف.',
+
+            'upload_excel': 'تحميل ملف Excel',
             // General Maintenance
             'fill_required_fields': 'يرجى ملء جميع الحقون المطلوبة',
             'customer_name': 'اسم العميل',
