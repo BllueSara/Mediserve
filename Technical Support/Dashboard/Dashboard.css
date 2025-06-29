@@ -13,6 +13,7 @@
   --gray: #6B7280;
   --gray-light: #E5E7EB;
 }
+  [dir="rtl"] body, [dir="rtl"] body * { font-family: 'Tajawal', Arial, sans-serif !important; }
 :root {
   --font-family: 'Tajawal', 'Arial',;
 }
