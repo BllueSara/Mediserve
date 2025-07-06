@@ -92,16 +92,27 @@ async function loadNotifications() {
   }
 }
 
+// دالة فلترة أسماء المهندسين بـ '|' - محدثة لتكون مثل السيرفر
 function filterEngineerNameByLang(text, lang) {
   if (!text || typeof text !== 'string') return text;
-  // فلترة أي اسم فيه | حتى لو جاء بعد كلمات مثل engineer أو user أو غيرها
-  // أمثلة: to engineer Sara|سارة, assigned to user Ali|علي
-  return text.replace(/([A-Za-zء-ي0-9_\-]+\|[A-Za-zء-ي0-9_\-]+)/g, (match) => {
-    const parts = match.split('|').map(s => s.trim());
-    if (parts.length === 2) {
-      return lang === 'ar' ? (parts[1] || parts[0]) : parts[0];
+  return text.replace(/([A-Za-z\s]+)\|([\u0600-\u06FF\s]+)/g, (match, en, ar, offset, string) => {
+    const name = lang === 'ar' ? ar.trim() : en.trim();
+    
+    // التحقق من المسافة قبل الاسم
+    const before = string.slice(0, offset);
+    let result = name;
+    
+    if (before.length > 0 && !before.endsWith(' ')) {
+      result = ' ' + name;
     }
-    return match;
+    
+    // التحقق من المسافة بعد الاسم
+    const after = string.slice(offset + match.length);
+    if (after.length > 0 && !after.startsWith(' ') && !after.startsWith('،') && !after.startsWith('.') && !after.startsWith('!') && !after.startsWith('?')) {
+      result = result + ' ';
+    }
+    
+    return result;
   });
 }
 
@@ -166,7 +177,6 @@ function filterComplexBracketedText(text, lang) {
     return cleanContent;
   });
 }
-
 
 // دالة للتعامل مع أسماء المهندسين التي تأتي باللغتين معًا
 function filterEngineerNamesByLang(text, lang) {
@@ -400,22 +410,12 @@ function normalizeMessage(text) {
   // أي نوع ثاني → نحوله string
   return String(text);
 }
-// دالة عامة تختار القسم اللي يناسب اللغة لأي نص فيه |
+// دالة عامة تختار القسم اللي يناسب اللغة لأي نص فيه | - محدثة لتكون مثل السيرفر
 function filterByPipe(text, lang) {
   if (typeof text !== 'string') return text;
   
   // التعامل مع النصوص المعقدة التي تحتوي على أقواس وarrays
-  return text.replace(/([^|]+)\|([^|]+)/g, (match, en, ar) => {
-    // إذا كان النص يحتوي على أقواس مربعة، نتجاهله (تم التعامل معه في filterBracketedTextByLang)
-    if (en.includes('[') || ar.includes('[')) {
-      return match;
-    }
-    
-    // إذا كان النص يحتوي على أقواس عادية، نتجاهله
-    if (en.includes('(') || ar.includes('(')) {
-      return match;
-    }
-    
+  return text.replace(/([^|]+)\|([^|]+)/g, (match, en, ar, offset, string) => {
     // فلترة النص العادي
     const englishPart = en.trim();
     const arabicPart = ar.trim();
@@ -423,15 +423,27 @@ function filterByPipe(text, lang) {
     // التحقق من وجود أحرف عربية في الجزء العربي
     const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(arabicPart);
     
-    if (lang === 'ar') {
-      return hasArabicChars ? arabicPart : englishPart;
-    } else {
-      return englishPart || arabicPart;
+    const name = lang === 'ar' ? (hasArabicChars ? arabicPart : englishPart) : (englishPart || arabicPart);
+    
+    // التحقق من المسافة قبل الاسم
+    const before = string.slice(0, offset);
+    let result = name;
+    
+    if (before.length > 0 && !before.endsWith(' ')) {
+      result = ' ' + name;
     }
+    
+    // التحقق من المسافة بعد الاسم
+    const after = string.slice(offset + match.length);
+    if (after.length > 0 && !after.startsWith(' ') && !after.startsWith('،') && !after.startsWith('.') && !after.startsWith('!') && !after.startsWith('?')) {
+      result = result + ' ';
+    }
+    
+    return result;
   });
 }
 
-// دالة للتعامل مع النصوص الطويلة التي تحتوي على | واحد يفصل بين النص الإنجليزي والعربي بالكامل
+// دالة للتعامل مع النصوص الطويلة التي تحتوي على | واحد يفصل بين النص الإنجليزي والعربي بالكامل - محدثة لتكون مثل السيرفر
 function filterLongTextByPipe(text, lang) {
   if (typeof text !== 'string') return text;
   
@@ -444,17 +456,60 @@ function filterLongTextByPipe(text, lang) {
     // التحقق من وجود أحرف عربية في الجزء العربي
     const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(arabicPart);
     
-    if (lang === 'ar') {
-      return hasArabicChars ? arabicPart : englishPart;
-    } else {
-      return englishPart || arabicPart;
+    const name = lang === 'ar' ? (hasArabicChars ? arabicPart : englishPart) : (englishPart || arabicPart);
+    
+    // التحقق من المسافة قبل الاسم
+    const before = text.substring(0, text.indexOf('|'));
+    let result = name;
+    
+    if (before.length > 0 && !before.endsWith(' ')) {
+      result = ' ' + name;
+    }
+    
+    // التحقق من المسافة بعد الاسم
+    const after = text.substring(text.indexOf('|') + 1 + arabicPart.length);
+    if (after.length > 0 && !after.startsWith(' ') && !after.startsWith('،') && !after.startsWith('.') && !after.startsWith('!') && !after.startsWith('?')) {
+      result = result + ' ';
+    }
+    
+    return result;
+  }
+  
+  // إذا كان النص يحتوي على أقواس مربعة في البداية والنهاية، نزيلها أولاً
+  if (text.startsWith('["') && text.endsWith('"]')) {
+    const innerText = text.slice(2, -2); // إزالة [" و "]
+    const innerParts = innerText.split('|');
+    if (innerParts.length === 2) {
+      const englishPart = innerParts[0].trim();
+      const arabicPart = innerParts[1].trim();
+      
+      // التحقق من وجود أحرف عربية في الجزء العربي
+      const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(arabicPart);
+      
+      const name = lang === 'ar' ? (hasArabicChars ? arabicPart : englishPart) : (englishPart || arabicPart);
+      
+      // التحقق من المسافة قبل الاسم
+      const before = innerText.substring(0, innerText.indexOf('|'));
+      let result = name;
+      
+      if (before.length > 0 && !before.endsWith(' ')) {
+        result = ' ' + name;
+      }
+      
+      // التحقق من المسافة بعد الاسم
+      const after = innerText.substring(innerText.indexOf('|') + 1 + arabicPart.length);
+      if (after.length > 0 && !after.startsWith(' ') && !after.startsWith('،') && !after.startsWith('.') && !after.startsWith('!') && !after.startsWith('?')) {
+        result = result + ' ';
+      }
+      
+      return result;
     }
   }
   
   return text;
 }
 
-// دالة للتعامل مع النصوص المختلطة (إنجليزي متبوع بعربي بدون فواصل)
+// دالة للتعامل مع النصوص المختلطة (إنجليزي متبوع بعربي بدون فواصل) - محدثة لتكون مثل السيرفر
 function filterMixedText(text, lang) {
   if (typeof text !== 'string') return text;
   
@@ -506,88 +561,49 @@ async function renderNotifications() {
     rawMessage = cleanTag(rawMessage);
     console.debug('[DEBUG] after cleanTag:', rawMessage);
 
-    // 3) فلترة الأسماء أولاً
+    // 3) تطبيق الفلاتر المحدثة (مثل السيرفر) بالترتيب الصحيح
     try {
-      rawMessage = filterEngineerNameByLang(rawMessage, lang);
-      console.debug('[DEBUG] after filterEngineerNameByLang:', rawMessage);
-    } catch (error) {
-      console.warn('Error in filterEngineerNameByLang:', error);
-    }
-
-    // 3.5) فلترة الأسماء بالدالة البديلة (إذا لم تعمل الأولى)
-    try {
-      rawMessage = filterEngineerNamesSimple(rawMessage, lang);
-      console.debug('[DEBUG] after filterEngineerNamesSimple:', rawMessage);
-    } catch (error) {
-      console.warn('Error in filterEngineerNamesSimple:', error);
-    }
-
-    // 3.6) فلترة الأسماء بالدالة العامة
-    try {
-      rawMessage = filterEngineerNamesGeneral(rawMessage, lang);
-      console.debug('[DEBUG] after filterEngineerNamesGeneral:', rawMessage);
-    } catch (error) {
-      console.warn('Error in filterEngineerNamesGeneral:', error);
-    }
-
-    // 3.7) فلترة "assigned to" و "to"
-    try {
-      rawMessage = filterAssignedTo(rawMessage, lang);
-      console.debug('[DEBUG] after filterAssignedTo:', rawMessage);
-    } catch (error) {
-      console.warn('Error in filterAssignedTo:', error);
-    }
-
-    // 3.8) فلترة الأسماء المتتالية
-    try {
-      rawMessage = filterConsecutiveNames(rawMessage, lang);
-      console.debug('[DEBUG] after filterConsecutiveNames:', rawMessage);
-    } catch (error) {
-      console.warn('Error in filterConsecutiveNames:', error);
-    }
-
-    // 3.9) فلترة أسماء المستخدمين
-    try {
-      rawMessage = filterUserNames(rawMessage, lang);
-      console.debug('[DEBUG] after filterUserNames:', rawMessage);
-    } catch (error) {
-      console.warn('Error in filterUserNames:', error);
-    }
-
-    // 4) فلترة المشاكل (النصوص داخل الأقواس المزدوجة)
-    try {
-      rawMessage = filterComplexBracketedText(rawMessage, lang);
-      console.debug('[DEBUG] after filterComplexBracketedText:', rawMessage);
-    } catch (error) {
-      console.warn('Error in filterComplexBracketedText:', error);
-    }
-
-    // 5) فلترة bracketed text العادي (لو فيه)
-    try {
-      rawMessage = filterBracketedTextByLang(rawMessage, lang);
-      console.debug('[DEBUG] after filterBracketedTextByLang:', rawMessage);
-    } catch (error) {
-      console.warn('Error in filterBracketedTextByLang:', error);
-    }
-
-    // 6) فلترة النصوص الطويلة التي تحتوي على | واحد
-    try {
+      // فلترة النصوص الطويلة أولاً (للتعامل مع رسائل التذاكر)
       rawMessage = filterLongTextByPipe(rawMessage, lang);
       console.debug('[DEBUG] after filterLongTextByPipe:', rawMessage);
     } catch (error) {
       console.warn('Error in filterLongTextByPipe:', error);
     }
 
-    // 7) فلترة أي \"en|ar\" عام
     try {
+      // فلترة النصوص داخل الأقواس المربعة
+      rawMessage = filterBracketedTextByLang(rawMessage, lang);
+      console.debug('[DEBUG] after filterBracketedTextByLang:', rawMessage);
+    } catch (error) {
+      console.warn('Error in filterBracketedTextByLang:', error);
+    }
+
+    try {
+      // فلترة النصوص المعقدة التي تحتوي على arrays
+      rawMessage = filterComplexBracketedText(rawMessage, lang);
+      console.debug('[DEBUG] after filterComplexBracketedText:', rawMessage);
+    } catch (error) {
+      console.warn('Error in filterComplexBracketedText:', error);
+    }
+
+    try {
+      // فلترة أسماء المهندسين بـ '|'
+      rawMessage = filterEngineerNameByLang(rawMessage, lang);
+      console.debug('[DEBUG] after filterEngineerNameByLang:', rawMessage);
+    } catch (error) {
+      console.warn('Error in filterEngineerNameByLang:', error);
+    }
+
+    try {
+      // فلترة أي "en|ar" عام
       rawMessage = filterByPipe(rawMessage, lang);
       console.debug('[DEBUG] after filterByPipe:', rawMessage);
     } catch (error) {
       console.warn('Error in filterByPipe:', error);
     }
 
-    // 8) فلترة النصوص المختلطة (إنجليزي متبوع بعربي بدون فواصل)
     try {
+      // فلترة النصوص المختلطة (إنجليزي متبوع بعربي بدون فواصل)
       rawMessage = filterMixedText(rawMessage, lang);
       console.debug('[DEBUG] after filterMixedText:', rawMessage);
     } catch (error) {
