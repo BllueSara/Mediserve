@@ -18,23 +18,7 @@ function cleanTag(text) {
 }
 
 /// دالة ترجمة عبر Google Translate
-async function translateWithGoogle(text, targetLang, sourceLang = "en") {
-  if (!text || !targetLang || targetLang === sourceLang) return text;
-  const encoded = encodeURIComponent(text);
-  const url =
-    `https://translate.googleapis.com/translate_a/single?client=gtx` +
-    `&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encoded}`;
 
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Failed to fetch Google Translate");
-    const data = await res.json();
-    return data?.[0]?.[0]?.[0] || text;
-  } catch (err) {
-    console.warn("⚠️ translateWithGoogle error:", err);
-    return text;
-  }
-}
 
 notifButton.addEventListener('click', (e) => {
   e.preventDefault();
@@ -125,91 +109,505 @@ function filterEngineerNameByLang(text, lang) {
 function filterBracketedTextByLang(text, lang) {
   if (!text || typeof text !== 'string') return text;
   
-  // البحث عن نصوص داخل قوسين [] تحتوي على | لفصل اللغتين
-  // مثال: (["Printer driver error pops up| يظهر خطأ في برنامج تشغيل الطابعة"])
-  return text.replace(/\(\["([^"]+)\|([^"]+)"\]\)/g, (match, englishPart, arabicPart) => {
-    const english = englishPart.trim();
-    const arabic = arabicPart.trim();
+  // التعامل مع النصوص المعقدة التي تحتوي على أقواس مربعة متداخلة
+  return text.replace(/\["([^"]+)\|([^"]+)"\]/g, (match, englishPart, arabicPart) => {
+    const en = englishPart.trim();
+    const ar = arabicPart.trim();
     
-    // التحقق من أن الجزء العربي يحتوي على أحرف عربية
-    const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(arabic);
+    // التحقق من وجود أحرف عربية في الجزء العربي
+    const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(ar);
     
     if (lang === 'ar') {
-      return hasArabicChars ? arabic : english; // إذا كانت اللغة عربية، نعرض الجزء العربي إذا كان يحتوي على أحرف عربية
+      return hasArabicChars ? ar : en;
     } else {
-      return english || arabic; // إذا كانت اللغة إنجليزية، نعرض الجزء الإنجليزي، وإلا الجزء العربي
+      return en || ar;
     }
   });
 }
+
+// دالة للتعامل مع النصوص التي تحتوي على arrays داخل الأقواس المربعة
+function filterComplexBracketedText(text, lang) {
+  if (!text || typeof text !== 'string') return text;
+  
+  // التعامل مع النصوص المعقدة التي تحتوي على أقواس مربعة مزدوجة مثل [["text|text"]]
+  return text.replace(/\[\[([^\]]+)\]\]/g, (match, arrayContent) => {
+    // تنظيف المحتوى من علامات الاقتباس الزائدة
+    let cleanContent = arrayContent.replace(/^"/, '').replace(/"$/, '');
+    
+    // إذا كان المحتوى يحتوي على | لفصل اللغتين
+    if (cleanContent.includes('|')) {
+      const parts = cleanContent.split('|').map(s => s.trim());
+      if (parts.length >= 2) {
+        // البحث عن الجزء الإنجليزي والعربي
+        let englishPart = '';
+        let arabicPart = '';
+        
+        for (let i = 0; i < parts.length; i++) {
+          const part = parts[i];
+          const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(part);
+          
+          if (hasArabicChars) {
+            arabicPart = part;
+          } else {
+            englishPart = part;
+          }
+        }
+        
+        // إرجاع الجزء المناسب حسب اللغة
+        if (lang === 'ar') {
+          return arabicPart || englishPart;
+        } else {
+          return englishPart || arabicPart;
+        }
+      }
+    }
+    
+    // إذا لم يكن هناك |، نعيد المحتوى كما هو
+    return cleanContent;
+  });
+}
+
 
 // دالة للتعامل مع أسماء المهندسين التي تأتي باللغتين معًا
 function filterEngineerNamesByLang(text, lang) {
   if (!text || typeof text !== 'string') return text;
   
-  // البحث عن أسماء مهندسين تأتي باللغتين معًا
-  // مثال: "assigned to engineer Mohammed محمد مشاط"
-  return text.replace(/(\b[A-Za-z]+\s+)([A-Za-zء-ي0-9_\-]+\s+[ء-ي0-9_\-]+)/g, (match, prefix, namePart) => {
-    const parts = namePart.trim().split(/\s+/);
-    
-    // البحث عن الجزء الإنجليزي والجزء العربي
-    let englishName = '';
-    let arabicName = '';
-    
-    for (const part of parts) {
-      // التحقق من أن الجزء يحتوي على أحرف عربية
-      const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(part);
+  try {
+    // البحث عن أسماء مهندسين تأتي باللغتين معًا
+    // مثال: "assigned to engineer Mohammed محمد مشاط"
+    return text.replace(/(\b[A-Za-z]+\s+)([A-Za-zء-ي0-9_\-]+\s+[ء-ي0-9_\-]+)/g, (match, prefix, namePart) => {
+      try {
+        if (!namePart || typeof namePart !== 'string') {
+          return match;
+        }
+        
+        const parts = namePart.trim().split(/\s+/).filter(part => part.length > 0);
+        
+        if (parts.length === 0) {
+          return match;
+        }
+        
+        // البحث عن الجزء الإنجليزي والجزء العربي
+        let englishName = '';
+        let arabicName = '';
+        
+        for (const part of parts) {
+          // التحقق من أن الجزء يحتوي على أحرف عربية
+          const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(part);
+          
+          if (hasArabicChars) {
+            arabicName = part;
+          } else {
+            englishName = part;
+          }
+        }
+        
+        if (lang === 'ar') {
+          return prefix + (arabicName || englishName); // إذا كانت اللغة عربية، نعرض الاسم العربي إذا وجد
+        } else {
+          return prefix + (englishName || arabicName); // إذا كانت اللغة إنجليزية، نعرض الاسم الإنجليزي إذا وجد
+        }
+      } catch (error) {
+        console.warn('Error in filterEngineerNamesByLang inner:', error, 'for namePart:', namePart);
+        return match; // إرجاع النص الأصلي إذا حدث خطأ
+      }
+    });
+  } catch (error) {
+    console.warn('Error in filterEngineerNamesByLang outer:', error, 'for text:', text);
+    return text; // إرجاع النص الأصلي إذا حدث خطأ
+  }
+}
+
+// دالة بديلة أبسط للتعامل مع أسماء المهندسين
+function filterEngineerNamesSimple(text, lang) {
+  if (!text || typeof text !== 'string') return text;
+  
+  try {
+    // البحث عن النمط: engineer + اسم إنجليزي + اسم عربي
+    return text.replace(/(\bengineer\s+)([A-Za-z]+)\s+([ء-ي]+)/gi, (match, prefix, englishName, arabicName) => {
+      if (lang === 'ar') {
+        return prefix + arabicName;
+      } else {
+        return prefix + englishName;
+      }
+    });
+  } catch (error) {
+    console.warn('Error in filterEngineerNamesSimple:', error, 'for text:', text);
+    return text;
+  }
+}
+
+// دالة للتعامل مع أسماء المهندسين بشكل عام
+function filterEngineerNamesGeneral(text, lang) {
+  if (!text || typeof text !== 'string') return text;
+  
+  try {
+    // البحث عن أي نص يحتوي على "engineer" متبوع باسمين (إنجليزي وعربي)
+    return text.replace(/(\bengineer\s+)([A-Za-zء-ي0-9_\-]+\s+[ء-ي0-9_\-]+)/gi, (match, prefix, names) => {
+      const nameParts = names.trim().split(/\s+/);
+      
+      if (nameParts.length >= 2) {
+        // البحث عن الاسم الإنجليزي والعربي
+        let englishName = '';
+        let arabicName = '';
+        
+        for (const part of nameParts) {
+          const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(part);
+          if (hasArabicChars) {
+            arabicName = part;
+          } else if (/^[A-Za-z0-9_\-]+$/.test(part)) {
+            englishName = part;
+          }
+        }
+        
+        if (lang === 'ar') {
+          return prefix + (arabicName || englishName || nameParts[0]);
+        } else {
+          return prefix + (englishName || arabicName || nameParts[0]);
+        }
+      }
+      
+      return match;
+    });
+  } catch (error) {
+    console.warn('Error in filterEngineerNamesGeneral:', error, 'for text:', text);
+    return text;
+  }
+}
+
+// دالة للتعامل مع "assigned to" و "to"
+function filterAssignedTo(text, lang) {
+  if (!text || typeof text !== 'string') return text;
+  
+  try {
+    // البحث عن "assigned to engineer" أو "to engineer"
+    return text.replace(/(\b(?:assigned\s+)?to\s+engineer\s+)([A-Za-zء-ي0-9_\-]+\s+[ء-ي0-9_\-]+)/gi, (match, prefix, names) => {
+      const nameParts = names.trim().split(/\s+/);
+      
+      if (nameParts.length >= 2) {
+        // البحث عن الاسم الإنجليزي والعربي
+        let englishName = '';
+        let arabicName = '';
+        
+        for (const part of nameParts) {
+          const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(part);
+          if (hasArabicChars) {
+            arabicName = part;
+          } else if (/^[A-Za-z0-9_\-]+$/.test(part)) {
+            englishName = part;
+          }
+        }
+        
+        if (lang === 'ar') {
+          return prefix + (arabicName || englishName || nameParts[0]);
+        } else {
+          return prefix + (englishName || arabicName || nameParts[0]);
+        }
+      }
+      
+      return match;
+    });
+  } catch (error) {
+    console.warn('Error in filterAssignedTo:', error, 'for text:', text);
+    return text;
+  }
+}
+
+// دالة للتعامل مع أي نص يحتوي على اسمين متتاليين (إنجليزي وعربي)
+function filterConsecutiveNames(text, lang) {
+  if (!text || typeof text !== 'string') return text;
+  
+  try {
+    // البحث عن نمط: كلمة إنجليزية + كلمة عربية متتالية
+    return text.replace(/(\b[A-Za-z0-9_\-]+\s+)([ء-ي0-9_\-]+)/g, (match, englishPart, arabicPart) => {
+      // التحقق من أن الجزء العربي يحتوي على أحرف عربية
+      const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(arabicPart);
       
       if (hasArabicChars) {
-        arabicName = part;
-      } else {
-        englishName = part;
+        if (lang === 'ar') {
+          return arabicPart;
+        } else {
+          return englishPart.trim();
+        }
       }
+      
+      return match;
+    });
+  } catch (error) {
+    console.warn('Error in filterConsecutiveNames:', error, 'for text:', text);
+    return text;
+  }
+}
+
+// دالة للتعامل مع "user" و "assigned to user"
+function filterUserNames(text, lang) {
+  if (!text || typeof text !== 'string') return text;
+  
+  try {
+    // البحث عن "assigned to user" أو "to user"
+    return text.replace(/(\b(?:assigned\s+)?to\s+user\s+)([A-Za-zء-ي0-9_\-]+\s+[ء-ي0-9_\-]+)/gi, (match, prefix, names) => {
+      const nameParts = names.trim().split(/\s+/);
+      
+      if (nameParts.length >= 2) {
+        // البحث عن الاسم الإنجليزي والعربي
+        let englishName = '';
+        let arabicName = '';
+        
+        for (const part of nameParts) {
+          const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(part);
+          if (hasArabicChars) {
+            arabicName = part;
+          } else if (/^[A-Za-z0-9_\-]+$/.test(part)) {
+            englishName = part;
+          }
+        }
+        
+        if (lang === 'ar') {
+          return prefix + (arabicName || englishName || nameParts[0]);
+        } else {
+          return prefix + (englishName || arabicName || nameParts[0]);
+        }
+      }
+      
+      return match;
+    });
+  } catch (error) {
+    console.warn('Error in filterUserNames:', error, 'for text:', text);
+    return text;
+  }
+}
+// ١) دالة للتأكد إذا الرسالة هي array أو JSON string تمثل array
+// ١) دالة لتوحيد الرسالة إلى string
+function normalizeMessage(text) {
+  // لو array أصلاً → نبسطه (flatten) ونجمعه
+  if (Array.isArray(text)) {
+    return text.flat(Infinity).join(' ');
+  }
+
+  // لو string → نجرب parse JSON
+  if (typeof text === 'string') {
+    try {
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed)) {
+        return parsed.flat(Infinity).join(' ');
+      }
+    } catch (e) {
+      // مش JSON → نستعمل النص كما هو
+    }
+    return text;
+  }
+
+  // أي نوع ثاني → نحوله string
+  return String(text);
+}
+// دالة عامة تختار القسم اللي يناسب اللغة لأي نص فيه |
+function filterByPipe(text, lang) {
+  if (typeof text !== 'string') return text;
+  
+  // التعامل مع النصوص المعقدة التي تحتوي على أقواس وarrays
+  return text.replace(/([^|]+)\|([^|]+)/g, (match, en, ar) => {
+    // إذا كان النص يحتوي على أقواس مربعة، نتجاهله (تم التعامل معه في filterBracketedTextByLang)
+    if (en.includes('[') || ar.includes('[')) {
+      return match;
     }
     
+    // إذا كان النص يحتوي على أقواس عادية، نتجاهله
+    if (en.includes('(') || ar.includes('(')) {
+      return match;
+    }
+    
+    // فلترة النص العادي
+    const englishPart = en.trim();
+    const arabicPart = ar.trim();
+    
+    // التحقق من وجود أحرف عربية في الجزء العربي
+    const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(arabicPart);
+    
     if (lang === 'ar') {
-      return prefix + (arabicName || englishName); // إذا كانت اللغة عربية، نعرض الاسم العربي إذا وجد
+      return hasArabicChars ? arabicPart : englishPart;
     } else {
-      return prefix + (englishName || arabicName); // إذا كانت اللغة إنجليزية، نعرض الاسم الإنجليزي إذا وجد
+      return englishPart || arabicPart;
     }
   });
 }
 
+// دالة للتعامل مع النصوص الطويلة التي تحتوي على | واحد يفصل بين النص الإنجليزي والعربي بالكامل
+function filterLongTextByPipe(text, lang) {
+  if (typeof text !== 'string') return text;
+  
+  // البحث عن النصوص التي تحتوي على | واحد فقط يفصل بين نصين طويلين
+  const parts = text.split('|');
+  if (parts.length === 2) {
+    const englishPart = parts[0].trim();
+    const arabicPart = parts[1].trim();
+    
+    // التحقق من وجود أحرف عربية في الجزء العربي
+    const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(arabicPart);
+    
+    if (lang === 'ar') {
+      return hasArabicChars ? arabicPart : englishPart;
+    } else {
+      return englishPart || arabicPart;
+    }
+  }
+  
+  return text;
+}
+
+// دالة للتعامل مع النصوص المختلطة (إنجليزي متبوع بعربي بدون فواصل)
+function filterMixedText(text, lang) {
+  if (typeof text !== 'string') return text;
+  
+  // البحث عن النمط: نص إنجليزي + نص عربي متصل بدون فواصل
+  // مثال: "Main report... رواد بن صديق... تم تقديم التقرير..."
+  
+  // البحث عن أول ظهور لأحرف عربية متتالية
+  const arabicStartIndex = text.search(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/);
+  
+  if (arabicStartIndex > 0) {
+    const englishPart = text.substring(0, arabicStartIndex).trim();
+    const arabicPart = text.substring(arabicStartIndex).trim();
+    
+    // التحقق من وجود أحرف عربية في الجزء العربي
+    const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(arabicPart);
+    
+    if (hasArabicChars) {
+      if (lang === 'ar') {
+        return arabicPart;
+      } else {
+        return englishPart;
+      }
+    }
+  }
+  
+  return text;
+}
+
+
 async function renderNotifications() {
   notifList.innerHTML = '';
   const notificationsToShow = showingAll ? allNotifications : allNotifications.slice(0, 4);
-  const lang = languageManager.currentLang; // مثال: "ar" أو "en"
+  const lang = languageManager.currentLang;
 
   if (notificationsToShow.length === 0) {
-    notifList.innerHTML = '<div class="p-4 text-center text-gray-400">No notifications</div>';
+    const noNotificationsText = lang === 'ar' ? 'لا توجد إشعارات' : 'No notifications';
+    notifList.innerHTML = `<div class="p-4 text-center text-gray-400">${noNotificationsText}</div>`;
     return;
   }
 
   for (const n of notificationsToShow) {
-    let rawMessage = cleanTag(n.message);
-    // فلترة النصوص داخل قوسين [] أولاً
-    rawMessage = filterBracketedTextByLang(rawMessage, lang);
-    // ثم فلترة الأسماء المفصولة بـ |
-    rawMessage = filterEngineerNameByLang(rawMessage, lang);
-    // ثم فلترة أسماء المهندسين باللغتين معًا
-    rawMessage = filterEngineerNamesByLang(rawMessage, lang);
-    const displayMessage = rawMessage;
+    console.debug('[DEBUG] original n.message:', n.message, typeof n.message);
 
-    // جلب العنوان الأصلي من getTypeLabel فقط (بدون ترجمة)
-    const rawLabel = getTypeLabel(n.type);
-    const displayLabel = rawLabel;
+    // 1) تطبيع وتحويل الرسالة
+    let rawMessage = normalizeMessage(n.message);
+    console.debug('[DEBUG] after normalizeMessage:', rawMessage);
 
+    // 2) إزالة وسوم [ar] أو [en]
+    rawMessage = cleanTag(rawMessage);
+    console.debug('[DEBUG] after cleanTag:', rawMessage);
+
+    // 3) فلترة الأسماء أولاً
+    try {
+      rawMessage = filterEngineerNameByLang(rawMessage, lang);
+      console.debug('[DEBUG] after filterEngineerNameByLang:', rawMessage);
+    } catch (error) {
+      console.warn('Error in filterEngineerNameByLang:', error);
+    }
+
+    // 3.5) فلترة الأسماء بالدالة البديلة (إذا لم تعمل الأولى)
+    try {
+      rawMessage = filterEngineerNamesSimple(rawMessage, lang);
+      console.debug('[DEBUG] after filterEngineerNamesSimple:', rawMessage);
+    } catch (error) {
+      console.warn('Error in filterEngineerNamesSimple:', error);
+    }
+
+    // 3.6) فلترة الأسماء بالدالة العامة
+    try {
+      rawMessage = filterEngineerNamesGeneral(rawMessage, lang);
+      console.debug('[DEBUG] after filterEngineerNamesGeneral:', rawMessage);
+    } catch (error) {
+      console.warn('Error in filterEngineerNamesGeneral:', error);
+    }
+
+    // 3.7) فلترة "assigned to" و "to"
+    try {
+      rawMessage = filterAssignedTo(rawMessage, lang);
+      console.debug('[DEBUG] after filterAssignedTo:', rawMessage);
+    } catch (error) {
+      console.warn('Error in filterAssignedTo:', error);
+    }
+
+    // 3.8) فلترة الأسماء المتتالية
+    try {
+      rawMessage = filterConsecutiveNames(rawMessage, lang);
+      console.debug('[DEBUG] after filterConsecutiveNames:', rawMessage);
+    } catch (error) {
+      console.warn('Error in filterConsecutiveNames:', error);
+    }
+
+    // 3.9) فلترة أسماء المستخدمين
+    try {
+      rawMessage = filterUserNames(rawMessage, lang);
+      console.debug('[DEBUG] after filterUserNames:', rawMessage);
+    } catch (error) {
+      console.warn('Error in filterUserNames:', error);
+    }
+
+    // 4) فلترة المشاكل (النصوص داخل الأقواس المزدوجة)
+    try {
+      rawMessage = filterComplexBracketedText(rawMessage, lang);
+      console.debug('[DEBUG] after filterComplexBracketedText:', rawMessage);
+    } catch (error) {
+      console.warn('Error in filterComplexBracketedText:', error);
+    }
+
+    // 5) فلترة bracketed text العادي (لو فيه)
+    try {
+      rawMessage = filterBracketedTextByLang(rawMessage, lang);
+      console.debug('[DEBUG] after filterBracketedTextByLang:', rawMessage);
+    } catch (error) {
+      console.warn('Error in filterBracketedTextByLang:', error);
+    }
+
+    // 6) فلترة النصوص الطويلة التي تحتوي على | واحد
+    try {
+      rawMessage = filterLongTextByPipe(rawMessage, lang);
+      console.debug('[DEBUG] after filterLongTextByPipe:', rawMessage);
+    } catch (error) {
+      console.warn('Error in filterLongTextByPipe:', error);
+    }
+
+    // 7) فلترة أي \"en|ar\" عام
+    try {
+      rawMessage = filterByPipe(rawMessage, lang);
+      console.debug('[DEBUG] after filterByPipe:', rawMessage);
+    } catch (error) {
+      console.warn('Error in filterByPipe:', error);
+    }
+
+    // 8) فلترة النصوص المختلطة (إنجليزي متبوع بعربي بدون فواصل)
+    try {
+      rawMessage = filterMixedText(rawMessage, lang);
+      console.debug('[DEBUG] after filterMixedText:', rawMessage);
+    } catch (error) {
+      console.warn('Error in filterMixedText:', error);
+    }
+
+
+
+    // بناء العنصر للعرض
+    const displayLabel = getTypeLabel(n.type);
     const div = document.createElement('div');
     div.className = `notification-item p-3 border-b ${getColor(n.type)}`;
     div.dataset.id = n.id;
-
     div.innerHTML = `
       <div class="notification-content">
         <div class="font-semibold">${displayLabel}</div>
-        <div class="text-sm text-gray-600">${displayMessage}</div>
+        <div class="text-sm text-gray-600">${rawMessage}</div>
         <div class="text-xs text-gray-400">${new Date(n.created_at).toLocaleString()}</div>
       </div>
     `;
-
     notifList.appendChild(div);
     setupSwipeToDelete(div);
   }
@@ -327,21 +725,43 @@ function getColor(type) {
 }
 
 function getTypeLabel(type) {
+  const lang = languageManager.currentLang;
+  
   switch (type) {
-    case 'regular-maintenance':         return ' Regular Maintenance';
-    case 'general-maintenance':         return ' General Maintenance';
-    case 'external-maintenance':        return ' External Maintenance';
-    case 'internal-ticket':             return ' Internal Ticket';
-    case 'external-ticket':             return ' External Ticket';
-    case 'general-report':              return ' General Report';
-    case 'regular-report':              return ' Regular Report';
-    case 'external-report':             return ' External Report';
-    case 'internal-ticket-report':      return ' Internal Ticket Report';
-    case 'external-ticket-report':      return ' External Ticket Report';
-    case 'status-update':               return ' Status Update';
-    case 'external-status-update':      return ' External Report Status Update';
-    default:                            return ' Notification';
+    case 'regular-maintenance':         
+      return lang === 'ar' ? ' صيانة دورية' : ' Regular Maintenance';
+    case 'general-maintenance':         
+      return lang === 'ar' ? ' صيانة عامة' : ' General Maintenance';
+    case 'external-maintenance':        
+      return lang === 'ar' ? ' صيانة خارجية' : ' External Maintenance';
+    case 'internal-ticket':             
+      return lang === 'ar' ? ' تذكرة داخلية' : ' Internal Ticket';
+    case 'external-ticket':             
+      return lang === 'ar' ? ' تذكرة خارجية' : ' External Ticket';
+    case 'general-report':              
+      return lang === 'ar' ? ' تقرير عام' : ' General Report';
+    case 'regular-report':              
+      return lang === 'ar' ? ' تقرير دوري' : ' Regular Report';
+    case 'external-report':             
+      return lang === 'ar' ? ' تقرير خارجي' : ' External Report';
+    case 'internal-ticket-report':      
+      return lang === 'ar' ? ' تقرير التذكرة الداخلية' : ' Internal Ticket Report';
+    case 'external-ticket-report':      
+      return lang === 'ar' ? ' تقرير التذكرة الخارجية' : ' External Ticket Report';
+    case 'status-update':               
+      return lang === 'ar' ? ' تحديث الحالة' : ' Status Update';
+    case 'external-status-update':      
+      return lang === 'ar' ? ' تحديث حالة التقرير الخارجي' : ' External Report Status Update';
+    case 'network-share':               
+      return lang === 'ar' ? ' مشاركة شبكة' : ' Network Share';
+    case 'contract-expiry-warning':     
+      return lang === 'ar' ? ' تحذير انتهاء العقد' : ' Contract Expiry Warning';
+    case 'technical-notification':      
+      return lang === 'ar' ? ' إشعار تقني' : ' Technical Notification';
+    default:                            
+      return lang === 'ar' ? ' إشعار' : ' Notification';
   }
 }
 
 window.addEventListener('DOMContentLoaded', fetchUnseenCount);
+

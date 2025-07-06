@@ -1847,8 +1847,8 @@ async function fetchProblemStatus(deviceType, onFinished) {
       if (currentLang === "ar" && hasEnTag) return;
       if (currentLang === "en" && hasArTag) return;
 
-      // ✅ تجاهل العربي الغير مترجم أو غير موسوم عند اللغة الإنجليزية
-      if (currentLang === "en" && !hasArTag && !hasEnTag && isUserAddedArabic) return;
+      // ✅ إزالة الفلترة المفرطة للمشاكل العربية غير الموسومة
+      // if (currentLang === "en" && !hasArTag && !hasEnTag && isUserAddedArabic) return;
 
       const row = document.createElement("div");
       row.className = "dropdown-option-row";
