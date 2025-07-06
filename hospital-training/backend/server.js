@@ -3,12 +3,548 @@ const cors = require("cors");
 const db = require("./db");
 const path = require("path");
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
 const app = express();
 const port = 5050;
 const JWT_SECRET = 'super_secret_key_123';
-
 app.use(express.json());
 app.use(cors());
+// تكوين البريد الإلكتروني مع تحسينات الأداء
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'medi.servee1@gmail.com',
+    pass: 'gfcf qtwc lucm rdfd' // App Password من Gmail
+  },
+  // تحسينات الأداء
+  pool: true, // استخدام pool للاتصالات
+  maxConnections: 5, // عدد أقصى للاتصالات المتزامنة
+  maxMessages: 100, // عدد أقصى للرسائل في الاتصال الواحد
+  rateLimit: 5, // عدد الرسائل في الثانية
+  rateDelta: 1000, // الفاصل الزمني بين الرسائل (ملي ثانية)
+  // إعدادات إضافية للأداء
+  connectionTimeout: 60000, // timeout للاتصال (60 ثانية)
+  greetingTimeout: 30000, // timeout للتحية
+  socketTimeout: 60000, // timeout للـ socket
+});
+
+
+// وظيفة تنظيف النصوص للبريد الإلكتروني (عربي فقط)
+// دالة تطبيع الرسالة (مثل الموجودة في Notifications.js)
+function normalizeMessage(text) {
+  // لو array أصلاً → نبسطه (flatten) ونجمعه
+  if (Array.isArray(text)) {
+    return text.flat(Infinity).join(' ');
+  }
+
+  // لو string → نجرب parse JSON
+  if (typeof text === 'string') {
+    try {
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed)) {
+        return parsed.flat(Infinity).join(' ');
+      }
+    } catch (e) {
+      // مش JSON → نستعمل النص كما هو
+    }
+    return text;
+  }
+
+  // أي نوع ثاني → نحوله string
+  return String(text);
+}
+
+// دالة إزالة وسوم اللغة [ar] أو [en]
+function cleanTag(text) {
+  if (!text || typeof text !== 'string') return text;
+  return text.replace(/\[(ar|en)\]/g, '').trim();
+}
+
+// دالة فلترة النصوص داخل قوسين [] التي تحتوي على | لفصل اللغتين
+function filterBracketedTextByLang(text, lang = 'ar') {
+  if (!text || typeof text !== 'string') return text;
+  
+  // التعامل مع النصوص المعقدة التي تحتوي على أقواس مربعة متداخلة
+  // النمط الأول: ["text1|text2"]
+  let result = text.replace(/\["([^"]+)\|([^"]+)"\]/g, (match, englishPart, arabicPart) => {
+    const en = englishPart.trim();
+    const ar = arabicPart.trim();
+    
+    // التحقق من وجود أحرف عربية في الجزء العربي
+    const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(ar);
+    
+    if (lang === 'ar') {
+      return hasArabicChars ? ar : en;
+    } else {
+      return en || ar;
+    }
+  });
+  
+  // النمط الثاني: ["text1 with [brackets]|text2"]
+  result = result.replace(/\["([^|]+)\|([^"]+)"\]/g, (match, englishPart, arabicPart) => {
+    const en = englishPart.trim();
+    const ar = arabicPart.trim();
+    
+    // التحقق من وجود أحرف عربية في الجزء العربي
+    const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(ar);
+    
+    if (lang === 'ar') {
+      return hasArabicChars ? ar : en;
+    } else {
+      return en || ar;
+    }
+  });
+  
+  return result;
+}
+
+// دالة للتعامل مع النصوص التي تحتوي على arrays داخل الأقواس المربعة
+function filterComplexBracketedText(text, lang = 'ar') {
+  if (!text || typeof text !== 'string') return text;
+  
+  // التعامل مع النصوص التي تحتوي على arrays مثل [["text1|text2", "text3|text4"]]
+  return text.replace(/\[\[([^\]]+)\]\]/g, (match, arrayContent) => {
+    // تقسيم المحتوى إلى عناصر منفصلة
+    const items = arrayContent.split('","').map(item => 
+      item.replace(/^"/, '').replace(/"$/, '')
+    );
+    
+    // فلترة كل عنصر حسب اللغة
+    const filteredItems = items.map(item => {
+      if (item.includes('|')) {
+        const [en, ar] = item.split('|').map(s => s.trim());
+        const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(ar);
+        return lang === 'ar' ? (hasArabicChars ? ar : en) : en;
+      }
+      return item;
+    });
+    
+    return filteredItems.join(', ');
+  });
+}
+
+// دالة فلترة أسماء المهندسين بـ '|'
+function filterEngineerNameByLang(text, lang = 'ar') {
+  if (!text || typeof text !== 'string') return text;
+  // فلترة أي اسم فيه | حتى لو جاء بعد كلمات مثل engineer أو user أو غيرها
+  // أمثلة: to engineer Sara|سارة, assigned to user Ali|علي
+  return text.replace(/([A-Za-zء-ي0-9_\-]+\|[A-Za-zء-ي0-9_\-]+)/g, (match) => {
+    const parts = match.split('|').map(s => s.trim());
+    if (parts.length === 2) {
+      return lang === 'ar' ? (parts[1] || parts[0]) : parts[0];
+    }
+    return match;
+  });
+}
+
+// دالة للتعامل مع أسماء المهندسين التي تأتي باللغتين معًا
+function filterEngineerNamesByLang(text, lang = 'ar') {
+  if (!text || typeof text !== 'string') return text;
+  
+  // البحث عن أسماء مهندسين تأتي باللغتين معًا
+  // مثال: "assigned to engineer Mohammed محمد مشاط"
+  return text.replace(/(\b[A-Za-z]+\s+)([A-Za-zء-ي0-9_\-]+\s+[ء-ي0-9_\-]+)/g, (match, prefix, namePart) => {
+    const parts = namePart.trim().split(/\s+/);
+    
+    // البحث عن الجزء الإنجليزي والجزء العربي
+    let englishName = '';
+    let arabicName = '';
+    
+    for (const part of parts) {
+      // التحقق من أن الجزء يحتوي على أحرف عربية
+      const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(part);
+      
+      if (hasArabicChars) {
+        arabicName = part;
+      } else {
+        englishName = part;
+      }
+    }
+    
+    if (lang === 'ar') {
+      return prefix + (arabicName || englishName); // إذا كانت اللغة عربية، نعرض الاسم العربي إذا وجد
+    } else {
+      return prefix + (englishName || arabicName); // إذا كانت اللغة إنجليزية، نعرض الاسم الإنجليزي إذا وجد
+    }
+  });
+}
+
+// دالة عامة تختار القسم اللي يناسب اللغة لأي نص فيه |
+function filterByPipe(text, lang = 'ar') {
+  if (typeof text !== 'string') return text;
+  
+  // التعامل مع النصوص المعقدة التي تحتوي على أقواس وarrays
+  return text.replace(/([^|]+)\|([^|]+)/g, (match, en, ar) => {
+    // فلترة النص العادي
+    const englishPart = en.trim();
+    const arabicPart = ar.trim();
+    
+    // التحقق من وجود أحرف عربية في الجزء العربي
+    const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(arabicPart);
+    
+    if (lang === 'ar') {
+      return hasArabicChars ? arabicPart : englishPart;
+    } else {
+      return englishPart || arabicPart;
+    }
+  });
+}
+
+// دالة للتعامل مع النصوص الطويلة التي تحتوي على | واحد يفصل بين النص الإنجليزي والعربي بالكامل
+function filterLongTextByPipe(text, lang = 'ar') {
+  if (typeof text !== 'string') return text;
+  
+  // البحث عن النصوص التي تحتوي على | واحد فقط يفصل بين نصين طويلين
+  const parts = text.split('|');
+  if (parts.length === 2) {
+    const englishPart = parts[0].trim();
+    const arabicPart = parts[1].trim();
+    
+    // التحقق من وجود أحرف عربية في الجزء العربي
+    const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(arabicPart);
+    
+    if (lang === 'ar') {
+      return hasArabicChars ? arabicPart : englishPart;
+    } else {
+      return englishPart || arabicPart;
+    }
+  }
+  
+  // إذا كان النص يحتوي على أقواس مربعة في البداية والنهاية، نزيلها أولاً
+  if (text.startsWith('["') && text.endsWith('"]')) {
+    const innerText = text.slice(2, -2); // إزالة [" و "]
+    const innerParts = innerText.split('|');
+    if (innerParts.length === 2) {
+      const englishPart = innerParts[0].trim();
+      const arabicPart = innerParts[1].trim();
+      
+      // التحقق من وجود أحرف عربية في الجزء العربي
+      const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(arabicPart);
+      
+      if (lang === 'ar') {
+        return hasArabicChars ? arabicPart : englishPart;
+      } else {
+        return englishPart || arabicPart;
+      }
+    }
+  }
+  
+  return text;
+}
+
+// دالة للتعامل مع النصوص المختلطة (إنجليزي متبوع بعربي بدون فواصل)
+function filterMixedText(text, lang = 'ar') {
+  if (typeof text !== 'string') return text;
+  
+  // البحث عن النمط: نص إنجليزي + نص عربي متصل بدون فواصل
+  // مثال: "Main report... رواد بن صديق... تم تقديم التقرير..."
+  
+  // البحث عن أول ظهور لأحرف عربية متتالية
+  const arabicStartIndex = text.search(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/);
+  
+  if (arabicStartIndex > 0) {
+    const englishPart = text.substring(0, arabicStartIndex).trim();
+    const arabicPart = text.substring(arabicStartIndex).trim();
+    
+    // التحقق من وجود أحرف عربية في الجزء العربي
+    const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(arabicPart);
+    
+    if (hasArabicChars) {
+      if (lang === 'ar') {
+        return arabicPart;
+      } else {
+        return englishPart;
+      }
+    }
+  }
+  
+  return text;
+}
+
+function cleanEmailText(text, lang = 'ar') {
+  if (!text) return '';
+  
+  // تطبيق نفس الفلترة الموجودة في Notifications.js مع التركيز على اللغة المحددة
+  
+  // 1) تطبيع وتحويل الرسالة
+  let rawMessage = normalizeMessage(text);
+  
+  // 2) إزالة وسوم [ar] أو [en]
+  rawMessage = cleanTag(rawMessage);
+  
+  // 3) فلترة النصوص الطويلة التي تحتوي على | واحد (للتعامل مع رسائل التذاكر)
+  rawMessage = filterLongTextByPipe(rawMessage, lang);
+  
+  // 4) فلترة bracketed text حسب اللغة المحددة
+  rawMessage = filterBracketedTextByLang(rawMessage, lang);
+  
+  // 5) فلترة النصوص المعقدة التي تحتوي على arrays
+  rawMessage = filterComplexBracketedText(rawMessage, lang);
+  
+  // 6) فلترة الأسماء بـ '|'
+  rawMessage = filterEngineerNameByLang(rawMessage, lang);
+  
+  // 7) فلترة أي "en|ar" عام
+  rawMessage = filterByPipe(rawMessage, lang);
+  
+  // 8) فلترة النصوص المختلطة (إنجليزي متبوع بعربي بدون فواصل)
+  rawMessage = filterMixedText(rawMessage, lang);
+  
+  // 9) ترجمة الكلمات الإنجليزية الشائعة المتبقية (فقط إذا كانت اللغة عربية)
+  if (lang === 'ar') {
+    const translations = {
+      'General Maintenance': 'صيانة عامة',
+      'Internal Ticket': 'تذكرة داخلية',
+      'External Ticket': 'تذكرة خارجية',
+      'General Report': 'تقرير عام',
+      'Regular Report': 'تقرير دوري',
+      'External Report': 'تقرير خارجي',
+      'Status Update': 'تحديث الحالة',
+      'Maintenance Reminder': 'تذكير بالصيانة',
+      'Technical Notification': 'إشعار تقني',
+      'Network Share': 'مشاركة شبكة',
+      'Contract Expiry Warning': 'تحذير انتهاء العقد',
+      'Open': 'مفتوح',
+      'Closed': 'مغلق',
+      'In Progress': 'قيد التنفيذ',
+      'Pending': 'في الانتظار',
+      'Resolved': 'تم الحل',
+      'Engineer': 'مهندس',
+      'Technician': 'فني',
+      'Admin': 'مشرف',
+      'User': 'مستخدم',
+      'Device': 'جهاز',
+      'Printer': 'طابعة',
+      'Scanner': 'سكانر',
+      'PC': 'كمبيوتر',
+      'Laptop': 'لابتوب',
+      'Desktop': 'كمبيوتر مكتبي',
+      'Network': 'شبكة',
+      'Maintenance': 'صيانة',
+      'Report': 'تقرير',
+      'Ticket': 'تذكرة',
+      'Problem': 'مشكلة',
+      'Issue': 'مشكلة',
+      'Solution': 'حل',
+      'Department': 'قسم',
+      'IT Department': 'قسم تقنية المعلومات',
+      'Technical Department': 'القسم التقني',
+      'Support Department': 'قسم الدعم',
+      'Maintenance Department': 'قسم الصيانة',
+      'N/A': 'غير محدد',
+      'assigned to': 'تم تعيينه إلى',
+      'created by': 'تم إنشاؤه بواسطة',
+      'updated by': 'تم تحديثه بواسطة',
+      'status changed to': 'تم تغيير الحالة إلى',
+      'priority changed to': 'تم تغيير الأولوية إلى',
+      'completed by': 'تم إنجازه بواسطة',
+      'approved by': 'تمت الموافقة عليه بواسطة',
+      'rejected by': 'تم رفضه بواسطة',
+      'forwarded to': 'تم توجيهه إلى',
+      'escalated to': 'تم تصعيده إلى',
+      'closed by': 'تم إغلاقه بواسطة',
+      'reopened by': 'تم إعادة فتحه بواسطة'
+    };
+    
+    // تطبيق الترجمات
+    Object.keys(translations).forEach(english => {
+      const arabic = translations[english];
+      rawMessage = rawMessage.replace(new RegExp(english, 'gi'), arabic);
+    });
+  }
+  
+  return rawMessage.trim();
+}
+
+// وظيفة إرسال البريد الإلكتروني للإشعارات
+async function sendNotificationEmail(userId, notificationMessage, notificationType, lang = 'ar') {
+  try {
+    // جلب معلومات المستخدم
+    const [userResult] = await db.promise().query('SELECT name, email FROM users WHERE id = ?', [userId]);
+    
+    if (userResult.length === 0) {
+      console.warn(`⚠️ User not found for ID: ${userId}`);
+      return false;
+    }
+
+    const user = userResult[0];
+    if (!user.email) {
+      console.warn(`⚠️ No email found for user: ${user.name}`);
+      return false;
+    }
+
+    // تنظيف اسم المستخدم
+    const cleanUserName = cleanEmailText(user.name, lang);
+
+    // تحديد نوع الإشعار وترجمته
+    const notificationTypes = {
+      'regular-maintenance': 'صيانة دورية',
+      'general-maintenance': 'صيانة عامة',
+      'external-maintenance': 'صيانة خارجية',
+      'internal-ticket': 'تذكرة داخلية',
+      'external-ticket': 'تذكرة خارجية',
+      'general-report': 'تقرير عام',
+      'regular-report': 'تقرير دوري',
+      'external-report': 'تقرير خارجي',
+      'internal-ticket-report': 'تقرير تذكرة داخلية',
+      'external-ticket-report': 'تقرير تذكرة خارجية',
+      'status-update': 'تحديث الحالة',
+      'external-status-update': 'تحديث حالة التقرير الخارجي',
+      'maintenance-reminder': 'تذكير بالصيانة',
+      'external-ticket-followup': 'متابعة التذكرة الخارجية',
+      'contract-expiry-warning': 'تحذير انتهاء العقد',
+      'technical-notification': 'إشعار تقني',
+      'network-share': 'مشاركة شبكة'
+    };
+
+    const typeLabel = notificationTypes[notificationType] || 'إشعار';
+    
+    // تنظيف رسالة الإشعار
+    const cleanMessage = cleanEmailText(notificationMessage, lang);
+    
+    // إنشاء محتوى البريد الإلكتروني
+    const emailSubject = `إشعار جديد - ${typeLabel}`;
+    
+    // تحديد لون الإشعار حسب النوع
+    const getNotificationColor = (type) => {
+      if (type.includes('maintenance')) return '#007bff'; // أزرق للصيانة
+      if (type.includes('report')) return '#28a745';      // أخضر للتقارير
+      if (type.includes('ticket')) return '#ffc107';      // أصفر للتذاكر
+      return '#6c757d'; // رمادي للأنواع الأخرى
+    };
+    
+    const notificationColor = getNotificationColor(notificationType);
+    const currentDate = new Date().toLocaleDateString('ar-SA', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>إشعار جديد - MediServe</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5; direction: rtl;">
+        
+        <!-- Container الرئيسي -->
+        <div style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden;">
+          
+          <!-- Header مع اللون -->
+          <div style="background: linear-gradient(135deg, ${notificationColor}, ${notificationColor}dd); padding: 25px; text-align: center;">
+            <div style="display: inline-block; background-color: rgba(255,255,255,0.2); border-radius: 50%; width: 60px; height: 60px; line-height: 60px; margin-bottom: 15px;">
+              <span style="font-size: 24px; color: white;">🔔</span>
+            </div>
+            <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 300;">MediServe</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 16px;">إشعار جديد</p>
+          </div>
+          
+          <!-- محتوى الإشعار -->
+          <div style="padding: 30px;">
+            
+            <!-- تحية المستخدم -->
+            <div style="margin-bottom: 25px;">
+              <h2 style="color: #333; margin: 0 0 10px 0; font-size: 20px; font-weight: 500;">مرحباً ${cleanUserName} 👋</h2>
+              <p style="color: #666; margin: 0; line-height: 1.6; font-size: 16px;">لديك إشعار جديد في نظام MediServe</p>
+            </div>
+            
+            <!-- تفاصيل الإشعار -->
+            <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 10px; padding: 25px; margin-bottom: 25px; border-right: 4px solid ${notificationColor};">
+              <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                <div style="width: 12px; height: 12px; background-color: ${notificationColor}; border-radius: 50%; margin-left: 10px;"></div>
+                <h3 style="color: #333; margin: 0; font-size: 18px; font-weight: 600;">${typeLabel}</h3>
+              </div>
+              <div style="background-color: white; border-radius: 8px; padding: 20px; border: 1px solid #e0e0e0;">
+                <p style="color: #495057; margin: 0; line-height: 1.7; font-size: 15px; text-align: justify;">${cleanMessage}</p>
+              </div>
+            </div>
+            
+            <!-- معلومات إضافية -->
+            <div style="background-color: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 25px; text-align: center;">
+              <p style="color: #6c757d; margin: 0; font-size: 14px;">
+                <span style="font-weight: 600;">التاريخ والوقت:</span> ${currentDate}
+              </p>
+            </div>
+            
+            
+            <!-- معلومات النظام -->
+            <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; text-align: center; border-top: 3px solid ${notificationColor};">
+              <p style="color: #6c757d; margin: 0 0 10px 0; font-size: 13px; line-height: 1.5;">
+                هذا البريد الإلكتروني تم إرساله تلقائياً من نظام MediServe
+              </p>
+            </div>
+            
+          </div>
+          
+          <!-- Footer -->
+          <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
+            <p style="color: #6c757d; margin: 0; font-size: 12px;">
+              © 2024 MediServe - نظام إدارة المستشفى
+            </p>
+          </div>
+          
+        </div>
+        
+      </body>
+      </html>
+    `;
+
+    const mailOptions = {
+      from: 'medi.servee1@gmail.com',
+      to: user.email,
+      subject: emailSubject,
+      html: emailHtml
+    };
+
+    // إرسال البريد الإلكتروني مع timeout
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Email sending timeout'));
+      }, 10000); // timeout بعد 10 ثواني
+
+      transporter.sendMail(mailOptions, (error, info) => {
+        clearTimeout(timeout);
+        if (error) {
+          console.error(`❌ Failed to send notification email to ${user.email}:`, error);
+          reject(error);
+        } else {
+          console.log(`✅ Email sent successfully to ${user.email}`);
+          resolve(info);
+        }
+      });
+    });
+
+    return true;
+  } catch (error) {
+    console.error(`❌ Error sending notification email:`, error);
+    return false;
+  }
+}
+
+// وظيفة إنشاء إشعار مع إرسال البريد الإلكتروني
+async function createNotificationWithEmail(userId, message, type, lang = 'ar') {
+  try {
+    // إنشاء الإشعار في قاعدة البيانات
+    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [userId, message, type]);
+
+    // إرسال البريد الإلكتروني في الخلفية باستخدام setImmediate
+    setImmediate(() => {
+      sendNotificationEmail(userId, message, type, lang).catch(error => {
+        console.error(`❌ Error sending notification email (background):`, error);
+      });
+    });
+
+  } catch (error) {
+    console.error(`❌ Error creating notification with email:`, error);
+  }
+}
+
+
 
 // Serve static files from all directories
 app.use(express.static(path.join(__dirname)));
@@ -594,13 +1130,12 @@ const normalizedDeviceType = allowedTypes.includes(deviceType)
 
 
 
-
     // 🛎️ إشعار 1: تقرير الصيانة
-    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-      userId,
-      `External maintenance report saved for ${deviceInfo.device_name} (${displayDevice}) problem is ${initial_diagnosis} by ${userName}`,
-      'external-maintenance'
-    ]);
+    await createNotificationWithEmail(userId, 
+      `["External maintenance report saved for (${displayDevice}) problem is ${initial_diagnosis} by engineer ${reporter_name} (created by ${userName})|تم حفظ تقرير صيانة خارجية للجهاز (${displayDevice}) والمشكلة هي ${initial_diagnosis} بواسطة المهندس ${reporter_name} (أنشأه ${userName})"]`,
+      'external-maintenance',
+      'ar' // Pass the language preference to the notification creation function
+    );
 
     // 🛎️ إشعار 2: تلخيص التذكرة
 
@@ -609,11 +1144,11 @@ const normalizedDeviceType = allowedTypes.includes(deviceType)
     const reporterId = reporterRes[0]?.id;
 
     if (reporterId) {
-      await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-        reporterId,
-        `New external maintenance task assigned on ${deviceInfo.device_name} (${displayDevice}) by ${userName}`,
-        'external-maintenance-assigned'
-      ]);
+      await createNotificationWithEmail(reporterId,
+        `["New external maintenance task assigned on (${displayDevice}) by ${userName} (you are the assigned engineer)|تم تعيين مهمة صيانة خارجية جديدة على الجهاز (${displayDevice}) بواسطة ${userName} (أنت المهندس المخصص)"]`,
+        'external-maintenance-assigned',
+        'ar' // Pass the language preference to the notification creation function
+      );
     }
 
     await queryAsync(`
@@ -756,25 +1291,25 @@ const problem_status = Array.isArray(rawProblemStatus)
   const adminUser = await getUserById(userId);
   const userName = await getUserNameById(userId);
 
-  let engineerName;
-  if (adminUser?.role === 'admin' && technical_engineer_id) {
-    // نجيب اسم المهندس الفني من جدول Engineers
-    const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE id = ?`, [technical_engineer_id]);
-    engineerName = techEngineerRes[0]?.name || userName;
-  } else {
-    engineerName = userName;
-  }
-  const isAllDevices = (rawDeviceType && rawDeviceType.toLowerCase() === "all-devices");
-
+  // نجيب اسم المهندس الفني من جدول Engineers إذا تم تمرير technical_engineer_id
+  let engineerName = 'N/A';
+  let cleanedName = 'N/A';
 
   let finalEngineerId = null;
-
+  
   if (technical_engineer_id && !isNaN(technical_engineer_id)) {
     const parsed = parseInt(technical_engineer_id);
     if (Number.isInteger(parsed)) {
       finalEngineerId = parsed;
+      
+      // نجيب اسم المهندس من جدول Engineers
+      const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE id = ?`, [finalEngineerId]);
+      engineerName = techEngineerRes[0]?.name || 'N/A';
+      cleanedName = cleanTag(engineerName); // تنظيف اسم المهندس من التاجات
     }
   }
+  
+  const isAllDevices = (rawDeviceType && rawDeviceType.toLowerCase() === "all-devices");
 
 
   try {
@@ -814,7 +1349,7 @@ const problem_status = Array.isArray(rawProblemStatus)
   LEFT JOIN Scanner_info sc ON md.device_type = 'Scanner' AND md.serial_number = sc.Serial_Number AND md.governmental_number = sc.Governmental_Number
   LEFT JOIN CPU_Types c ON pc.Processor_id = c.id
   LEFT JOIN RAM_Types r ON pc.RAM_id = r.id
-  LEFT JOIN RAM_Sizes rs ON pc.RAMSize_id = rs.id
+  LEFT JOIN RAM_Sizes rs ON pc.RamSize_id = rs.id
   LEFT JOIN OS_Types o ON pc.OS_id = o.id
   LEFT JOIN Processor_Generations g ON pc.Generation_id = g.id
   LEFT JOIN PC_Model pm ON pc.Model_id = pm.id
@@ -874,11 +1409,11 @@ const problem_status = Array.isArray(rawProblemStatus)
       userId
     ]);
 
-    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-      userId,
-      `Regular maintenance for ${displayDevice} has been created by ${userName} and assigned to engineer ${engineerName || 'N/A'} [${formattedProblemStatus}]`,
-  'regular-maintenance'
-    ]);
+    await createNotificationWithEmail(userId,
+      `["Regular maintenance for ${displayDevice} has been created by ${userName} and assigned to engineer ${cleanedName || 'N/A'} [${formattedProblemStatus}]|تم إنشاء صيانة دورية للجهاز ${displayDevice} بواسطة ${userName} وتعيينها للمهندس ${cleanedName || 'غير محدد'} [${formattedProblemStatus}]"]`,
+      'regular-maintenance',
+      'ar' // Pass the language preference to the notification creation function
+    );
 
     const nextTicketId = await generateNumber("INT");
 
@@ -916,14 +1451,11 @@ const problem_status = Array.isArray(rawProblemStatus)
       deviceInfo.ip_address,
       userId
     ]);
-    await queryAsync(`
-      INSERT INTO Notifications (user_id, message, type)
-      VALUES (?, ?, ?)
-    `, [
-      userId,
-      `Ticket ${ticketNumber} has been opened by ${userName} and assigned to engineer ${engineerName || 'N/A'} [${formattedProblemStatus}]`,
-  'internal-ticket-report'
-    ]);
+    await createNotificationWithEmail(userId,
+      `["Ticket ${ticketNumber} has been opened by ${userName} and assigned to engineer ${cleanedName || 'N/A'} [${formattedProblemStatus}]|تم فتح التذكرة ${ticketNumber} بواسطة ${userName} وتعيينها للمهندس ${cleanedName || 'غير محدد'} [${formattedProblemStatus}]"]`,
+      'internal-ticket-report',
+      'ar' // Pass the language preference to the notification creation function
+    );
 
     const reportNumberMain = formatNumber("REP", nextTicketId, "MAIN");
     await queryAsync(`
@@ -944,34 +1476,23 @@ const problem_status = Array.isArray(rawProblemStatus)
       userId
     ]);
 
-    await queryAsync(`
-      INSERT INTO Notifications (user_id, message, type)
-      VALUES (?, ?, ?)
-    `, [
-      userId,
-      `Main report ${reportNumberMain} for device ${deviceInfo.device_name} (${displayDevice}) has been submitted by ${userName} and handled by engineer ${engineerName || 'N/A'}`,
-  'regular-report'
-    ]);
+    await createNotificationWithEmail(userId,
+      `["Main report ${reportNumberMain} for device  (${displayDevice}) has been submitted by ${userName} and handled by engineer ${cleanedName || 'N/A'} |تم تقديم التقرير الرئيسي ${reportNumberMain} للجهاز  (${displayDevice}) بواسطة ${userName} وتنفيذه بواسطة المهندس ${cleanedName || 'غير محدد'}"]`,
+      'regular-report',
+      'ar' // Pass the language preference to the notification creation function
+    );
 
-// 🧼 دالة تنظيف التاج من الاسم
-function cleanTag(str) {
-  return (str || "").replace(/\[\s*(ar|en)\s*\]/gi, "").trim();
-}
-
-const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE id = ?`, [technical_engineer_id]);
-const techEngineerName = techEngineerRes[0]?.name;
-
-if (techEngineerName) {
-  const cleanedName = cleanTag(techEngineerName); // ✅ نظف الاسم
-  const techUserRes = await queryAsync(`SELECT id FROM Users WHERE name = ?`, [cleanedName]);
-  const techUserId = techUserRes[0]?.id;
+    // إرسال إشعار للمهندس الفني إذا تم تعيينه
+    if (technical_engineer_id && cleanedName !== 'N/A') {
+      const techUserRes = await queryAsync(`SELECT id FROM Users WHERE name = ?`, [cleanedName]);
+      const techUserId = techUserRes[0]?.id;
 
       if (techUserId) {
-        await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-          techUserId,
-          `You have been assigned a new Regular maintenance task for ${displayDevice} by ${userName}. [Engineer: ${cleanedName}]`,
-      'technical-notification'
-        ]);
+        await createNotificationWithEmail(techUserId,
+          `["You have been assigned a new Regular maintenance task for ${displayDevice} by ${userName}|تم تعيين مهمة صيانة دورية جديدة لك للجهاز ${displayDevice} بواسطة ${userName}"]`,
+          'technical-notification',
+          'ar'
+        );
       }
     }
 
@@ -994,6 +1515,8 @@ if (techEngineerName) {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+
 
 app.get("/report-statuses", (req, res) => {
   db.query("SELECT * FROM Report_Statuses", (err, result) => {
@@ -1389,11 +1912,14 @@ function cleanTag(str) {
 const cleanedTechnical = cleanTag(technical);
 
 let engineerName;
+let cleanedName = 'N/A';
 if (adminUser?.role === 'admin' && cleanedTechnical) {
   const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE name = ?`, [cleanedTechnical]);
   engineerName = techEngineerRes[0]?.name || userName;
+  cleanedName = cleanTag(engineerName); // تنظيف اسم المهندس من التاجات
 } else {
   engineerName = userName;
+  cleanedName = userName;
 }
 
 
@@ -1499,25 +2025,23 @@ if (adminUser?.role === 'admin' && cleanedTechnical) {
       `Initial Diagnosis: ${initialDiagnosis}`,
       "Open", "General", deviceInfo.mac_address, deviceInfo.ip_address, userId
     ]);
+await createNotificationWithEmail(userId,
+  `["General maintenance created for  (${displayDevice}) by engineer ${cleanedName || 'N/A'} (${formattedProblemStatus})|تم إنشاء صيانة عامة للجهاز  (${displayDevice}) بواسطة المهندس ${cleanedName || 'غير محدد'} (${formattedProblemStatus})"]`,
+  'general-maintenance',
+  'ar' // Pass the language preference to the notification creation function
+);
 
-    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-      userId,
-      `General maintenance created for ${deviceInfo.device_name} (${displayDevice}) by engineer ${engineerName || 'N/A'} (${formattedProblemStatus})`,
-      'general-maintenance'
-    ]);
+await createNotificationWithEmail(userId,
+  `["Report created ${reportNumberMain} for device  (${displayDevice}) by engineer ${cleanedName || 'N/A'}|تم إنشاء التقرير ${reportNumberMain} للجهاز  (${displayDevice}) بواسطة المهندس ${cleanedName || 'غير محدد'}"]`,
+  'general-report',
+  'ar' // Pass the language preference to the notification creation function
+);
 
-    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-      userId,
-      `Report created ${reportNumberMain} for device ${deviceInfo.device_name} (${displayDevice}) by engineer ${engineerName || 'N/A'}`,
-      'general-report'
-    ]);
-
-    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-      userId,
-      `Report created (Ticket) ${reportNumberTicket} for device ${deviceInfo.device_name} (${displayDevice}) by engineer ${engineerName || 'N/A'}`,
-      'internal-ticket-report'
-    ]);
-
+await createNotificationWithEmail(userId,
+  `["Report created (Ticket) ${reportNumberTicket} for device  (${displayDevice}) by engineer ${cleanedName || 'N/A'}|تم إنشاء التقرير (تذكرة) ${reportNumberTicket} للجهاز  (${displayDevice}) بواسطة المهندس ${cleanedName || 'غير محدد'}"]`,
+  'internal-ticket-report',
+  'ar' // Pass the language preference to the notification creation function
+);
 // 🧼 دالة تنظيف التاج من الاسم
 
 const cleanedTechnical = cleanTag(technical); // "rawad"
@@ -1538,11 +2062,11 @@ if (techEngineerName) {
   const techUserId = techUserRes[0]?.id;
 
   if (techUserId) {
-    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-      techUserId,
-      `You have been assigned a new General maintenance task on ${deviceInfo.device_name} (${displayDevice}) by ${userName}`,
-      'technical-notification'
-    ]);
+await createNotificationWithEmail(techUserId,
+  `["You have been assigned a new General maintenance task on ${deviceInfo.device_name} (${displayDevice}) by ${userName}|تم تعيين مهمة صيانة عامة جديدة لك على الجهاز ${deviceInfo.device_name} (${displayDevice}) بواسطة ${userName}"]`,
+  'technical-notification',
+  'ar' // Pass the language preference to the notification creation function
+);
   } else {
     console.warn("❌ No user found in Users with cleaned name:", cleanedTechnical);
   }
@@ -1765,19 +2289,19 @@ app.put("/update-external-report-status/:id", authenticateToken, async (req, res
     }
 
     // 7. Notify user who did the update
-    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-      userId,
-      `You updated external report status to '${status}' for ${readableDevice}`,
-      'external-status-update'
-    ]);
+    await createNotificationWithEmail(userId,
+      `["You updated external report status to '${status}' for ${readableDevice}|تم تحديث حالة التقرير الخارجي إلى '${status}' للجهاز ${readableDevice}"]`,
+      'external-status-update',
+      'ar' // Pass the language preference to the notification creation function
+    );
 
     // 8. Notify engineer
     if (engineerUserId && engineerUserId !== userId) {
-      await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-        engineerUserId,
-        `External report status updated to '${status}' for ${readableDevice}`,
-        'external-status-update'
-      ]);
+      await createNotificationWithEmail(engineerUserId,
+        `["External report status updated to '${status}' for ${readableDevice}|تم تحديث حالة التقرير الخارجي إلى '${status}' للجهاز ${readableDevice}"]`,
+        'external-status-update',
+        'ar' // Pass the language preference to the notification creation function
+      );
     }
 
     // 9. Log the action
@@ -2868,18 +3392,18 @@ app.put("/update-report-status/:id", authenticateToken, async (req, res) => {
 
     // === Notifications ===
 
-    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-      userId,
-      `You updated report status to '${status}' for ${readableDevice}`,
-      'status-update'
-    ]);
+    await createNotificationWithEmail(userId,
+      `["You updated report status to '${status}' for ${readableDevice}|تم تحديث حالة التقرير إلى '${status}' للجهاز ${readableDevice}"]`,
+      'status-update',
+      'ar' // Pass the language preference to the notification creation function
+    );
 
     if (engineerUserId && engineerUserId !== userId) {
-      await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-        engineerUserId,
-        `Report status updated to '${status}' for ${readableDevice}`,
-        'status-update'
-      ]);
+      await createNotificationWithEmail(engineerUserId,
+        `["Report status updated to '${status}' for ${readableDevice}|تم تحديث حالة التقرير إلى '${status}' للجهاز ${readableDevice}"]`,
+        'status-update',
+        'ar' // Pass the language preference to the notification creation function
+      );
     }
 
     // === Logs ===
@@ -3357,10 +3881,10 @@ if (reportOld.device_id) {
     oldSpec = oldSpec || {};
 
     // ✅ مقارنات عامة
-compareReadable("Issue Summary", reportOld.issue_summary, issue_summary, changes);
-compareReadable("Description", reportOld.full_description ?? reportOld.details, full_description, changes);
-compareReadable("Priority", reportOld.priority, priority, changes);
-compareReadable("Status", reportOld.status, status, changes);
+    compareReadable("Issue Summary", reportOld.issue_summary, issue_summary, changes);
+    compareReadable("Description", reportOld.full_description ?? reportOld.details, full_description, changes);
+    compareReadable("Priority", reportOld.priority, priority, changes);
+    compareReadable("Status", reportOld.status, status, changes);
 // 1) احسب oldAssigned بناءً على reportType و source القديم
 
 // 2) جهّز القيمة الجديدة (engName) عشان تقارنها في كل الحالات
@@ -3836,7 +4360,7 @@ if (device_type === "printer") {
     );
   }
 
-  // 4) استخدم دائماً الـ serial_number المحدث
+  // 4) استخدم دائمًاً الـ serial_number المحدث
   const serialKey = serial_number.trim(); // من updatedData
 
   await db.promise().query(
@@ -4572,11 +5096,14 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), authenticate
   const userName = await getUserNameById(userId);
 
   let engineerName;
+  let cleanedName = 'N/A';
   if (adminUser?.role === 'admin' && assigned_to) {
     const techEngineerRes = await queryAsync(`SELECT name FROM Engineers WHERE name = ?`, [assigned_to]);
     engineerName = techEngineerRes[0]?.name || userName;
+    cleanedName = cleanTag(engineerName); // تنظيف اسم المهندس من التاجات
   } else {
     engineerName = userName;
+    cleanedName = userName;
   }
 
   // ✅ Handle ticket number (use provided or auto-generate)
@@ -4632,17 +5159,17 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), authenticate
           return res.status(500).json({ error: "Failed to insert maintenance report" });
         }
 
-        await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-          userId,
-          `Internal ticket created: ${generatedTicketNumber} for ${ticket_type} by ${engineerName}`,
-          'internal-ticket'
-        ]);
+        await createNotificationWithEmail(userId,
+          `["Internal ticket created: ${generatedTicketNumber} for ${ticket_type} by engineer ${cleanedName}|تم إنشاء تذكرة داخلية: ${generatedTicketNumber} لـ ${ticket_type} بواسطة المهندس ${cleanedName}"]`,
+          'internal-ticket',
+          'ar' // Pass the language preference to the notification creation function
+        );
 
-        await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-          userId,
-          `Report created for ticket ${generatedTicketNumber} for ${ticket_type}`,
-          'internal-ticket-report'
-        ]);
+        await createNotificationWithEmail(userId,
+          `["Report created for ticket ${generatedTicketNumber} for ${ticket_type} by engineer ${cleanedName}|تم إنشاء تقرير للتذكرة ${generatedTicketNumber} لـ ${ticket_type} بواسطة المهندس ${cleanedName}"]`,
+          'internal-ticket-report',
+          'ar' // Pass the language preference to the notification creation function
+        );
 
         let techUserId;
 
@@ -4660,11 +5187,11 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), authenticate
 
 
           if (techUserId) {
-            await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-              techUserId,
-              `You have been assigned a new internal ticket ${generatedTicketNumber} by ${userName}`,
-              'technical-notification'
-            ]);
+            await createNotificationWithEmail(techUserId,
+              `["You have been assigned a new internal ticket ${generatedTicketNumber} by ${userName}|تم تعيين تذكرة داخلية جديدة لك ${generatedTicketNumber} بواسطة ${userName}"]`,
+              'technical-notification',
+              'ar' // Pass the language preference to the notification creation function
+            );
           }
         }
 
@@ -6231,18 +6758,18 @@ app.post("/external-ticket-with-file", upload.single("attachment"), authenticate
     await queryAsync(insertReportQuery, reportValues);
 
     // ✅ إشعار إنشاء التذكرة
-    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-      userId,
-      `External ticket created: ${ticket_number} by ${userName || 'N/A'}`,
-      'external-ticket'
-    ]);
+    await createNotificationWithEmail(userId,
+      `["External ticket created: ${ticket_number} by engineer ${reporter_name || 'N/A'}|تم إنشاء تذكرة خارجية: ${ticket_number} بواسطة المهندس ${reporter_name || 'غير محدد'}"]`,
+      'external-ticket',
+      'ar' // Pass the language preference to the notification creation function
+    );
 
     // ✅ إشعار إنشاء التقرير
-    await queryAsync(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [
-      userId,
-      `Report created for external ticket ${ticket_number} by ${userName || 'N/A'}`,
-      'external-ticket-report'
-    ]);
+    await createNotificationWithEmail(userId,
+      `["Report created for external ticket ${ticket_number} by engineer ${reporter_name || 'N/A'}|تم إنشاء تقرير للتذكرة الخارجية ${ticket_number} بواسطة المهندس ${reporter_name || 'غير محدد'}"]`,
+      'external-ticket-report',
+      'ar' // Pass the language preference to the notification creation function
+    );
 
     res.status(201).json({
       message: "✅ External ticket and report created successfully",
@@ -6318,7 +6845,7 @@ cron.schedule('1 9 * * *', async () => {
             continue;
           }
 
-          const message = `🔔 Maintenance is due today for device: ${row.device_name} (${row.device_type})`;
+          const message = `["🔔 Maintenance is due today for device: ${row.device_name} (${row.device_type})|🔔 الصيانة مستحقة اليوم للجهاز: ${row.device_name} (${row.device_type})"]`;
 
           const [existingNotifs] = await db.promise().query(`
             SELECT id FROM Notifications 
@@ -6330,10 +6857,7 @@ cron.schedule('1 9 * * *', async () => {
             continue;
           }
 
-          await db.promise().query(`
-            INSERT INTO Notifications (user_id, message, type)
-            VALUES (?, ?, ?)
-          `, [techUserId, message, 'maintenance-reminder']);
+          await createNotificationWithEmail(techUserId, message, 'maintenance-reminder', 'ar');
 
           console.log(`✅ Notification sent to ${engineerName} for ${row.device_name}`);
         }
@@ -6360,7 +6884,7 @@ cron.schedule('2 9 * * *', async () => {
     `);
 
     for (const ticket of tickets) {
-      const notifMessage = `🚨 Ticket ${ticket.ticket_number} has been open for 3+ days. Please follow up.`;
+      const notifMessage = `["🚨 Ticket ${ticket.ticket_number} has been open for 3+ days. Please follow up.|🚨 التذكرة ${ticket.ticket_number} مفتوحة منذ 3+ أيام. يرجى المتابعة."]`;
 
       const [existing] = await db.promise().query(`
         SELECT id FROM Notifications
@@ -6372,10 +6896,7 @@ cron.schedule('2 9 * * *', async () => {
         continue;
       }
 
-      await db.promise().query(`
-        INSERT INTO Notifications (user_id, message, type)
-        VALUES (?, ?, ?)
-      `, [ticket.user_id, notifMessage, 'external-ticket-followup']);
+      await createNotificationWithEmail(ticket.user_id, notifMessage, 'external-ticket-followup', 'ar');
 
       console.log(`✅ Reminder sent to ${ticket.user_name} for ticket ${ticket.ticket_number}`);
     }
@@ -6384,3 +6905,4 @@ cron.schedule('2 9 * * *', async () => {
     console.error("❌ Error in external ticket reminder cron:", err);
   }
 });
+
