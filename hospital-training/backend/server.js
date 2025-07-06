@@ -126,55 +126,35 @@ function filterComplexBracketedText(text, lang = 'ar') {
 // دالة فلترة أسماء المهندسين بـ '|'
 function filterEngineerNameByLang(text, lang = 'ar') {
   if (!text || typeof text !== 'string') return text;
-  // فلترة أي اسم فيه | حتى لو جاء بعد كلمات مثل engineer أو user أو غيرها
-  // أمثلة: to engineer Sara|سارة, assigned to user Ali|علي
-  return text.replace(/([A-Za-zء-ي0-9_\-]+\|[A-Za-zء-ي0-9_\-]+)/g, (match) => {
-    const parts = match.split('|').map(s => s.trim());
-    if (parts.length === 2) {
-      return lang === 'ar' ? (parts[1] || parts[0]) : parts[0];
+  return text.replace(/([A-Za-z\s]+)\|([\u0600-\u06FF\s]+)/g, (match, en, ar, offset, string) => {
+    const name = lang === 'ar' ? ar.trim() : en.trim();
+    
+    // التحقق من المسافة قبل الاسم
+    const before = string.slice(0, offset);
+    let result = name;
+    
+    if (before.length > 0 && !before.endsWith(' ')) {
+      result = ' ' + name;
     }
-    return match;
+    
+    // التحقق من المسافة بعد الاسم
+    const after = string.slice(offset + match.length);
+    if (after.length > 0 && !after.startsWith(' ') && !after.startsWith('،') && !after.startsWith('.') && !after.startsWith('!') && !after.startsWith('?')) {
+      result = result + ' ';
+    }
+    
+    return result;
   });
 }
 
-// دالة للتعامل مع أسماء المهندسين التي تأتي باللغتين معًا
-function filterEngineerNamesByLang(text, lang = 'ar') {
-  if (!text || typeof text !== 'string') return text;
-  
-  // البحث عن أسماء مهندسين تأتي باللغتين معًا
-  // مثال: "assigned to engineer Mohammed محمد مشاط"
-  return text.replace(/(\b[A-Za-z]+\s+)([A-Za-zء-ي0-9_\-]+\s+[ء-ي0-9_\-]+)/g, (match, prefix, namePart) => {
-    const parts = namePart.trim().split(/\s+/);
-    
-    // البحث عن الجزء الإنجليزي والجزء العربي
-    let englishName = '';
-    let arabicName = '';
-    
-    for (const part of parts) {
-      // التحقق من أن الجزء يحتوي على أحرف عربية
-      const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(part);
-      
-      if (hasArabicChars) {
-        arabicName = part;
-      } else {
-        englishName = part;
-      }
-    }
-    
-    if (lang === 'ar') {
-      return prefix + (arabicName || englishName); // إذا كانت اللغة عربية، نعرض الاسم العربي إذا وجد
-    } else {
-      return prefix + (englishName || arabicName); // إذا كانت اللغة إنجليزية، نعرض الاسم الإنجليزي إذا وجد
-    }
-  });
-}
+
 
 // دالة عامة تختار القسم اللي يناسب اللغة لأي نص فيه |
 function filterByPipe(text, lang = 'ar') {
   if (typeof text !== 'string') return text;
   
   // التعامل مع النصوص المعقدة التي تحتوي على أقواس وarrays
-  return text.replace(/([^|]+)\|([^|]+)/g, (match, en, ar) => {
+  return text.replace(/([^|]+)\|([^|]+)/g, (match, en, ar, offset, string) => {
     // فلترة النص العادي
     const englishPart = en.trim();
     const arabicPart = ar.trim();
@@ -182,13 +162,26 @@ function filterByPipe(text, lang = 'ar') {
     // التحقق من وجود أحرف عربية في الجزء العربي
     const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(arabicPart);
     
-    if (lang === 'ar') {
-      return hasArabicChars ? arabicPart : englishPart;
-    } else {
-      return englishPart || arabicPart;
+    const name = lang === 'ar' ? (hasArabicChars ? arabicPart : englishPart) : (englishPart || arabicPart);
+    
+    // التحقق من المسافة قبل الاسم
+    const before = string.slice(0, offset);
+    let result = name;
+    
+    if (before.length > 0 && !before.endsWith(' ')) {
+      result = ' ' + name;
     }
+    
+    // التحقق من المسافة بعد الاسم
+    const after = string.slice(offset + match.length);
+    if (after.length > 0 && !after.startsWith(' ') && !after.startsWith('،') && !after.startsWith('.') && !after.startsWith('!') && !after.startsWith('?')) {
+      result = result + ' ';
+    }
+    
+    return result;
   });
 }
+
 
 // دالة للتعامل مع النصوص الطويلة التي تحتوي على | واحد يفصل بين النص الإنجليزي والعربي بالكامل
 function filterLongTextByPipe(text, lang = 'ar') {
@@ -203,11 +196,23 @@ function filterLongTextByPipe(text, lang = 'ar') {
     // التحقق من وجود أحرف عربية في الجزء العربي
     const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(arabicPart);
     
-    if (lang === 'ar') {
-      return hasArabicChars ? arabicPart : englishPart;
-    } else {
-      return englishPart || arabicPart;
+    const name = lang === 'ar' ? (hasArabicChars ? arabicPart : englishPart) : (englishPart || arabicPart);
+    
+    // التحقق من المسافة قبل الاسم
+    const before = text.substring(0, text.indexOf('|'));
+    let result = name;
+    
+    if (before.length > 0 && !before.endsWith(' ')) {
+      result = ' ' + name;
     }
+    
+    // التحقق من المسافة بعد الاسم
+    const after = text.substring(text.indexOf('|') + 1 + arabicPart.length);
+    if (after.length > 0 && !after.startsWith(' ') && !after.startsWith('،') && !after.startsWith('.') && !after.startsWith('!') && !after.startsWith('?')) {
+      result = result + ' ';
+    }
+    
+    return result;
   }
   
   // إذا كان النص يحتوي على أقواس مربعة في البداية والنهاية، نزيلها أولاً
@@ -221,11 +226,23 @@ function filterLongTextByPipe(text, lang = 'ar') {
       // التحقق من وجود أحرف عربية في الجزء العربي
       const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(arabicPart);
       
-      if (lang === 'ar') {
-        return hasArabicChars ? arabicPart : englishPart;
-      } else {
-        return englishPart || arabicPart;
+      const name = lang === 'ar' ? (hasArabicChars ? arabicPart : englishPart) : (englishPart || arabicPart);
+      
+      // التحقق من المسافة قبل الاسم
+      const before = innerText.substring(0, innerText.indexOf('|'));
+      let result = name;
+      
+      if (before.length > 0 && !before.endsWith(' ')) {
+        result = ' ' + name;
       }
+      
+      // التحقق من المسافة بعد الاسم
+      const after = innerText.substring(innerText.indexOf('|') + 1 + arabicPart.length);
+      if (after.length > 0 && !after.startsWith(' ') && !after.startsWith('،') && !after.startsWith('.') && !after.startsWith('!') && !after.startsWith('?')) {
+        result = result + ' ';
+      }
+      
+      return result;
     }
   }
   
@@ -260,7 +277,6 @@ function filterMixedText(text, lang = 'ar') {
   
   return text;
 }
-
 function cleanEmailText(text, lang = 'ar') {
   if (!text) return '';
   
@@ -290,72 +306,10 @@ function cleanEmailText(text, lang = 'ar') {
   // 8) فلترة النصوص المختلطة (إنجليزي متبوع بعربي بدون فواصل)
   rawMessage = filterMixedText(rawMessage, lang);
   
-  // 9) ترجمة الكلمات الإنجليزية الشائعة المتبقية (فقط إذا كانت اللغة عربية)
-  if (lang === 'ar') {
-    const translations = {
-      'General Maintenance': 'صيانة عامة',
-      'Internal Ticket': 'تذكرة داخلية',
-      'External Ticket': 'تذكرة خارجية',
-      'General Report': 'تقرير عام',
-      'Regular Report': 'تقرير دوري',
-      'External Report': 'تقرير خارجي',
-      'Status Update': 'تحديث الحالة',
-      'Maintenance Reminder': 'تذكير بالصيانة',
-      'Technical Notification': 'إشعار تقني',
-      'Network Share': 'مشاركة شبكة',
-      'Contract Expiry Warning': 'تحذير انتهاء العقد',
-      'Open': 'مفتوح',
-      'Closed': 'مغلق',
-      'In Progress': 'قيد التنفيذ',
-      'Pending': 'في الانتظار',
-      'Resolved': 'تم الحل',
-      'Engineer': 'مهندس',
-      'Technician': 'فني',
-      'Admin': 'مشرف',
-      'User': 'مستخدم',
-      'Device': 'جهاز',
-      'Printer': 'طابعة',
-      'Scanner': 'سكانر',
-      'PC': 'كمبيوتر',
-      'Laptop': 'لابتوب',
-      'Desktop': 'كمبيوتر مكتبي',
-      'Network': 'شبكة',
-      'Maintenance': 'صيانة',
-      'Report': 'تقرير',
-      'Ticket': 'تذكرة',
-      'Problem': 'مشكلة',
-      'Issue': 'مشكلة',
-      'Solution': 'حل',
-      'Department': 'قسم',
-      'IT Department': 'قسم تقنية المعلومات',
-      'Technical Department': 'القسم التقني',
-      'Support Department': 'قسم الدعم',
-      'Maintenance Department': 'قسم الصيانة',
-      'N/A': 'غير محدد',
-      'assigned to': 'تم تعيينه إلى',
-      'created by': 'تم إنشاؤه بواسطة',
-      'updated by': 'تم تحديثه بواسطة',
-      'status changed to': 'تم تغيير الحالة إلى',
-      'priority changed to': 'تم تغيير الأولوية إلى',
-      'completed by': 'تم إنجازه بواسطة',
-      'approved by': 'تمت الموافقة عليه بواسطة',
-      'rejected by': 'تم رفضه بواسطة',
-      'forwarded to': 'تم توجيهه إلى',
-      'escalated to': 'تم تصعيده إلى',
-      'closed by': 'تم إغلاقه بواسطة',
-      'reopened by': 'تم إعادة فتحه بواسطة'
-    };
-    
-    // تطبيق الترجمات
-    Object.keys(translations).forEach(english => {
-      const arabic = translations[english];
-      rawMessage = rawMessage.replace(new RegExp(english, 'gi'), arabic);
-    });
-  }
-  
+
+
   return rawMessage.trim();
 }
-
 // وظيفة إرسال البريد الإلكتروني للإشعارات
 async function sendNotificationEmail(userId, notificationMessage, notificationType, lang = 'ar') {
   try {
@@ -1438,7 +1392,7 @@ const problem_status = Array.isArray(rawProblemStatus)
       INSERT INTO Maintenance_Reports (
         report_number, ticket_id, device_id,
         issue_summary, full_description, status, maintenance_type, mac_address,ip_address, user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?,?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)
     `, [
       reportNumberTicket,
       ticketId,
@@ -2026,25 +1980,23 @@ if (adminUser?.role === 'admin' && cleanedTechnical) {
       "Open", "General", deviceInfo.mac_address, deviceInfo.ip_address, userId
     ]);
 await createNotificationWithEmail(userId,
-  `["General maintenance created for  (${displayDevice}) by engineer ${cleanedName || 'N/A'} (${formattedProblemStatus})|تم إنشاء صيانة عامة للجهاز  (${displayDevice}) بواسطة المهندس ${cleanedName || 'غير محدد'} (${formattedProblemStatus})"]`,
+  `["General maintenance created for  (${displayDevice}) by engineer ${(cleanedName || 'N/A').trim()} and assigned to ${(cleanedTechnical || 'N/A').trim()}|تم إنشاء صيانة عامة للجهاز  (${displayDevice}) بواسطة المهندس ${(cleanedName || 'غير محدد').trim()} وتم تعيينها للمهندس ${(cleanedTechnical || 'غير محدد').trim()} (${formattedProblemStatus})"]`,
   'general-maintenance',
   'ar' // Pass the language preference to the notification creation function
 );
 
 await createNotificationWithEmail(userId,
-  `["Report created ${reportNumberMain} for device  (${displayDevice}) by engineer ${cleanedName || 'N/A'}|تم إنشاء التقرير ${reportNumberMain} للجهاز  (${displayDevice}) بواسطة المهندس ${cleanedName || 'غير محدد'}"]`,
+  `["Report created ${reportNumberMain} for device  (${displayDevice}) by engineer ${(cleanedName || 'N/A').trim()} and assigned to ${(cleanedTechnical || 'N/A').trim()}|تم إنشاء التقرير ${reportNumberMain} للجهاز  (${displayDevice}) بواسطة المهندس ${(cleanedName || 'غير محدد').trim()} وتم تعيينه للمهندس ${(cleanedTechnical || 'غير محدد').trim()}"]`,
   'general-report',
   'ar' // Pass the language preference to the notification creation function
 );
 
 await createNotificationWithEmail(userId,
-  `["Report created (Ticket) ${reportNumberTicket} for device  (${displayDevice}) by engineer ${cleanedName || 'N/A'}|تم إنشاء التقرير (تذكرة) ${reportNumberTicket} للجهاز  (${displayDevice}) بواسطة المهندس ${cleanedName || 'غير محدد'}"]`,
+  `["Report created (Ticket) ${reportNumberTicket} for device  (${displayDevice}) by engineer ${(cleanedName || 'N/A').trim()} and assigned to ${(cleanedTechnical || 'N/A').trim()}|تم إنشاء التقرير (تذكرة) ${reportNumberTicket} للجهاز  (${displayDevice}) بواسطة المهندس ${(cleanedName || 'غير محدد').trim()} وتم تعيينه للمهندس ${(cleanedTechnical || 'غير محدد').trim()}"]`,
   'internal-ticket-report',
   'ar' // Pass the language preference to the notification creation function
 );
 // 🧼 دالة تنظيف التاج من الاسم
-
-const cleanedTechnical = cleanTag(technical); // "rawad"
 
 const techEngineerRes = await queryAsync(`
   SELECT name FROM Engineers 
@@ -4157,7 +4109,7 @@ if (signatureFile) {
 if (attachmentFile) {
   setFields.push("attachment_path = ?");
   reportValues.push(
-    `uploads/${attachmentFile.filename}`  // مسار التوقيع داخل مجلد uploads
+    `uploads/${attachmentFile.filename}`  // مسافر التوقيع داخل مجلد uploads
   );
 }
 if (setFields.length > 0) {
@@ -5160,13 +5112,13 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), authenticate
         }
 
         await createNotificationWithEmail(userId,
-          `["Internal ticket created: ${generatedTicketNumber} for ${ticket_type} by engineer ${cleanedName}|تم إنشاء تذكرة داخلية: ${generatedTicketNumber} لـ ${ticket_type} بواسطة المهندس ${cleanedName}"]`,
+          `["Internal ticket created: ${generatedTicketNumber} for ${ticket_type} by engineer ${cleanedName} and assigned to ${assigned_to}|تم إنشاء تذكرة داخلية: ${generatedTicketNumber} لـ ${ticket_type} بواسطة المهندس ${cleanedName} وتم تعيينها للمهندس ${assigned_to}"]`,
           'internal-ticket',
           'ar' // Pass the language preference to the notification creation function
         );
 
         await createNotificationWithEmail(userId,
-          `["Report created for ticket ${generatedTicketNumber} for ${ticket_type} by engineer ${cleanedName}|تم إنشاء تقرير للتذكرة ${generatedTicketNumber} لـ ${ticket_type} بواسطة المهندس ${cleanedName}"]`,
+          `["Report created for ticket ${generatedTicketNumber} for ${ticket_type} by engineer ${cleanedName} and assigned to ${assigned_to}|تم إنشاء تقرير للتذكرة ${generatedTicketNumber} لـ ${ticket_type} بواسطة المهندس ${cleanedName} وتم تعيينها للمهندس ${assigned_to}"]`,
           'internal-ticket-report',
           'ar' // Pass the language preference to the notification creation function
         );
@@ -6759,14 +6711,14 @@ app.post("/external-ticket-with-file", upload.single("attachment"), authenticate
 
     // ✅ إشعار إنشاء التذكرة
     await createNotificationWithEmail(userId,
-      `["External ticket created: ${ticket_number} by engineer ${reporter_name || 'N/A'}|تم إنشاء تذكرة خارجية: ${ticket_number} بواسطة المهندس ${reporter_name || 'غير محدد'}"]`,
+      `["External ticket created: ${ticket_number} by engineer ${reporter_name || 'N/A'}|تم إنشاء تذكرة خارجية: ${ticket_number} بواسطة المهندس ${reporter_name || 'غير محدد'}]`,
       'external-ticket',
       'ar' // Pass the language preference to the notification creation function
     );
 
     // ✅ إشعار إنشاء التقرير
     await createNotificationWithEmail(userId,
-      `["Report created for external ticket ${ticket_number} by engineer ${reporter_name || 'N/A'}|تم إنشاء تقرير للتذكرة الخارجية ${ticket_number} بواسطة المهندس ${reporter_name || 'غير محدد'}"]`,
+      `["Report created for external ticket ${ticket_number} by engineer ${reporter_name || 'N/A'}|تم إنشاء تقرير للتذكرة الخارجية ${ticket_number} بواسطة المهندس ${reporter_name || 'غير محدد'}]`,
       'external-ticket-report',
       'ar' // Pass the language preference to the notification creation function
     );

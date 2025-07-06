@@ -229,8 +229,8 @@ async function sendNotificationEmail(userId, notificationMessage, notificationTy
           
           <!-- Header مع اللون المخصص -->
           <div style="background: linear-gradient(135deg, ${notificationColor}, ${notificationColor}dd); padding: 25px; text-align: center;">
-            <div style="display: inline-block; background-color: rgba(255, 255, 255, 0.2); border-radius: 50%; width: 60px; height: 60px; line-height: 60px; margin-bottom: 15px;">
-              <span style="font-size: 24px; color: white;">🔔</span>
+            <div style="width:60px;height:60px;background:rgba(255,255,255,0.2);border-radius:50%;display:table; margin:0 auto 15px auto;">
+              <span style="display:table-cell;vertical-align:middle;text-align:center;font-size:24px;color:white;width:60px;height:60px;">🔔</span>
             </div>
             <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">MediServe</h1>
             <p style="color: rgba(255, 255, 255, 0.9); margin: 8px 0 0 0; font-size: 16px;">نظام إدارة الصيانة الطبية</p>
@@ -248,9 +248,9 @@ async function sendNotificationEmail(userId, notificationMessage, notificationTy
             <!-- نوع الإشعار -->
             <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 25px; border-right: 4px solid ${notificationColor};">
               <div style="display: flex; align-items: center; margin-bottom: 15px;">
-                               <div style="background-color: ${notificationColor}; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; margin-left: 15px;">
-                 <span style="color: white; font-size: 18px; font-weight: bold;">${notificationIcon}</span>
-               </div>
+                <div style="width:40px;height:40px;background:${notificationColor};border-radius:50%;display:table; margin-left:15px;">
+                  <span style="display:table-cell;vertical-align:middle;text-align:center;font-size:18px;font-weight:bold;color:white;width:40px;height:40px;line-height:1;">${notificationIcon}</span>
+                </div>
                 <h3 style="color: #2c3e50; margin: 0; font-size: 18px; font-weight: 600;">${typeLabel}</h3>
               </div>
               <div style="background-color: white; border-radius: 6px; padding: 15px; border: 1px solid #e9ecef;">
@@ -258,52 +258,52 @@ async function sendNotificationEmail(userId, notificationMessage, notificationTy
               </div>
             </div>
             
-                         <!-- معلومات إضافية -->
-             <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 8px; padding: 20px; margin-bottom: 25px;">
-               <div style="display: flex; align-items: center; margin-bottom: 12px;">
-                 <div style="background-color: ${notificationColor}; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; margin-left: 12px;">
-                   <span style="color: white; font-size: 14px;">🕒</span>
-                 </div>
-                 <div>
-                   <p style="color: #2c3e50; margin: 0; font-size: 14px; font-weight: 600;">وقت الإرسال</p>
-                   <p style="color: #6c757d; margin: 0; font-size: 13px;">${new Date().toLocaleString('ar-SA', { 
-                     year: 'numeric', 
-                     month: 'long', 
-                     day: 'numeric',
-                     hour: '2-digit',
-                     minute: '2-digit',
-                     hour12: true
-                   })}</p>
-                 </div>
-               </div>
-               <div style="display: flex; align-items: center;">
-                 <div style="background-color: ${notificationColor}; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; margin-left: 12px;">
-                   <span style="color: white; font-size: 14px;">📋</span>
-                 </div>
-                 <div>
-                   <p style="color: #2c3e50; margin: 0; font-size: 14px; font-weight: 600;">نوع الإشعار</p>
-                   <p style="color: #6c757d; margin: 0; font-size: 13px;">${typeLabel}</p>
-                 </div>
-               </div>
-             </div>
+            <!-- معلومات إضافية -->
+            <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+              <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                <div style="width:30px;height:30px;background:${notificationColor};border-radius:50%;display:table; margin-left:12px;">
+                  <span style="display:table-cell;vertical-align:middle;text-align:center;font-size:14px;color:white;width:30px;height:30px;">🕒</span>
+                </div>
+                <div>
+                  <p style="color: #2c3e50; margin: 0; font-size: 14px; font-weight: 600;">وقت الإرسال</p>
+                  <p style="color: #6c757d; margin: 0; font-size: 13px;">${new Date().toLocaleString('ar-SA', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                  })}</p>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center;">
+                <div style="width:30px;height:30px;background:${notificationColor};border-radius:50%;display:table; margin-left:12px;">
+                  <span style="display:table-cell;vertical-align:middle;text-align:center;font-size:14px;color:white;width:30px;height:30px;">📋</span>
+                </div>
+                <div>
+                  <p style="color: #2c3e50; margin: 0; font-size: 14px; font-weight: 600;">نوع الإشعار</p>
+                  <p style="color: #6c757d; margin: 0; font-size: 13px;">${typeLabel}</p>
+                </div>
+              </div>
+            </div>
             
             
           </div>
           
-                     <!-- Footer -->
-           <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); padding: 25px; text-align: center; border-top: 1px solid #e9ecef;">
-             <div style="margin-bottom: 20px;">
-               <div style="display: inline-block; background: linear-gradient(135deg, ${notificationColor}, ${notificationColor}dd); border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
-                 <span style="color: white; font-size: 20px; font-weight: bold;">🏥</span>
-               </div>
-             </div>
-             <p style="color: #2c3e50; margin: 0 0 10px 0; font-size: 16px; font-weight: 600;">MediServe</p>
-             <p style="color: #6c757d; margin: 0 0 8px 0; font-size: 14px; font-weight: 500;">نظام إدارة الصيانة الطبية</p>
-             <div style="margin: 15px 0; padding: 15px; background-color: white; border-radius: 6px; border: 1px solid #e9ecef;">
-               <p style="color: #adb5bd; margin: 0 0 8px 0; font-size: 12px;">📧 هذا البريد الإلكتروني تم إرساله تلقائياً من النظام</p>
-               <p style="color: #adb5bd; margin: 0; font-size: 12px;">⚙️ إذا كنت لا تريد تلقي هذه الإشعارات، يمكنك تعديل إعداداتك في النظام</p>
-             </div>
-           </div>
+          <!-- Footer -->
+          <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); padding: 25px; text-align: center; border-top: 1px solid #e9ecef;">
+            <div style="margin-bottom: 20px;">
+              <div style="width:50px;height:50px;background:linear-gradient(135deg, ${notificationColor}, ${notificationColor}dd);border-radius:50%;display:table; margin:0 auto 15px auto;">
+                <span style="display:table-cell;vertical-align:middle;text-align:center;font-size:20px;font-weight:bold;color:white;width:50px;height:50px;">🏥</span>
+              </div>
+            </div>
+            <p style="color: #2c3e50; margin: 0 0 10px 0; font-size: 16px; font-weight: 600;">MediServe</p>
+            <p style="color: #6c757d; margin: 0 0 8px 0; font-size: 14px; font-weight: 500;">نظام إدارة الصيانة الطبية</p>
+            <div style="margin: 15px 0; padding: 15px; background-color: white; border-radius: 6px; border: 1px solid #e9ecef;">
+              <p style="color: #adb5bd; margin: 0 0 8px 0; font-size: 12px;">📧 هذا البريد الإلكتروني تم إرساله تلقائياً من النظام</p>
+              <p style="color: #adb5bd; margin: 0; font-size: 12px;">⚙️ إذا كنت لا تريد تلقي هذه الإشعارات، يمكنك تعديل إعداداتك في النظام</p>
+            </div>
+          </div>
           
         </div>
         
@@ -1039,33 +1039,45 @@ app.get('/api/distinct-values/:key', authenticateToken, async (req, res) => {
 const cron = require('node-cron');
 const { error } = require('console');
 
+
 cron.schedule('02 * * * *', async () => {
   try {
+    console.log('🚀 Starting contract expiry check at', new Date().toISOString());
+
     const intervals = [
       { days: 90, label: '3 months' },
       { days: 30, label: '1 month' },
-      { days: 7, label: '1 week' }
+      { days: 7, label: '1 week' },
     ];
 
     for (let interval of intervals) {
+      console.log(`🔍 Checking for contracts expiring in ${interval.label} (${interval.days} days)`);
+
       const [entries] = await db.promise().query(`
-        SELECT id, user_id, circuit_name, ip, end_date
+        SELECT id, user_id, circuit_name, ip, end_date, DATEDIFF(end_date, CURDATE()) AS diff
         FROM entries
         WHERE DATEDIFF(end_date, CURDATE()) = ?
       `, [interval.days]);
 
-      for (let entry of entries) {
-        const message = `["Contract for circuit \"${entry.circuit_name}\" (IP: ${entry.ip}) will expire in ${interval.label}|عقد الدائرة \"${entry.circuit_name}\" (IP: ${entry.ip}) سينتهي خلال ${interval.label}"]`;
+      console.log(`📊 Found ${entries.length} entries for ${interval.label}`);
 
-        // تحقق إذا الإشعار تم مسبقًا
+      for (let entry of entries) {
+        console.log(`➡️ Entry ID ${entry.id}, circuit "${entry.circuit_name}", IP ${entry.ip}, diff=${entry.diff}`);
+
+        const message = `"Contract for circuit \"${entry.circuit_name}\" (IP: ${entry.ip}) will expire in ${interval.label}|عقد الدائرة \"${entry.circuit_name}\" (IP: ${entry.ip}) سينتهي خلال ${interval.label}"`;
+
         const [existingNotif] = await db.promise().query(`
           SELECT id FROM Notifications
           WHERE user_id = ? AND message = ? AND type = 'contract-expiry-warning'
         `, [entry.user_id, message]);
 
+        console.log(`🔎 Existing notifications: ${existingNotif.length}`);
+
         if (existingNotif.length === 0) {
           const [userRes] = await db.promise().query(`SELECT name FROM users WHERE id = ?`, [entry.user_id]);
           const userName = userRes[0]?.name || 'Unknown';
+
+          console.log(`✉️ Sending notification to user ${userName} (${entry.user_id})`);
 
           await createNotificationWithEmail(entry.user_id, message, 'contract-expiry-warning');
 
@@ -1078,11 +1090,15 @@ cron.schedule('02 * * * *', async () => {
             'Contract Expiry Reminder',
             `System notified ${interval.label} before contract end for IP: ${entry.ip}`
           ]);
+
+          console.log(`✅ Notification and log inserted for circuit ${entry.circuit_name}`);
+        } else {
+          console.log(`⚠️ Notification already exists for this contract.`);
         }
       }
     }
 
-    console.log('✅ Contract expiry reminders processed.');
+    console.log('✅ Contract expiry reminders processed completely.');
   } catch (err) {
     console.error('❌ Error in contract expiry check:', err);
   }
