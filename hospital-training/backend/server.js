@@ -13,8 +13,8 @@ app.use(cors());
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'medi.servee1@gmail.com',
-    pass: 'gfcf qtwc lucm rdfd' // App Password من Gmail
+    user: 'sup.it.system.medical@gmail.com',
+    pass: 'bwub ozwj dzlg uicp' // App Password من Gmail
   },
   // تحسينات الأداء
   pool: true, // استخدام pool للاتصالات
