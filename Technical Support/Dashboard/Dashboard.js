@@ -545,7 +545,14 @@ document.addEventListener('DOMContentLoaded', loadMaintenanceOverviewChart);
 // internal 
 async function loadRepeatedProblems() {
   try {
-    const res = await fetch('http://localhost:4000/api/critical-devices', {
+    // تحديد اللغة الحالية
+    let lang = 'en';
+    if (typeof languageManager !== 'undefined' && languageManager.currentLang) {
+      lang = languageManager.currentLang === 'ar' ? 'ar' : 'en';
+    } else if (window.localStorage && localStorage.getItem('lang')) {
+      lang = localStorage.getItem('lang') === 'ar' ? 'ar' : 'en';
+    }
+    const res = await fetch(`http://localhost:4000/api/critical-devices?lang=${lang}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
