@@ -981,6 +981,7 @@ app.get('/api/maintenance/overview', authenticateToken, async (req, res) => {
 //inter
 app.get('/api/critical-devices', authenticateToken, async (req, res) => {
   try {
+    const lang = req.query.lang === 'ar' ? 'ar' : 'en'; // افتراضي انجليزي
     const [rows] = await db.promise().query(`
       SELECT 
         LOWER(d.device_type) AS device_type,
@@ -995,7 +996,16 @@ app.get('/api/critical-devices', authenticateToken, async (req, res) => {
       ORDER BY COUNT(*) DESC;
     `);
 
-    res.json(rows);
+    // تقسيم النص حسب اللغة
+    const localizedRows = rows.map(row => {
+      if (row.problem && row.problem.includes('|')) {
+        const [en, ar] = row.problem.split('|').map(s => s.trim());
+        row.problem = lang === 'ar' ? (ar || en) : (en || ar);
+      }
+      return row;
+    });
+
+    res.json(localizedRows);
   } catch (err) {
     console.error('❌ Error loading critical devices:', err);
     res.status(500).json({ error: 'Server error' });
@@ -1214,13 +1224,13 @@ app.get('/api/replacement-report', authenticateToken, async (req, res) => {
     const [devices] = await db.promise().query(`SELECT * FROM Maintenance_Devices`);
     const results = [];
 
+    const pcTypes = ["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"];
     for (const device of devices) {
       const type = device.device_type?.toLowerCase().trim();
       const serial = device.serial_number;
 
-      let ram = '', generation = '', os = '';
-
-      if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(type)) {
+      if (pcTypes.includes(type)) {
+        let ram = '', generation = '', os = '';
         const [pcRows] = await db.promise().query(`
           SELECT 
             os.os_name AS OS,
@@ -1237,27 +1247,27 @@ app.get('/api/replacement-report', authenticateToken, async (req, res) => {
         ram = info.RAM || '';
         generation = info.Generation || '';
         os = info.OS || '';
-      }
 
-      const genNum = parseInt(generation?.replace(/\D/g, '')) || 0;
-      const ramNum = parseInt(ram?.replace(/\D/g, '')) || 0;
-      const osClean = (os || '').toLowerCase();
+        const genNum = parseInt(generation?.replace(/\D/g, '')) || 0;
+        const ramNum = parseInt(ram?.replace(/\D/g, '')) || 0;
+        const osClean = (os || '').toLowerCase();
 
-      const isOldGen = genNum < 8;
-      const isLowRam = ramNum < 4;
-      const isOldOS = osClean.includes('windows') && !osClean.includes('10') && !osClean.includes('11');
+        const isOldGen = genNum < 8;
+        const isLowRam = ramNum < 4;
+        const isOldOS = osClean.includes('windows') && !osClean.includes('10') && !osClean.includes('11');
 
-      const needsReplacement = isOldGen || isLowRam || isOldOS;
+        const needsReplacement = isOldGen || isLowRam || isOldOS;
 
-      if (needsReplacement) {
-        results.push([
-          serial,
-          os || 'Unknown',
-          generation || 'Unknown',
-          ram || 'Unknown',
-          '8th Gen+, 4GB+ RAM, Win 10/11',
-          'Needs Replacement'
-        ]);
+        if (needsReplacement) {
+          results.push([
+            serial,
+            os || 'Unknown',
+            generation || 'Unknown',
+            ram || 'Unknown',
+            '8th Gen+, 4GB+ RAM, Win 10/11',
+            'Needs Replacement'
+          ]);
+        }
       }
     }
 
@@ -1365,8 +1375,14 @@ app.get('/api/dashboard-data', authenticateToken, async (req, res) => {
     for (const device of devices) {
       const type = device.device_type?.toLowerCase().trim();
       const serial = device.serial_number;
-      let ram = '', generation = '', os = '', department = '';
-      if (["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(type)) {
+      let department = '';
+      const pcTypes = ["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"];
+      if (pcTypes.includes(type)) {
+        // القسم
+        const [deptRow] = await db.promise().query(`SELECT name FROM Departments WHERE id = ?`, [device.department_id]);
+        if (deptRow.length > 0) department = deptRow[0].name;
+
+        let ram = '', generation = '', os = '';
         const [pcRows] = await db.promise().query(`
           SELECT 
             os.os_name AS OS,
@@ -1382,26 +1398,23 @@ app.get('/api/dashboard-data', authenticateToken, async (req, res) => {
         ram = info.RAM || '';
         generation = info.Generation || '';
         os = info.OS || '';
-      }
-      // القسم
-      const [deptRow] = await db.promise().query(`SELECT name FROM Departments WHERE id = ?`, [device.department_id]);
-      if (deptRow.length > 0) department = deptRow[0].name;
 
-      const genNum = parseInt(generation?.replace(/\D/g, '')) || 0;
-      const ramNum = parseInt(ram?.replace(/\D/g, '')) || 0;
-      const osClean = (os || '').toLowerCase();
-      const isOldGen = genNum < 8;
-      const isLowRam = ramNum < 4;
-      const isOldOS = osClean.includes('windows') && !osClean.includes('10') && !osClean.includes('11');
-      const needs = isOldGen || isLowRam || isOldOS;
-      needsReplacement.push({
-        name: device.device_name,
-        department,
-        ram: ram || 'Unknown',
-        cpu: generation || 'Unknown',
-        os: os || 'Unknown',
-        status: needs ? 'Replace Soon' : 'OK'
-      });
+        const genNum = parseInt(generation?.replace(/\D/g, '')) || 0;
+        const ramNum = parseInt(ram?.replace(/\D/g, '')) || 0;
+        const osClean = (os || '').toLowerCase();
+        const isOldGen = genNum < 8;
+        const isLowRam = ramNum < 4;
+        const isOldOS = osClean.includes('windows') && !osClean.includes('10') && !osClean.includes('11');
+        const needs = isOldGen || isLowRam || isOldOS;
+        needsReplacement.push({
+          name: device.device_name,
+          department,
+          ram: ram || 'Unknown',
+          cpu: generation || 'Unknown',
+          os: os || 'Unknown',
+          status: needs ? 'Replace Soon' : 'OK'
+        });
+      }
     }
 
     res.json({
