@@ -203,7 +203,6 @@ document.getElementById("loginForm").addEventListener("submit", function (event)
         return;
     }
 
-    // المحاولة الأولى: جرب مباشرة كما هو
     fetch("http://localhost:4000/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -219,10 +218,23 @@ document.getElementById("loginForm").addEventListener("submit", function (event)
                 localStorage.setItem("userId", data.user.id);
                 window.location.href = "/Home/Home.html";
             } else {
-                // إذا فشل، جرب البحث عن الاسم الكامل
-                fetch("http://localhost:4000/users")
+                // إذا فشل، جرب البحث عن الاسم الكامل فقط إذا كان هناك توكن
+                const token = localStorage.getItem("token");
+                if (!token) {
+                    errorMessage.textContent = data.message || "Login failed.";
+                    return;
+                }
+                fetch("http://localhost:4000/users", {
+                    headers: {
+                        "Authorization": "Bearer " + token
+                    }
+                })
                     .then(res => res.json())
                     .then(users => {
+                        if (!Array.isArray(users)) {
+                            errorMessage.textContent = users.message || "Login failed.";
+                            return;
+                        }
                         const found = users.find(u => {
                             if (!u.name) return false;
                             const [en, ar] = u.name.split("|").map(s => s.trim());
