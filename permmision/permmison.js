@@ -206,14 +206,19 @@ async function loadUserDetails(userId) {
       const parts = name.split('|');
       name = (document.documentElement.lang === 'ar') ? (parts[1] || parts[0]) : parts[0];
     }
+    let department = user.department;
+    if (department && department.includes('|')) {
+      const parts = department.split('|');
+      department = (document.documentElement.lang === 'en') ? (parts[1] || parts[0]) : parts[0];
+    }
     document.getElementById('user-name').textContent = name;
     document.getElementById('user-email').textContent = user.email;
 
     const infoBox = document.getElementById('user-extra-info');
     infoBox.innerHTML = `
-      <span style="color: #4b5563;">Department: ${user.department || '-'}</span>
-      <span style="color: #4b5563;">Employee ID: ${user.employee_id || '-'}</span>
-      <span style="color: #4b5563;">Role: ${user.role}</span>
+<span style="color: #4b5563;">${i18n('department')}: ${department || '-'}</span>
+<span style="color: #4b5563;">${i18n('employee_id')}: ${user.employee_id || '-'}</span>
+<span style="color: #4b5563;">${i18n('role')}: ${user.role}</span>
     `;
 
     const statusBadge = document.getElementById('user-status-badge');
