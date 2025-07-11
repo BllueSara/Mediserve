@@ -833,6 +833,7 @@ const languageManager = {
             'select_users_to_share': "Select User(s) to Share With",
             'confirm': "Confirm",
             'cancel': "Cancel",
+            'device_count': "Device Count",
             'fill_complete_row': "Please fill in at least one complete row before saving.",
             // Tool Selection Page
             'network_tools': "Network Tools",
@@ -1216,6 +1217,7 @@ const languageManager = {
             'end_date': 'تاريخ النهاية',
             'previous': 'السابق',
             'next': 'التالي',
+            'device_count': 'عدد الاجهزة',
             'page_info': 'الصفحة {0} من {1}',
 
             // Profile Page

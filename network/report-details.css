@@ -46,3 +46,43 @@ input::-ms-input-placeholder {
     font-weight: bold;
 }
 
+/* زر تحميل PDF/Excel */
+.download-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #3BAAE0;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 22px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 6px rgba(59, 170, 224, 0.08);
+    outline: none;
+}
+.download-btn:hover, .download-btn:focus {
+    background-color: #2389b4;
+    box-shadow: 0 4px 12px rgba(59, 170, 224, 0.18);
+}
+.download-btn .download-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 4px;
+    filter: brightness(0) invert(1);
+}
+
+/* Responsive: زر التحميل أصغر في الشاشات الصغيرة */
+@media (max-width: 600px) {
+    .download-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+    .download-btn .download-icon {
+        width: 16px;
+        height: 16px;
+    }
+}
+

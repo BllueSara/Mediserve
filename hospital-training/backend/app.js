@@ -14,7 +14,7 @@ app.use(express.static(path.join(__dirname, '..')));
 app.use(express.static(path.join(__dirname, '..', '..')));
 
 // تحميل جميع الراوترات تلقائيًا من جميع مجلدات الراوتر
-const routersFolders = ['userRouter', 'dashboardRouter', 'deviceRouter', 'reportRouter'];
+const routersFolders = ['userRouter', 'dashboardRouter', 'deviceRouter', 'reportRouter', 'networkRouter'];
 routersFolders.forEach(folder => {
   const routersPath = path.join(__dirname, folder);
   if (fs.existsSync(routersPath)) {
@@ -26,6 +26,8 @@ routersFolders.forEach(folder => {
     });
   }
 });
+
+require('./networkController/contractExpiryCron');
 
 // تشغيل السيرفر
 app.listen(4000, () => console.log('🚀 app.js running on http://localhost:4000'));  

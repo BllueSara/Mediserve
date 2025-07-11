@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'http://localhost:4000';
 
 // Function to format date
 function formatDate(date) {
@@ -168,93 +168,63 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-function generateExcelForIPDetails() {
-    const targetIp = document.getElementById('ipAddress').textContent;
-    if (!targetIp) {
-        const lang = languageManager.currentLang || 'en';
-        const message = lang === 'ar' ? 'لا يوجد عنوان IP محدد' : 'No IP address specified';
-        alert(message);
+async function generateExcelForIPDetails() {
+    const reportId = new URLSearchParams(location.search).get('report_id');
+    if (!reportId) {
+        alert('No report ID found.');
         return;
     }
 
-    const savedReports = JSON.parse(localStorage.getItem('autoPingReports') || '[]');
+    try {
+        const res = await fetch(`${API_BASE_URL}/reports/${reportId}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        });
 
-    const allReportResults = savedReports.reduce((acc, report) => {
-        if (report.results && Array.isArray(report.results)) {
-            const resultsWithTimestamp = report.results.map(result => ({
-                ...result,
-                parentTimestamp: report.timestamp
-            }));
-            return acc.concat(resultsWithTimestamp);
+        if (!res.ok) throw new Error('Failed to fetch report data');
+
+        const { type, results } = await res.json();
+        if (!results || results.length === 0) {
+            alert('لا توجد بيانات لهذا العنوان');
+            return;
         }
-        return acc;
-    }, []);
 
-    const ipHistory = allReportResults
-        .filter(result => result.ip === targetIp)
-        .sort((a, b) => new Date(a.parentTimestamp) - new Date(b.parentTimestamp));
-
-    if (!ipHistory.length) {
         const lang = languageManager.currentLang || 'en';
-        const message = lang === 'ar' ? 'لا توجد بيانات لهذا العنوان' : 'No data found for this IP.';
-        alert(message);
-        return;
+        const headers = lang === 'ar'
+            ? ['الوقت', 'الحالة', 'زمن الاستجابة (مللي ثانية)', 'فقدان الحزم (%)']
+            : ['Timestamp', 'Status', 'Latency (ms)', 'Packet Loss (%)'];
+
+        const data = [headers];
+
+        results.forEach(result => {
+            data.push([
+                formatDate(result.timestamp),
+                translateStatus(result.status),
+                result.latency ?? '0',
+                result.packetLoss ?? '0'
+            ]);
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, lang === 'ar' ? 'تقرير' : 'Report');
+
+        const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([excelBuffer], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `report_${reportId}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        alert('❌ Failed to download report.');
+        console.error(err);
     }
-
-    const lang = languageManager.currentLang || 'en';
-    const headers = lang === 'ar' 
-        ? ['الوقت', 'الحالة', 'زمن الاستجابة (مللي ثانية)', 'فقدان الحزم (%)']
-        : ['Timestamp', 'Status', 'Latency (ms)', 'Packet Loss (%)'];
-
-    const data = [headers];
-
-    ipHistory.forEach(result => {
-        const output = result.output || '';
-        const latency = parseFloat(result.latency);
-        const packetLoss = parseFloat(result.packetLoss);
-        const timeouts = parseInt(result.timeouts) || 0;
-
-        let status = '';
-        if (
-            result.status === 'failed' ||
-            output.includes('100% packet loss') ||
-            output.includes('Request timed out') ||
-            isNaN(latency)
-        ) {
-            status = lang === 'ar' ? 'فشل' : 'failed';
-        } else if (packetLoss > 0 || timeouts > 0) {
-            status = lang === 'ar' ? 'غير مستقر' : 'unstable';
-        } else if (latency > 50) {
-            status = lang === 'ar' ? 'تأخير' : 'delay';
-        } else {
-            status = lang === 'ar' ? 'نشط' : 'active';
-        }
-
-        data.push([
-            formatDate(result.timestamp),
-            status,
-            !isNaN(latency) ? latency : '0',
-            !isNaN(packetLoss) ? packetLoss : '0'
-        ]);
-    });
-
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, lang === 'ar' ? 'تقرير' : 'Report');
-
-    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([excelBuffer], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    });
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `report_${targetIp}.xlsx`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
 }
 
 
