@@ -28,7 +28,9 @@ const transporter = nodemailer.createTransport({
   socketTimeout: 60000, // timeout للـ socket
 });
 
-
+function makeBilingualLog(en, ar) {
+  return { en, ar };
+}
 // وظيفة تنظيف النصوص للبريد الإلكتروني (عربي فقط)
 // دالة تطبيع الرسالة (مثل الموجودة في Notifications.js)
 function normalizeMessage(text) {
@@ -1105,15 +1107,18 @@ const normalizedDeviceType = allowedTypes.includes(deviceType)
       );
     }
 
-    await queryAsync(`
-      INSERT INTO Activity_Logs (user_id, user_name, action, details)
-      VALUES (?, ?, ?, ?)
-    `, [
-      userId,
-      userName,
-      'Submitted External Maintenance',
-      `Submitted external maintenance for a ${deviceInfo.normalizedDeviceType} | Device Name: ${deviceInfo.device_name} | Serial: ${deviceInfo.serial_number} | Governmental No.: ${deviceInfo.governmental_number}`
-    ]);
+await queryAsync(`
+  INSERT INTO Activity_Logs (user_id, user_name, action, details)
+  VALUES (?, ?, ?, ?)
+`, [
+  userId,
+  userName,
+  JSON.stringify(makeBilingualLog('Submitted External Maintenance', 'إرسال صيانة خارجية')),
+  JSON.stringify(makeBilingualLog(
+    `Submitted external maintenance for a ${deviceInfo.normalizedDeviceType} | Device Name: ${deviceInfo.device_name} | Serial: ${deviceInfo.serial_number} | Governmental No.: ${deviceInfo.governmental_number}`,
+    `تم إرسال صيانة خارجية لجهاز ${deviceInfo.normalizedDeviceType} - اسم الجهاز: ${deviceInfo.device_name} - سيريال: ${deviceInfo.serial_number} - الرقم الحكومي: ${deviceInfo.governmental_number}`
+  ))
+]);
 
 
     res.json({ message: "✅ External maintenance, ticket summary, and notifications saved successfully." });
@@ -1451,15 +1456,18 @@ const problem_status = Array.isArray(rawProblemStatus)
     }
 
 
-    await queryAsync(`
-      INSERT INTO Activity_Logs (user_id, user_name, action, details)
-      VALUES (?, ?, ?, ?)
-    `, [
-      userId,
-      userName,
-      'Submitted Regular Maintenance',
-      `Submitted regular maintenance for a ${deviceInfo.device_type} | Device: ${deviceInfo.device_name} | Serial: ${deviceInfo.serial_number} | Governmental No.: ${deviceInfo.governmental_number}`
-    ]);
+await queryAsync(`
+  INSERT INTO Activity_Logs (user_id, user_name, action, details)
+  VALUES (?, ?, ?, ?)
+`, [
+  userId,
+  userName,
+  JSON.stringify(makeBilingualLog('Submitted Regular Maintenance', 'إرسال صيانة دورية')),
+  JSON.stringify(makeBilingualLog(
+    `Submitted regular maintenance for a ${deviceInfo.device_type} | Device: ${deviceInfo.device_name} | Serial: ${deviceInfo.serial_number} | Governmental No.: ${deviceInfo.governmental_number}`,
+    `تم إرسال صيانة دورية لجهاز ${deviceInfo.device_type} - اسم الجهاز: ${deviceInfo.device_name} - سيريال: ${deviceInfo.serial_number} - الرقم الحكومي: ${deviceInfo.governmental_number}`
+  ))
+]);
 
 
     res.json({ message: "✅ Regular maintenance, ticket, and reports created successfully." });
@@ -1564,15 +1572,18 @@ app.post("/submit-new-device", authenticateToken, async (req, res) => {
 
     // 5. سجل النشاط
     const userName = await getUserNameById(userId);
-    await queryAsync(`
-      INSERT INTO Activity_Logs (user_id, user_name, action, details)
-      VALUES (?, ?, ?, ?)
-    `, [
-      userId,
-      userName,
-      "Used Existing Device",
-      `تم استخدام جهاز محفوظ مسبقًا (ID: ${device.id}) - النوع: ${device.device_type} - القسم: ${device.department_name}`
-    ]);
+await queryAsync(`
+  INSERT INTO Activity_Logs (user_id, user_name, action, details)
+  VALUES (?, ?, ?, ?)
+`, [
+  userId,
+  userName,
+  JSON.stringify(makeBilingualLog('Used Existing Device', 'استخدام جهاز محفوظ')),
+  JSON.stringify(makeBilingualLog(
+    `Used existing device (ID: ${device.id}) - Type: ${device.device_type} - Department: ${device.department_name}`,
+    `تم استخدام جهاز محفوظ مسبقًا (المعرف: ${device.id}) - النوع: ${device.device_type} - القسم: ${device.department_name}`
+  ))
+]);
 
     res.json({ message: "✅ تم استخدام الجهاز المحفوظ بنجاح." });
 
@@ -1589,28 +1600,116 @@ app.post("/add-option-general", authenticateToken, (req, res) => {
   const { target, value, type } = req.body;
   const userId = req.user?.id;
 
-  const tableMap = {
-    "device-type": { table: "DeviceType", column: "DeviceType" },
-    "section": { table: "Departments", column: "name" },
-    "floor": { table: "Floors", column: "FloorNum" },
-    "technical": { table: "Engineers", column: "name" },
-    "problem-status": type === "pc"
-      ? { table: "ProblemStates_Pc", column: "problem_text" }
-      : type === "printer"
-        ? { table: "ProblemStates_Printer", column: "problem_text" }
-        : type === "scanner"
-          ? { table: "ProblemStates_Scanner", column: "problem_text" }
-          : { table: "problemStates_Maintance_device", column: "problemStates_Maintance_device_name", extra: "device_type_name" },
-    "os-select": { table: "OS_Types", column: "os_name" },
-    "ram-select": { table: "RAM_Types", column: "ram_type" },
-    "ram-size-select": { table: "RAM_Sizes", column: "ram_size" },
-    "cpu-select": { table: "CPU_Types", column: "cpu_name" },
-    "generation-select": { table: "Processor_Generations", column: "generation_number" },
-    "drive-select": { table: "Hard_Drive_Types", column: "drive_type" },
-    "printer-type": { table: "Printer_Types", column: "printer_type" },
-    "ink-type": { table: "Ink_Types", column: "ink_type" },
-    "scanner-type": { table: "Scanner_Types", column: "scanner_type" },
-  };
+const tableMap = {
+  "device-type": {
+    table: "DeviceType",
+    column: "DeviceType",
+    action: { en: "Add Device Type", ar: "إضافة نوع جهاز" },
+    tableLabel: { en: "Device Type", ar: "نوع الجهاز" }
+  },
+  "section": {
+    table: "Departments",
+    column: "name",
+    action: { en: "Add Department", ar: "إضافة قسم" },
+    tableLabel: { en: "Department", ar: "القسم" }
+  },
+  "floor": {
+    table: "Floors",
+    column: "FloorNum",
+    action: { en: "Add Floor", ar: "إضافة طابق" },
+    tableLabel: { en: "Floor", ar: "الطابق" }
+  },
+  "technical": {
+    table: "Engineers",
+    column: "name",
+    action: { en: "Add Engineer", ar: "إضافة مهندس" },
+    tableLabel: { en: "Engineer", ar: "المهندس" }
+  },
+  "problem-status": {
+    // سيتم تحديدها حسب النوع بالأسفل
+    table: null,
+    column: "problem_text",
+    action: { en: "Add Problem", ar: "إضافة مشكلة" },
+    tableLabel: { en: "Problem", ar: "المشكلة" }
+  },
+  "os-select": {
+    table: "OS_Types",
+    column: "os_name",
+    action: { en: "Add OS", ar: "إضافة نظام تشغيل" },
+    tableLabel: { en: "Operating System", ar: "نظام التشغيل" }
+  },
+  "ram-select": {
+    table: "RAM_Types",
+    column: "ram_type",
+    action: { en: "Add RAM", ar: "إضافة نوع ذاكرة" },
+    tableLabel: { en: "RAM Type", ar: "نوع الذاكرة" }
+  },
+  "ram-size-select": {
+    table: "RAM_Sizes",
+    column: "ram_size",
+    action: { en: "Add RAM Size", ar: "إضافة حجم ذاكرة" },
+    tableLabel: { en: "RAM Size", ar: "حجم الذاكرة" }
+  },
+  "cpu-select": {
+    table: "CPU_Types",
+    column: "cpu_name",
+    action: { en: "Add CPU", ar: "إضافة معالج" },
+    tableLabel: { en: "CPU", ar: "المعالج" }
+  },
+  "generation-select": {
+    table: "Processor_Generations",
+    column: "generation_number",
+    action: { en: "Add CPU Generation", ar: "إضافة جيل معالج" },
+    tableLabel: { en: "CPU Generation", ar: "جيل المعالج" }
+  },
+  "drive-select": {
+    table: "Hard_Drive_Types",
+    column: "drive_type",
+    action: { en: "Add Drive Type", ar: "إضافة نوع قرص" },
+    tableLabel: { en: "Drive Type", ar: "نوع القرص" }
+  },
+  "printer-type": {
+    table: "Printer_Types",
+    column: "printer_type",
+    action: { en: "Add Printer Type", ar: "إضافة نوع طابعة" },
+    tableLabel: { en: "Printer Type", ar: "نوع الطابعة" }
+  },
+  "ink-type": {
+    table: "Ink_Types",
+    column: "ink_type",
+    action: { en: "Add Ink Type", ar: "إضافة نوع حبر" },
+    tableLabel: { en: "Ink Type", ar: "نوع الحبر" }
+  },
+  "scanner-type": {
+    table: "Scanner_Types",
+    column: "scanner_type",
+    action: { en: "Add Scanner Type", ar: "إضافة نوع ماسح" },
+    tableLabel: { en: "Scanner Type", ar: "نوع الماسح" }
+  }
+};
+
+
+// منطق التفرقة لـ problem-status
+if (target === "problem-status") {
+  if (type === "pc") {
+    mapping.table = "ProblemStates_Pc";
+    mapping.action = { en: "Add PC Problem", ar: "إضافة مشكلة كمبيوتر" };
+    mapping.tableLabel = { en: "PC Problem", ar: "مشكلة كمبيوتر" };
+  } else if (type === "printer") {
+    mapping.table = "ProblemStates_Printer";
+    mapping.action = { en: "Add Printer Problem", ar: "إضافة مشكلة طابعة" };
+    mapping.tableLabel = { en: "Printer Problem", ar: "مشكلة طابعة" };
+  } else if (type === "scanner") {
+    mapping.table = "ProblemStates_Scanner";
+    mapping.action = { en: "Add Scanner Problem", ar: "إضافة مشكلة ماسح" };
+    mapping.tableLabel = { en: "Scanner Problem", ar: "مشكلة ماسح" };
+  } else {
+    mapping.table = "problemStates_Maintance_device";
+    mapping.action = { en: "Add Generic Problem", ar: "إضافة مشكلة عامة" };
+    mapping.tableLabel = { en: "Generic Problem", ar: "مشكلة عامة" };
+    mapping.extra = "device_type_name";
+  }
+}
 
   const mapping = tableMap[target];
   if (!mapping) return res.status(400).json({ error: "Invalid target field" });
@@ -1641,19 +1740,25 @@ app.post("/add-option-general", authenticateToken, (req, res) => {
       db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
         if (!errUser && resultUser.length > 0) {
           const userName = resultUser[0].name;
-          const logQuery = `
-            INSERT INTO Activity_Logs (user_id, user_name, action, details)
-            VALUES (?, ?, ?, ?)
-          `;
-          const logValues = [
-            userId,
-            userName,
-            `Added '${mapping.table}'`,
-            `Added '${value}' to '${mapping.table}'`
-          ];
-          db.query(logQuery, logValues, (logErr) => {
-            if (logErr) console.error("❌ Logging failed:", logErr);
-          });
+       const logAction = mapping.action;
+const logTable = mapping.tableLabel;
+
+const logQuery = `
+  INSERT INTO Activity_Logs (user_id, user_name, action, details)
+  VALUES (?, ?, ?, ?)
+`;
+const logValues = [
+  userId,
+  userName,
+  JSON.stringify(makeBilingualLog(logAction.en, logAction.ar)),
+  JSON.stringify(makeBilingualLog(
+    `Added '${value}' to '${logTable.en}'`,
+    `تمت إضافة '${value}' إلى '${logTable.ar}'`
+  ))
+];
+db.query(logQuery, logValues, (logErr) => {
+  if (logErr) console.error("❌ Logging failed:", logErr);
+});
         }
       });
 
@@ -1664,107 +1769,111 @@ app.post("/add-option-general", authenticateToken, (req, res) => {
 
 
 
-
-
-app.post("/add-options-external", authenticateToken, (req, res) => {
-  const { target, value } = req.body;
-  const userId = req.user?.id;
-
-  if (!target || !value) {
-    return res.status(400).json({ error: "Missing target or value" });
-  }
-
-  let table = "";
-  let column = "";
-
-  switch (target) {
-    case "device-type":
-      table = "DeviceType";
-      column = "DeviceType";
-      break;
-    case "section":
-      table = "Departments";
-      column = "name";
-      break;
-    case "technical-status":
-      table = "Engineers";
-      column = "name";
-      break;
-    default:
-      return res.status(400).json({ error: "Unsupported dropdown" });
-  }
-
-  const checkQuery = `SELECT * FROM ${table} WHERE ${column} = ? LIMIT 1`;
-  db.query(checkQuery, [value], (checkErr, checkResult) => {
-    if (checkErr) {
-      console.error("❌ Error checking existing value:", checkErr);
-      return res.status(500).json({ error: "Database error" });
-    }
-
-    if (checkResult.length > 0) {
-      return res.status(400).json({ error: `⚠️ "${value}" already exists!` });
-    }
-
-    const insertQuery = `INSERT INTO ${table} (${column}) VALUES (?)`;
-    db.query(insertQuery, [value], (insertErr, insertResult) => {
-      if (insertErr) {
-        console.error("❌ Error inserting option:", insertErr);
-        return res.status(500).json({ error: "Database insert error" });
-      }
-
-      // ✅ سجل اللوق بعد الإدخال
-      db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
-        if (!errUser && resultUser.length > 0) {
-          const userName = resultUser[0].name;
-
-          const logQuery = `
-            INSERT INTO Activity_Logs (user_id, user_name, action, details)
-            VALUES (?, ?, ?, ?)
-          `;
-          const logValues = [
-            userId,
-            userName,
-            `Added '${table}'`,
-            `Added '${value}' to '${table}'`
-          ];
-
-          db.query(logQuery, logValues, (logErr) => {
-            if (logErr) console.error("❌ Logging failed:", logErr);
-          });
-        }
-      });
-
-      res.json({ message: `✅ ${value} added successfully` });
-    });
-  });
-});
-
 app.post("/add-options-regular", authenticateToken, (req, res) => {
   const { target, value, type } = req.body;
   const userId = req.user?.id;
 
-  const tableMap = {
-    "device-type": { table: "DeviceType", column: "DeviceType", action: "Add Device Type" },
-    "section": { table: "Departments", column: "name", action: "Add Department" },
-    "os-select": { table: "OS_Types", column: "os_name", action: "Add OS" },
-    "ram-select": { table: "RAM_Types", column: "ram_type", action: "Add RAM" },
-    "ram-size-select": { table: "RAM_Sizes", column: "ram_size", action: "Add RAM Size" },
-    "cpu-select": { table: "CPU_Types", column: "cpu_name", action: "Add CPU" },
-    "generation-select": { table: "Processor_Generations", column: "generation_number", action: "Add CPU Generation" },
-    "drive-select": { table: "Hard_Drive_Types", column: "drive_type", action: "Add Drive Type" },
-    "problem-status": type === "pc"
-      ? { table: "ProblemStates_Pc", column: "problem_text", action: "Add PC Problem" }
-      : type === "printer"
-        ? { table: "ProblemStates_Printer", column: "problem_text", action: "Add Printer Problem" }
-        : type === "scanner"
-          ? { table: "ProblemStates_Scanner", column: "problem_text", action: "Add Scanner Problem" }
-          : { table: "problemStates_Maintance_device", column: "problemStates_Maintance_device_name", extra: "device_type_name", action: "Add Generic Problem" },
-    "technical": { table: "Engineers", column: "name", action: "Add Engineer" },
-    "printer-type": { table: "Printer_Types", column: "printer_type", action: "Add Printer Type" },
-    "ink-type": { table: "Ink_Types", column: "ink_type", action: "Add Ink Type" },
-    "scanner-type": { table: "Scanner_Types", column: "scanner_type", action: "Add Scanner Type" },
-  };
+const tableMap = {
+  "device-type": {
+    table: "DeviceType",
+    column: "DeviceType",
+    action: { en: "Add Device Type", ar: "إضافة نوع جهاز" },
+    tableLabel: { en: "Device Type", ar: "نوع الجهاز" }
+  },
+  "section": {
+    table: "Departments",
+    column: "name",
+    action: { en: "Add Department", ar: "إضافة قسم" },
+    tableLabel: { en: "Department", ar: "القسم" }
+  },
+  "os-select": {
+    table: "OS_Types",
+    column: "os_name",
+    action: { en: "Add OS", ar: "إضافة نظام تشغيل" },
+    tableLabel: { en: "Operating System", ar: "نظام التشغيل" }
+  },
+  "ram-select": {
+    table: "RAM_Types",
+    column: "ram_type",
+    action: { en: "Add RAM", ar: "إضافة نوع ذاكرة" },
+    tableLabel: { en: "RAM Type", ar: "نوع الذاكرة" }
+  },
+  "ram-size-select": {
+    table: "RAM_Sizes",
+    column: "ram_size",
+    action: { en: "Add RAM Size", ar: "إضافة حجم ذاكرة" },
+    tableLabel: { en: "RAM Size", ar: "حجم الذاكرة" }
+  },
+  "cpu-select": {
+    table: "CPU_Types",
+    column: "cpu_name",
+    action: { en: "Add CPU", ar: "إضافة معالج" },
+    tableLabel: { en: "CPU", ar: "المعالج" }
+  },
+  "generation-select": {
+    table: "Processor_Generations",
+    column: "generation_number",
+    action: { en: "Add CPU Generation", ar: "إضافة جيل معالج" },
+    tableLabel: { en: "CPU Generation", ar: "جيل المعالج" }
+  },
+  "drive-select": {
+    table: "Hard_Drive_Types",
+    column: "drive_type",
+    action: { en: "Add Drive Type", ar: "إضافة نوع قرص" },
+    tableLabel: { en: "Drive Type", ar: "نوع القرص" }
+  },
+  "problem-status": {
+    // لاحظ: هنا تحتاج تفرّق حسب النوع (type) كما في كودك الأصلي
+    table: null, // سيتم تحديده لاحقًا حسب type
+    column: "problem_text",
+    action: { en: "Add Problem", ar: "إضافة مشكلة" },
+    tableLabel: { en: "Problem", ar: "المشكلة" }
+  },
+  "technical": {
+    table: "Engineers",
+    column: "name",
+    action: { en: "Add Engineer", ar: "إضافة مهندس" },
+    tableLabel: { en: "Engineer", ar: "المهندس" }
+  },
+  "printer-type": {
+    table: "Printer_Types",
+    column: "printer_type",
+    action: { en: "Add Printer Type", ar: "إضافة نوع طابعة" },
+    tableLabel: { en: "Printer Type", ar: "نوع الطابعة" }
+  },
+  "ink-type": {
+    table: "Ink_Types",
+    column: "ink_type",
+    action: { en: "Add Ink Type", ar: "إضافة نوع حبر" },
+    tableLabel: { en: "Ink Type", ar: "نوع الحبر" }
+  },
+  "scanner-type": {
+    table: "Scanner_Types",
+    column: "scanner_type",
+    action: { en: "Add Scanner Type", ar: "إضافة نوع ماسح" },
+    tableLabel: { en: "Scanner Type", ar: "نوع الماسح" }
+  }
+};
 
+  if (target === "problem-status") {
+    if (type === "pc") {
+      mapping.table = "ProblemStates_Pc";
+      mapping.action = { en: "Add PC Problem", ar: "إضافة مشكلة كمبيوتر" };
+      mapping.tableLabel = { en: "PC Problem", ar: "مشكلة كمبيوتر" };
+    } else if (type === "printer") {
+      mapping.table = "ProblemStates_Printer";
+      mapping.action = { en: "Add Printer Problem", ar: "إضافة مشكلة طابعة" };
+      mapping.tableLabel = { en: "Printer Problem", ar: "مشكلة طابعة" };
+    } else if (type === "scanner") {
+      mapping.table = "ProblemStates_Scanner";
+      mapping.action = { en: "Add Scanner Problem", ar: "إضافة مشكلة ماسح" };
+      mapping.tableLabel = { en: "Scanner Problem", ar: "مشكلة ماسح" };
+    } else {
+      mapping.table = "problemStates_Maintance_device";
+      mapping.action = { en: "Add Generic Problem", ar: "إضافة مشكلة عامة" };
+      mapping.tableLabel = { en: "Generic Problem", ar: "مشكلة عامة" };
+    }
+  }
   const mapping = tableMap[target];
   if (!mapping) return res.status(400).json({ error: "Invalid target field" });
 
@@ -1799,19 +1908,25 @@ app.post("/add-options-regular", authenticateToken, (req, res) => {
       db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
         if (!errUser && resultUser.length > 0) {
           const userName = resultUser[0].name;
-          const logQuery = `
-            INSERT INTO Activity_Logs (user_id, user_name, action, details)
-            VALUES (?, ?, ?, ?)
-          `;
-          const logValues = [
-            userId,
-            userName,
-            `Added '${mapping.table}'`,
-            `Added '${value}' to '${mapping.table}'`
-          ];
-          db.query(logQuery, logValues, (logErr) => {
-            if (logErr) console.error("❌ Logging failed:", logErr);
-          });
+const logAction = mapping.action;
+const logTable = mapping.tableLabel;
+
+const logQuery = `
+  INSERT INTO Activity_Logs (user_id, user_name, action, details)
+  VALUES (?, ?, ?, ?)
+`;
+const logValues = [
+  userId,
+  userName,
+  JSON.stringify(makeBilingualLog(logAction.en, logAction.ar)),
+  JSON.stringify(makeBilingualLog(
+    `Added '${value}' to '${logTable.en}'`,
+    `تمت إضافة '${value}' إلى '${logTable.ar}'`
+  ))
+];
+db.query(logQuery, logValues, (logErr) => {
+  if (logErr) console.error("❌ Logging failed:", logErr);
+});
         }
       });
 
@@ -2029,15 +2144,18 @@ await createNotificationWithEmail(techUserId,
 
 
 
-    await queryAsync(`
-      INSERT INTO Activity_Logs (user_id, user_name, action, details)
-      VALUES (?, ?, ?, ?)
-    `, [
-      userId,
-      userName,
-      'Submitted General Maintenance',
-      `General maintenance for ${deviceInfo.device_type} | Device Name: ${deviceInfo.device_name} | Serial: ${deviceInfo.serial_number} | Gov: ${deviceInfo.governmental_number}`
-    ]);
+ await queryAsync(`
+  INSERT INTO Activity_Logs (user_id, user_name, action, details)
+  VALUES (?, ?, ?, ?)
+`, [
+  userId,
+  userName,
+  JSON.stringify(makeBilingualLog('Submitted General Maintenance', 'إرسال صيانة عامة')),
+  JSON.stringify(makeBilingualLog(
+    `General maintenance for ${deviceInfo.device_type} | Device Name: ${deviceInfo.device_name} | Serial: ${deviceInfo.serial_number} | Gov: ${deviceInfo.governmental_number}`,
+    `تم إرسال صيانة عامة لجهاز ${deviceInfo.device_type} - اسم الجهاز: ${deviceInfo.device_name} - سيريال: ${deviceInfo.serial_number} - الرقم الحكومي: ${deviceInfo.governmental_number}`
+  ))
+]);
 
     res.json({ message: "✅ General maintenance, ticket, and reports created successfully." });
 
@@ -2257,15 +2375,18 @@ app.put("/update-external-report-status/:id", authenticateToken, async (req, res
     }
 
     // 9. Log the action
-    await queryAsync(`
-      INSERT INTO Activity_Logs (user_id, user_name, action, details)
-      VALUES (?, ?, ?, ?)
-    `, [
-      userId,
-      userName,
-      'Updated External Report Status',
-      `Updated external report #${reportId} to '${status}' | Device: ${readableDevice}`
-    ]);
+ await queryAsync(`
+  INSERT INTO Activity_Logs (user_id, user_name, action, details)
+  VALUES (?, ?, ?, ?)
+`, [
+  userId,
+  userName,
+  JSON.stringify(makeBilingualLog('Updated External Report Status', 'تحديث حالة تقرير خارجي')),
+  JSON.stringify(makeBilingualLog(
+    `Updated external report #${reportId} to '${status}' | Device: ${readableDevice}`,
+    `تم تحديث حالة التقرير الخارجي رقم ${reportId} إلى '${status}' للجهاز ${readableDevice}`
+  ))
+]);
 
     res.json({ message: "✅ External report, ticket, and related entries updated with notifications." });
 
@@ -2749,83 +2870,6 @@ WHERE mr.id = ?
 });
 
 
-// POST /add-options-device
-app.post("/add-options-add-device", authenticateToken, (req, res) => {
-  const { target, value } = req.body;
-  const userId = req.user?.id;
-
-  if (!target || !value) {
-    return res.status(400).json({ error: "❌ Missing target or value" });
-  }
-
-  const tableMap = {
-    "cpu-select": { table: "CPU_Types", column: "cpu_name" },
-    "ram-select": { table: "RAM_Types", column: "ram_type" },
-    "os-select": { table: "OS_Types", column: "os_name" },
-    "drive-select": { table: "Hard_Drive_Types", column: "drive_type" },
-    "ram-size-select": { table: "RAM_Sizes", column: "ram_size" },
-    "generation-select": { table: "Processor_Generations", column: "generation_number" },
-    "printer-type": { table: "Printer_Types", column: "printer_type" },
-    "ink-type": { table: "Ink_Types", column: "ink_type" },
-    "scanner-type": { table: "Scanner_Types", column: "scanner_type" },
-    "model": { table: "Device_Models", column: "model_name" },
-    "section": { table: "Departments", column: "name" },
-    "device-type": { table: "DeviceType", column: "DeviceType" }
-  };
-
-  const mapping = tableMap[target];
-  if (!mapping) return res.status(400).json({ error: "Invalid target field" });
-
-  const query = mapping.extra
-    ? `INSERT INTO ${mapping.table} (${mapping.column}, ${mapping.extra}) VALUES (?, ?)`
-    : `INSERT INTO ${mapping.table} (${mapping.column}) VALUES (?)`;
-
-  const params = mapping.extra ? [value, type] : [value];
-
-  const checkQuery = mapping.extra
-    ? `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ? AND ${mapping.extra} = ?`
-    : `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ?`;
-
-  db.query(checkQuery, params, (err, existing) => {
-    if (err) return res.status(500).json({ error: "DB check error" });
-    if (existing.length > 0) {
-      return res.status(400).json({ error: `⚠️ \"${value}\" already exists in ${mapping.table}` });
-    }
-
-    db.query(query, params, (err2, result) => {
-      if (err2) {
-        console.error("❌ DB Insert Error:", err2);
-        return res.status(500).json({ error: "Database error while inserting option" });
-      }
-
-      // ✅ Log to Activity_Logs
-      db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
-        if (!errUser && resultUser.length > 0) {
-          const userName = resultUser[0].name;
-          const logQuery = `
-            INSERT INTO Activity_Logs (user_id, user_name, action, details)
-            VALUES (?, ?, ?, ?)
-          `;
-          const logValues = [
-            userId,
-            userName,
-            `Added '${mapping.table}'`,
-            `Added '${value}' to '${mapping.table}'`
-          ];
-          db.query(logQuery, logValues, (logErr) => {
-            if (logErr) console.error("❌ Logging failed:", logErr);
-          });
-        }
-      });
-
-      res.json({ message: `✅ ${value} added to ${mapping.table}`, insertedId: result.insertId });
-    });
-  });
-});
-
-
-
-
 
 app.post("/add-device-specification", async (req, res) => {
   const { ministry, name, model, serial, department, type } = req.body; // 🟢 Extract device data from body
@@ -3095,12 +3139,15 @@ if (isPcType) {
             INSERT INTO Activity_Logs (user_id, user_name, action, details)
             VALUES (?, ?, ?, ?)
           `;
-          const logValues = [
-            userId,
-            userName,
-            "Add Device",
-            `Added '${deviceType}' with serial '${Serial_Number}'`
-          ];
+      const logValues = [
+  userId,
+  userName,
+  JSON.stringify(makeBilingualLog("Add Device", "إضافة جهاز")),
+  JSON.stringify(makeBilingualLog(
+    `Added '${deviceType}' with serial '${Serial_Number}'`,
+    `تمت إضافة جهاز من النوع '${deviceType}' برقم سيريال '${Serial_Number}'`
+  ))
+];
           db.query(logQuery, logValues);
         }
       });
@@ -3223,12 +3270,15 @@ app.post("/add-device-model", authenticateToken, (req, res) => {
           INSERT INTO Activity_Logs (user_id, user_name, action, details)
           VALUES (?, ?, ?, ?)
         `;
-        const logValues = [
-          userId,
-          userName,
-          "Add Device Model",
-          `Added new model '${model_name}' for device type '${device_type_name}'`
-        ];
+const logValues = [
+  userId,
+  userName,
+  JSON.stringify(makeBilingualLog("Add Device Model", "إضافة موديل جهاز")),
+  JSON.stringify(makeBilingualLog(
+    `Added new model '${model_name}' for device type '${device_type_name}'`,
+    `تمت إضافة موديل جديد '${model_name}' لنوع الجهاز '${device_type_name}'`
+  ))
+];
 
         db.query(logQuery, logValues, (logErr) => {
           if (logErr) console.error("❌ Failed to log activity:", logErr);
@@ -3360,15 +3410,18 @@ app.put("/update-report-status/:id", authenticateToken, async (req, res) => {
 
     // === Logs ===
 
-    await queryAsync(`
-      INSERT INTO Activity_Logs (user_id, user_name, action, details)
-      VALUES (?, ?, ?, ?)
-    `, [
-      userId,
-      userName,
-      'Updated Report Status',
-      `Updated report status to '${status}' for ${readableDevice} (Report ID: ${reportId})`
-    ]);
+await queryAsync(`
+  INSERT INTO Activity_Logs (user_id, user_name, action, details)
+  VALUES (?, ?, ?, ?)
+`, [
+  userId,
+  userName,
+  JSON.stringify(makeBilingualLog('Updated Report Status', 'تحديث حالة التقرير')),
+  JSON.stringify(makeBilingualLog(
+    `Updated report status to '${status}' for ${readableDevice} (Report ID: ${reportId})`,
+    `تم تحديث حالة التقرير إلى '${status}' للجهاز ${readableDevice} (رقم التقرير: ${reportId})`
+  ))
+]);
 
     res.json({ message: "✅ Status updated and notifications sent." });
 
@@ -4427,14 +4480,48 @@ if (changes.length > 0) {
     [userId]
   );
   const userName = userRow?.name || 'Unknown';
-
+  const fieldLabelMap = {
+    "Issue Summary":      { en: "Issue Summary",      ar: "ملخص المشكلة" },
+    "Description":        { en: "Description",        ar: "الوصف" },
+    "Priority":           { en: "Priority",           ar: "الأولوية" },
+    "Status":             { en: "Status",             ar: "الحالة" },
+    "Assigned To":        { en: "Assigned To",        ar: "المسند إليه" },
+    "Category":           { en: "Category",           ar: "الفئة" },
+    "Device Name":        { en: "Device Name",        ar: "اسم الجهاز" },
+    "Serial Number":      { en: "Serial Number",      ar: "الرقم التسلسلي" },
+    "Governmental Number":{ en: "Governmental Number",ar: "الرقم الحكومي" },
+    "IP Address":         { en: "IP Address",         ar: "عنوان IP" },
+    "MAC Address":        { en: "MAC Address",        ar: "عنوان MAC" },
+    "Model":              { en: "Model",              ar: "الموديل" },
+    "Processor":          { en: "Processor",          ar: "المعالج" },
+    "RAM":                { en: "RAM",                ar: "الذاكرة" },
+    "RAM Size":           { en: "RAM Size",           ar: "حجم الذاكرة" },
+    "OS":                 { en: "OS",                 ar: "نظام التشغيل" },
+    "Generation":         { en: "Generation",         ar: "جيل المعالج" },
+    "Drive Type":         { en: "Drive Type",         ar: "نوع القرص" },
+    "Ink Type":           { en: "Ink Type",           ar: "نوع الحبر" },
+    "Ink Serial":         { en: "Ink Serial",         ar: "سيريال الحبر" },
+    "Printer Type":       { en: "Printer Type",       ar: "نوع الطابعة" },
+    "Scanner Type":       { en: "Scanner Type",       ar: "نوع الماسح" },
+    "Department":         { en: "Department",         ar: "القسم" }
+    // أضف أي حقل آخر تحتاجه هنا
+  };
   // سجل كل تغيير في لوق منفصل
   for (const change of changes) {
+    // استخراج اسم الحقل من التغيير (مثلاً: "Device Name" أو "Status" ...)
+    // إذا كان التغيير بصيغة: "Device Name: old → new"
+    const match = change.match(/^(.+?):/);
+    const field = match ? match[1].trim() : "";
+    const label = fieldLabelMap[field] || { en: field, ar: field };
+  
     logActivity(
       userId,
       userName,
-      "Edited",
-      `Report ID ${id} changed: ${change.trim()}`
+      JSON.stringify(makeBilingualLog("Edited", "تعديل")),
+      JSON.stringify(makeBilingualLog(
+        `Report ID ${id} changed: ${change.replace(field, label.en).trim()}`,
+        `تم تعديل تقرير رقم ${id}: ${change.replace(field, label.ar).trim()}`
+      ))
     );
   }
 }
@@ -4769,52 +4856,6 @@ app.post("add-ram-size", (req, res) => {
 
 
 
-app.post("/delete-option-general", (req, res) => {
-  const { target, value, type } = req.body;
-
-  const tableMap = {
-    "problem-type": { table: "DeviceType", column: "DeviceType" },
-    "section": { table: "Departments", column: "name" },
-    "floor": { table: "Floors", column: "FloorNum" },
-    "technical": { table: "Engineers", column: "name" },
-    "problem-status": type === "pc"
-      ? { table: "ProblemStates_Pc", column: "problem_text" }
-      : type === "printer"
-        ? { table: "ProblemStates_Printer", column: "problem_text" }
-        : type === "scanner"
-          ? { table: "ProblemStates_Scanner", column: "problem_text" }
-          : { table: "problemStates_Maintance_device", column: "problemStates_Maintance_device_name", extra: "device_type_name" }
-  };
-
-  const mapping = tableMap[target];
-  if (!mapping) return res.status(400).json({ error: "❌ Invalid target field" });
-
-  let query = "";
-  let params = [];
-
-  if (mapping.extra) {
-    query = `DELETE FROM ${mapping.table} WHERE ${mapping.column} = ? AND ${mapping.extra} = ?`;
-    params = [value, type];
-  } else {
-    query = `DELETE FROM ${mapping.table} WHERE ${mapping.column} = ?`;
-    params = [value];
-  }
-
-  db.query(query, params, (err) => {
-    if (err) {
-      if (err.code === "ER_ROW_IS_REFERENCED_2") {
-        return res.status(400).json({
-          error: `❌ لا يمكن حذف "${value}" لأنه مرتبط بعناصر أخرى في النظام`
-        });
-      }
-
-      console.error("❌ Delete failed:", err);
-      return res.status(500).json({ error: "❌ Failed to delete option from database" });
-    }
-
-    res.json({ message: "✅ Option deleted successfully" });
-  });
-});
 
 app.put("/update-linked-reports", async (req, res) => {
   const { maintenance_id, status } = req.body;
@@ -5147,15 +5188,18 @@ app.post("/internal-ticket-with-file", upload.single("attachment"), authenticate
           }
         }
 
-        await queryAsync(`
-          INSERT INTO Activity_Logs (user_id, user_name, action, details)
-          VALUES (?, ?, ?, ?)
-        `, [
-          userId,
-          userName,
-          'Submitted Internal Ticket',
-          `Internal ticket submitted (${generatedTicketNumber}) with report )`
-        ]);
+await queryAsync(`
+  INSERT INTO Activity_Logs (user_id, user_name, action, details)
+  VALUES (?, ?, ?, ?)
+`, [
+  userId,
+  userName,
+  JSON.stringify(makeBilingualLog('Submitted Internal Ticket', 'إرسال تذكرة داخلية')),
+  JSON.stringify(makeBilingualLog(
+    `Internal ticket submitted (${generatedTicketNumber}) with report`,
+    `تم إرسال تذكرة داخلية (${generatedTicketNumber}) مع تقرير`
+  ))
+]);
 
         res.status(201).json({
           message: "✅ Internal ticket and report created",
@@ -5342,15 +5386,18 @@ app.post("/submit-new-report", authenticateToken, upload.fields([
     await db.promise().query(insertReportSql, insertParams);
 
 
-    await queryAsync(`
-      INSERT INTO Activity_Logs (user_id, user_name, action, details)
-      VALUES (?, ?, ?, ?)
-    `, [
-      userId,
-      await getUserNameById(userId),
-      'Submitted New Maintenance Report',
-      `New report for ${device_type} | Device Name: ${device_name || 'N/A'} | Serial: ${serial_number || 'N/A'} | Department: ${department_name || 'N/A'}`
-    ]);
+await queryAsync(`
+  INSERT INTO Activity_Logs (user_id, user_name, action, details)
+  VALUES (?, ?, ?, ?)
+`, [
+  userId,
+  await getUserNameById(userId),
+  JSON.stringify(makeBilingualLog('Submitted New Maintenance Report', 'إرسال تقرير صيانة جديد')),
+  JSON.stringify(makeBilingualLog(
+    `New report for ${device_type} | Device Name: ${device_name || 'N/A'} | Serial: ${serial_number || 'N/A'} | Department: ${department_name || 'N/A'}`,
+    `تقرير صيانة جديد لجهاز ${device_type} - اسم الجهاز: ${device_name || 'غير متوفر'} - السيريال: ${serial_number || 'غير متوفر'} - القسم: ${department_name || 'غير متوفر'}`
+  ))
+]);
 
 
     res.json({ message: "✅ Report saved successfully with printer type and ink type" });
@@ -5694,13 +5741,36 @@ app.post("/delete-option-complete", authenticateToken, async (req, res) => {
         return res.status(404).json({ error: "❌ Value not found or already deleted." });
       }
     }
-
+    const labelMap = {
+      "ink-type":      { en: "Ink Type",      ar: "نوع الحبر" },
+      "scanner-type":  { en: "Scanner Type",  ar: "نوع الماسح" },
+      "printer-type":  { en: "Printer Type",  ar: "نوع الطابعة" },
+      "section":       { en: "Department",    ar: "القسم" },
+      "problem-type":  { en: "Device Type",   ar: "نوع الجهاز" },
+      "os-select":     { en: "Operating System", ar: "نظام التشغيل" },
+      "ram-select":    { en: "RAM Type",      ar: "نوع الذاكرة" },
+      "cpu-select":    { en: "CPU",           ar: "المعالج" },
+      "generation-select": { en: "CPU Generation", ar: "جيل المعالج" },
+      "drive-select":  { en: "Drive Type",    ar: "نوع القرص" },
+      "ram-size-select": { en: "RAM Size",    ar: "حجم الذاكرة" },
+      "model":         { en: "Model",         ar: "الموديل" },
+      "floor":         { en: "Floor",         ar: "الطابق" },
+      "technical":     { en: "Engineer",      ar: "المهندس" },
+      "problem-status":{ en: "Problem",       ar: "المشكلة" }
+    };
     // 4) تسجيل النشاط بعد الحذف
     const userId = req.user?.id;
     const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
     const userName = userRow[0]?.name || 'Unknown';
-    logActivity(userId, userName, "Deleted", `Deleted "${value}" from ${mapping.table}`);
-
+    logActivity(
+      userId,
+      userName,
+      JSON.stringify(makeBilingualLog("Deleted", "حذف")),
+      JSON.stringify(makeBilingualLog(
+        `Deleted "${value}" from ${labelMap[target]?.en || mapping.table}`,
+        `تم حذف "${value}" من ${labelMap[target]?.ar || mapping.table}`
+      ))
+    );
     return res.json({ message: `✅ "${value}" deleted successfully.` });
   } catch (err) {
     console.error("❌ Error during delete-option-complete:", err.sqlMessage || err.message || err);
@@ -5800,7 +5870,30 @@ app.post("/update-option-complete", authenticateToken, async (req, res) => {
 
     "technical":     { table: "Engineers",           column: "name",      propagate: [] }
   };
-
+  const tableLabelMap = {
+    "Ink_Types":              { en: "Ink Type", ar: "نوع الحبر" },
+    "Printer_Types":          { en: "Printer Type", ar: "نوع الطابعة" },
+    "Scanner_Types":          { en: "Scanner Type", ar: "نوع الماسح" },
+    "Departments":            { en: "Department", ar: "القسم" },
+    "DeviceType":             { en: "Device Type", ar: "نوع الجهاز" },
+    "OS_Types":               { en: "Operating System", ar: "نظام التشغيل" },
+    "RAM_Types":              { en: "RAM Type", ar: "نوع الذاكرة" },
+    "CPU_Types":              { en: "CPU Type", ar: "نوع المعالج" },
+    "Processor_Generations":  { en: "CPU Generation", ar: "جيل المعالج" },
+    "Hard_Drive_Types":       { en: "Hard Drive Type", ar: "نوع القرص الصلب" },
+    "RAM_Sizes":              { en: "RAM Size", ar: "حجم الذاكرة" },
+    "PC_Model":               { en: "PC Model", ar: "موديل الحاسب" },
+    "Printer_Model":          { en: "Printer Model", ar: "موديل الطابعة" },
+    "Scanner_Model":          { en: "Scanner Model", ar: "موديل الماسح" },
+    "Maintance_Device_Model": { en: "Device Model", ar: "موديل الجهاز" },
+    "floors":                 { en: "Floor", ar: "الطابق" },
+    "ProblemStates_Pc":       { en: "PC Problem", ar: "مشكلة الحاسب" },
+    "ProblemStates_Printer":  { en: "Printer Problem", ar: "مشكلة الطابعة" },
+    "ProblemStates_Scanner":  { en: "Scanner Problem", ar: "مشكلة الماسح" },
+    "problemStates_Maintance_device": { en: "Device Problem", ar: "مشكلة الجهاز" },
+    "Engineers":              { en: "Engineer", ar: "الفني" }
+    // أضف أي جدول آخر تحتاجه هنا
+  };
   const mapping = updateMap[target];
   if (!mapping) {
     return res.status(400).json({ error: "❌ Invalid target" });
@@ -6130,11 +6223,16 @@ app.post("/update-option-complete", authenticateToken, async (req, res) => {
       [userId]
     );
     const userName = userRow[0]?.name || "Unknown";
+    const tableLabel = tableLabelMap[mapping.table] || { en: mapping.table, ar: mapping.table };
+
     logActivity(
       userId,
       userName,
-      "Edited",
-      `Updated "${oldValue}" to "${newValue}" in ${mapping.table}`
+      JSON.stringify(makeBilingualLog("Edited", "تعديل")),
+      JSON.stringify(makeBilingualLog(
+        `Updated "${oldValue}" to "${newValue}" in ${tableLabel.en}`,
+        `تم تحديث "${oldValue}" إلى "${newValue}" في ${tableLabel.ar}`
+      ))
     );
 
     return res.json({ message: "✅ Option updated correctly." });
@@ -6306,8 +6404,15 @@ app.post("/delete-device-specification", authenticateToken, async (req, res) => 
     const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
     const userName = userRow[0]?.name || 'Unknown';
 
-    await logActivity(userId, userName, "Deleted", `Soft-deleted device ID ${id} (${deviceInfo[0].device_name})`);
-
+await logActivity(
+  userId,
+  userName,
+  JSON.stringify(makeBilingualLog("Deleted", "حذف")),
+  JSON.stringify(makeBilingualLog(
+    `Soft-deleted device ID ${id} (${deviceInfo[0].device_name})`,
+    `تم حذف الجهاز (حذف منطقي) برقم ${id} (${deviceInfo[0].device_name})`
+  ))
+);
     res.json({ message: "✅ Device soft-deleted successfully." });
 
   } catch (err) {
@@ -6472,12 +6577,15 @@ for (const { table } of relatedTables) {
     const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
     const userName = userRow[0]?.name || 'Unknown';
 
-    logActivity(
-      userId,
-      userName,
-      "Edited",
-      `Updated device ID ${id} – name: ${name}, serial: ${Serial_Number}, gov#: ${Governmental_Number}`
-    );
+logActivity(
+  userId,
+  userName,
+  JSON.stringify(makeBilingualLog("Edited", "تعديل")),
+  JSON.stringify(makeBilingualLog(
+    `Updated device ID ${id} – name: ${name}, serial: ${Serial_Number}, gov#: ${Governmental_Number}`,
+    `تم تحديث بيانات الجهاز رقم ${id} – الاسم: ${name}، السيريال: ${Serial_Number}، الرقم الحكومي: ${Governmental_Number}`
+  ))
+);
 
     res.json({ message: "✅ Device specification updated successfully." });
 
@@ -6530,7 +6638,24 @@ app.post('/add-option-internal-ticket', authenticateToken, async (req, res) => {
       case "scanner-type": query = "INSERT INTO Scanner_Types (scanner_type) VALUES (?)"; break;
       default: return res.status(400).json({ error: "❌ Invalid target." });
     }
-
+    const labelMap = {
+      "department":      { en: "Department",      ar: "القسم" },
+      "technical":       { en: "Engineer",        ar: "المهندس" },
+      "device-type":     { en: "Device Type",     ar: "نوع الجهاز" },
+      "problem-status":  { en: "Problem",         ar: "المشكلة" },
+      "ticket-type":     { en: "Ticket Type",     ar: "نوع التذكرة" },
+      "report-status":   { en: "Report Status",   ar: "حالة التقرير" },
+      "generation":      { en: "CPU Generation",  ar: "جيل المعالج" },
+      "processor":       { en: "CPU",             ar: "المعالج" },
+      "ram":             { en: "RAM Type",        ar: "نوع الذاكرة" },
+      "model":           { en: "Model",           ar: "الموديل" },
+      "os":              { en: "Operating System",ar: "نظام التشغيل" },
+      "drive":           { en: "Drive Type",      ar: "نوع القرص" },
+      "ram-size":        { en: "RAM Size",        ar: "حجم الذاكرة" },
+      "ink-type":        { en: "Ink Type",        ar: "نوع الحبر" },
+      "printer-type":    { en: "Printer Type",    ar: "نوع الطابعة" },
+      "scanner-type":    { en: "Scanner Type",    ar: "نوع الماسح" }
+    };
     if (values.length === 0) values = [value];
 
     await db.promise().query(query, values);
@@ -6543,12 +6668,18 @@ app.post('/add-option-internal-ticket', authenticateToken, async (req, res) => {
           INSERT INTO Activity_Logs (user_id, user_name, action, details)
           VALUES (?, ?, ?, ?)
         `;
-        const logValues = [
-          userId,
-          userName,
-          `Added '${target}'`,
-          `Added '${value}' to '${target}'`
-        ];
+const logValues = [
+  userId,
+  userName,
+  JSON.stringify(makeBilingualLog(
+    `Added ${labelMap[target]?.en || target}`,
+    `إضافة ${labelMap[target]?.ar || target}`
+  )),
+  JSON.stringify(makeBilingualLog(
+    `Added '${value}' to ${labelMap[target]?.en || target}`,
+    `تمت إضافة '${value}' إلى ${labelMap[target]?.ar || target}`
+  ))
+];
         db.query(logQuery, logValues, (logErr) => {
           if (logErr) console.error("❌ Logging failed:", logErr);
         });
@@ -6590,7 +6721,22 @@ app.post('/add-option-external-ticket', authenticateToken, async (req, res) => {
       case "scanner-type": query = "INSERT INTO Scanner_Types (scanner_type) VALUES (?)"; break;
       default: return res.status(400).json({ error: "❌ Invalid target." });
     }
-
+    const labelMap = {
+      "department":      { en: "Department",      ar: "القسم" },
+      "technical":       { en: "Engineer",        ar: "المهندس" },
+      "ticket-type":     { en: "Ticket Type",     ar: "نوع التذكرة" },
+      "report-status":   { en: "Report Status",   ar: "حالة التقرير" },
+      "generation":      { en: "CPU Generation",  ar: "جيل المعالج" },
+      "processor":       { en: "CPU",             ar: "المعالج" },
+      "ram":             { en: "RAM Type",        ar: "نوع الذاكرة" },
+      "model":           { en: "Model",           ar: "الموديل" },
+      "os":              { en: "Operating System",ar: "نظام التشغيل" },
+      "drive":           { en: "Drive Type",      ar: "نوع القرص" },
+      "ram-size":        { en: "RAM Size",        ar: "حجم الذاكرة" },
+      "ink-type":        { en: "Ink Type",        ar: "نوع الحبر" },
+      "printer-type":    { en: "Printer Type",    ar: "نوع الطابعة" },
+      "scanner-type":    { en: "Scanner Type",    ar: "نوع الماسح" }
+    };
     values = [value];
     await db.promise().query(query, values);
 
@@ -6602,12 +6748,18 @@ app.post('/add-option-external-ticket', authenticateToken, async (req, res) => {
           INSERT INTO Activity_Logs (user_id, user_name, action, details)
           VALUES (?, ?, ?, ?)
         `;
-        const logValues = [
-          userId,
-          userName,
-          `Added '${target}'`,
-          `Added '${value}' to '${target}'`
-        ];
+const logValues = [
+  userId,
+  userName,
+  JSON.stringify(makeBilingualLog(
+    `Added ${labelMap[target]?.en || target}`,
+    `إضافة ${labelMap[target]?.ar || target}`
+  )),
+  JSON.stringify(makeBilingualLog(
+    `Added '${value}' to ${labelMap[target]?.en || target}`,
+    `تمت إضافة '${value}' إلى ${labelMap[target]?.ar || target}`
+  ))
+];
         db.query(logQuery, logValues, (logErr) => {
           if (logErr) console.error("❌ Logging failed:", logErr);
         });
