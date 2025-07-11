@@ -637,7 +637,35 @@ app.put('/api/entries/:id', authenticateToken, async (req, res) => {
       { table: "Internal_Tickets", column: "department_id", conditionCol: "department_id", value: newDeptId },
       { table: "External_Tickets", column: "department_id", conditionCol: "department_id", value: newDeptId }
     ];
+// خريطة ترجمة ثنائية اللغة لأسماء الحقول
+const fieldLabelMap = {
+  circuit_name: { en: "Circuit Name", ar: "اسم الدائرة" },
+  isp: { en: "ISP", ar: "مزود الخدمة" },
+  location: { en: "Location", ar: "الموقع" },
+  ip: { en: "IP Address", ar: "عنوان IP" },
+  speed: { en: "Speed", ar: "السرعة" },
+  start_date: { en: "Contract Start", ar: "بداية العقد" },
+  end_date: { en: "Contract End", ar: "نهاية العقد" }
+};
 
+// خريطة ترجمة للجداول
+const tableLabelMap = {
+  Maintenance_Devices: { en: "Maintenance Devices", ar: "أجهزة الصيانة" },
+  Maintenance_Reports: { en: "Maintenance Reports", ar: "تقارير الصيانة" },
+  PC_info: { en: "PC Info", ar: "معلومات الكمبيوتر" },
+  General_Maintenance: { en: "General Maintenance", ar: "الصيانة العامة" },
+  Regular_Maintenance: { en: "Regular Maintenance", ar: "الصيانة الدورية" },
+  External_Maintenance: { en: "External Maintenance", ar: "الصيانة الخارجية" },
+  New_Maintenance_Report: { en: "New Maintenance Report", ar: "تقرير صيانة جديد" },
+  Internal_Tickets: { en: "Internal Tickets", ar: "تذاكر داخلية" },
+  External_Tickets: { en: "External Tickets", ar: "تذاكر خارجية" }
+};
+
+// خريطة ترجمة للإجراءات
+const actionLabelMap = {
+  "Updated Department": { en: "Updated Department", ar: "تحديث القسم" },
+  "Edited Entry": { en: "Edited Entry", ar: "تعديل الإدخال" }
+};
     for (const update of updates) {
       const query = `
         UPDATE ${update.table}
@@ -648,29 +676,50 @@ app.put('/api/entries/:id', authenticateToken, async (req, res) => {
       if (result.affectedRows > 0) logUpdates.push(update.table);
     }
 
-    // ✅ Log department change
-    if (logUpdates.length > 0 && oldEntry.location !== location) {
-      await conn.query(`
-        INSERT INTO Activity_Logs (user_id, user_name, action, details)
-        VALUES (?, ?, 'Updated Department', ?)
-      `, [
-        userId,
-        userName,
-        `Changed department to '${location}' for IP ${ip} in: ${logUpdates.join(', ')}`
-      ]);
-    }
+// ✅ Log department change
+if (logUpdates.length > 0 && oldEntry.location !== location) {
+  const logTables = logUpdates.map(tbl => {
+    const label = tableLabelMap[tbl] || { en: tbl, ar: tbl };
+    return `[${label.en}|${label.ar}]`;
+  }).join(', ');
 
-    // ✅ Log entry field changes
-    if (changes.length > 0) {
-      await conn.query(`
-        INSERT INTO Activity_Logs (user_id, user_name, action, details)
-        VALUES (?, ?, 'Edited Entry', ?)
-      `, [
-        userId,
-        userName,
-        `Edited entry ID ${entryId}:\n- ${changes.join('\n- ')}`
-      ]);
+  await conn.query(`
+    INSERT INTO Activity_Logs (user_id, user_name, action, details)
+    VALUES (?, ?, ?, ?)
+  `, [
+    userId,
+    userName,
+    `[${actionLabelMap["Updated Department"].en}|${actionLabelMap["Updated Department"].ar}]`,
+    `Changed department to '[${location}|${location}]' for IP [${ip}|${ip}] in: ${logTables}`
+  ]);
+}
+
+// ✅ Log entry field changes
+if (changes.length > 0) {
+  // ترجم أسماء الحقول في التغييرات
+  const bilingualChanges = changes.map(change => {
+    // مثال: circuit_name: 'old' → 'new'
+    const match = change.match(/^(\w+): '(.+)' → '(.+)'$/);
+    if (match) {
+      const field = match[1];
+      const oldVal = match[2];
+      const newVal = match[3];
+      const label = fieldLabelMap[field] || { en: field, ar: field };
+      return `[${label.en}|${label.ar}]: '[${oldVal}|${oldVal}]' → '[${newVal}|${newVal}]'`;
     }
+    return change;
+  });
+
+  await conn.query(`
+    INSERT INTO Activity_Logs (user_id, user_name, action, details)
+    VALUES (?, ?, ?, ?)
+  `, [
+    userId,
+    userName,
+    `[${actionLabelMap["Edited Entry"].en}|${actionLabelMap["Edited Entry"].ar}]`,
+    `Edited entry ID [${entryId}|${entryId}]:\n- ${bilingualChanges.join('\n- ')}`
+  ]);
+}
 
     res.json({
       message: `✅ Entry updated. ${changes.length || logUpdates.length ? '' : 'No actual changes.'}`
@@ -831,11 +880,17 @@ app.post('/api/share-entry', authenticateToken, async (req, res) => {
       await createNotificationWithEmail(receiverId, message, 'network-share');
     }
 
-    const logMsg = `Shared entries with IPs [${ipList.join(', ')}] with users: [${receiverNames.join(', ')}]`;
+    // سجل النشاط ثنائي اللغة
+    const actionBilingual = `[${shareEntryActionLabelMap["Shared Network Entry"].en}|${shareEntryActionLabelMap["Shared Network Entry"].ar}]`;
+    const ipListStr = ipList.join(', ');
+    const receiverNamesStr = receiverNames.join(', ');
+    const logMsgBilingual =
+      `[${shareEntryFieldLabelMap.entry.en}|${shareEntryFieldLabelMap.entry.ar}]s with [${shareEntryFieldLabelMap.ip.en}|${shareEntryFieldLabelMap.ip.ar}]s [${ipListStr}|${ipListStr}] were shared with [${shareEntryFieldLabelMap.user.en}|${shareEntryFieldLabelMap.user.ar}]s: [${receiverNamesStr}|${receiverNamesStr}]`;
+
     await db.promise().query(`
       INSERT INTO Activity_Logs (user_id, user_name, action, details)
-      VALUES (?, ?, 'Shared Network Entry', ?)
-    `, [senderId, senderName, logMsg]);
+      VALUES (?, ?, ?, ?)
+    `, [senderId, senderName, actionBilingual, logMsgBilingual]);
 
     res.json({ success: true });
   } catch (err) {
@@ -1044,10 +1099,18 @@ cron.schedule('02 * * * *', async () => {
   try {
     console.log('🚀 Starting contract expiry check at', new Date().toISOString());
 
+    // خريطة ترجمة ثنائية اللغة للإجراء والتفاصيل
+    const contractExpiryActionLabel = { en: 'Contract Expiry Reminder', ar: 'تذكير بانتهاء العقد' };
+    const contractExpiryFieldLabel = {
+      contract: { en: 'Contract', ar: 'العقد' },
+      ip: { en: 'IP Address', ar: 'عنوان IP' },
+      days: { en: 'Days Remaining', ar: 'الأيام المتبقية' }
+    };
+
     const intervals = [
-      { days: 90, label: '3 months' },
-      { days: 30, label: '1 month' },
-      { days: 7, label: '1 week' },
+      { days: 90, label: '3 months', label_ar: '3 أشهر' },
+      { days: 30, label: '1 month', label_ar: 'شهر واحد' },
+      { days: 7, label: '1 week', label_ar: 'أسبوع واحد' },
     ];
 
     for (let interval of intervals) {
@@ -1064,7 +1127,7 @@ cron.schedule('02 * * * *', async () => {
       for (let entry of entries) {
         console.log(`➡️ Entry ID ${entry.id}, circuit "${entry.circuit_name}", IP ${entry.ip}, diff=${entry.diff}`);
 
-        const message = `"Contract for circuit \"${entry.circuit_name}\" (IP: ${entry.ip}) will expire in ${interval.label}|عقد الدائرة \"${entry.circuit_name}\" (IP: ${entry.ip}) سينتهي خلال ${interval.label}"`;
+        const message = `"Contract for circuit \"${entry.circuit_name}\" (IP: ${entry.ip}) will expire in ${interval.label}|عقد الدائرة \"${entry.circuit_name}\" (IP: ${entry.ip}) سينتهي خلال ${interval.label_ar}"`;
 
         const [existingNotif] = await db.promise().query(`
           SELECT id FROM Notifications
@@ -1081,14 +1144,19 @@ cron.schedule('02 * * * *', async () => {
 
           await createNotificationWithEmail(entry.user_id, message, 'contract-expiry-warning');
 
+          // سجل النشاط ثنائي اللغة
+          const actionBilingual = `[${contractExpiryActionLabel.en}|${contractExpiryActionLabel.ar}]`;
+          const detailsBilingual =
+            `[${contractExpiryFieldLabel.contract.en}|${contractExpiryFieldLabel.contract.ar}] for circuit "${entry.circuit_name}|${entry.circuit_name}" ([${contractExpiryFieldLabel.ip.en}|${contractExpiryFieldLabel.ip.ar}]: ${entry.ip}|${entry.ip}) will expire in [${contractExpiryFieldLabel.days.en}|${contractExpiryFieldLabel.days.ar}]: ${interval.label}|${interval.label_ar}`;
+
           await db.promise().query(`
             INSERT INTO Activity_Logs (user_id, user_name, action, details)
             VALUES (?, ?, ?, ?)
           `, [
             entry.user_id,
             userName,
-            'Contract Expiry Reminder',
-            `System notified ${interval.label} before contract end for IP: ${entry.ip}`
+            actionBilingual,
+            detailsBilingual
           ]);
 
           console.log(`✅ Notification and log inserted for circuit ${entry.circuit_name}`);

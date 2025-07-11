@@ -63,6 +63,22 @@ function authenticateToken(req, res, next) {
 }
 
 
+// دالة مساعدة لبناء كائن ثنائي اللغة
+function makeBilingualLog(en, ar) {
+  return { en, ar };
+}
+
+function logActivity(userId, userName, action, details) {
+  // إذا كان action/details كائن، حوّله لنص JSON
+  if (typeof action === 'object') action = JSON.stringify(action);
+  if (typeof details === 'object') details = JSON.stringify(details);
+  const sql = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
+  db.query(sql, [userId, userName, action, details], (err) => {
+    if (err) console.error('❌ Error logging activity:', err);
+  });
+}
+
+
 // تسجيل المستخدم الجديد
 app.post('/register', async (req, res) => {
   const { name, email, password, phone, department, employee_id } = req.body;
@@ -180,7 +196,15 @@ if (err) {
 
           const token = jwt.sign({ id: userId, role }, JWT_SECRET, { expiresIn: '1d' });
 
-          logActivity(userId, name, 'Register', `User ${name} created an account using ${email}`);
+          logActivity(
+            userId,
+            name,
+            makeBilingualLog('Register', 'تسجيل مستخدم'),
+            makeBilingualLog(
+              `User ${name} created an account using ${email}`,
+              `قام المستخدم ${name} بإنشاء حساب باستخدام البريد الإلكتروني ${email}`
+            )
+          );
 
           res.status(201).json({
             message: 'User registered successfully',
@@ -269,7 +293,15 @@ app.post('/login', (req, res) => {
 
       const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
 
-      logActivity(user.id, user.name, 'Login', `User ${user.name} logged in successfully.`);
+      logActivity(
+        user.id,
+        user.name,
+        makeBilingualLog('Login', 'تسجيل دخول'),
+        makeBilingualLog(
+          `User ${user.name} logged in successfully.`,
+          `تم تسجيل دخول المستخدم ${user.name} بنجاح.`
+        )
+      );
 
       res.json({
         message: t.success,
@@ -297,7 +329,15 @@ app.put('/users/:id/role', authenticateToken, (req, res) => {
   db.query('UPDATE users SET role = ? WHERE id = ?', [role, targetUserId], (err) => {
     if (err) return res.status(500).json({ message: '❌ Failed to update role' });
 
-    logActivity(targetUserId, 'System', 'Change Role', `Changed role to ${role}`);
+    logActivity(
+      targetUserId,
+      'System',
+      makeBilingualLog('Change Role', 'تغيير الدور'),
+      makeBilingualLog(
+        `Changed role to ${role}`,
+        `تم تغيير الدور إلى ${role === 'admin' ? 'مشرف' : 'مستخدم'}`
+      )
+    );
     res.json({ message: `✅ Role updated to ${role}` });
   });
 });
@@ -523,7 +563,15 @@ app.put('/users/:id/status', authenticateToken, (req, res) => {
   db.query('UPDATE users SET status = ? WHERE id = ?', [status, userId], (err) => {
     if (err) return res.status(500).json({ message: 'Failed to update status' });
 
-    logActivity(userId, 'System', 'Toggle Status', `Status changed to ${status}`);
+    logActivity(
+      userId,
+      'System',
+      makeBilingualLog('Toggle Status', 'تغيير حالة المستخدم'),
+      makeBilingualLog(
+        `Status changed to ${status}`,
+        `تم تغيير حالة المستخدم إلى ${status === 'active' ? 'نشط' : 'غير نشط'}`
+      )
+    );
     res.json({ message: `User status updated to ${status}` });
   });
 });
@@ -534,7 +582,15 @@ app.delete('/users/:id', authenticateToken, (req, res) => {
     if (err) return res.status(500).json({ message: 'Failed to delete user' });
     if (result.affectedRows === 0) return res.status(404).json({ message: 'User not found' });
 
-    logActivity(userId, 'System', 'Delete User', `User ID ${userId} deleted`);
+    logActivity(
+      userId,
+      'System',
+      makeBilingualLog('Delete User', 'حذف مستخدم'),
+      makeBilingualLog(
+        `User ID ${userId} deleted`,
+        `تم حذف المستخدم ذو المعرف ${userId}`
+      )
+    );
     res.json({ message: 'User deleted successfully' });
   });
 });
@@ -582,13 +638,6 @@ app.get('/notifications/unseen-count', authenticateToken, async (req, res) => {
   }
 });
 
-function logActivity(userId, userName, action, details) {
-  const sql = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
-  db.query(sql, [userId, userName, action, details], (err) => {
-    if (err) console.error('❌ Error logging activity:', err);
-  });
-}
-
 
 app.get('/activity-logs', authenticateToken, (req, res) => {
   const userId = req.user.id;
@@ -605,7 +654,19 @@ app.get('/activity-logs', authenticateToken, (req, res) => {
       console.error('❌ Failed to load activity logs:', err);
       return res.status(500).json({ error: 'Failed to load activity logs' });
     }
-    res.json(results);
+    // تحويل action/details من نص JSON إلى كائن إذا أمكن
+    const parsedResults = results.map(log => {
+      let action = log.action;
+      let details = log.details;
+      try {
+        action = JSON.parse(action);
+      } catch {}
+      try {
+        details = JSON.parse(details);
+      } catch {}
+      return { ...log, action, details };
+    });
+    res.json(parsedResults);
   });
 });
 
@@ -781,7 +842,15 @@ app.put('/users/:id/reset-password', authenticateToken, async (req, res) => {
   try {
     const hashed = await bcrypt.hash(newPassword, 12);
     await db.promise().query('UPDATE users SET password = ? WHERE id = ?', [hashed, userId]);
-    logActivity(userId, 'System', 'Reset Password', 'Password was reset by admin');
+    logActivity(
+      userId,
+      'System',
+      makeBilingualLog('Reset Password', 'إعادة تعيين كلمة المرور'),
+      makeBilingualLog(
+        'Password was reset by admin',
+        'تمت إعادة تعيين كلمة المرور بواسطة المشرف'
+      )
+    );
     res.json({ message: '✅ Password updated successfully' });
   } catch (err) {
     console.error("❌ Error resetting password:", err);

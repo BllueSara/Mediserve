@@ -9,6 +9,23 @@
   <link rel="stylesheet" href="style.css" /> <!-- Links the external CSS file -->
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
 
+  <style>
+    .form-container.rtl {
+      direction: rtl;
+    }
+    .form-container.rtl .align-left,
+    .form-container.rtl label,
+    .form-container.rtl input,
+    .form-container.rtl h1,
+    .form-container.rtl h2,
+    .form-container.rtl p,
+    .form-container.rtl .dropdown-placeholder {
+      text-align: right !important;
+    }
+    body.font-arabic, body.font-arabic * {
+      font-family: 'Tajawal', 'Amiri', Arial, sans-serif !important;
+    }
+  </style>
   
 </head>
 
@@ -129,10 +146,17 @@
       currentLang = currentLang === 'en' ? 'ar' : 'en';
       updateLanguage();
       document.getElementById('lang-switch-btn').textContent = currentLang === 'en' ? 'ع' : 'En';
-      
       // Update font classes
       document.body.className = currentLang === 'en' ? 'font-english' : 'font-arabic';
       document.documentElement.lang = currentLang;
+      // أضف أو أزل كلاس rtl على الفورمات فقط
+      document.querySelectorAll('.form-container').forEach(el => {
+        if (currentLang === 'ar') {
+          el.classList.add('rtl');
+        } else {
+          el.classList.remove('rtl');
+        }
+      });
     }
 
     function updateLanguage() {

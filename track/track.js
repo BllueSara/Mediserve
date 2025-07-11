@@ -46,14 +46,22 @@ console.log(allLogs.map(log => log.action));
       console.error("❌ Failed to load logs:", err);
       container.innerHTML = "<p>Error loading activity logs.</p>";
     });
-
   // ✅ دالة ترسم السجلات حسب الفلتر المحدد
 function renderLogs(filter, searchTerm = "") {
   container.innerHTML = "";
 
+  const lang = languageManager.currentLang || "en";
+
   const filteredLogs = allLogs.filter(log => {
-    const action = cleanTag(log.action)?.toLowerCase() || "";
-    const details = cleanTag(log.details)?.toLowerCase() || "";
+    const actionText = typeof log.action === "object" && log.action !== null
+      ? log.action[lang] || log.action.en || ""
+      : log.action || "";
+    const detailsText = typeof log.details === "object" && log.details !== null
+      ? log.details[lang] || log.details.en || ""
+      : log.details || "";
+
+    const action = cleanTag(actionText)?.toLowerCase() || "";
+    const details = cleanTag(detailsText)?.toLowerCase() || "";
     const search = searchTerm.toLowerCase();
 
     const actionMatch = filter === "All" || action.includes(filter.toLowerCase());
@@ -67,17 +75,26 @@ function renderLogs(filter, searchTerm = "") {
     return;
   }
 
-  const lang = languageManager.currentLang;
-
   filteredLogs.forEach(log => {
     const createdAt = new Date(log.timestamp);
     const time = createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const date = createdAt.toLocaleDateString();
 
+    const actionText = typeof log.action === "object" && log.action !== null
+      ? log.action[lang] || log.action.en || ""
+      : log.action || "";
+    const detailsText = typeof log.details === "object" && log.details !== null
+      ? log.details[lang] || log.details.en || ""
+      : log.details || "";
+    const userText = typeof log.user_name === "object" && log.user_name !== null
+      ? log.user_name[lang] || log.user_name.en || ""
+      : log.user_name || "";
+
     // فلترة اسم المهندس حسب اللغة
-    const action = filterEngineerNameByLang(cleanTag(log.action), lang);
-    const details = filterEngineerNameByLang(cleanTag(log.details), lang);
-    const user = filterEngineerNameByLang(cleanTag(log.user_name), lang);
+    const action = filterEngineerNameByLang(cleanTag(actionText), lang);
+    const details = filterEngineerNameByLang(cleanTag(detailsText), lang);
+    const user = filterEngineerNameByLang(cleanTag(userText), lang);
+  const byText = lang === "ar" ? "بواسطة" : "By";
 
     const card = document.createElement("div");
     card.className = "activity-card";
@@ -87,7 +104,7 @@ function renderLogs(filter, searchTerm = "") {
         <div class="activity-content">
           <h2>${action}</h2>
           <p>${details}</p>
-          <p class="meta">By: ${user}</p>
+      <p class="meta">${byText}: ${user}</p>
         </div>
       </div>
       <div class="activity-time">

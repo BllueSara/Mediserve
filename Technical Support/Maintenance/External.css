@@ -14,19 +14,24 @@
 }
 
 /* Title Styling - "External Maintenance" */
+/* Titles */
 .title {
     font-size: 24px;
-    color: #111827; /* Primary title color */
     font-weight: bold;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
+    text-align: left;
+}
+.subtitle {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 20px;
+    text-align: left;
+}
+html[dir="rtl"] .title,
+html[dir="rtl"] .subtitle {
+    text-align: right;
 }
 
-/* Subtitle Styling - "Please fill in the maintenance details below" */
-.subtitle {
-    font-size: 16px;
-    color: #6B7280; /* Gray color */
-    margin-bottom: 20px;
-}
 
 /* Page Background */
 body {
@@ -116,6 +121,12 @@ header {
     margin-top: 20px;
     margin-bottom: 10px;
     color: #333;
+    text-align: left;
+}
+html[dir="rtl"] .title,
+html[dir="rtl"] .subtitle,
+html[dir="rtl"] .section-title {
+    text-align: right;
 }
 
 /* Labels - Input field labels */
