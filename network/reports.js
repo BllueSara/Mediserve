@@ -7,7 +7,7 @@ function goBack() {
     }
 }
 
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'http://localhost:4000';
 
 function filterEngineerNameByLang(text, lang) {
   if (!text || typeof text !== 'string') return text;
@@ -408,11 +408,16 @@ async function loadSavedReports() {
   
     const items = [
       {
-        label: 'IPs',
+        label: getTranslatedText('device_count'),
         value: `${report.device_count || 0}`
       },
+      // إضافة سطر لعرض كل الـ IPs
+      ...(report.ips ? [{
+        label: getTranslatedText('ip_address'),
+        value: Array.from(new Set(report.ips.split(','))).join(', ')
+      }] : []),
       ...(filteredOwnerName ? [{
-        label: 'Owner',
+        label: getTranslatedText('owner'),
         value: filteredOwnerName
       }] : [])
     ];
