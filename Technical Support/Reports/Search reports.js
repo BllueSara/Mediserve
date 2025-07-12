@@ -109,7 +109,7 @@ async function loadReports(page = 1) {
   const token = localStorage.getItem('token');
   let data;
   try {
-    const res = await fetch(`http://localhost:5050/get-internal-reports`, {
+    const res = await fetch(`http://localhost:4000/get-internal-reports`, {
       headers: { "Authorization": `Bearer ${token}` }
     });
     data = await res.json();
@@ -514,7 +514,7 @@ function updateReportStatus(reportId, selectElement) {
   const newStatus = selectElement.value;
   const ticketId = selectElement.getAttribute("data-ticket-id");
 
-  fetch(`http://localhost:5050/update-report-status/${reportId}`, {
+  fetch(`http://localhost:4000/update-report-status/${reportId}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -572,7 +572,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ✅ تحميل أنواع الأجهزة (بما فيها الأنواع الجديدة)
-  fetch("http://localhost:5050/device-types")
+  fetch("http://localhost:4000/device-types")
     .then(res => res.json())
     .then(deviceTypes => {
       console.log("📦 Fetched device types:", deviceTypes);
@@ -672,7 +672,7 @@ async function downloadReplacementReport() {
   } catch (error) {
     console.error('❌ Error downloading replacement report:', error);
     // fallback: افتح الرابط في نافذة جديدة (قد لا يرسل التوكن)
-    window.open('http://localhost:5050/api/replacement-report', '_blank');
+    window.open('http://localhost:4000/api/replacement-report', '_blank');
     showCenterNotification('❌ Error downloading report (fallback to new tab)', 'error');
   } finally {
     button.disabled = false;
@@ -723,7 +723,7 @@ function hasReplacementKeywordsInStatus(report, keywords) {
 // دالة إنشاء تقرير الاستبدال
 async function generateReplacementReport() {
   const token = localStorage.getItem('token');
-  const response = await fetch('http://localhost:5050/api/all-device-specs', {
+  const response = await fetch('http://localhost:4000/api/all-device-specs', {
     headers: { 'Authorization': `Bearer ${token}` }
   });
 

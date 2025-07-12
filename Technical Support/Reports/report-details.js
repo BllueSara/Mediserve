@@ -164,7 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!reportId) return alert("No report ID provided");
 
-  fetch(`http://localhost:5050/report/${reportId}?type=${reportType}`)
+  fetch(`http://localhost:4000/report/${reportId}?type=${reportType}`)
     .then(res => res.json())
     .then(async rawReport => { // ← جعل المعالج async لاستخدام await
       console.log("📦 التقرير (خام):", rawReport);
@@ -370,7 +370,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // ✅ عرض المرفق إذا موجود
       if (report.attachment_name && report.attachment_path) {
         const attachmentLink = document.createElement("a");
-        attachmentLink.href = `http://localhost:5050/uploads/${report.attachment_path}`;
+        attachmentLink.href = `http://localhost:4000/uploads/${report.attachment_path}`;
         attachmentLink.textContent = `📎 ${report.attachment_name}`;
         attachmentLink.download = report.attachment_name;
         attachmentLink.style = "display: block; margin-top: 10px; color: #007bff; text-decoration: underline;";
@@ -380,7 +380,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // ✅ عرض التوقيع إذا موجود (نفس مكان المرفق)
       if (report.signature_path) {
         const sigImg = document.createElement("img");
-        sigImg.src = `http://localhost:5050/${report.signature_path}`;
+        sigImg.src = `http://localhost:4000/${report.signature_path}`;
         sigImg.alt = "Signature";
         sigImg.style = "margin-top: 10px; max-width: 200px; border: 1px solid #ccc; display: block;";
         attachmentSection.appendChild(sigImg);
@@ -1828,7 +1828,7 @@ console.log("عنصر الصفحة:", document.getElementById("assigned-to")?.te
 
     doc.setFontSize(12);
     const attachmentName = reportData?.attachment_name || null;
-    const attachmentUrl = reportData?.attachment_path ? `http://localhost:5050/uploads/${reportData.attachment_path}` : null;
+    const attachmentUrl = reportData?.attachment_path ? `http://localhost:4000/uploads/${reportData.attachment_path}` : null;
 
     const showPriority = document.getElementById("opt-priority").checked;
     const showDeviceType = document.getElementById("opt-device-type").checked;
@@ -2428,7 +2428,7 @@ console.log("عنصر الصفحة:", document.getElementById("assigned-to")?.te
       try {
         const img = new Image();
         img.crossOrigin = "anonymous";
-        img.src = `http://localhost:5050/${reportData.signature_path}`;
+        img.src = `http://localhost:4000/${reportData.signature_path}`;
         await new Promise((res, rej) => {
           img.onload = res;
           img.onerror = rej;
@@ -2453,25 +2453,25 @@ console.log("عنصر الصفحة:", document.getElementById("assigned-to")?.te
 
 
   const lookupConfig = [
-    { fieldId: "assigned-to", api: "http://localhost:5050/Technical" },
-    { fieldId: "department", api: "http://localhost:5050/Departments" },
-    { fieldId: "category", api: "http://localhost:5050/api/categories" },
-    { fieldId: "device_type", api: "http://localhost:5050/api/device-types" },
+    { fieldId: "assigned-to", api: "http://localhost:4000/Technical" },
+    { fieldId: "department", api: "http://localhost:4000/Departments" },
+    { fieldId: "category", api: "http://localhost:4000/api/categories" },
+    { fieldId: "device_type", api: "http://localhost:4000/api/device-types" },
   ];
 
 
   // ===== نحذف الحقل الثابت model من هنا ونعلّمه خاصة =====
   const specConfig = [
     // { key: "model", api: "/api/pc-models" }, ← يحذف
-    { key: "cpu", api: "http://localhost:5050/CPU_Types" },
-    { key: "ram", api: "http://localhost:5050/RAM_Types" },
-    { key: "os", api: "http://localhost:5050/OS_Types" },
-    { key: "generation", api: "http://localhost:5050/Processor_Generations" },
-    { key: "hard_drive", api: "http://localhost:5050/Hard_Drive_Types" },
-    { key: "ram_size", api: "http://localhost:5050/RAM_Sizes" },
-    { key: "printer_type", api: "http://localhost:5050/Printer_Types" },
-    { key: "scanner_type", api: "http://localhost:5050/Scanner_Types" },
-    { key: "ink_type", api: "http://localhost:5050/Ink_Types" },
+    { key: "cpu", api: "http://localhost:4000/CPU_Types" },
+    { key: "ram", api: "http://localhost:4000/RAM_Types" },
+    { key: "os", api: "http://localhost:4000/OS_Types" },
+    { key: "generation", api: "http://localhost:4000/Processor_Generations" },
+    { key: "hard_drive", api: "http://localhost:4000/Hard_Drive_Types" },
+    { key: "ram_size", api: "http://localhost:4000/RAM_Sizes" },
+    { key: "printer_type", api: "http://localhost:4000/Printer_Types" },
+    { key: "scanner_type", api: "http://localhost:4000/Scanner_Types" },
+    { key: "ink_type", api: "http://localhost:4000/Ink_Types" },
   ];
 
   // دالة لجلب قائمة الخيارات من مسار API
@@ -2699,10 +2699,10 @@ function createSelectElement(options, currentId, currentRawText, fieldId) {
       }
     }
     let endpoint;
-    if (["pc", "laptop", "desktop"].includes(key)) endpoint = "http://localhost:5050/PC_Model";
-    else if (key === "printer") endpoint = "http://localhost:5050/Printer_Model";
-    else if (key === "scanner") endpoint = "http://localhost:5050/Scanner_Model";
-    else endpoint = `http://localhost:5050/models-by-type/${encodeURIComponent(key)}`;
+    if (["pc", "laptop", "desktop"].includes(key)) endpoint = "http://localhost:4000/PC_Model";
+    else if (key === "printer") endpoint = "http://localhost:4000/Printer_Model";
+    else if (key === "scanner") endpoint = "http://localhost:4000/Scanner_Model";
+    else endpoint = `http://localhost:4000/models-by-type/${encodeURIComponent(key)}`;
 
     console.log("▶ Fetching endpoint:", endpoint);
 
@@ -3360,7 +3360,7 @@ for (const { key } of specConfig) {
     // 9) الإرسال
     try {
       console.log("🚀 Sending request to server...");
-      const res = await fetch("http://localhost:5050/update-report-full", {
+      const res = await fetch("http://localhost:4000/update-report-full", {
         method: "POST",
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         body: formData

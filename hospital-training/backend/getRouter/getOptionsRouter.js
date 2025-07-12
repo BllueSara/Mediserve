@@ -1,0 +1,38 @@
+const express = require('express');
+const router = express.Router();
+const ctrl = require('../getController/getOptionsController');
+
+router.get('/Hard_Drive_Types', ctrl.getHardDriveTypes);
+router.get('/RAM_Sizes', ctrl.getRamSizes);
+router.get('/DeviceType', ctrl.getDeviceTypes);
+router.get('/RAM_Types', ctrl.getRamTypes);
+router.get('/report-statuses', ctrl.getReportStatuses);
+router.get('/ticket-status', ctrl.getTicketStatuses);
+router.get('/api/device-types', ctrl.getApiDeviceTypes);
+router.get('/get-all-problems', ctrl.getAllProblems);
+router.get('/TypeProplem', ctrl.getTypeProplem);
+router.get('/Departments', ctrl.getDepartments);
+router.get('/CPU_Types', ctrl.getCpuTypes);
+router.get('/Scanner_Types', ctrl.getScannerTypes);
+router.get('/OS_Types', ctrl.getOsTypes);
+router.get('/PC_Model', ctrl.getPcModels);
+router.get('/Scanner_Model', ctrl.getScannerModels);
+router.get('/Ink_Types', ctrl.getInkTypes);
+router.get('/device-specifications', ctrl.getDeviceSpecifications);
+router.get('/models-by-type/:type', ctrl.getModelsByType);
+router.get('/ticket-types', ctrl.getTicketTypes);
+router.get('/api/ink-serials', ctrl.getApiInkSerials);
+router.get('/api/categories', ctrl.getApiCategories);
+router.get('/device-types', ctrl.getDeviceTypesSimple);
+router.get('/problem-states/:deviceType', ctrl.getProblemStates);
+router.get('/all-devices-specs', ctrl.getAllDevicesSpecs);
+router.get('/floors', ctrl.getFloors);
+router.get('/Technical', ctrl.getTechnical);
+router.get('/Processor_Generations', ctrl.getProcessorGenerations);
+router.get('/Printer_Model', ctrl.getPrinterModels);
+router.get('/Printer_Types', ctrl.getPrinterTypes);
+router.get('/devices/:type/:department', ctrl.getDevicesByTypeAndDepartment);
+router.get('/problem-states/maintenance/:deviceType', ctrl.getProblemStatesMaintenance);
+router.get('/generate-internal-ticket-number', ctrl.generateInternalTicketNumber);
+
+module.exports = router; 

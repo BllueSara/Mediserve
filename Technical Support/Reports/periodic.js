@@ -5,8 +5,8 @@ function loadMaintenance(type) {
   currentType = type;
 
   const url = type === '3months' 
-    ? 'http://localhost:5050/regular-maintenance-summary' 
-    : 'http://localhost:5050/regular-maintenance-summary-4months';
+    ? 'http://localhost:4000/regular-maintenance-summary' 
+    : 'http://localhost:4000/regular-maintenance-summary-4months';
 
     fetch(url, {
       cache: "no-store",
@@ -76,7 +76,7 @@ function updateStatus(id, selectElement) {
   const newStatus = selectElement.value;
   const previousStatus = selectElement.getAttribute("data-prev-status");
 
-  fetch(`http://localhost:5050/update-report-status/${id}`, {
+  fetch(`http://localhost:4000/update-report-status/${id}`, {
     method: 'PUT',
     headers: { "Content-Type": "application/json","Authorization": "Bearer " + localStorage.getItem("token" )},
     body: JSON.stringify({ status: newStatus })
@@ -123,8 +123,8 @@ function adjustHeaderCountManually(prevStatus, newStatus, type = '3months') {
 
 function updateSummaryCountsOnly() {
   const url = currentType === '3months'
-    ? 'http://localhost:5050/regular-maintenance-summary'
-    : 'http://localhost:5050/regular-maintenance-summary-4months';
+    ? 'http://localhost:4000/regular-maintenance-summary'
+    : 'http://localhost:4000/regular-maintenance-summary-4months';
 
     fetch(url, { cache: "no-store" })
     .then(res => res.json())
@@ -175,23 +175,27 @@ document.addEventListener("DOMContentLoaded", () => {
   loadMaintenance("3months");
 
   // ✅ تحميل عدادات 4 شهور مباشرة (بدون جدول)
-  fetch('http://localhost:5050/regular-maintenance-summary-4months')
-    .then(res => res.json())
-    .then(data => {
-      let total = 0;
-      let completed = 0;
+fetch('http://localhost:4000/regular-maintenance-summary-4months', {
+  headers: {
+    "Authorization": "Bearer " + localStorage.getItem("token")
+  }
+})
+  .then(res => res.json())
+  .then(data => {
+    let total = 0;
+    let completed = 0;
 
-      data.forEach(item => {
-        if (!item.device_name) return;
-        total++;
-        if (item.status === 'Closed') completed++;
-      });
-
-      updateHeaderCounts(completed, total, "4months");
-    })
-    .catch(err => {
-      console.error("❌ Error loading 4-month summary:", err);
+    data.forEach(item => {
+      if (!item.device_name) return;
+      total++;
+      if (item.status === 'Closed') completed++;
     });
+
+    updateHeaderCounts(completed, total, "4months");
+  })
+  .catch(err => {
+    console.error("❌ Error loading 4-month summary:", err);
+  });
 
   // أزرار التبديل بين الجداول
   document.getElementById("btn-3months").addEventListener("click", () => {
