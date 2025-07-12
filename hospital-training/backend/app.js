@@ -3,18 +3,34 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
 const fs = require('fs');
+const multer = require('multer');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// Serve static files
+// إعداد static files
 app.use(express.static(path.join(__dirname)));
 app.use(express.static(path.join(__dirname, '..')));
 app.use(express.static(path.join(__dirname, '..', '..')));
 
+const { authenticateToken, upload } = require('./middlewares');
+
 // تحميل جميع الراوترات تلقائيًا من جميع مجلدات الراوتر
-const routersFolders = ['userRouter', 'dashboardRouter', 'deviceRouter', 'reportRouter', 'networkRouter'];
+const routersFolders = [
+  'userRouter',
+  'dashboardRouter',
+  'deviceRouter',
+  'reportRouter',
+  'networkRouter',
+  'updateRouter',
+  'deleteRouter',
+  'maintanceRouter',
+  'ticketRouter',
+  'getRouter',
+  'addRouter'
+];
 routersFolders.forEach(folder => {
   const routersPath = path.join(__dirname, folder);
   if (fs.existsSync(routersPath)) {
@@ -27,7 +43,12 @@ routersFolders.forEach(folder => {
   }
 });
 
+require('./cron/maintenanceDueCron');
+require('./cron/externalTicketFollowupCron');
 require('./networkController/contractExpiryCron');
 
 // تشغيل السيرفر
-app.listen(4000, () => console.log('🚀 app.js running on http://localhost:4000'));  
+app.listen(4000, () => console.log('🚀 app.js running on http://localhost:4000'));
+
+// تصدير الميدلويرز إذا احتاجتها الراوترات
+module.exports = { authenticateToken, upload };  

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const autoPingResultsController = require('../networkController/autoPingResultsController');
-const authenticateToken = require('../userController/authenticateTokenController');
+const { authenticateToken } = require('../middlewares');
 
 router.get('/auto-ping/results', authenticateToken, autoPingResultsController);
 

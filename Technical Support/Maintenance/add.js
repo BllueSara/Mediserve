@@ -22,13 +22,13 @@ function fetchAndRenderModels(deviceType, dropdownId) {
   let endpoint = "";
 
   if (["pc", "laptop", "desktop", "كمبيوتر", "لابتوب"].includes(cleanedType)) {
-    endpoint = "http://localhost:5050/PC_Model";
+    endpoint = "http://localhost:4000/PC_Model";
   } else if (cleanedType === "printer") {
-    endpoint = "http://localhost:5050/Printer_Model";
+    endpoint = "http://localhost:4000/Printer_Model";
   } else if (cleanedType === "scanner") {
-    endpoint = "http://localhost:5050/Scanner_Model";
+    endpoint = "http://localhost:4000/Scanner_Model";
   } else {
-    endpoint = `http://localhost:5050/models-by-type/${cleanedType}`;
+    endpoint = `http://localhost:4000/models-by-type/${cleanedType}`;
   }
 
   renderDropdownOptions({
@@ -459,7 +459,7 @@ deviceData.department = departmentFullName;
 
   console.log("📦 البيانات المرسلة:", deviceData);
 
-  fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
+  fetch(`http://localhost:4000/AddDevice/${deviceType}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
     body: JSON.stringify(deviceData)
@@ -578,7 +578,7 @@ function createLangAwareTransform(field) {
 
 function fetchScannerTypes() {
   renderDropdownOptions({
-    endpoint: "http://localhost:5050/Scanner_Types",
+    endpoint: "http://localhost:4000/Scanner_Types",
     containerId: "scanner-type-options",
     displayId: "selected-scanner-type",
     inputId: "scanner-type",
@@ -609,7 +609,7 @@ transformData: createLangAwareTransform("scanner_type"),
 
 function fetchPrinterTypes() {
   renderDropdownOptions({
-    endpoint: "http://localhost:5050/Printer_Types",
+    endpoint: "http://localhost:4000/Printer_Types",
     containerId: "printer-type-options",
     displayId: "selected-printer-type",
     inputId: "printer-type",
@@ -639,7 +639,7 @@ transformData: createLangAwareTransform("printer_type")
 
 function fetchInkTypes() {
   renderDropdownOptions({
-    endpoint: "http://localhost:5050/Ink_Types",
+    endpoint: "http://localhost:4000/Ink_Types",
     containerId: "ink-type-options",
     displayId: "selected-ink-type",
     inputId: "ink-type",
@@ -673,7 +673,7 @@ function isArabicText(text) {
 }
 
 function fetchDepartments(selectId = "section") {
-  const url = `http://localhost:5050/Departments`;
+  const url = `http://localhost:4000/Departments`;
 
   renderDropdownOptions({
     endpoint: url,
@@ -688,7 +688,7 @@ function fetchDepartments(selectId = "section") {
       const currentLang = languageManager.currentLang; // "ar" أو "en"
 console.log("currentLang:", currentLang);
       return items.map(item => {
-        const parts = (item.fullName || "").split("|");
+const parts = (item.name || "").split("|");
         const enPart = parts[0].trim();
         const arPart = parts.length > 1 ? parts[1].trim() : "";
 
@@ -703,7 +703,7 @@ console.log("currentLang:", currentLang);
 
         return {
           id: item.id,
-          fullName: item.fullName.trim(),
+fullName: item.name.trim(),
           name: displayName
         };
       });
@@ -791,7 +791,7 @@ function saveNewSection() {
   // ✅ إضافة جديدة
   console.log(`➕ Adding new section: "${combined}"`);
 
-  fetch("http://localhost:5050/add-department", {
+  fetch("http://localhost:4000/add-department", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -893,7 +893,7 @@ function saveNewSection() {
 
 function fetchDrives() {
   renderDropdownOptions({
-    endpoint: "http://localhost:5050/Hard_Drive_Types",
+    endpoint: "http://localhost:4000/Hard_Drive_Types",
     containerId: "drive-select-options",
     displayId: "selected-drive-select",
     inputId: "drive-select",
@@ -918,7 +918,7 @@ transformData: createLangAwareTransform("drive_type")
 
 function fetchCPU() {
   renderDropdownOptions({
-    endpoint: "http://localhost:5050/CPU_Types",
+    endpoint: "http://localhost:4000/CPU_Types",
     containerId: "cpu-select-options",
     displayId: "selected-cpu-select",
     inputId: "cpu-select",
@@ -942,7 +942,7 @@ function fetchCPU() {
 
 function fetchRAM() {
   renderDropdownOptions({
-    endpoint: "http://localhost:5050/RAM_Types",
+    endpoint: "http://localhost:4000/RAM_Types",
     containerId: "ram-select-options",
     displayId: "selected-ram-select",
     inputId: "ram-select",
@@ -967,7 +967,7 @@ function fetchRAM() {
 
 function fetchOS() {
   renderDropdownOptions({
-    endpoint: "http://localhost:5050/OS_Types",
+    endpoint: "http://localhost:4000/OS_Types",
     containerId: "os-select-options",
     displayId: "selected-os-select",
     inputId: "os-select",
@@ -992,7 +992,7 @@ function fetchOS() {
 
 function fetchProcessorGen() {
   renderDropdownOptions({
-    endpoint: "http://localhost:5050/Processor_Generations",
+    endpoint: "http://localhost:4000/Processor_Generations",
     containerId: "generation-select-options",
     displayId: "selected-generation-select",
     inputId: "generation-select",
@@ -1016,7 +1016,7 @@ function fetchProcessorGen() {
 }
 function fetchRAMSize() {
   renderDropdownOptions({
-    endpoint: "http://localhost:5050/RAM_Sizes",
+    endpoint: "http://localhost:4000/RAM_Sizes",
     containerId: "ram-size-select-options",
     displayId: "selected-ram-size-select",
     inputId: "ram-size-select",
@@ -1191,7 +1191,7 @@ function saveOptionForSelect() {
   // لا تضف أي تاجات لغة، فقط احفظ القيمة كما هي
   const value = rawValue;
 
-  fetch("http://localhost:5050/add-options-regular", {
+  fetch("http://localhost:4000/add-options-regular", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -1228,7 +1228,7 @@ function saveOptionForSelect() {
 async function fetchDeviceTypes() {
   const permissions = await checkUserPermissions();
 
-  fetch("http://localhost:5050/TypeProplem", {
+  fetch("http://localhost:4000/TypeProplem", {
     headers: {
       'Authorization': `Bearer ${localStorage.getItem('token')}`
     }
@@ -1472,7 +1472,7 @@ function saveNewTechnical() {
     return;
   }
   const rawName = `${en}|${ar}`;
-  fetch("http://localhost:5050/add-options-regular", {
+  fetch("http://localhost:4000/add-options-regular", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -1564,7 +1564,7 @@ function fetchDevicesBySection() {
     return;
   }
 
-  fetch(`http://localhost:5050/devices/${type}/${department}`)
+  fetch(`http://localhost:4000/devices/${type}/${department}`)
     .then(res => res.json())
     .then(data => {
       const dropdown = document.getElementById("device-spec");
@@ -1598,7 +1598,7 @@ async function fetchDeviceSpecsByTypeAndDepartment() {
   console.log("📤 القسم المرسل فعليًا حسب اللغة:", deptNameToSend);
 
   // … باقي الشيفرة تستدعي الـ fetch
-  fetch(`http://localhost:5050/devices/${type}/${encodeURIComponent(deptNameToSend)}`)
+  fetch(`http://localhost:4000/devices/${type}/${encodeURIComponent(deptNameToSend)}`)
 
   console.log("📤 القسم المرسل فعليًا حسب اللغة:", deptNameToSend);
 
@@ -1630,7 +1630,7 @@ async function fetchDeviceSpecsByTypeAndDepartment() {
   optionsContainer.appendChild(addNewRow);
 
   if (type === "all-devices") {
-    fetch(`http://localhost:5050/all-devices-specs`)
+    fetch(`http://localhost:4000/all-devices-specs`)
       .then(res => res.json())
       .then(data => {
         data.forEach(device => {
@@ -1654,7 +1654,7 @@ async function fetchDeviceSpecsByTypeAndDepartment() {
     return;
   }
 
-  fetch(`http://localhost:5050/devices/${type}/${encodeURIComponent(deptNameToSend)}`)
+  fetch(`http://localhost:4000/devices/${type}/${encodeURIComponent(deptNameToSend)}`)
     .then(res => res.json())
     .then(data => {
       if (!Array.isArray(data) || data.length === 0) {
@@ -1698,7 +1698,7 @@ async function fetchDeviceSpecsByTypeAndDepartment() {
                 return;
               }
               try {
-                const res = await fetch(`http://localhost:5050/device-spec/${deviceId}`, {
+                const res = await fetch(`http://localhost:4000/device-spec/${deviceId}`, {
                   headers: {
                     "Authorization": `Bearer ${localStorage.getItem("token")}`
                   }
@@ -2154,7 +2154,7 @@ async function submitNewDevice(data) {
   try {
     const token = localStorage.getItem('token');
 
-    const response = await fetch("http://localhost:5050/submit-new-device", {
+    const response = await fetch("http://localhost:4000/submit-new-device", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -2219,8 +2219,8 @@ async function deleteOption(selectId, valueOrObject, type = null) {
 
   const isDeviceSpec = selectId === "device-spec";
   const url = isDeviceSpec
-    ? "http://localhost:5050/delete-device-specification"
-    : "http://localhost:5050/delete-option-complete";
+    ? "http://localhost:4000/delete-device-specification"
+    : "http://localhost:4000/delete-option-complete";
 
   // تحديد إذا المستخدم مرر كائن جاهز (targetObject) أو قيمة تقليدية
   const body = typeof valueOrObject === "object" && (valueOrObject.id || valueOrObject.target)
@@ -2393,7 +2393,7 @@ function openGenericPopup(labelKey, targetId) {
   const cleanedType = deviceType?.trim().toLowerCase() || '';
 
   if (labelKey === "device_specifications") {
-    fetch("http://localhost:5050/Departments")
+    fetch("http://localhost:4000/Departments")
       .then(res => res.json())
       .then((departments) => {
         const isUnknownType = !["pc", "printer", "scanner", "desktop", "laptop", "كمبيوتر", "لابتوب"].includes(cleanedType);
@@ -2679,7 +2679,7 @@ function saveNewModel() {
   // لا تضف أي تاجات لغة، فقط احفظ القيمة كما هي
   const nameWithTag = modelName;
 
-  fetch("http://localhost:5050/add-device-model", {
+  fetch("http://localhost:4000/add-device-model", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -2821,7 +2821,7 @@ function saveDeviceSpecification() {
   };
 
 
-  fetch(`http://localhost:5050/AddDevice/${deviceType}`, {
+  fetch(`http://localhost:4000/AddDevice/${deviceType}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem('token')}` },
     body: JSON.stringify(specData)
@@ -2991,7 +2991,7 @@ function saveGenericOption() {
   const tag = isArabic ? "[ar]" : "[en]";
   const labeledValue = `${rawValue} ${tag}`;
 
-  fetch("http://localhost:5050/add-options-regular", {
+  fetch("http://localhost:4000/add-options-regular", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -3293,7 +3293,7 @@ async function getFullName(target, value) {
   try {
     console.log(`🔍 Fetching full name for ${target}: "${value}"`);
     
-    const response = await fetch("http://localhost:5050/get-full-name", {
+    const response = await fetch("http://localhost:4000/get-full-name", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -3407,7 +3407,7 @@ async function editOptionWithFullName(selectId, oldValue, newValue = null, type 
 
   // إرسال الطلب للباكند
   try {
-    const response = await fetch("http://localhost:5050/update-option-complete", {
+    const response = await fetch("http://localhost:4000/update-option-complete", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -3447,8 +3447,8 @@ async function editOption(selectId, updatedDevice, newValue = null, type = null)
 
   const isDeviceSpec = selectId === "device-spec";
   const url = isDeviceSpec
-    ? "http://localhost:5050/update-device-specification"
-    : "http://localhost:5050/update-option-complete";
+    ? "http://localhost:4000/update-device-specification"
+    : "http://localhost:4000/update-option-complete";
 
   let body;
   if (isDeviceSpec) {
