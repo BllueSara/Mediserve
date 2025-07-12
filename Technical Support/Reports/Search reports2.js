@@ -115,7 +115,7 @@ function updateReportStatus(reportId, selectElement) {
   const newStatus = selectElement.value;
   const ticketId = selectElement.getAttribute("data-ticket-id");
 
-  fetch(`http://localhost:5050/update-external-report-status/${reportId}`, {
+  fetch(`http://localhost:4000/update-external-report-status/${reportId}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -155,7 +155,7 @@ t = (key, fallback = '') => languageManager.translations[languageManager.current
 function loadExternalReports(page = 1) {
   const token = localStorage.getItem('token');
 
-  fetch(`http://localhost:5050/get-external-reports?page=${page}`, {
+  fetch(`http://localhost:4000/get-external-reports?page=${page}`, {
     headers: { 'Authorization': `Bearer ${token}` }
   })
     .then(res => res.json())
@@ -438,7 +438,7 @@ document.addEventListener("DOMContentLoaded", () => {
     console.warn("⚠️ filter-device-type not found in DOM!");
     return;
   }
-  fetch("http://localhost:5050/device-types")
+  fetch("http://localhost:4000/device-types")
     .then(res => res.json())
     .then(deviceTypes => {
       const known = ["pc", "printer", "scanner"];

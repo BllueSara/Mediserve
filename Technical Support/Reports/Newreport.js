@@ -4,11 +4,11 @@ window.addEventListener("DOMContentLoaded", () => {
   fillSelect("reportType", ["Incident Report", "Maintenance", "Other"]);
 
   Promise.all([
-  fetch("http://localhost:5050/TypeProplem", {
+  fetch("http://localhost:4000/TypeProplem", {
     headers: {
       'Authorization': `Bearer ${localStorage.getItem('token')}`
     }
-  })    .then(res => res.json()),    fetch("http://localhost:5050/ticket-status").then(res => res.json())
+  })    .then(res => res.json()),    fetch("http://localhost:4000/ticket-status").then(res => res.json())
   ])
 .then(([deviceRes, statuses]) => {
   fillSelect("deviceType", deviceRes.deviceTypes.map(t => t.DeviceType));
@@ -148,7 +148,7 @@ document.getElementById("report-form").addEventListener("submit", async (e) => {
   const token = localStorage.getItem('token');  // احفظ التوكن بعد تسجيل الدخول
 
   // الإرسال للسيرفر
-  fetch("http://localhost:5050/submit-new-report", {
+  fetch("http://localhost:4000/submit-new-report", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`
