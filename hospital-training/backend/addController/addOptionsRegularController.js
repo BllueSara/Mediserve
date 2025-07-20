@@ -1,6 +1,7 @@
 const db = require('../db');
 const { makeBilingualLog } = require('../utils/makeBilingualLog');
 
+<<<<<<< HEAD
 async function logActivity(userId, userName, action, details) {
   try {
     const [rows] = await db.promise().query('SELECT cancel_logs FROM user_permissions WHERE user_id = ?', [userId]);
@@ -17,6 +18,8 @@ async function logActivity(userId, userName, action, details) {
   await db.promise().query(sql, [userId, userName, action, details]);
 }
 
+=======
+>>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
 exports.addOptionsRegular = (req, res) => {
   const { target, value, type } = req.body;
   const userId = req.user?.id;
@@ -174,10 +177,27 @@ const tableMap = {
           const logAction = mapping.action;
           const logTable = mapping.tableLabel;
 
+<<<<<<< HEAD
           logActivity(userId, userName, makeBilingualLog(logAction.en, logAction.ar), makeBilingualLog(
             `Added '${value}' to '${logTable.en}'`,
             `تمت إضافة '${value}' إلى '${logTable.ar}'`
           )).catch(logErr => {
+=======
+          const logQuery = `
+            INSERT INTO Activity_Logs (user_id, user_name, action, details)
+            VALUES (?, ?, ?, ?)
+          `;
+          const logValues = [
+            userId,
+            userName,
+            JSON.stringify(makeBilingualLog(logAction.en, logAction.ar)),
+            JSON.stringify(makeBilingualLog(
+              `Added '${value}' to '${logTable.en}'`,
+              `تمت إضافة '${value}' إلى '${logTable.ar}'`
+            ))
+          ];
+          db.query(logQuery, logValues, (logErr) => {
+>>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
             if (logErr) console.error("❌ Logging failed:", logErr);
           });
         }

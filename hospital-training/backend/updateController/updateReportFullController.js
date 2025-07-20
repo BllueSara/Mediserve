@@ -823,7 +823,11 @@ if (isPrinter && serial_number && modelId) {
 
 // 1) جهّز scannerTypeId مضبوط:
  if (device_type === "scanner") {
+<<<<<<< HEAD
    // خذ القيمة القديدة أو الجديدة
+=======
+   // خذ القيمة القديمة أو الجديدة
+>>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
    let scannerTypeId = Number(updatedData.scanner_type_id);
    // لو ما عندنا ID صالح لكن عندنا اسم جديد:
    if ((!scannerTypeId || isNaN(scannerTypeId)) && updatedData.scanner_type) {
@@ -940,7 +944,11 @@ if (changes.length > 0) {
     const field = match ? match[1].trim() : "";
     const label = fieldLabelMap[field] || { en: field, ar: field };
   
+<<<<<<< HEAD
     await logActivity(
+=======
+    logActivity(
+>>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
       userId,
       userName,
       JSON.stringify(makeBilingualLog("Edited", "تعديل")),
@@ -1076,6 +1084,7 @@ async function getOrCreateDepartment(rawDept) {
   // 🔁 دوال المساعدة
 
   
+<<<<<<< HEAD
   async function logActivity(userId, userName, action, details) {
     try {
       const [rows] = await db.promise().query('SELECT cancel_logs FROM user_permissions WHERE user_id = ?', [userId]);
@@ -1091,6 +1100,12 @@ async function getOrCreateDepartment(rawDept) {
     const sql = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
     db.query(sql, [userId, userName, action, details], (err) => {
       if (err) console.error('❌ Error logging activity:', err);
+=======
+  function logActivity(userId, userName, action, details) {
+    const query = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
+    db.query(query, [userId, userName, action, details], (err) => {
+      if (err) console.error("❌ Failed to log activity:", err);
+>>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
     });
   }
   

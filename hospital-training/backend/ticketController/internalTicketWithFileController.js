@@ -9,6 +9,7 @@ const {
   getUserNameById
 } = require('../maintanceController/helpers');
 
+<<<<<<< HEAD
 async function logActivity(userId, userName, action, details) {
   try {
     const [rows] = await db.promise().query('SELECT cancel_logs FROM user_permissions WHERE user_id = ?', [userId]);
@@ -25,6 +26,8 @@ async function logActivity(userId, userName, action, details) {
   await db.promise().query(sql, [userId, userName, action, details]);
 }
 
+=======
+>>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
 const internalTicketWithFileController = async (req, res) => {
   const userId = req.user.id;
   const {
@@ -143,13 +146,26 @@ const internalTicketWithFileController = async (req, res) => {
           }
         }
 
+<<<<<<< HEAD
         await logActivity(userId, userName,
+=======
+        await queryAsync(`
+          INSERT INTO Activity_Logs (user_id, user_name, action, details)
+          VALUES (?, ?, ?, ?)
+        `, [
+          userId,
+          userName,
+>>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
           JSON.stringify(makeBilingualLog('Submitted Internal Ticket', 'إرسال تذكرة داخلية')),
           JSON.stringify(makeBilingualLog(
             `Internal ticket submitted (${generatedTicketNumber}) with report`,
             `تم إرسال تذكرة داخلية (${generatedTicketNumber}) مع تقرير`
           ))
+<<<<<<< HEAD
         );
+=======
+        ]);
+>>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
 
         res.status(201).json({
           message: "✅ Internal ticket and report created",

@@ -11,10 +11,14 @@ const updatePermissionsController = (req, res) => {
     delete_items,
     check_logs,
     edit_permission,
+<<<<<<< HEAD
     share_items,
     cancel_emails,
     cancel_notifications,
     cancel_logs
+=======
+    share_items
+>>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
   } = req.body;
 
   const sql = `
@@ -28,12 +32,18 @@ const updatePermissionsController = (req, res) => {
       delete_items,
       check_logs,
       edit_permission,
+<<<<<<< HEAD
       share_items,
       cancel_emails,
       cancel_notifications,
       cancel_logs
     )
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+=======
+      share_items
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+>>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
     ON DUPLICATE KEY UPDATE
       device_access = VALUES(device_access),
       full_access = VALUES(full_access),
@@ -43,10 +53,14 @@ const updatePermissionsController = (req, res) => {
       delete_items = VALUES(delete_items),
       check_logs = VALUES(check_logs),
       edit_permission = VALUES(edit_permission),
+<<<<<<< HEAD
       share_items = VALUES(share_items),
       cancel_emails = VALUES(cancel_emails),
       cancel_notifications = VALUES(cancel_notifications),
       cancel_logs = VALUES(cancel_logs)
+=======
+      share_items = VALUES(share_items)
+>>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
   `;
 
   const values = [
@@ -59,10 +73,14 @@ const updatePermissionsController = (req, res) => {
     delete_items,
     check_logs,
     edit_permission,
+<<<<<<< HEAD
     share_items,
     cancel_emails,
     cancel_notifications,
     cancel_logs
+=======
+    share_items
+>>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
   ];
 
   db.query(sql, values, (err) => {

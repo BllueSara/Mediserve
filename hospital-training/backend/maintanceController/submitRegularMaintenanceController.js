@@ -11,6 +11,7 @@ const {
   generateNumber
 } = require('./helpers');
 
+<<<<<<< HEAD
 async function logActivity(userId, userName, action, details) {
   try {
     const [rows] = await db.promise().query('SELECT cancel_logs FROM user_permissions WHERE user_id = ?', [userId]);
@@ -27,6 +28,8 @@ async function logActivity(userId, userName, action, details) {
   await db.promise().query(sql, [userId, userName, action, details]);
 }
 
+=======
+>>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
 const submitRegularMaintenanceController = async (req, res) => {
   const userId = req.user.id;
   const {
@@ -243,10 +246,25 @@ const submitRegularMaintenanceController = async (req, res) => {
         );
       }
     }
+<<<<<<< HEAD
     await logActivity(userId, userName, JSON.stringify(makeBilingualLog('Submitted Regular Maintenance', 'إرسال صيانة دورية')), JSON.stringify(makeBilingualLog(
       `Submitted regular maintenance for a ${deviceInfo.device_type} | Device: ${deviceInfo.device_name} | Serial: ${deviceInfo.serial_number} | Governmental No.: ${deviceInfo.governmental_number}`,
       `تم إرسال صيانة دورية لجهاز ${deviceInfo.device_type} - اسم الجهاز: ${deviceInfo.device_name} - سيريال: ${deviceInfo.serial_number} - الرقم الحكومي: ${deviceInfo.governmental_number}`
     )));
+=======
+    await queryAsync(`
+      INSERT INTO Activity_Logs (user_id, user_name, action, details)
+      VALUES (?, ?, ?, ?)
+    `, [
+      userId,
+      userName,
+      JSON.stringify(makeBilingualLog('Submitted Regular Maintenance', 'إرسال صيانة دورية')),
+      JSON.stringify(makeBilingualLog(
+        `Submitted regular maintenance for a ${deviceInfo.device_type} | Device: ${deviceInfo.device_name} | Serial: ${deviceInfo.serial_number} | Governmental No.: ${deviceInfo.governmental_number}`,
+        `تم إرسال صيانة دورية لجهاز ${deviceInfo.device_type} - اسم الجهاز: ${deviceInfo.device_name} - سيريال: ${deviceInfo.serial_number} - الرقم الحكومي: ${deviceInfo.governmental_number}`
+      ))
+    ]);
+>>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
     res.json({ message: "✅ Regular maintenance, ticket, and reports created successfully." });
   } catch (error) {
     console.error("❌ Error in regular maintenance submission:", error);

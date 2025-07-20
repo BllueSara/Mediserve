@@ -169,6 +169,7 @@ exports.addOptionGeneral = (req, res) => {
       res.json({ message: `✅ ${value} added to ${mapping.table}`, insertedId: result.insertId });
     });
   });
+<<<<<<< HEAD
 };
 
 async function logActivity(userId, userName, action, details) {
@@ -186,3 +187,6 @@ async function logActivity(userId, userName, action, details) {
   const sql = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
   await db.promise().query(sql, [userId, userName, action, details]);
 } 
+=======
+}; 
+>>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45

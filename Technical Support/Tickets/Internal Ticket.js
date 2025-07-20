@@ -420,8 +420,13 @@ function updatePopupHeadingAndFields(type) {
           <input type="text" name="mac-address" required>
         </div>
         <div class="form-field">
+<<<<<<< HEAD
           <label>${t['ip_address']}</label>
           <input type="text" name="ip-address">
+=======
+          <label>${labelWithStar(t['ip_address'], true)}</label>
+          <input type="text" name="ip-address" required>
+>>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
         </div>
       `;
     }
