@@ -4,11 +4,20 @@ const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = 'super_secret_key_123';
 
-function makeBilingualLog(en, ar) {
+ function makeBilingualLog(en, ar) {
   return { en, ar };
 }
 
-function logActivity(userId, userName, action, details) {
+async function logActivity(userId, userName, action, details) {
+  try {
+    const [rows] = await db.promise().query('SELECT cancel_logs FROM user_permissions WHERE user_id = ?', [userId]);
+    if (rows.length && rows[0].cancel_logs) {
+      console.log(`🚫 Logging canceled for user ${userId} due to cancel_logs permission.`);
+      return;
+    }
+  } catch (err) {
+    console.error('❌ Error checking cancel_logs permission:', err);
+  }
   if (typeof action === 'object') action = JSON.stringify(action);
   if (typeof details === 'object') details = JSON.stringify(details);
   const sql = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
@@ -17,7 +26,7 @@ function logActivity(userId, userName, action, details) {
   });
 }
 
-const registerController = async (req, res) => {
+async function registerController(req, res) {
   const { name, email, password, phone, department, employee_id } = req.body;
   const isAdmin = name?.toLowerCase() === 'admin|مشرف';
   const isEngineer = department?.toLowerCase().includes('technology') || department?.includes('تقنية');
@@ -69,7 +78,7 @@ const registerController = async (req, res) => {
           isAdmin ? null : employee_id,
           role
         ];
-        db.query(sql, values, (err, result) => {
+        db.query(sql, values, async (err, result) => {
           if (err) return res.status(500).json({ message: 'Error saving user' });
           const userId = result.insertId;
           const defaultPermissions = {
@@ -118,15 +127,7 @@ const registerController = async (req, res) => {
             });
           }
           const token = jwt.sign({ id: userId, role }, JWT_SECRET, { expiresIn: '1d' });
-          logActivity(
-            userId,
-            name,
-            makeBilingualLog('Register', 'تسجيل مستخدم'),
-            makeBilingualLog(
-              `User ${name} created an account using ${email}`,
-              `قام المستخدم ${name} بإنشاء حساب باستخدام البريد الإلكتروني ${email}`
-            )
-          );
+          await logActivity(userId, name, makeBilingualLog('Register', 'تسجيل مستخدم جديد'), makeBilingualLog(`User ${name} registered.`, `تم تسجيل المستخدم ${name}.`));
           res.status(201).json({
             message: 'User registered successfully',
             token,

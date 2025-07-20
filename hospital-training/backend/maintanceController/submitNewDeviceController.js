@@ -6,6 +6,22 @@ const {
   getUserNameById
 } = require('./helpers');
 
+async function logActivity(userId, userName, action, details) {
+  try {
+    const [rows] = await db.promise().query('SELECT cancel_logs FROM user_permissions WHERE user_id = ?', [userId]);
+    if (rows.length && rows[0].cancel_logs) {
+      console.log(`🚫 Logging canceled for user ${userId} due to cancel_logs permission.`);
+      return;
+    }
+  } catch (err) {
+    console.error('❌ Error checking cancel_logs permission:', err);
+  }
+  if (typeof action === 'object') action = JSON.stringify(action);
+  if (typeof details === 'object') details = JSON.stringify(details);
+  const sql = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
+  await db.promise().query(sql, [userId, userName, action, details]);
+}
+
 const submitNewDeviceController = async (req, res) => {
   const userId = req.user.id;
   const {
@@ -43,18 +59,10 @@ const submitNewDeviceController = async (req, res) => {
       return res.status(400).json({ error: `❌ القسم المختار لا يطابق قسم الجهاز المحفوظ` });
     }
     const userName = await getUserNameById(userId);
-    await queryAsync(`
-      INSERT INTO Activity_Logs (user_id, user_name, action, details)
-      VALUES (?, ?, ?, ?)
-    `, [
-      userId,
-      userName,
-      JSON.stringify(makeBilingualLog('Used Existing Device', 'استخدام جهاز محفوظ')),
-      JSON.stringify(makeBilingualLog(
+    await logActivity(userId, userName, JSON.stringify(makeBilingualLog('Used Existing Device', 'استخدام جهاز محفوظ')), JSON.stringify(makeBilingualLog(
         `Used existing device (ID: ${device.id}) - Type: ${device.device_type} - Department: ${device.department_name}`,
         `تم استخدام جهاز محفوظ مسبقًا (المعرف: ${device.id}) - النوع: ${device.device_type} - القسم: ${device.department_name}`
-      ))
-    ]);
+      )));
     res.json({ message: "✅ تم استخدام الجهاز المحفوظ بنجاح." });
   } catch (err) {
     console.error("❌ Error using existing device:", err);

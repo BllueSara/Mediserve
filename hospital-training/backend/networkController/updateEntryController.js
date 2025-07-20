@@ -1,6 +1,22 @@
 const db = require("../db");
 // إذا احتجت إشعار استورد من notificationUtils
 
+async function logActivity(userId, userName, action, details) {
+  try {
+    const [rows] = await db.promise().query('SELECT cancel_logs FROM user_permissions WHERE user_id = ?', [userId]);
+    if (rows.length && rows[0].cancel_logs) {
+      console.log(`🚫 Logging canceled for user ${userId} due to cancel_logs permission.`);
+      return;
+    }
+  } catch (err) {
+    console.error('❌ Error checking cancel_logs permission:', err);
+  }
+  if (typeof action === 'object') action = JSON.stringify(action);
+  if (typeof details === 'object') details = JSON.stringify(details);
+  const sql = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
+  await db.promise().query(sql, [userId, userName, action, details]);
+}
+
 const updateEntryController = async (req, res) => {
   const entryId = req.params.id;
   const { circuit, isp, location, ip, speed, start_date, end_date } = req.body;
@@ -73,15 +89,7 @@ const updateEntryController = async (req, res) => {
         return `[${label.en}|${label.ar}]`;
       }).join(', ');
 
-      await conn.query(`
-        INSERT INTO Activity_Logs (user_id, user_name, action, details)
-        VALUES (?, ?, ?, ?)
-      `, [
-        userId,
-        userName,
-        `[${actionLabelMap["Updated Department"].en}|${actionLabelMap["Updated Department"].ar}]`,
-        `Changed department to '[${location}|${location}]' for IP [${ip}|${ip}] in: ${logTables}`
-      ]);
+      await logActivity(userId, userName, `[${actionLabelMap["Updated Department"].en}|${actionLabelMap["Updated Department"].ar}]`, `Changed department to '[${location}|${location}]' for IP [${ip}|${ip}] in: ${logTables}`);
     }
 
     // Log entry field changes
@@ -100,15 +108,7 @@ const updateEntryController = async (req, res) => {
         return change;
       });
 
-      await conn.query(`
-        INSERT INTO Activity_Logs (user_id, user_name, action, details)
-        VALUES (?, ?, ?, ?)
-      `, [
-        userId,
-        userName,
-        `[${actionLabelMap["Edited Entry"].en}|${actionLabelMap["Edited Entry"].ar}]`,
-        `Edited entry ID [${entryId}|${entryId}]:\n- ${bilingualChanges.join('\n- ')}`
-      ]);
+      await logActivity(userId, userName, `[${actionLabelMap["Edited Entry"].en}|${actionLabelMap["Edited Entry"].ar}]`, `Edited entry ID [${entryId}|${entryId}]:\n- ${bilingualChanges.join('\n- ')}`);
     }
     res.json({ message: `✅ Entry updated.` });
   } catch (err) {

@@ -7,6 +7,22 @@ const {
   getUserNameById
 } = require('./helpers');
 
+async function logActivity(userId, userName, action, details) {
+  try {
+    const [rows] = await db.promise().query('SELECT cancel_logs FROM user_permissions WHERE user_id = ?', [userId]);
+    if (rows.length && rows[0].cancel_logs) {
+      console.log(`🚫 Logging canceled for user ${userId} due to cancel_logs permission.`);
+      return;
+    }
+  } catch (err) {
+    console.error('❌ Error checking cancel_logs permission:', err);
+  }
+  if (typeof action === 'object') action = JSON.stringify(action);
+  if (typeof details === 'object') details = JSON.stringify(details);
+  const sql = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
+  await db.promise().query(sql, [userId, userName, action, details]);
+}
+
 const submitExternalMaintenanceController =  async (req, res) => {
   const userId = req.user.id;
   const {
@@ -134,18 +150,13 @@ const submitExternalMaintenanceController =  async (req, res) => {
       );
     }
 
-    await queryAsync(`
-      INSERT INTO Activity_Logs (user_id, user_name, action, details)
-      VALUES (?, ?, ?, ?)
-    `, [
-      userId,
-      userName,
+    await logActivity(userId, userName, 
       JSON.stringify(makeBilingualLog('Submitted External Maintenance', 'إرسال صيانة خارجية')),
       JSON.stringify(makeBilingualLog(
         `Submitted external maintenance for a ${deviceInfo.device_type} | Device Name: ${deviceInfo.device_name} | Serial: ${deviceInfo.serial_number} | Governmental No.: ${deviceInfo.governmental_number}`,
         `تم إرسال صيانة خارجية لجهاز ${deviceInfo.device_type} - اسم الجهاز: ${deviceInfo.device_name} - سيريال: ${deviceInfo.serial_number} - الرقم الحكومي: ${deviceInfo.governmental_number}`
       ))
-    ]);
+    );
 
     res.json({ message: "✅ External maintenance, ticket summary, and notifications saved successfully." });
   } catch (error) {

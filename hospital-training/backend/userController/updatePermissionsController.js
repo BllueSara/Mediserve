@@ -11,7 +11,10 @@ const updatePermissionsController = (req, res) => {
     delete_items,
     check_logs,
     edit_permission,
-    share_items
+    share_items,
+    cancel_emails,
+    cancel_notifications,
+    cancel_logs
   } = req.body;
 
   const sql = `
@@ -25,9 +28,12 @@ const updatePermissionsController = (req, res) => {
       delete_items,
       check_logs,
       edit_permission,
-      share_items
+      share_items,
+      cancel_emails,
+      cancel_notifications,
+      cancel_logs
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON DUPLICATE KEY UPDATE
       device_access = VALUES(device_access),
       full_access = VALUES(full_access),
@@ -37,7 +43,10 @@ const updatePermissionsController = (req, res) => {
       delete_items = VALUES(delete_items),
       check_logs = VALUES(check_logs),
       edit_permission = VALUES(edit_permission),
-      share_items = VALUES(share_items)
+      share_items = VALUES(share_items),
+      cancel_emails = VALUES(cancel_emails),
+      cancel_notifications = VALUES(cancel_notifications),
+      cancel_logs = VALUES(cancel_logs)
   `;
 
   const values = [
@@ -50,7 +59,10 @@ const updatePermissionsController = (req, res) => {
     delete_items,
     check_logs,
     edit_permission,
-    share_items
+    share_items,
+    cancel_emails,
+    cancel_notifications,
+    cancel_logs
   ];
 
   db.query(sql, values, (err) => {

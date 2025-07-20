@@ -5,6 +5,22 @@ function removeLangTag(str) {
   return typeof str === "string" ? str.replace(/\s*\[(ar|en)\]$/i, "").trim() : str;
 }
 
+async function logActivity(userId, userName, action, details) {
+  try {
+    const [rows] = await db.promise().query('SELECT cancel_logs FROM user_permissions WHERE user_id = ?', [userId]);
+    if (rows.length && rows[0].cancel_logs) {
+      console.log(`🚫 Logging canceled for user ${userId} due to cancel_logs permission.`);
+      return;
+    }
+  } catch (err) {
+    console.error('❌ Error checking cancel_logs permission:', err);
+  }
+  if (typeof action === 'object') action = JSON.stringify(action);
+  if (typeof details === 'object') details = JSON.stringify(details);
+  const sql = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
+  await db.promise().query(sql, [userId, userName, action, details]);
+}
+
 exports.addDevice = async (req, res) => {
   const deviceType = req.params.type.toLowerCase();
   const Serial_Number = req.body.serial;
@@ -133,17 +149,10 @@ exports.addDevice = async (req, res) => {
       db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
         if (!errUser && resultUser.length > 0) {
           const userName = resultUser[0].name;
-          const logQuery = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
-          const logValues = [
-            userId,
-            userName,
-            JSON.stringify(makeBilingualLog("Add Device", "إضافة جهاز")),
-            JSON.stringify(makeBilingualLog(
-              `Added '${deviceType}' with serial '${Serial_Number}'`,
-              `تمت إضافة جهاز من النوع '${deviceType}' برقم سيريال '${Serial_Number}'`
-            ))
-          ];
-          db.query(logQuery, logValues);
+          logActivity(userId, userName, JSON.stringify(makeBilingualLog("Add Device", "إضافة جهاز")), JSON.stringify(makeBilingualLog(
+            `Added '${deviceType}' with serial '${Serial_Number}'`,
+            `تمت إضافة جهاز من النوع '${deviceType}' برقم سيريال '${Serial_Number}'`
+          )));
         }
       });
     }

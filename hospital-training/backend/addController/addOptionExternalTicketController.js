@@ -1,6 +1,22 @@
 const db = require('../db');
 const { makeBilingualLog } = require('../utils/makeBilingualLog');
 
+async function logActivity(userId, userName, action, details) {
+  try {
+    const [rows] = await db.promise().query('SELECT cancel_logs FROM user_permissions WHERE user_id = ?', [userId]);
+    if (rows.length && rows[0].cancel_logs) {
+      console.log(`🚫 Logging canceled for user ${userId} due to cancel_logs permission.`);
+      return;
+    }
+  } catch (err) {
+    console.error('❌ Error checking cancel_logs permission:', err);
+  }
+  if (typeof action === 'object') action = JSON.stringify(action);
+  if (typeof details === 'object') details = JSON.stringify(details);
+  const sql = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
+  await db.promise().query(sql, [userId, userName, action, details]);
+}
+
 exports.addOptionExternalTicket = async (req, res) => {
   try {
     const { target, value } = req.body;
@@ -46,8 +62,7 @@ exports.addOptionExternalTicket = async (req, res) => {
     db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
       if (!errUser && resultUser.length > 0) {
         const userName = resultUser[0].name;
-        const logQuery = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
-        const logValues = [
+        logActivity(
           userId,
           userName,
           JSON.stringify(makeBilingualLog(
@@ -58,10 +73,7 @@ exports.addOptionExternalTicket = async (req, res) => {
             `Added '${value}' to ${labelMap[target]?.en || target}`,
             `تمت إضافة '${value}' إلى ${labelMap[target]?.ar || target}`
           ))
-        ];
-        db.query(logQuery, logValues, (logErr) => {
-          if (logErr) console.error("❌ Logging failed:", logErr);
-        });
+        );
       }
     });
     return res.json({ message: `✅ Successfully added ${value} to ${target}` });

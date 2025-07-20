@@ -11,6 +11,22 @@ const {
   generateNumber
 } = require('./helpers');
 
+async function logActivity(userId, userName, action, details) {
+  try {
+    const [rows] = await db.promise().query('SELECT cancel_logs FROM user_permissions WHERE user_id = ?', [userId]);
+    if (rows.length && rows[0].cancel_logs) {
+      console.log(`🚫 Logging canceled for user ${userId} due to cancel_logs permission.`);
+      return;
+    }
+  } catch (err) {
+    console.error('❌ Error checking cancel_logs permission:', err);
+  }
+  if (typeof action === 'object') action = JSON.stringify(action);
+  if (typeof details === 'object') details = JSON.stringify(details);
+  const sql = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
+  await db.promise().query(sql, [userId, userName, action, details]);
+}
+
 const submitRegularMaintenanceController = async (req, res) => {
   const userId = req.user.id;
   const {
@@ -227,18 +243,10 @@ const submitRegularMaintenanceController = async (req, res) => {
         );
       }
     }
-    await queryAsync(`
-      INSERT INTO Activity_Logs (user_id, user_name, action, details)
-      VALUES (?, ?, ?, ?)
-    `, [
-      userId,
-      userName,
-      JSON.stringify(makeBilingualLog('Submitted Regular Maintenance', 'إرسال صيانة دورية')),
-      JSON.stringify(makeBilingualLog(
-        `Submitted regular maintenance for a ${deviceInfo.device_type} | Device: ${deviceInfo.device_name} | Serial: ${deviceInfo.serial_number} | Governmental No.: ${deviceInfo.governmental_number}`,
-        `تم إرسال صيانة دورية لجهاز ${deviceInfo.device_type} - اسم الجهاز: ${deviceInfo.device_name} - سيريال: ${deviceInfo.serial_number} - الرقم الحكومي: ${deviceInfo.governmental_number}`
-      ))
-    ]);
+    await logActivity(userId, userName, JSON.stringify(makeBilingualLog('Submitted Regular Maintenance', 'إرسال صيانة دورية')), JSON.stringify(makeBilingualLog(
+      `Submitted regular maintenance for a ${deviceInfo.device_type} | Device: ${deviceInfo.device_name} | Serial: ${deviceInfo.serial_number} | Governmental No.: ${deviceInfo.governmental_number}`,
+      `تم إرسال صيانة دورية لجهاز ${deviceInfo.device_type} - اسم الجهاز: ${deviceInfo.device_name} - سيريال: ${deviceInfo.serial_number} - الرقم الحكومي: ${deviceInfo.governmental_number}`
+    )));
     res.json({ message: "✅ Regular maintenance, ticket, and reports created successfully." });
   } catch (error) {
     console.error("❌ Error in regular maintenance submission:", error);

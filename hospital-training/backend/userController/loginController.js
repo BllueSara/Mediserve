@@ -8,7 +8,18 @@ function makeBilingualLog(en, ar) {
   return { en, ar };
 }
 
-function logActivity(userId, userName, action, details) {
+async function logActivity(userId, userName, action, details) {
+  // Check cancel_logs permission
+  try {
+    const [rows] = await db.promise().query('SELECT cancel_logs FROM user_permissions WHERE user_id = ?', [userId]);
+    if (rows.length && rows[0].cancel_logs) {
+      console.log(`🚫 Logging canceled for user ${userId} due to cancel_logs permission.`);
+      return;
+    }
+  } catch (err) {
+    console.error('❌ Error checking cancel_logs permission:', err);
+    // If error, proceed with logging to avoid losing logs
+  }
   if (typeof action === 'object') action = JSON.stringify(action);
   if (typeof details === 'object') details = JSON.stringify(details);
   const sql = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
@@ -54,7 +65,7 @@ const loginController = (req, res) => {
         return res.status(403).json({ message: t.inactive });
       }
       const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
-      logActivity(
+      await logActivity(
         user.id,
         user.name,
         makeBilingualLog('Login', 'تسجيل دخول'),

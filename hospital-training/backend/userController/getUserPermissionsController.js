@@ -15,10 +15,18 @@ const getUserPermissionsController = (req, res) => {
         delete_items: false,
         check_logs: false,
         edit_permission: false,
-        share_items: false
+        share_items: false,
+        cancel_emails: false,
+        cancel_notifications: false,
+        cancel_logs: false
       });
     }
-    res.json(results[0]);
+    // Ensure new fields are present in the result (for backward compatibility)
+    const perms = results[0];
+    perms.cancel_emails = perms.cancel_emails || false;
+    perms.cancel_notifications = perms.cancel_notifications || false;
+    perms.cancel_logs = perms.cancel_logs || false;
+    res.json(perms);
   });
 };
 

@@ -300,9 +300,22 @@ function cleanEmailText(text, lang = 'ar') {
 
   return rawMessage.trim();
 }
+// Helper to get user permissions
+async function getUserPermissions(userId) {
+  const [rows] = await db.promise().query('SELECT * FROM user_permissions WHERE user_id = ?', [userId]);
+  if (!rows.length) return {};
+  return rows[0];
+}
+
 // وظيفة إرسال البريد الإلكتروني للإشعارات
 async function sendNotificationEmail(userId, notificationMessage, notificationType, lang = 'ar') {
   try {
+    // جلب صلاحيات المستخدم
+    const perms = await getUserPermissions(userId);
+    if (perms.cancel_emails) {
+      console.log(`🚫 Email sending canceled for user ${userId} due to cancel_emails permission.`);
+      return false;
+    }
     // جلب معلومات المستخدم
     const [userResult] = await db.promise().query('SELECT name, email FROM users WHERE id = ?', [userId]);
     
@@ -473,9 +486,14 @@ async function sendNotificationEmail(userId, notificationMessage, notificationTy
 // وظيفة إنشاء إشعار مع إرسال البريد الإلكتروني
 async function createNotificationWithEmail(userId, message, type, lang = 'ar') {
   try {
-    // إنشاء الإشعار في قاعدة البيانات
-    await db.promise().query(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [userId, message, type]);
-
+    // جلب صلاحيات المستخدم
+    const perms = await getUserPermissions(userId);
+    if (!perms.cancel_notifications) {
+      // إنشاء الإشعار في قاعدة البيانات
+      await db.promise().query(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [userId, message, type]);
+    } else {
+      console.log(`🚫 Notification creation canceled for user ${userId} due to cancel_notifications permission.`);
+    }
     // إرسال البريد الإلكتروني في الخلفية باستخدام setImmediate
     setImmediate(() => {
       sendNotificationEmail(userId, message, type, lang).catch(error => {

@@ -1,9 +1,20 @@
 const db = require('../db');
 
-function logActivity(userId, userName, action, details) {
-  const query = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
-  db.query(query, [userId, userName, action, details], (err) => {
-    if (err) console.error("❌ Failed to log activity:", err);
+async function logActivity(userId, userName, action, details) {
+  try {
+    const [rows] = await db.promise().query('SELECT cancel_logs FROM user_permissions WHERE user_id = ?', [userId]);
+    if (rows.length && rows[0].cancel_logs) {
+      console.log(`🚫 Logging canceled for user ${userId} due to cancel_logs permission.`);
+      return;
+    }
+  } catch (err) {
+    console.error('❌ Error checking cancel_logs permission:', err);
+  }
+  if (typeof action === 'object') action = JSON.stringify(action);
+  if (typeof details === 'object') details = JSON.stringify(details);
+  const sql = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
+  db.query(sql, [userId, userName, action, details], (err) => {
+    if (err) console.error('❌ Error logging activity:', err);
   });
 }
 
@@ -294,7 +305,7 @@ const deleteOptionCompleteController = async (req, res) => {
     const userId = req.user?.id;
     const [userRow] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
     const userName = userRow[0]?.name || 'Unknown';
-    logActivity(
+    await logActivity(
       userId,
       userName,
       JSON.stringify(makeBilingualLog("Deleted", "حذف")),
