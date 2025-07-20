@@ -10,15 +10,12 @@ const languageManager = {
             'logs': 'Logs',
             'language': 'Language',
             'current_language': 'English',
-<<<<<<< HEAD
                         'cancel_emails': 'Cancel Emails',
             'can_cancel_emails': 'Can cancel emails',
             'cancel_notifications': 'Cancel Notifications',
             'can_cancel_notifications': 'Can cancel notifications',
             'cancel_logs': 'Cancel Logs',
             'can_cancel_logs': 'Can cancel logs',
-=======
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
             'english': 'English',
             'arabic': 'Arabic',
             'back': 'Back',
@@ -1272,15 +1269,12 @@ const languageManager = {
             'can_edit_permission': 'يمكنه تعديل الصلاحيات',
             'share_items': 'مشاركة العناصر',
             'can_share': 'يمكنه مشاركة العناصر',
-<<<<<<< HEAD
             'cancel_emails': 'إلغاء الإيميلات',
             'can_cancel_emails': 'يمكنه إلغاء الإيميلات',
             'cancel_notifications': 'إلغاء الإشعارات',
             'can_cancel_notifications': 'يمكنه إلغاء الإشعارات',
             'cancel_logs': 'إلغاء السجلات',
             'can_cancel_logs': 'يمكنه إلغاء السجلات',
-=======
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
             // Dashboard Page
             'server_status': 'حالة الخادم',
             'active_servers': 'الخوادم النشطة',

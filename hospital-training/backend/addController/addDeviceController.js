@@ -5,7 +5,6 @@ function removeLangTag(str) {
   return typeof str === "string" ? str.replace(/\s*\[(ar|en)\]$/i, "").trim() : str;
 }
 
-<<<<<<< HEAD
 async function logActivity(userId, userName, action, details) {
   try {
     const [rows] = await db.promise().query('SELECT cancel_logs FROM user_permissions WHERE user_id = ?', [userId]);
@@ -22,8 +21,6 @@ async function logActivity(userId, userName, action, details) {
   await db.promise().query(sql, [userId, userName, action, details]);
 }
 
-=======
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
 exports.addDevice = async (req, res) => {
   const deviceType = req.params.type.toLowerCase();
   const Serial_Number = req.body.serial;
@@ -152,24 +149,10 @@ exports.addDevice = async (req, res) => {
       db.query("SELECT name FROM users WHERE id = ?", [userId], (errUser, resultUser) => {
         if (!errUser && resultUser.length > 0) {
           const userName = resultUser[0].name;
-<<<<<<< HEAD
           logActivity(userId, userName, JSON.stringify(makeBilingualLog("Add Device", "إضافة جهاز")), JSON.stringify(makeBilingualLog(
             `Added '${deviceType}' with serial '${Serial_Number}'`,
             `تمت إضافة جهاز من النوع '${deviceType}' برقم سيريال '${Serial_Number}'`
           )));
-=======
-          const logQuery = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
-          const logValues = [
-            userId,
-            userName,
-            JSON.stringify(makeBilingualLog("Add Device", "إضافة جهاز")),
-            JSON.stringify(makeBilingualLog(
-              `Added '${deviceType}' with serial '${Serial_Number}'`,
-              `تمت إضافة جهاز من النوع '${deviceType}' برقم سيريال '${Serial_Number}'`
-            ))
-          ];
-          db.query(logQuery, logValues);
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
         }
       });
     }

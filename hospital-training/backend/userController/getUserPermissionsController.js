@@ -15,7 +15,6 @@ const getUserPermissionsController = (req, res) => {
         delete_items: false,
         check_logs: false,
         edit_permission: false,
-<<<<<<< HEAD
         share_items: false,
         cancel_emails: false,
         cancel_notifications: false,
@@ -28,12 +27,6 @@ const getUserPermissionsController = (req, res) => {
     perms.cancel_notifications = perms.cancel_notifications || false;
     perms.cancel_logs = perms.cancel_logs || false;
     res.json(perms);
-=======
-        share_items: false
-      });
-    }
-    res.json(results[0]);
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
   });
 };
 

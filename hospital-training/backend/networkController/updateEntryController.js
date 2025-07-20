@@ -1,7 +1,6 @@
 const db = require("../db");
 // إذا احتجت إشعار استورد من notificationUtils
 
-<<<<<<< HEAD
 async function logActivity(userId, userName, action, details) {
   try {
     const [rows] = await db.promise().query('SELECT cancel_logs FROM user_permissions WHERE user_id = ?', [userId]);
@@ -18,8 +17,6 @@ async function logActivity(userId, userName, action, details) {
   await db.promise().query(sql, [userId, userName, action, details]);
 }
 
-=======
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
 const updateEntryController = async (req, res) => {
   const entryId = req.params.id;
   const { circuit, isp, location, ip, speed, start_date, end_date } = req.body;
@@ -92,19 +89,7 @@ const updateEntryController = async (req, res) => {
         return `[${label.en}|${label.ar}]`;
       }).join(', ');
 
-<<<<<<< HEAD
       await logActivity(userId, userName, `[${actionLabelMap["Updated Department"].en}|${actionLabelMap["Updated Department"].ar}]`, `Changed department to '[${location}|${location}]' for IP [${ip}|${ip}] in: ${logTables}`);
-=======
-      await conn.query(`
-        INSERT INTO Activity_Logs (user_id, user_name, action, details)
-        VALUES (?, ?, ?, ?)
-      `, [
-        userId,
-        userName,
-        `[${actionLabelMap["Updated Department"].en}|${actionLabelMap["Updated Department"].ar}]`,
-        `Changed department to '[${location}|${location}]' for IP [${ip}|${ip}] in: ${logTables}`
-      ]);
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
     }
 
     // Log entry field changes
@@ -123,19 +108,7 @@ const updateEntryController = async (req, res) => {
         return change;
       });
 
-<<<<<<< HEAD
       await logActivity(userId, userName, `[${actionLabelMap["Edited Entry"].en}|${actionLabelMap["Edited Entry"].ar}]`, `Edited entry ID [${entryId}|${entryId}]:\n- ${bilingualChanges.join('\n- ')}`);
-=======
-      await conn.query(`
-        INSERT INTO Activity_Logs (user_id, user_name, action, details)
-        VALUES (?, ?, ?, ?)
-      `, [
-        userId,
-        userName,
-        `[${actionLabelMap["Edited Entry"].en}|${actionLabelMap["Edited Entry"].ar}]`,
-        `Edited entry ID [${entryId}|${entryId}]:\n- ${bilingualChanges.join('\n- ')}`
-      ]);
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
     }
     res.json({ message: `✅ Entry updated.` });
   } catch (err) {

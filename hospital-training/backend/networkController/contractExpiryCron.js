@@ -2,7 +2,6 @@ const db = require("../db");
 const { createNotificationWithEmail } = require("./notificationUtils");
 const cron = require('node-cron');
 
-<<<<<<< HEAD
 async function logActivity(userId, userName, action, details) {
   try {
     const [rows] = await db.promise().query('SELECT cancel_logs FROM user_permissions WHERE user_id = ?', [userId]);
@@ -19,8 +18,6 @@ async function logActivity(userId, userName, action, details) {
   await db.promise().query(sql, [userId, userName, action, details]);
 }
 
-=======
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
 cron.schedule('02 * * * *', async () => {
   try {
     console.log('🚀 Starting contract expiry check at', new Date().toISOString());
@@ -75,19 +72,7 @@ cron.schedule('02 * * * *', async () => {
           const detailsBilingual =
             `[${contractExpiryFieldLabel.contract.en}|${contractExpiryFieldLabel.contract.ar}] for circuit "${entry.circuit_name}|${entry.circuit_name}" ([${contractExpiryFieldLabel.ip.en}|${contractExpiryFieldLabel.ip.ar}]: ${entry.ip}|${entry.ip}) will expire in [${contractExpiryFieldLabel.days.en}|${contractExpiryFieldLabel.days.ar}]: ${interval.label}|${interval.label_ar}`;
 
-<<<<<<< HEAD
           await logActivity(entry.user_id, userName, actionBilingual, detailsBilingual);
-=======
-          await db.promise().query(`
-            INSERT INTO Activity_Logs (user_id, user_name, action, details)
-            VALUES (?, ?, ?, ?)
-          `, [
-            entry.user_id,
-            userName,
-            actionBilingual,
-            detailsBilingual
-          ]);
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
 
           console.log(`✅ Notification and log inserted for circuit ${entry.circuit_name}`);
         } else {

@@ -1,7 +1,6 @@
 const db = require("../db");
 const { createNotificationWithEmail } = require("./notificationUtils");
 
-<<<<<<< HEAD
 async function logActivity(userId, userName, action, details) {
   try {
     const [rows] = await db.promise().query('SELECT cancel_logs FROM user_permissions WHERE user_id = ?', [userId]);
@@ -18,8 +17,6 @@ async function logActivity(userId, userName, action, details) {
   await db.promise().query(sql, [userId, userName, action, details]);
 }
 
-=======
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
 const shareEntryController = async (req, res) => {
   const senderId = req.user.id;
   const { devices, receiver_ids } = req.body;
@@ -94,14 +91,7 @@ const shareEntryController = async (req, res) => {
     const logMsgBilingual =
       `[${shareEntryFieldLabelMap.entry.en}|${shareEntryFieldLabelMap.entry.ar}]s with [${shareEntryFieldLabelMap.ip.en}|${shareEntryFieldLabelMap.ip.ar}]s [${ipListStr}|${ipListStr}] were shared with [${shareEntryFieldLabelMap.user.en}|${shareEntryFieldLabelMap.user.ar}]s: [${receiverNamesStr}|${receiverNamesStr}]`;
 
-<<<<<<< HEAD
     await logActivity(senderId, senderName, actionBilingual, logMsgBilingual);
-=======
-    await db.promise().query(`
-      INSERT INTO Activity_Logs (user_id, user_name, action, details)
-      VALUES (?, ?, ?, ?)
-    `, [senderId, senderName, actionBilingual, logMsgBilingual]);
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
     res.json({ success: true });
   } catch (err) {
     console.error('❌ Share Error:', err);

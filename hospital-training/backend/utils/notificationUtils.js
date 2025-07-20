@@ -300,7 +300,6 @@ function cleanEmailText(text, lang = 'ar') {
 
   return rawMessage.trim();
 }
-<<<<<<< HEAD
 // Helper to get user permissions
 async function getUserPermissions(userId) {
   const [rows] = await db.promise().query('SELECT * FROM user_permissions WHERE user_id = ?', [userId]);
@@ -317,11 +316,6 @@ async function sendNotificationEmail(userId, notificationMessage, notificationTy
       console.log(`🚫 Email sending canceled for user ${userId} due to cancel_emails permission.`);
       return false;
     }
-=======
-// وظيفة إرسال البريد الإلكتروني للإشعارات
-async function sendNotificationEmail(userId, notificationMessage, notificationType, lang = 'ar') {
-  try {
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
     // جلب معلومات المستخدم
     const [userResult] = await db.promise().query('SELECT name, email FROM users WHERE id = ?', [userId]);
     
@@ -492,7 +486,6 @@ async function sendNotificationEmail(userId, notificationMessage, notificationTy
 // وظيفة إنشاء إشعار مع إرسال البريد الإلكتروني
 async function createNotificationWithEmail(userId, message, type, lang = 'ar') {
   try {
-<<<<<<< HEAD
     // جلب صلاحيات المستخدم
     const perms = await getUserPermissions(userId);
     if (!perms.cancel_notifications) {
@@ -501,11 +494,6 @@ async function createNotificationWithEmail(userId, message, type, lang = 'ar') {
     } else {
       console.log(`🚫 Notification creation canceled for user ${userId} due to cancel_notifications permission.`);
     }
-=======
-    // إنشاء الإشعار في قاعدة البيانات
-    await db.promise().query(`INSERT INTO Notifications (user_id, message, type) VALUES (?, ?, ?)`, [userId, message, type]);
-
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
     // إرسال البريد الإلكتروني في الخلفية باستخدام setImmediate
     setImmediate(() => {
       sendNotificationEmail(userId, message, type, lang).catch(error => {

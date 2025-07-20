@@ -62,15 +62,11 @@ document.addEventListener('DOMContentLoaded', () => {
   '#delete_items',
   '#check_logs',
   '#edit_permission',
-<<<<<<< HEAD
   '#share_items',
   // New permissions
   '#cancel_emails',
   '#cancel_notifications',
   '#cancel_logs'
-=======
-  '#share_items'
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
 ].forEach(id => {
   const el = document.querySelector(id);
   if (el) {
@@ -293,13 +289,10 @@ function updatePermissionsUI(permissions) {
   document.getElementById('check_logs').checked = !!permissions.check_logs;
   document.getElementById('edit_permission').checked = !!permissions.edit_permission;
   document.getElementById('share_items').checked = !!permissions.share_items;
-<<<<<<< HEAD
   // New permissions
   document.getElementById('cancel_emails').checked = !!permissions.cancel_emails;
   document.getElementById('cancel_notifications').checked = !!permissions.cancel_notifications;
   document.getElementById('cancel_logs').checked = !!permissions.cancel_logs;
-=======
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
 }
 
 
@@ -318,13 +311,10 @@ async function savePermissions() {
       delete_items: document.getElementById('delete_items')?.checked || false,
       check_logs: document.getElementById('check_logs')?.checked || false,
       edit_permission: document.getElementById('edit_permission')?.checked || false,
-<<<<<<< HEAD
       // New permissions
       cancel_emails: document.getElementById('cancel_emails')?.checked || false,
       cancel_notifications: document.getElementById('cancel_notifications')?.checked || false,
       cancel_logs: document.getElementById('cancel_logs')?.checked || false,
-=======
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
     };
 
     const response = await fetch(`http://localhost:4000/users/${window.currentUserId}/permissions`, {

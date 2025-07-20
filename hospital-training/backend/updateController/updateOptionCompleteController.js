@@ -1,6 +1,5 @@
 const db = require('../db');
 
-<<<<<<< HEAD
 async function logActivity(userId, userName, action, details) {
   try {
     const [rows] = await db.promise().query('SELECT cancel_logs FROM user_permissions WHERE user_id = ?', [userId]);
@@ -16,12 +15,6 @@ async function logActivity(userId, userName, action, details) {
   const sql = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
   db.query(sql, [userId, userName, action, details], (err) => {
     if (err) console.error('❌ Error logging activity:', err);
-=======
-function logActivity(userId, userName, action, details) {
-  const query = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
-  db.query(query, [userId, userName, action, details], (err) => {
-    if (err) console.error("❌ Failed to log activity:", err);
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
   });
 }
 
@@ -349,11 +342,7 @@ const updateOptionCompleteController = async (req, res) => {
     );
     const userName = userRow[0]?.name || "Unknown";
     const tableLabel = tableLabelMap[mapping.table] || { en: mapping.table, ar: mapping.table };
-<<<<<<< HEAD
     await logActivity(
-=======
-    logActivity(
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
       userId,
       userName,
       JSON.stringify(makeBilingualLog("Edited", "تعديل")),

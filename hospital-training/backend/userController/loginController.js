@@ -8,7 +8,6 @@ function makeBilingualLog(en, ar) {
   return { en, ar };
 }
 
-<<<<<<< HEAD
 async function logActivity(userId, userName, action, details) {
   // Check cancel_logs permission
   try {
@@ -21,9 +20,6 @@ async function logActivity(userId, userName, action, details) {
     console.error('❌ Error checking cancel_logs permission:', err);
     // If error, proceed with logging to avoid losing logs
   }
-=======
-function logActivity(userId, userName, action, details) {
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
   if (typeof action === 'object') action = JSON.stringify(action);
   if (typeof details === 'object') details = JSON.stringify(details);
   const sql = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
@@ -69,11 +65,7 @@ const loginController = (req, res) => {
         return res.status(403).json({ message: t.inactive });
       }
       const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
-<<<<<<< HEAD
       await logActivity(
-=======
-      logActivity(
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
         user.id,
         user.name,
         makeBilingualLog('Login', 'تسجيل دخول'),

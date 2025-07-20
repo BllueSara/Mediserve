@@ -1,7 +1,6 @@
 const db = require('../db');
 const { makeBilingualLog } = require('../utils/makeBilingualLog');
 
-<<<<<<< HEAD
 async function logActivity(userId, userName, action, details) {
   try {
     const [rows] = await db.promise().query('SELECT cancel_logs FROM user_permissions WHERE user_id = ?', [userId]);
@@ -18,8 +17,6 @@ async function logActivity(userId, userName, action, details) {
   await db.promise().query(sql, [userId, userName, action, details]);
 }
 
-=======
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
 exports.addDeviceModel = (req, res) => {
   const { model_name, device_type_name } = req.body;
   const userId = req.user?.id;
@@ -56,7 +53,6 @@ exports.addDeviceModel = (req, res) => {
         : [model_name];
       db.query(insertQuery, insertValues, (err2, result2) => {
         if (err2) return res.status(500).json({ error: "Database insert failed" });
-<<<<<<< HEAD
         logActivity(userId, userName, JSON.stringify(makeBilingualLog("Add Device Model", "إضافة موديل جهاز")), JSON.stringify(makeBilingualLog(
             `Added new model '${model_name}' for device type '${device_type_name}'`,
             `تمت إضافة موديل جديد '${model_name}' لنوع الجهاز '${device_type_name}'`
@@ -67,22 +63,6 @@ exports.addDeviceModel = (req, res) => {
         .catch(logErr => {
           if (logErr) console.error("❌ Failed to log activity:", logErr);
         });
-=======
-        const logQuery = `INSERT INTO Activity_Logs (user_id, user_name, action, details) VALUES (?, ?, ?, ?)`;
-        const logValues = [
-          userId,
-          userName,
-          JSON.stringify(makeBilingualLog("Add Device Model", "إضافة موديل جهاز")),
-          JSON.stringify(makeBilingualLog(
-            `Added new model '${model_name}' for device type '${device_type_name}'`,
-            `تمت إضافة موديل جديد '${model_name}' لنوع الجهاز '${device_type_name}'`
-          ))
-        ];
-        db.query(logQuery, logValues, (logErr) => {
-          if (logErr) console.error("❌ Failed to log activity:", logErr);
-        });
-        res.json({ message: `✅ Model '${model_name}'` });
->>>>>>> dfa1ff18f501a113e159d8d77f54553e04171c45
       });
     });
   });
