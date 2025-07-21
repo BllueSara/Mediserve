@@ -100,8 +100,21 @@ const tableMap = {
     column: "scanner_type",
     action: { en: "Add Scanner Type", ar: "إضافة نوع ماسح" },
     tableLabel: { en: "Scanner Type", ar: "نوع الماسح" }
+  },
+  "ticket-type": {
+    table: "ticket_types",
+    column: "type_name",
+    action: { en: "Add Ticket Type", ar: "إضافة نوع تذكرة" },
+    tableLabel: { en: "Ticket Type", ar: "نوع التذكرة" }
+  },
+  "report-status": {
+    table: "report_statuses",
+    column: "status_name",
+    action: { en: "Add Report Status", ar: "إضافة حالة التقرير" },
+    tableLabel: { en: "Report Status", ar: "حالة التقرير" }
   }
 };
+
 
   // منطق التفرقة لـ problem-status
   if (target === "problem-status") {

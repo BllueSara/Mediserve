@@ -178,7 +178,7 @@ const { maintenance_type: reportType, device_id: deviceId, ticket_id: ticketId }
     engName = updatedData.technical_engineer;
   } else if (reportType === "General") {
     engId = updatedData.technician_id;
-    engName = updatedData.technician_name;
+    engName = updatedData.technician_name || updatedData.assigned_to || null;
   } else if (reportType === "Internal" || reportType === "External") {
     engId = updatedData.assigned_to_id;
     engName = updatedData.assigned_to;

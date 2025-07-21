@@ -23,7 +23,13 @@ function makeBilingualLog(english, arabic) {
 }
 
 const deleteOptionCompleteController = async (req, res) => {
-  const { target, value, type } = req.body;
+  console.log("[DELETE] req.body:", req.body);
+  let { target, value, type } = req.body;
+  // ✅ توحيد target ليكون بنفس صيغة mapping
+  if (typeof target === 'string') target = target.replace(/_/g, '-');
+  if (target === "ticket-type" || target === "report-status") {
+    console.log(`[DELETE] Special case: target = ${target}, value = '${value}', type = '${type}'`);
+  }
 
   if (!target || !value) {
     return res.status(400).json({ error: "❌ Missing fields" });
@@ -166,6 +172,20 @@ const deleteOptionCompleteController = async (req, res) => {
         { table: "General_Maintenance", column: "floor" }
       ]
     },
+    "ticket-type": {
+      table: "Ticket_Types",
+      column: "type_name",
+      referencedTables: [
+        { table: "Internal_Tickets", column: "ticket_type" },
+      ]
+    },
+    "report-status": {
+      table: "Report_Statuses",
+      column: "status_name",
+      referencedTables: [
+        { table: "Internal_Tickets", column: "status" },
+      ]
+    },
     "technical": {
       table: "Engineers",
       column: "name",
@@ -188,6 +208,7 @@ const deleteOptionCompleteController = async (req, res) => {
 
   const mapping = deleteMap[target];
   if (!mapping) {
+    console.log(`[DELETE] Invalid target: ${target}`);
     return res.status(400).json({ error: "❌ Invalid target field" });
   }
 
@@ -197,33 +218,59 @@ const deleteOptionCompleteController = async (req, res) => {
     let statusId = null;
 
     if (target === "section") {
+      console.log('[DELETE] SECTION: value =', value, '| target =', target);
       const [deptRows] = await db.promise().query(
-        `SELECT id FROM Departments WHERE TRIM(SUBSTRING_INDEX(name, '|', 1)) = ? OR TRIM(SUBSTRING_INDEX(name, '|', -1)) = ? LIMIT 1`,
-        [value.trim(), value.trim()]
+        `SELECT id FROM Departments WHERE 
+          TRIM(SUBSTRING_INDEX(name, '|', 1)) = ? 
+          OR TRIM(SUBSTRING_INDEX(name, '|', -1)) = ? 
+          OR TRIM(name) = ? 
+          OR name LIKE ?
+          LIMIT 1`,
+        [value.trim(), value.trim(), value.trim(), `%${value.trim()}%`]
       );
+      console.log('[DELETE] SECTION: deptRows =', deptRows);
       if (!deptRows.length) {
+        console.log('[DELETE] SECTION: Not found');
         return res.status(400).json({ error: `❌ Department "${value}" not found.` });
       }
       departmentId = deptRows[0].id;
     }
 
     if (target === "problem-status") {
+      console.log('[DELETE] PROBLEM-STATUS: value =', value, '| type =', type, '| target =', target);
+      console.log('[DELETE] PROBLEM-STATUS: mapping.table =', mapping.table, '| mapping.column =', mapping.column);
       const [statusRows] = await db.promise().query(
-        `SELECT id FROM ${mapping.table} WHERE TRIM(SUBSTRING_INDEX(${mapping.column}, '|', 1)) = ? OR TRIM(SUBSTRING_INDEX(${mapping.column}, '|', -1)) = ? LIMIT 1`,
-        [value.trim(), value.trim()]
+        `SELECT id FROM ${mapping.table} WHERE 
+          TRIM(SUBSTRING_INDEX(${mapping.column}, '|', 1)) = ? 
+          OR TRIM(SUBSTRING_INDEX(${mapping.column}, '|', -1)) = ? 
+          OR TRIM(${mapping.column}) = ? 
+          OR TRIM(SUBSTRING_INDEX(${mapping.column}, '|', -1)) LIKE ? 
+          OR ${mapping.column} LIKE ?
+          LIMIT 1`,
+        [value.trim(), value.trim(), value.trim(), `%${value.trim()}%`, `%${value.trim()}%`]
       );
+      console.log('[DELETE] PROBLEM-STATUS: statusRows =', statusRows);
       if (!statusRows.length) {
+        console.log('[DELETE] PROBLEM-STATUS: Not found');
         return res.status(400).json({ error: `❌ Status "${value}" not found.` });
       }
       statusId = statusRows[0].id;
     }
 
     if (target === "technical") {
+      console.log('[DELETE] TECHNICAL: value =', value, '| target =', target);
       const [engineerRows] = await db.promise().query(
-        `SELECT id FROM Engineers WHERE TRIM(SUBSTRING_INDEX(name, '|', 1)) = ? OR TRIM(SUBSTRING_INDEX(name, '|', -1)) = ? LIMIT 1`,
-        [value.trim(), value.trim()]
+        `SELECT id FROM Engineers WHERE 
+          TRIM(SUBSTRING_INDEX(name, '|', 1)) = ? 
+          OR TRIM(SUBSTRING_INDEX(name, '|', -1)) = ? 
+          OR TRIM(name) = ? 
+          OR name LIKE ?
+          LIMIT 1`,
+        [value.trim(), value.trim(), value.trim(), `%${value.trim()}%`]
       );
+      console.log('[DELETE] TECHNICAL: engineerRows =', engineerRows);
       if (!engineerRows.length) {
+        console.log('[DELETE] TECHNICAL: Not found');
         return res.status(400).json({ error: `❌ Engineer "${value}" not found.` });
       }
       engineerId = engineerRows[0].id;
@@ -246,6 +293,7 @@ const deleteOptionCompleteController = async (req, res) => {
         param = value.trim();
       }
       const [rows] = await db.promise().query(query, [param]);
+      console.log(`[DELETE] Check reference in table '${ref.table}', column '${ref.column}', param = '${param}', count = ${rows[0].count}`);
       if (rows[0].count > 0) {
         return res.status(400).json({
           error: `❌ Can't delete "${value}" because it is referenced in table "${ref.table}".`
@@ -255,33 +303,63 @@ const deleteOptionCompleteController = async (req, res) => {
 
     // تنفيذ الحذف الفعلي
     if (target === "section") {
+      console.log('[DELETE] SECTION: Deleting id =', departmentId);
       const [delRes] = await db.promise().query(
         `DELETE FROM Departments WHERE id = ?`,
         [departmentId]
       );
+      console.log('[DELETE] SECTION: delRes =', delRes);
       if (delRes.affectedRows === 0) {
+        console.log('[DELETE] SECTION: Not found or already deleted');
         return res.status(404).json({ error: "❌ Department not found or already deleted." });
       }
     } else if (target === "technical") {
+      console.log('[DELETE] TECHNICAL: Deleting id =', engineerId);
       const [delRes] = await db.promise().query(
         `DELETE FROM Engineers WHERE id = ?`,
         [engineerId]
       );
+      console.log('[DELETE] TECHNICAL: delRes =', delRes);
       if (delRes.affectedRows === 0) {
+        console.log('[DELETE] TECHNICAL: Not found or already deleted');
         return res.status(404).json({ error: "❌ Engineer not found or already deleted." });
       }
+    } else if (target === "ticket-type" || target === "report-status") {
+      console.log(`[DELETE] ${target.toUpperCase()}: Deleting value = '${value}'`);
+      const [beforeRows] = await db.promise().query(
+        `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ?`,
+        [value.trim()]
+      );
+      console.log(`[DELETE] ${target.toUpperCase()} BEFORE:`, beforeRows);
+      let deleteQuery = `DELETE FROM ${mapping.table} WHERE ${mapping.column} = ?`;
+      let params = [value.trim()];
+      const [result] = await db.promise().query(deleteQuery, params);
+      console.log(`[DELETE] ${target.toUpperCase()} RESULT:`, result);
+      const [afterRows] = await db.promise().query(
+        `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ?`,
+        [value.trim()]
+      );
+      console.log(`[DELETE] ${target.toUpperCase()} AFTER:`, afterRows);
+      if (result.affectedRows === 0) {
+        console.log(`[DELETE] ${target.toUpperCase()}: Not found or already deleted`);
+        return res.status(404).json({ error: "❌ Value not found or already deleted." });
+      }
     } else {
+      console.log(`[DELETE] DEFAULT: target = ${target}, value = '${value}'`);
       let deleteQuery = "";
       let params = [];
       if (target === "problem-status" && type && !["pc", "printer", "scanner"].includes(type)) {
-        deleteQuery = `DELETE FROM ${mapping.table} WHERE ${mapping.column} = ? AND device_type_name = ?`;
+        deleteQuery = `DELETE FROM ${mapping.table} WHERE TRIM(SUBSTRING_INDEX(${mapping.column}, '|', -1)) = ? AND device_type_name = ?`;
         params = [value.trim(), type];
       } else {
         deleteQuery = `DELETE FROM ${mapping.table} WHERE ${mapping.column} = ?`;
         params = [value.trim()];
       }
+      console.log('[DELETE] GENERIC: deleteQuery =', deleteQuery, '| params =', params);
       const [result] = await db.promise().query(deleteQuery, params);
+      console.log('[DELETE] GENERIC: result =', result);
       if (result.affectedRows === 0) {
+        console.log('[DELETE] GENERIC: Not found or already deleted');
         return res.status(404).json({ error: "❌ Value not found or already deleted." });
       }
     }

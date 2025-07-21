@@ -31,10 +31,21 @@ const submitNewDeviceController = async (req, res) => {
   } = req.body;
 
   const deviceType = removeLangTag(rawDeviceType);
-  const section = removeLangTag(rawSection);
+  let sectionParts = [rawSection];
+  if (rawSection.includes('|')) {
+    sectionParts = rawSection.split('|').map(s => s.trim());
+  }
+  console.log("[submitNewDeviceController] sectionParts:", sectionParts);
 
   try {
-    const deptRes = await queryAsync("SELECT id FROM Departments WHERE name = ?", [section]);
+    // بناء شروط LIKE لكل جزء
+    const likeParts = sectionParts.map(() => 'name LIKE ?').join(' OR ');
+    const likeValues = sectionParts.map(s => `%${s}%`);
+    const deptRes = await queryAsync(
+      `SELECT id FROM Departments WHERE ${likeParts}`,
+      likeValues
+    );
+    console.log("[submitNewDeviceController] deptRes result:", deptRes);
     const departmentId = deptRes[0]?.id;
     if (!departmentId) return res.status(400).json({ error: "❌ القسم غير موجود" });
     const deviceRes = await queryAsync(`
@@ -59,9 +70,17 @@ const submitNewDeviceController = async (req, res) => {
       return res.status(400).json({ error: `❌ القسم المختار لا يطابق قسم الجهاز المحفوظ` });
     }
     const userName = await getUserNameById(userId);
+    // استخراج اسم القسم بالإنجليزي والعربي إذا كان موجودًا
+    let departmentNameEn = device.department_name;
+    let departmentNameAr = device.department_name;
+    if (device.department_name && device.department_name.includes('|')) {
+      const parts = device.department_name.split('|');
+      departmentNameEn = parts[0].trim();
+      departmentNameAr = parts[1]?.trim() || parts[0].trim();
+    }
     await logActivity(userId, userName, JSON.stringify(makeBilingualLog('Used Existing Device', 'استخدام جهاز محفوظ')), JSON.stringify(makeBilingualLog(
-        `Used existing device (ID: ${device.id}) - Type: ${device.device_type} - Department: ${device.department_name}`,
-        `تم استخدام جهاز محفوظ مسبقًا (المعرف: ${device.id}) - النوع: ${device.device_type} - القسم: ${device.department_name}`
+        `Used existing device (ID: ${device.id}) - Type: ${device.device_type} - Department: ${departmentNameEn}`,
+        `تم استخدام جهاز محفوظ مسبقًا (المعرف: ${device.id}) - النوع: ${device.device_type} - القسم: ${departmentNameAr}`
       )));
     res.json({ message: "✅ تم استخدام الجهاز المحفوظ بنجاح." });
   } catch (err) {

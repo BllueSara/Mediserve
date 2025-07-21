@@ -389,16 +389,16 @@ textarea {
   z-index: 1000;
 }
 
-.popup-content {
-  background: white;
-  padding: 30px;
-  width: 600px;
-  max-height: 90vh;
-  overflow-y: auto;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-   .popup-contentt {
+  .popup-content {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    max-width: 1000px;
+    width: 90%;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  }
+  
+  .popup-contentt {
     background: white;
     padding: 30px;
     border-radius: 10px;
@@ -406,6 +406,7 @@ textarea {
     width: 90%;
     box-shadow: 0 0 10px rgba(0,0,0,0.2);
   }
+  
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr); /* حقلين جنب بعض */
@@ -528,22 +529,31 @@ select {
   align-items: center;
   z-index: 1000;
 }
-
-
-.popup-content label {
-  margin-top: 15px;
-  display: block;
-  font-size: 14px;
+  .popup-content {
+    background: white;
+    padding: 30px;
+    width: 30%;
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    
+  }
   
-}
-
+  .popup-content label {
+    margin-top: 15px;
+    display: block;
+    font-size: 14px;
+    
+  }
+  
 .popup-content input, .popup-content select {
-  width: 90%;
-  margin: 5px auto;
-  padding: 10px;
-  display: block;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+    width: 90%;
+    margin: 5px auto;
+    padding: 10px;
+    display: block;
+    border: 1px solid #ccc;
+    border-radius: 5px;
 
 }
 
@@ -736,27 +746,13 @@ select {
   align-items: center;
   z-index: 1000;
 }
-.popup-content {
-  background: white;
-  padding: 30px;
-  max-height: 90vh;
-  overflow-y: auto;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
+
 .popup-content label {
   margin-top: 15px;
   display: block;
   font-size: 14px;
 }
-.popup-content input, .popup-content select {
-  width: 80%;
-  margin: 5px auto;
-  padding: 10px;
-  display: block;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-}
+
 .popup-buttons {
   margin-top: 20px;
   display: flex;

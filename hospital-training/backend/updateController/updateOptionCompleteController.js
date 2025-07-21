@@ -23,7 +23,13 @@ function makeBilingualLog(english, arabic) {
 }
 
 const updateOptionCompleteController = async (req, res) => {
-  const { target, oldValue, newValue, type } = req.body;
+  console.log("[UPDATE] req.body:", req.body);
+  let { target, oldValue, newValue, type } = req.body;
+  // ✅ توحيد target ليكون بنفس صيغة mapping
+  if (typeof target === 'string') target = target.replace(/_/g, '-');
+  if (target === "ticket-type" || target === "report-status") {
+    console.log(`[UPDATE] Special case: target = ${target}, oldValue = '${oldValue}', newValue = '${newValue}', type = '${type}'`);
+  }
 
   if (!target || !oldValue || !newValue) {
     return res.status(400).json({ error: "❌ Missing fields" });
@@ -87,6 +93,22 @@ const updateOptionCompleteController = async (req, res) => {
     "floor":         { table: "floors",             column: "FloorNum",  propagate: [
                         { table: "General_Maintenance", column: "floor" }
                       ] },
+
+    "ticket-type": {
+      table: "Ticket_Types",
+      column: "type_name",
+      propagate: [
+        { table: "Internal_Tickets", column: "ticket_type" }
+      ]
+    },
+    "report-status": {
+      table: "Report_Statuses",
+      column: "status_name",
+      propagate: [
+        { table: "Internal_Tickets", column: "status" }
+      ]
+    },
+
     "problem-status": {
       table: (type === "pc")      ? "ProblemStates_Pc"
            : (type === "printer") ? "ProblemStates_Printer"
@@ -121,6 +143,8 @@ const updateOptionCompleteController = async (req, res) => {
     "Scanner_Model":          { en: "Scanner Model", ar: "موديل الماسح" },
     "Maintance_Device_Model": { en: "Device Model", ar: "موديل الجهاز" },
     "floors":                 { en: "Floor", ar: "الطابق" },
+    "Ticket_Types":           { en: "Ticket Type", ar: "نوع التذكرة" },
+    "report_status":          { en: "Report Status", ar: "حالة التقرير" },
     "ProblemStates_Pc":       { en: "PC Problem", ar: "مشكلة الحاسب" },
     "ProblemStates_Printer":  { en: "Printer Problem", ar: "مشكلة الطابعة" },
     "ProblemStates_Scanner":  { en: "Scanner Problem", ar: "مشكلة الماسح" },
@@ -130,6 +154,7 @@ const updateOptionCompleteController = async (req, res) => {
   };
   const mapping = updateMap[target];
   if (!mapping) {
+    console.log(`[UPDATE] Invalid target: ${target}`);
     return res.status(400).json({ error: "❌ Invalid target" });
   }
 
@@ -138,6 +163,7 @@ const updateOptionCompleteController = async (req, res) => {
     await conn.query("START TRANSACTION");
 
     if (target === "section") {
+      console.log(`[UPDATE] SECTION: oldValue = '${oldValue}', newValue = '${newValue}'`);
       const [deptRows] = await conn.query(
         `SELECT id, name FROM Departments WHERE name = ? OR TRIM(SUBSTRING_INDEX(name, '|', 1)) = ? OR TRIM(SUBSTRING_INDEX(name, '|', -1)) = ? OR name LIKE ? LIMIT 1`,
         [oldValue.trim(), oldValue.trim(), oldValue.trim(), `%${oldValue.trim()}%`]
@@ -206,6 +232,7 @@ const updateOptionCompleteController = async (req, res) => {
         [fullNameNew, oldDeptId]
       );
     } else if (target === "problem-type") {
+      console.log(`[UPDATE] PROBLEM-TYPE: oldValue = '${oldValue}', newValue = '${newValue}'`);
       const [existsRows] = await conn.query(
         `SELECT 1 FROM ${mapping.table} WHERE ${mapping.column} = ? LIMIT 1`,
         [newValue.trim()]
@@ -227,6 +254,7 @@ const updateOptionCompleteController = async (req, res) => {
         [oldValue.trim()]
       );
     } else if (target === "technical") {
+      console.log(`[UPDATE] TECHNICAL: oldValue = '${oldValue}', newValue = '${newValue}'`);
       const [engineerRows] = await conn.query(
         `SELECT id, name FROM Engineers WHERE TRIM(SUBSTRING_INDEX(name, '|', 1)) = ? OR TRIM(SUBSTRING_INDEX(name, '|', -1)) = ? OR name LIKE ? LIMIT 1`,
         [oldValue.trim(), oldValue.trim(), `%${oldValue.trim()}%`]
@@ -266,6 +294,7 @@ const updateOptionCompleteController = async (req, res) => {
         [fullNameNew, oldEngineerId]
       );
     } else if (target === "problem-status") {
+      console.log(`[UPDATE] PROBLEM-STATUS: oldValue = '${oldValue}', newValue = '${newValue}', type = '${type}'`);
       const [rows] = await conn.query(
         `SELECT id, ${mapping.column} AS fullname FROM ${mapping.table} WHERE ${mapping.column} = ? OR TRIM(SUBSTRING_INDEX(${mapping.column}, '|', 1)) = ? OR TRIM(SUBSTRING_INDEX(${mapping.column}, '|', -1)) = ? OR ${mapping.column} LIKE ? LIMIT 1`,
         [oldValue.trim(), oldValue.trim(), oldValue.trim(), `%${oldValue.trim()}%`]
@@ -322,7 +351,32 @@ const updateOptionCompleteController = async (req, res) => {
         `UPDATE ${mapping.table} SET ${mapping.column} = ? WHERE id = ?`,
         [fullNew, oldId]
       );
+    } else if (target === "ticket-type" || target === "report-status") {
+      console.log(`[UPDATE] ${target.toUpperCase()}: oldValue = '${oldValue}', newValue = '${newValue}'`);
+      // Log before update
+      const [beforeRows] = await conn.query(
+        `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ?`,
+        [oldValue.trim()]
+      );
+      console.log(`[UPDATE] ${target.toUpperCase()} BEFORE:`, beforeRows);
+      for (const { table, column } of mapping.propagate) {
+        await conn.query(
+          `UPDATE ${table} SET ${column} = ? WHERE ${column} = ?`,
+          [newValue.trim(), oldValue.trim()]
+        );
+      }
+      await conn.query(
+        `UPDATE ${mapping.table} SET ${mapping.column} = ? WHERE ${mapping.column} = ?`,
+        [newValue.trim(), oldValue.trim()]
+      );
+      // Log after update
+      const [afterRows] = await conn.query(
+        `SELECT * FROM ${mapping.table} WHERE ${mapping.column} = ?`,
+        [newValue.trim()]
+      );
+      console.log(`[UPDATE] ${target.toUpperCase()} AFTER:`, afterRows);
     } else {
+      console.log(`[UPDATE] DEFAULT: target = ${target}, oldValue = '${oldValue}', newValue = '${newValue}'`);
       for (const { table, column } of mapping.propagate) {
         await conn.query(
           `UPDATE ${table} SET ${column} = ? WHERE ${column} = ?`,
