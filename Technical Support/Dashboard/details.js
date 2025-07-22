@@ -230,7 +230,8 @@ async function loadDashboardData() {
     try {
         const token = localStorage.getItem('token');
         const res = await fetch('http://localhost:4000/api/dashboard-data', {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: { 'Authorization': `Bearer ${token}` },
+            cache: 'no-store' // تعطيل الكاش
         });
         allDashboardData = await res.json();
         renderDashboard(allDashboardData);
@@ -292,4 +293,8 @@ function getFilteredNeedsReplacement() {
                (!filters.osVersion || device.os === filters.osVersion) &&
                (!filters.ramSize || device.ram === filters.ramSize);
     });
-} 
+}
+
+setInterval(() => {
+    loadDashboardData();
+}, 60000); // 

@@ -271,8 +271,9 @@ document.addEventListener('DOMContentLoaded', function () {
   // تحميل البيانات من الـ API
   fetch('http://localhost:4000/api/maintenance/completion-rates', {
     headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token')}`  // إذا كنت مخزن التوكن هنا
-    }
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    },
+    cache: 'no-store' // تعطيل الكاش
   })
     .then(res => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -304,7 +305,8 @@ async function loadSupportTicketsSummary() {
     const res = await fetch('http://localhost:4000/api/tickets/summary', {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
+      },
+      cache: 'no-store' // تعطيل الكاش
     });
 
     if (!res.ok) throw new Error('Failed to fetch support ticket summary');
@@ -457,7 +459,8 @@ async function loadUpcomingMaintenance() {
     const res = await fetch('http://localhost:4000/api/maintenance/upcoming', {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
+      },
+      cache: 'no-store' // تعطيل الكاش
     });
 
     if (!res.ok) throw new Error('❌ Failed to fetch upcoming maintenance');
@@ -502,7 +505,8 @@ async function loadMaintenanceOverviewChart() {
     const res = await fetch('http://localhost:4000/api/maintenance/overview', {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
+      },
+      cache: 'no-store' // تعطيل الكاش
     });
 
     if (!res.ok) throw new Error('Failed to load overview data');
@@ -555,7 +559,8 @@ async function loadRepeatedProblems() {
     const res = await fetch(`http://localhost:4000/api/critical-devices?lang=${lang}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
+      },
+      cache: 'no-store' // تعطيل الكاش
     });
 
     if (!res.ok) throw new Error('❌ Failed to fetch repeated problems');
@@ -635,7 +640,8 @@ async function loadUpgradeDevices() {
     const res = await fetch('http://localhost:4000/api/devices/needs-upgrade', {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
+      },
+      cache: 'no-store' // تعطيل الكاش
     });
 
     if (!res.ok) throw new Error('❌ Failed to fetch upgrade devices');
@@ -714,7 +720,8 @@ async function drawMonthlyCompletionLineChart() {
     const res = await fetch('http://localhost:4000/api/maintenance/monthly-closed', {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
+      },
+      cache: 'no-store' // تعطيل الكاش
     });
 
     if (!res.ok) throw new Error('Failed to load monthly completion data');

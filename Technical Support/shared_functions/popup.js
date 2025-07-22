@@ -1111,9 +1111,15 @@ export function savePCSpec() {
       }
 
       popup.style.display = "none";
+      // أعد تحميل قائمة الأجهزة
+      device.fetchDeviceSpecsByTypeAndDepartment();
+      // بعد قليل، عيّن الجهاز الجديد تلقائيًا في الـ dropdown
       setTimeout(() => {
-        device.fetchDeviceSpecsByTypeAndDepartment();
-      }, 100);
+        const dropdown = document.getElementById("device-spec");
+        if (dropdown) dropdown.value = option.value;
+        const displaySpan = document.getElementById("selected-device-spec");
+        if (displaySpan) displaySpan.textContent = option.textContent;
+      }, 500); // 500ms كافية غالبًا بعد إعادة التحميل
     })
     .catch(err => {
       console.error("❌ خطأ أثناء الاتصال بالسيرفر:", err);

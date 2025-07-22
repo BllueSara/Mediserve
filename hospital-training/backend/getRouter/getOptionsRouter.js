@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const ctrl = require('../getController/getOptionsController');
+const { authenticateToken } = require('../middlewares');
 
 router.get('/Hard_Drive_Types', ctrl.getHardDriveTypes);
 router.get('/RAM_Sizes', ctrl.getRamSizes);
@@ -10,7 +11,7 @@ router.get('/report-statuses', ctrl.getReportStatuses);
 router.get('/ticket-status', ctrl.getTicketStatuses);
 router.get('/api/device-types', ctrl.getApiDeviceTypes);
 router.get('/get-all-problems', ctrl.getAllProblems);
-router.get('/TypeProplem', ctrl.getTypeProplem);
+router.get('/TypeProplem', authenticateToken, ctrl.getTypeProplem);
 router.get('/Departments', ctrl.getDepartments);
 router.get('/CPU_Types', ctrl.getCpuTypes);
 router.get('/Scanner_Types', ctrl.getScannerTypes);
