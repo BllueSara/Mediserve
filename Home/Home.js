@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (data.status === "inactive") {
         alert("🚫 تم تعطيل حسابك. سيتم تسجيل الخروج الآن.");
         localStorage.clear();
-        window.location.href = "/authintication/AuthPage/LoginEnglish.html";
+        window.location.href = "/auth/login.html";
       }
     } catch (err) {
       console.error("🚨 فشل التحقق من حالة الحساب:", err);

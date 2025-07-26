@@ -22,7 +22,7 @@ const forgotPasswordController = (req, res) => {
       [token, expires, email],
       (updateErr) => {
         if (updateErr) return res.status(500).json({ message: 'Database error' });
-        const resetLink = `http://localhost:4000/reset-password.html?token=${token}`;
+        const resetLink = `http://localhost:4000/auth/reset-password.html?token=${token}`;
         const currentDate = new Date().toLocaleDateString('ar-SA', {
           year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
         });

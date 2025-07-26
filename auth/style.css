@@ -1,0 +1,548 @@
+/* Reset and box-sizing for all elements */
+* {
+    margin: 0; /* Remove default margin */
+    padding: 0; /* Remove default padding */
+    box-sizing: border-box; /* Include padding and border in element's total width/height */
+}
+
+/* Base styles for the body */
+body {
+    font-family: 'Tajawal', Arial, sans-serif; /* Set default font */
+    display: flex; /* Use flex layout */
+    justify-content: center; /* Center content horizontally */
+    align-items: center; /* Center content vertically */
+    height: 100vh; /* Full viewport height */
+    background-color: #f6f5f7; /* Light background color */
+}
+
+/* Main container styles */
+.container {
+    background-color: #fff; /* White background */
+    border-radius: 10px; /* Rounded corners */
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25), /* Drop shadow */
+                0 10px 10px rgba(0, 0, 0, 0.22);
+    position: relative; /* Needed for absolute children */
+    overflow: hidden; /* Hide overflowing content */
+    width: 100%; /* Full width */
+    max-width: 1300px; /* Max width */
+    min-height: 685px; /* Minimum height */
+    transition: transform 0.6s ease-in-out; /* Smooth transform animation */
+}
+
+/* Right logos */
+.right-logo {
+    position: absolute; /* Position relative to container */
+    top: 20px; /* 20px from top */
+    left: 5px; /* 5px from left */
+    z-index: 110; /* High z-index to appear above content */
+    width: 150px; /* Set width */
+    height: auto; /* Auto height */
+    transition: opacity 0.6s ease-in-out; /* Smooth fade effect */
+}
+
+/* Left logos */
+.left-logo {
+    position: absolute; /* Absolute inside container */
+    top: 20px; /* Distance from top */
+    right: 640px; /* Distance from right */
+    z-index: 110; /* Ensure it's on top */
+    width: 150px; /* Set width */
+    height: auto; /* Auto height */
+    transition: opacity 0.6s ease-in-out; /* Smooth opacity change */
+}
+
+/* Overlay container rounded initially on the right side */
+.overlay-container {
+    border-radius: 0 13px 13px 0; /* Rounded corners on right side */
+    transition: transform 0.6s ease-in-out, border-radius 0.6s ease-in-out; /* Animate changes */
+}
+
+/* When right panel is active, shift and round opposite side */
+.right-panel-active .overlay-container {
+    transform: translateX(-150%); /* Move overlay */
+    border-radius: 13px 0 0 13px; /* Rounded corners on left instead */
+}
+
+/* Animate signup form when active */
+.right-panel-active .sign-up-container {
+    transform: translateX(66.7%); /* Slide into view */
+    opacity: 1; /* Make visible */
+    z-index: 5; /* Bring to front */
+    animation: show 0.6s; /* Apply animation */
+}
+
+/* Shared form container styles */
+.form-container {
+    position: absolute; /* Positioned inside container */
+    top: 0;
+    height: 100%; /* Full height */
+    width: 50%; /* Half the container */
+    transition: transform 0.6s ease-in-out, opacity 0.4s ease-in-out; /* Smooth effects */
+}
+
+/* Login form specific styles */
+.login-container {
+    left: 0; /* Align to left */
+    width: 50%; /* Half the container */
+    z-index: 2; /* Above signup by default */
+}
+
+/* Signup form specific styles */
+.signup-container {
+    left: 0;
+    width: 50%;
+    opacity: 0; /* Hidden initially */
+    z-index: 1; /* Behind login initially */
+    transition: transform 0.6s ease-in-out, opacity 0.6s ease-in-out;
+}
+
+/* Move login form when panel is active */
+.container.right-panel-active .login-container {
+    transform: translateX(100%);
+    opacity: 0; /* Hide */
+}
+
+/* Show signup form when panel is active */
+.container.right-panel-active .signup-container {
+    transform: translateX(100%);
+    opacity: 1;
+    z-index: 5;
+}
+
+/* Overlay container styles */
+.overlay-container {
+    position: absolute;
+    top: 0;
+    left: 50%; /* Start from middle */
+    width: 50%;
+    height: 100%;
+    overflow: hidden; /* Hide content overflow */
+    transition: transform 0.6s ease-in-out;
+    z-index: 100;
+}
+
+/* Move overlay container when active */
+.container.right-panel-active .overlay-container {
+    transform: translateX(-100%);
+}
+
+/* Overlay background and positioning */
+.overlay {
+    background: linear-gradient(to right, #172F4A, #3BAAE0); /* Gradient background */
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: 0 0;
+    color: #fff;
+    position: relative;
+    left: -100%;
+    height: 100%;
+    width: 200%; /* Double width for sliding */
+    transform: translateX(0);
+    transition: transform 0.6s ease-in-out;
+}
+
+/* Move overlay when active */
+.container.right-panel-active .overlay {
+    transform: translateX(50%);
+}
+
+/* Overlay panel shared styles */
+.overlay-panel {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 0 40px;
+    text-align: left;
+    top: 0;
+    height: 100%;
+    width: 50%;
+    transform: translateX(0);
+    transition: transform 0.6s ease-in-out, opacity 0.6s ease-in-out;
+}
+
+/* Left overlay panel hidden initially */
+.overlay-left {
+    transform: translateX(-20%);
+    opacity: 0;
+}
+
+/* Show left panel when active */
+.container.right-panel-active .overlay-left {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+/* Right panel default */
+.overlay-right {
+    right: 0;
+    transform: translateX(0);
+    opacity: 1;
+}
+
+/* Hide right panel when active */
+.container.right-panel-active .overlay-right {
+    transform: translateX(20%);
+    opacity: 0;
+}
+
+/* Error message styling */
+.error-message {
+    color: red;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+/* Button styles */
+button {
+    border-radius: 10px;
+    border: 1px solid #ffffff;
+    background-color: #3BAAE0;
+    color: #fff;
+    font-size: 12px;
+    font-weight: bold;
+    padding: 12px 45px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: transform 80ms ease-in;
+    cursor: pointer;
+}
+
+/* Click effect */
+button:active {
+    transform: scale(0.95);
+}
+
+/* Remove button outline */
+button:focus {
+    outline: none;
+}
+
+/* Ghost button style */
+button.ghost {
+    background-color: transparent;
+    border-color: #fff;
+}
+
+/* Form base styling */
+form {
+    background-color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 0 50px;
+    height: 100%;
+    text-align: center;
+}
+
+/* Left alignment utility for RTL */
+form .align-left {
+    text-align: left;
+    width: 100%;
+}
+
+/* Input styles */
+input {
+    background-color: #eee;
+    border: 2px solid transparent;
+    padding: 12px 15px;
+    margin: 8px 0;
+    width: 100%;
+    border-radius: 5px;
+    transition: border-color 0.3s;
+}
+
+/* Input focus effect */
+input:focus {
+    border-color: #3BAAE0;
+    outline: none;
+}
+
+/* Link styling */
+a {
+    color: #333;
+    font-size: 14px;
+    text-decoration: none;
+    margin: 15px 0;
+}
+
+/* Checkbox appearance */
+input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: #3BAAE0;
+    vertical-align: baseline;
+}
+
+/* Subtitle (h2) styling */
+h2 {
+    font-size: 18px;
+    font-weight: normal;
+    color: #666;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+/* Custom dropdown select styling */
+.custom-dropdown {
+    background-color: #eee;
+    border: 2px solid transparent;
+    padding: 12px 15px;
+    margin: 8px 0;
+    width: 100%;
+    border-radius: 5px;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #666;
+    transition: border-color 0.3s;
+  }
+  
+  .custom-dropdown:hover {
+    border-color: #3BAAE0;
+  }
+  
+
+
+
+/* Dropdown hover effect */
+.custom-dropdown:hover {
+    background-color: #ddd;
+}
+
+/* Dropdown focus border effect */
+.custom-dropdown:focus {
+    border-color: #3BAAE0;
+    outline: none;
+}
+
+/* Language switch button */
+.lang-switch-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #ffffff;
+    color: #333;
+    border: none;
+    padding: 8px 16px;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s ease;
+    z-index: 1000;
+}
+
+/* Hover effect for language button */
+.lang-switch-btn:hover {
+    background-color: #f0f0f0;
+}
+
+/* RTL "Remember me" styling */
+.remember-me {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    direction: rtl;
+}
+
+/* ----------------- Responsive Layout ----------------- */
+
+
+
+
+.custom-dropdown-wrapper{
+    width: 100%;
+    position: relative;
+}
+
+
+.custom-dropdown{
+    background-color: #eee;
+    border-radius: 5px;
+    cursor: pointer;
+    padding: 10px;
+    position: relative;
+}
+
+
+.dropdown-content{
+    display: none;
+    position: absolute;
+    top: 100%;
+    width: 100%;
+    background-color: white;
+    border: 1px solid #ccc;
+    z-index: 1000;
+    border-radius: 5px;
+    margin-top: 5px;
+}
+
+
+.dropdown-content input.dropdown-search{
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-bottom: 1px solid #ccc;
+}
+
+.dropdown-options{
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.dropdown-option{
+    padding: 10px;
+    cursor: pointer;
+}
+
+
+
+.dropdown-option:hover{
+    background-color: #f0f0f0;
+}
+
+
+
+
+.dropdown-toggle {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+
+
+  .custom-dropdown-wrapper {
+    position: relative;
+    width: 100%;
+    z-index: 10; /* 🔸 يحطها فوق باقي العناصر */
+  }
+  
+  
+  .custom-dropdown {
+    background-color: #eee;
+    border: 2px solid transparent;
+    border-radius: 5px;
+    padding: 12px 15px;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #666;
+    transition: border-color 0.3s;
+    cursor: pointer;
+  }
+  
+  .custom-dropdown:hover {
+    border-color: #3BAAE0;
+  }
+  
+  .dropdown-placeholder {
+    color: #999;
+  }
+  
+  .dropdown-content {
+    display: none;
+    position: absolute;
+    top: 105%;
+    left: 0;
+    width: 100%;
+    background-color: white;
+    border: 1px solid #ccc;
+    z-index: 1000;
+    border-radius: 5px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    max-height: 250px; /* 🔸 أقصى ارتفاع مناسب */
+    overflow-y: auto;   /* 🔸 يعمل Scroll لو زاد المحتوى */
+  }
+  
+  
+  .dropdown-search {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    outline: none;
+  }
+  
+  .dropdown-options {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  
+  .dropdown-option {
+    padding: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  
+  .dropdown-option:hover {
+    background-color: #f0f0f0;
+  }
+/* Responsive adjustments for logos on small screens */
+@media (max-width: 1024px) {
+  .right-logo,
+  .left-logo {
+    width: 100px; /* أصغر شوي */
+    top: 10px;
+  }
+
+  .right-logo {
+    left: 20px; /* أبعد شوي عن الزاوية */
+  }
+
+  .left-logo {
+    right: 20px; /* أبعد شوي عن الزاوية */
+  }
+
+  .container {
+    padding-top: 80px; /* نزيد مسافة من الأعلى لتفادي تراكب اللوغو مع المحتوى */
+  }
+}
+
+@media (max-width: 768px) {
+  .right-logo,
+  .left-logo {
+    width: 80px;
+    top: 10px;
+  }
+
+  .right-logo {
+    left: 15px;
+  }
+
+  .left-logo {
+    right: 15px;
+  }
+
+  .container {
+    padding-top: 90px;
+  }
+}
+
+@media (max-width: 480px) {
+  .right-logo,
+  .left-logo {
+    width: 70px;
+    top: 8px;
+  }
+
+  .right-logo {
+    left: 10px;
+  }
+
+  .left-logo {
+    right: 10px;
+  }
+
+  .container {
+    padding-top: 100px;
+  }
+}
