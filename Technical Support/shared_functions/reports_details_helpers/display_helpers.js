@@ -1,31 +1,31 @@
 // دوال عرض البيانات في تقارير التفاصيل
 
-import { processPipeText, translateWithGoogle, translateBatch } from './translation.js';
-import { cleanTag, getAssignedTo, getAssignedToId } from './data_processing.js';
+import { processPipeText, translateWithGoogle, translateBatch } from './translation.js'; // استيراد دوال الترجمة
+import { cleanTag, getAssignedTo, getAssignedToId } from './data_processing.js'; // استيراد دوال معالجة البيانات
 
 /**
  * تعيين البيانات الأساسية للتقرير
  */
 export async function setBasicReportData(report, translations, lang) {
-  const reportId = document.getElementById("report-id");
-  const reportTitle = document.getElementById("report-title");
-  const priority = document.getElementById("priority");
-  const deviceType = document.getElementById("device-type");
-  const assignedTo = document.getElementById("assigned-to");
-  const department = document.getElementById("department");
-  const category = document.getElementById("category");
-  const reportStatus = document.getElementById("report-status");
-  const submittedDate = document.getElementById("submitted-date");
+  const reportId = document.getElementById("report-id"); // عنصر رقم التقرير
+  const reportTitle = document.getElementById("report-title"); // عنصر عنوان التقرير
+  const priority = document.getElementById("priority"); // عنصر الأولوية
+  const deviceType = document.getElementById("device-type"); // عنصر نوع الجهاز
+  const assignedTo = document.getElementById("assigned-to"); // عنصر المهندس المسؤول
+  const department = document.getElementById("department"); // عنصر القسم
+  const category = document.getElementById("category"); // عنصر الفئة
+  const reportStatus = document.getElementById("report-status"); // عنصر حالة التقرير
+  const submittedDate = document.getElementById("submitted-date"); // عنصر تاريخ الإرسال
 
   // تعيين رقم التقرير
   if (report.maintenance_type === "Internal") {
-    reportId.textContent = report.ticket_number || `INT-${report.id}`;
+    reportId.textContent = report.ticket_number || `INT-${report.id}`; // رقم تذكرة داخلي
   } else {
-    reportId.textContent = report.report_number || report.request_number || `MR-${report.id}`;
+    reportId.textContent = report.report_number || report.request_number || `MR-${report.id}`; // رقم تقرير أو طلب
   }
 
   // تعيين عنوان التقرير
-  let titlePrefix = "Maintenance";
+  let titlePrefix = "Maintenance"; // بادئة العنوان الافتراضية
   if (report.maintenance_type === "Regular") {
     titlePrefix = "Regular Maintenance";
   } else if (report.maintenance_type === "General") {
@@ -36,8 +36,8 @@ export async function setBasicReportData(report, translations, lang) {
     titlePrefix = report.source === "external-new" ? "External Ticket" : "External Maintenance";
   }
 
-  const translatedTitle = translations.titleType?.[titlePrefix]?.[lang] || titlePrefix;
-  let ticketNum = report.ticket_number?.trim();
+  const translatedTitle = translations.titleType?.[titlePrefix]?.[lang] || titlePrefix; // ترجمة العنوان
+  let ticketNum = report.ticket_number?.trim(); // رقم التذكرة
   if (!ticketNum) {
     const fullText = `${report.full_description || ""} ${report.issue_summary || ""}`;
     const match = fullText.match(/(?:Ticket Number:|Ticket\s+\()? *(TIC-\d+|INT-\d{8}-\d{3})/i);
@@ -46,30 +46,30 @@ export async function setBasicReportData(report, translations, lang) {
     }
   }
 
-  const reportNum = report.report_number || report.request_number || "";
-  const isTicketReport = reportNum.includes("-TICKET");
-  const translatedTicket = translations.titleType?.["Ticket"]?.[lang] || "Ticket";
+  const reportNum = report.report_number || report.request_number || ""; // رقم التقرير
+  const isTicketReport = reportNum.includes("-TICKET"); // هل هو تقرير تذكرة
+  const translatedTicket = translations.titleType?.["Ticket"]?.[lang] || "Ticket"; // ترجمة كلمة تذكرة
 
-  let finalNumber = ticketNum || reportNum || report.id;
+  let finalNumber = ticketNum || reportNum || report.id; // الرقم النهائي
   if (isTicketReport && finalNumber.includes("-TICKET")) {
     finalNumber = finalNumber.replace("-TICKET", "");
   }
 
-  let reportTitleText = `${translatedTitle} #${finalNumber}`;
+  let reportTitleText = `${translatedTitle} #${finalNumber}`; // نص عنوان التقرير
   if (isTicketReport) {
     reportTitleText += ` - ${translatedTicket}`;
   }
 
-  reportTitle.textContent = reportTitleText;
-  reportTitle.setAttribute("data-i18n", "report_title_key");
+  reportTitle.textContent = reportTitleText; // تعيين نص العنوان
+  reportTitle.setAttribute("data-i18n", "report_title_key"); // تعيين خاصية الترجمة
 
   // تجميع النصوص المطلوب ترجمتها
   const textsToTranslate = [];
   const translationMap = new Map();
 
   // إضافة النصوص للترجمة
-  const rawPriority = report.priority || "Medium";
-  const rawType = report.device_type || "";
+  const rawPriority = report.priority || "Medium"; // الأولوية الأصلية
+  const rawType = report.device_type || ""; // نوع الجهاز الأصلي
   
   if (!translations.priority?.[rawPriority]?.[lang]) {
     textsToTranslate.push(rawPriority);
@@ -183,8 +183,8 @@ export async function setBasicReportData(report, translations, lang) {
  * معالجة وعرض الوصف
  */
 export function setDescription(report, lang) {
-  const descEl = document.getElementById("description");
-  const isInternalTicket = report.maintenance_type === "Internal";
+  const descEl = document.getElementById("description"); // عنصر الوصف
+  const isInternalTicket = report.maintenance_type === "Internal"; // هل هو تذكرة داخلية
   
   let descriptionHtml = "";
   
@@ -261,7 +261,7 @@ export function setDescription(report, lang) {
     cleanedDescription = cleanedDescription.slice(0, -1);
   }
   
-  cleanedDescription = cleanedDescription.replace(/^["""]?|["""]?$/g, "").trim();
+  cleanedDescription = cleanedDescription.replace(/^"""?|"""?$/g, "").trim();
 
   // عرض الوصف
   if (cleanedDescription.includes('<br>')) {
@@ -281,7 +281,7 @@ export function setDescription(report, lang) {
     }
   }
   
-  descEl.style.textAlign = lang === 'ar' ? 'right' : 'left';
+  descEl.style.textAlign = lang === 'ar' ? 'right' : 'left'; // محاذاة النص حسب اللغة
 }
 
 /**
@@ -397,8 +397,8 @@ function processInternalTicketDescription(report, lang) {
  * تعيين الملاحظات التقنية
  */
 export function setTechnicalNotes(report, lang, translations) {
-  const noteEl = document.getElementById("note");
-  const isExternal = report.source === "external";
+  const noteEl = document.getElementById("note"); // عنصر الملاحظات
+  const isExternal = report.source === "external"; // هل التقرير خارجي
 
   if (report.maintenance_type === "General") {
     const generalInfo = [
@@ -496,24 +496,24 @@ export function setTechnicalNotes(report, lang, translations) {
  * تعيين المرفقات والتوقيع
  */
 export function setAttachments(report) {
-  const attachmentSection = document.getElementById("attachment-section");
+  const attachmentSection = document.getElementById("attachment-section"); // عنصر المرفقات
 
   // عرض المرفق إذا موجود
   if (report.attachment_name && report.attachment_path) {
-    const attachmentLink = document.createElement("a");
-    attachmentLink.href = `http://localhost:4000/uploads/${report.attachment_path}`;
-    attachmentLink.textContent = `📎 ${report.attachment_name}`;
-    attachmentLink.download = report.attachment_name;
+    const attachmentLink = document.createElement("a"); // إنشاء رابط للمرفق
+    attachmentLink.href = `http://localhost:4000/uploads/${report.attachment_path}`; // رابط المرفق
+    attachmentLink.textContent = `📎 ${report.attachment_name}`; // نص الرابط
+    attachmentLink.download = report.attachment_name; // اسم الملف عند التحميل
     attachmentLink.style = "display: block; margin-top: 10px; color: #007bff; text-decoration: underline;";
-    attachmentSection.appendChild(attachmentLink);
+    attachmentSection.appendChild(attachmentLink); // إضافة الرابط إلى القسم
   }
 
   // عرض التوقيع إذا موجود
   if (report.signature_path) {
-    const sigImg = document.createElement("img");
-    sigImg.src = `http://localhost:4000/${report.signature_path}`;
-    sigImg.alt = "Signature";
+    const sigImg = document.createElement("img"); // إنشاء عنصر صورة للتوقيع
+    sigImg.src = `http://localhost:4000/${report.signature_path}`; // رابط الصورة
+    sigImg.alt = "Signature"; // نص بديل
     sigImg.style = "margin-top: 10px; max-width: 200px; border: 1px solid #ccc; display: block;";
-    attachmentSection.appendChild(sigImg);
+    attachmentSection.appendChild(sigImg); // إضافة الصورة إلى القسم
   }
 } 

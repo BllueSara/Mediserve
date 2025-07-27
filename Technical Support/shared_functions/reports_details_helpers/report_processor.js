@@ -1,35 +1,35 @@
 // دوال معالجة التقارير الأولية
 
-import { cleanReport, getAssignedTo, getAssignedToId } from './data_processing.js';
-import { processPipeText } from './translation.js';
-import { isDevelopment } from './performance_optimizer.js';
+import { cleanReport, getAssignedTo, getAssignedToId } from './data_processing.js'; // استيراد دوال معالجة البيانات
+import { processPipeText } from './translation.js'; // استيراد دالة معالجة النصوص
+import { isDevelopment } from './performance_optimizer.js'; // استيراد دالة التحقق من بيئة التطوير
 
 /**
  * معالجة التقرير الجديد
  */
 export function processNewReport(report, lang, languageManager) {
   // تعيين البيانات الأساسية
-  document.getElementById("report-title").textContent = `New Maintenance Report #${report.id}`;
-  document.getElementById("report-id").textContent = `NMR-${report.id}`;
-  document.getElementById("priority").textContent = report.priority || "Medium";
-  document.getElementById("device-type").textContent = report.device_type || "";
+  document.getElementById("report-title").textContent = `New Maintenance Report #${report.id}`; // تعيين عنوان التقرير
+  document.getElementById("report-id").textContent = `NMR-${report.id}`; // تعيين رقم التقرير
+  document.getElementById("priority").textContent = report.priority || "Medium"; // تعيين الأولوية
+  document.getElementById("device-type").textContent = report.device_type || ""; // تعيين نوع الجهاز
   
   // معالجة اسم المهندس
-  const assignedToEl = document.getElementById("assigned-to");
-  assignedToEl.textContent = getAssignedTo(report, lang);
-  assignedToEl.dataset.key = report.assigned_to_raw || report.assigned_to || "";
-  assignedToEl.dataset.rawtext = report.assigned_to_raw || report.assigned_to || "";
+  const assignedToEl = document.getElementById("assigned-to"); // عنصر المهندس
+  assignedToEl.textContent = getAssignedTo(report, lang); // تعيين اسم المهندس
+  assignedToEl.dataset.key = report.assigned_to_raw || report.assigned_to || ""; // تعيين البيانات الإضافية
+  assignedToEl.dataset.rawtext = report.assigned_to_raw || report.assigned_to || ""; // تعيين النص الخام
   
-  document.getElementById("department").textContent = report.department_name || "";
-  document.getElementById("category").textContent = "New";
-  document.getElementById("report-status").textContent = report.status || "Open";
-  document.getElementById("submitted-date").textContent = `Submitted on ${new Date(report.created_at).toLocaleString()}`;
+  document.getElementById("department").textContent = report.department_name || ""; // تعيين القسم
+  document.getElementById("category").textContent = "New"; // تعيين الفئة
+  document.getElementById("report-status").textContent = report.status || "Open"; // تعيين حالة التقرير
+  document.getElementById("submitted-date").textContent = `Submitted on ${new Date(report.created_at).toLocaleString()}`; // تعيين تاريخ الإرسال
   
   // معالجة problem_status
-  let descriptionText = report.description || "No description.";
+  let descriptionText = report.description || "No description."; // نص الوصف الافتراضي
   if (typeof report.problem_status === "string" && report.problem_status.trim().startsWith("[")) {
     try {
-      const problemArray = JSON.parse(report.problem_status);
+      const problemArray = JSON.parse(report.problem_status); // تحويل النص إلى مصفوفة
       if (Array.isArray(problemArray) && problemArray.length > 0) {
         const processedItems = problemArray.map(item => {
           if (typeof item === "string" && item.includes("|")) {
@@ -38,7 +38,7 @@ export function processNewReport(report, lang, languageManager) {
           }
           return item;
         });
-        descriptionText = processedItems.map(item => '• ' + item).join('<br>');
+        descriptionText = processedItems.map(item => '• ' + item).join('<br>'); // تحويل العناصر إلى قائمة نقطية
       }
     } catch (e) {
       console.warn("⚠️ Failed to parse new report problem_status JSON:", e);
@@ -48,8 +48,8 @@ export function processNewReport(report, lang, languageManager) {
     descriptionText = processPipeText(report.description, lang) || "No description.";
   }
   
-  document.getElementById("description").innerHTML = descriptionText;
-  document.getElementById("note").innerHTML = `<strong>Note:</strong><br>${processPipeText(report.details, lang) || ""}`;
+  document.getElementById("description").innerHTML = descriptionText; // تعيين الوصف
+  document.getElementById("note").innerHTML = `<strong>Note:</strong><br>${processPipeText(report.details, lang) || ""}`; // تعيين الملاحظة
 }
 
 /**

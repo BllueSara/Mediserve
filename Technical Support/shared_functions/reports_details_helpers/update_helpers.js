@@ -1,4 +1,4 @@
-import { fetchOptions, createSelectElement, populateModelDropdown, getLookupField } from './helpers.js';
+import { fetchOptions, createSelectElement, populateModelDropdown, getLookupField } from './helpers.js'; // استيراد الدوال المساعدة
 
 /**
  * Activates edit mode for the report details page
@@ -8,8 +8,8 @@ import { fetchOptions, createSelectElement, populateModelDropdown, getLookupFiel
  */
 export const activateEditMode = async (reportData, lookupConfig, specConfig) => {
   // إظهار/إخفاء الأزرار
-  document.querySelector(".edit-btn").style.display = "none";
-  document.querySelector(".save-btn").style.display = "inline-block";
+  document.querySelector(".edit-btn").style.display = "none"; // إخفاء زر التعديل
+  document.querySelector(".save-btn").style.display = "inline-block"; // إظهار زر الحفظ
   
   // بعد loop على lookupConfig و specConfig:
   const editableFields = [

@@ -1,18 +1,18 @@
 // دوال مساعدة لتوليد PDF في تقارير التفاصيل
 
 import {
-  prepareArabic,
-  getImageBase64,
-  waitForImagesToLoad,
-  reverseTranslate,
-  processPipeText,
-  normalizeText,
-  getTitleKey,
-  getAssignedTo
+  prepareArabic, // دالة تجهيز النص العربي
+  getImageBase64, // دالة تحويل الصورة إلى Base64
+  waitForImagesToLoad, // دالة انتظار تحميل الصور
+  reverseTranslate, // دالة الترجمة العكسية
+  processPipeText, // دالة معالجة النصوص
+  normalizeText, // دالة تطبيع النصوص
+  getTitleKey, // دالة الحصول على مفتاح العنوان
+  getAssignedTo // دالة الحصول على اسم المسؤول
 } from './helpers.js';
 
 import {
-  findLabelKeyByAnyLang
+  findLabelKeyByAnyLang // دالة البحث عن مفتاح التسمية بأي لغة
 } from './translation.js';
 
 // ترجمات الحقول للـ PDF
@@ -121,21 +121,21 @@ const getSpecsTranslations = () => {
 
 // دالة إعداد الخطوط للـ PDF
 export const setupPdfFonts = (doc, tajawalRegularBase64, tajawalBoldBase64) => {
-  doc.addFileToVFS("Amiri-Regular.ttf", tajawalRegularBase64);
-  doc.addFont("Amiri-Regular.ttf", "Amiri", "normal");
-  doc.addFileToVFS("Amiri-Bold.ttf", tajawalBoldBase64);
-  doc.addFont("Amiri-Bold.ttf", "Amiri", "bold");
-  doc.setFont("Amiri", "normal");
+  doc.addFileToVFS("Amiri-Regular.ttf", tajawalRegularBase64); // إضافة خط Amiri-Regular
+  doc.addFont("Amiri-Regular.ttf", "Amiri", "normal"); // إضافة الخط العادي
+  doc.addFileToVFS("Amiri-Bold.ttf", tajawalBoldBase64); // إضافة خط Amiri-Bold
+  doc.addFont("Amiri-Bold.ttf", "Amiri", "bold"); // إضافة الخط العريض
+  doc.setFont("Amiri", "normal"); // تعيين الخط الافتراضي
 };
 
 // دالة إضافة الشعارات للـ PDF
 export const addLogosToPdf = (doc, msLogoImg, hospitalLogoImg) => {
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const msBase64 = getImageBase64(msLogoImg);
-  const hospitalBase64 = getImageBase64(hospitalLogoImg);
+  const pageWidth = doc.internal.pageSize.getWidth(); // عرض الصفحة
+  const msBase64 = getImageBase64(msLogoImg); // تحويل شعار ms إلى Base64
+  const hospitalBase64 = getImageBase64(hospitalLogoImg); // تحويل شعار المستشفى إلى Base64
   
-  doc.addImage(msBase64, "PNG", 3, 8, 25, 12);
-  doc.addImage(hospitalBase64, "PNG", pageWidth - 35, 8, 25, 12);
+  doc.addImage(msBase64, "PNG", 3, 8, 25, 12); // إضافة شعار ms
+  doc.addImage(hospitalBase64, "PNG", pageWidth - 35, 8, 25, 12); // إضافة شعار المستشفى
 };
 
 // دالة إضافة عنوان التقرير للـ PDF

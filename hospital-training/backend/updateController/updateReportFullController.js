@@ -18,7 +18,7 @@ const compareReadable = (label, oldVal, newVal, changes) => {
   
   // الدالة الأصلية كما هي من server.js
   async function updateReportFull(req, res) {
-  const updatedData = JSON.parse(req.body.data || "{}");
+    const updatedData = JSON.parse(req.body.data || "{}");
   const attachmentFile = req.files?.attachment?.[0] || null;
   const signatureRaw = req.files?.signature?.[0] || null;
   const signatureFile = signatureRaw && signatureRaw.size > 0 ? signatureRaw : null;
@@ -78,12 +78,12 @@ if (department_name && department_name.trim() !== "") {
   const isPrinter = lowerType === "printer";
   const isScanner = lowerType === "scanner";
 
+  // تعريف المتغيرات في البداية لتجنب أخطاء ReferenceError
+  const isExternal = source === "external-legacy";
+  let actualDeviceId = null;
+
   // استخدم جدول Maintance_Device_Model في جميع الحالات
   const { model_id } = updatedData;
-let modelId = null;
-if (device_type && model_id) {
-  modelId = Number(model_id);
-}
 
 
 
@@ -250,7 +250,8 @@ if(source === "external-legacy"){
      SET reporter_name = ?
      WHERE id = ?`,
     [engName, id]
-  );}
+  );
+}
 
 if (source === "external-new") {
   // جلب ticket_number إذا لم يكن موجودًا
@@ -299,6 +300,33 @@ if (reportOld.device_id) {
   oldDevice = rows[0] || {};
 }
 
+// للصيانة الخارجية، تحسين منطق البحث عن الجهاز بالرقم التسلسلي القديم
+if (isExternal && serial_number && oldDevice.serial_number && oldDevice.serial_number !== serial_number) {
+  console.log(`🔍 EXTERNAL MAINTENANCE DEBUG - Starting device search for serial: ${serial_number}`);
+  console.log(`🔍 STEP 1: Searching for device with OLD serial number in Maintenance_Devices`);
+  console.log(`🔍 OLD serial from device: ${oldDevice.serial_number}, NEW serial: ${serial_number}`);
+  
+  // ابحث عن الجهاز بالرقم التسلسلي القديم في Maintenance_Devices
+  const [oldSerialDevice] = await db.promise().query(
+    `SELECT id, serial_number FROM Maintenance_Devices WHERE serial_number = ? LIMIT 1`,
+    [oldDevice.serial_number]
+  );
+  
+  if (oldSerialDevice.length > 0) {
+    actualDeviceId = oldSerialDevice[0].id;
+    console.log(`🔗 FOUND device ${actualDeviceId} with OLD serial ${oldSerialDevice[0].serial_number}, will UPDATE it to new serial ${serial_number}`);
+    console.log(`📝 CRITICAL: This ensures we UPDATE existing device, NOT create new one`);
+    
+    // ربط التقرير بالجهاز الموجود
+    await db.promise().query(
+      `UPDATE Maintenance_Reports SET device_id = ? WHERE id = ?`,
+      [actualDeviceId, id]
+    );
+    console.log(`🔗 Linked report ${id} to existing device ${actualDeviceId} (found by OLD serial)`);
+  } else {
+    console.log(`⚠️ No device found with OLD serial ${oldDevice.serial_number}, continuing with normal search`);
+  }
+}
 
     // جلب بيانات PC_info / Printer_info / Scanner_info
     let oldSpec = {};
@@ -339,6 +367,16 @@ compareReadable("Category", reportOld.report_type, category, changes);
     // Model
 // بعد ما تجيب oldDevice و oldSpec
 const oldModelId = oldDevice.model_id ?? oldSpec?.Model_id;
+
+// حساب modelId مع fallback للقيمة القديمة
+let modelId = null;
+if (device_type && model_id) {
+  const parsedModelId = Number(model_id);
+  modelId = isNaN(parsedModelId) ? oldModelId : parsedModelId;
+} else {
+  modelId = oldModelId; // استخدم القيمة القديمة إذا لم يتم إرسال model_id جديد
+}
+
 let modelNameOld = null;
 
 if (oldModelId) {
@@ -481,6 +519,28 @@ compareReadable("Model", modelNameOld, updatedData.model_name, changes);
       ink_serial_number = await getOrCreateinkId("Ink_Serials", "serial_number", ink_serial_number);
       printer_type = await getOrCreateId("Printer_Types", "printer_type", printer_type);
     }
+
+    // تحسين: تأكد من أن جميع المتغيرات المطلوبة متوفرة للصيانة الخارجية
+    if (source === "external-legacy" || source === "external-new") {
+      console.log(`🔧 External maintenance detected. Ensuring all required variables are available.`);
+      console.log(`📋 Device type: ${device_type}, Serial: ${serial_number}, Model: ${model_name}`);
+      
+      // تأكد من أن serial_number متوفر
+      if (!serial_number) {
+        console.warn(`⚠️ Serial number is missing for external maintenance. Using device_id: ${actualDeviceId}`);
+      }
+      
+      // تأكد من أن device_type متوفر
+      if (!device_type) {
+        console.warn(`⚠️ Device type is missing for external maintenance.`);
+      }
+      
+      // تأكد من أن modelId متوفر
+      if (!modelId) {
+        console.warn(`⚠️ Model ID is missing for external maintenance.`);
+      }
+    }
+
     if (source === "new") {
       const updateSql = `
         UPDATE New_Maintenance_Report
@@ -614,10 +674,225 @@ if (setFields.length > 0) {
   }
 }
 
-const isExternal = source === "external-legacy";
-
 // خذ ID الجهاز من التقرير نفسه
-let actualDeviceId = reportOld.device_id;
+actualDeviceId = reportOld.device_id;
+
+console.log(`🔍 External Legacy Debug - Report ID: ${id}, Source: ${source}, Initial device_id: ${actualDeviceId}, Serial: ${serial_number}`);
+
+  // للصيانة الخارجية، تحسين منطق البحث عن الجهاز
+if (isExternal && serial_number) {
+  // إذا كان هناك device_id موجود، استخدمه أولاً (الأولوية للجهاز المرتبط بالتقرير)
+  if (actualDeviceId) {
+    const [deviceCheck] = await db.promise().query(
+      `SELECT id, serial_number FROM Maintenance_Devices WHERE id = ? LIMIT 1`,
+      [actualDeviceId]
+    );
+    if (deviceCheck.length > 0) {
+      console.log(`🔗 Using existing linked device ${actualDeviceId} for report ${id} (current serial: ${deviceCheck[0].serial_number}, new serial: ${serial_number})`);
+      // نستخدم الجهاز الموجود حتى لو تغير الرقم التسلسلي
+    } else {
+      console.log(`⚠️ Linked device ${actualDeviceId} not found, will search for new device`);
+      actualDeviceId = null;
+    }
+  }
+
+  // إذا لم يكن هناك device_id مرتبط، ابحث عن جهاز بالرقم التسلسلي
+  if (!actualDeviceId) {
+    console.log(`🔍 Searching for existing device in Maintenance_Devices for serial: ${serial_number}`);
+    const [deviceRows] = await db.promise().query(
+      `SELECT id FROM Maintenance_Devices WHERE serial_number = ? LIMIT 1`,
+      [serial_number]
+    );
+    
+    if (deviceRows.length > 0) {
+      // الجهاز موجود في Maintenance_Devices، استخدمه
+      actualDeviceId = deviceRows[0].id;
+      console.log(`🔗 Found existing device ${actualDeviceId} in Maintenance_Devices for serial: ${serial_number}`);
+      
+      // ربط التقرير بالجهاز الموجود
+      await db.promise().query(
+        `UPDATE Maintenance_Reports SET device_id = ? WHERE id = ?`,
+        [actualDeviceId, id]
+      );
+      console.log(`🔗 Linked report ${id} to existing device ${actualDeviceId}`);
+    } else {
+      // لم يوجد في Maintenance_Devices، ابحث في External_Maintenance
+      console.log(`🔍 Device not found in Maintenance_Devices, searching in External_Maintenance for serial: ${serial_number}`);
+      const [externalRows] = await db.promise().query(
+        `SELECT * FROM External_Maintenance WHERE serial_number = ? LIMIT 1`,
+        [serial_number]
+      );
+      
+      if (externalRows.length > 0) {
+        // وجد الجهاز في External_Maintenance، أنشئ سجل جديد في Maintenance_Devices
+        await db.promise().query(
+        `UPDATE Maintenance_Reports SET device_id = ? WHERE id = ?`,
+        [actualDeviceId, id]
+      );
+        console.log(`🆕 Created new device ${actualDeviceId} for external-legacy report ${id}`);
+        
+        // إنشاء السجل في الجدول التفصيلي المناسب (فقط إذا لم يكن موجوداً)
+        if (device_type === "Printer" || device_type === "printer") {
+          console.log(`🖨️ Checking if Printer_info record exists for serial: ${serial_number}`);
+          const [existingPrinter] = await db.promise().query(
+            `SELECT 1 FROM Printer_info WHERE Serial_Number = ? LIMIT 1`,
+            [serial_number]
+          );
+          
+          if (existingPrinter.length === 0) {
+            console.log(`🖨️ Creating new Printer_info record for serial: ${serial_number}`);
+            let inkTypeId = Number(updatedData.ink_type_id);
+            if ((!inkTypeId || isNaN(inkTypeId)) && updatedData.ink_type) {
+              inkTypeId = await getOrCreateId("Ink_Types", "ink_type", updatedData.ink_type.trim());
+            }
+            const newInkSerialStr = updatedData.ink_serial_number?.trim() || null;
+            const inkSerialId = newInkSerialStr ? await getOrCreateinkId("Ink_Serials", "serial_number", newInkSerialStr) : null;
+            let printerTypeId = Number(updatedData.printer_type_id);
+            if ((!printerTypeId || isNaN(printerTypeId)) && updatedData.printer_type) {
+              printerTypeId = await getOrCreateId("Printer_Types", "printer_type", updatedData.printer_type.trim());
+            }
+            await db.promise().query(`
+              INSERT INTO Printer_info (Serial_Number, Printer_Name, Governmental_Number, Department, InkType_id, InkSerial_id, PrinterType_id, Model_id)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `, [serial_number, device_name, governmental_number, departmentId, inkTypeId, inkSerialId, printerTypeId, modelId]);
+            console.log(`✅ Created new Printer_info record for serial: ${serial_number}`);
+          } else {
+            console.log(`✅ Printer_info record already exists for serial: ${serial_number}`);
+          }
+        } else if (device_type === "PC") {
+          console.log(`🖥️ Checking if PC_info record exists for serial: ${serial_number}`);
+          const [existingPC] = await db.promise().query(
+            `SELECT 1 FROM PC_info WHERE Serial_Number = ? LIMIT 1`,
+            [serial_number]
+          );
+          
+          if (existingPC.length === 0) {
+            console.log(`🖥️ Creating new PC_info record for serial: ${serial_number}`);
+            await db.promise().query(`
+              INSERT INTO PC_info (Serial_Number, Computer_Name, Governmental_Number, Department, Model_id, Mac_Address, Ip_Address)
+              VALUES (?, ?, ?, ?, ?, ?, ?)
+            `, [serial_number, device_name, governmental_number, departmentId, modelId, mac_address, ip_address]);
+            console.log(`✅ Created new PC_info record for serial: ${serial_number}`);
+          } else {
+            console.log(`✅ PC_info record already exists for serial: ${serial_number}`);
+          }
+        } else if (device_type === "Scanner" || device_type === "scanner") {
+          console.log(`📷 Checking if Scanner_info record exists for serial: ${serial_number}`);
+          const [existingScanner] = await db.promise().query(
+            `SELECT 1 FROM Scanner_info WHERE Serial_Number = ? LIMIT 1`,
+            [serial_number]
+          );
+          
+          if (existingScanner.length === 0) {
+            console.log(`📷 Creating new Scanner_info record for serial: ${serial_number}`);
+            let scannerTypeId = Number(updatedData.scanner_type_id);
+            if ((!scannerTypeId || isNaN(scannerTypeId)) && updatedData.scanner_type) {
+              scannerTypeId = await getOrCreateId("Scanner_Types", "scanner_type", updatedData.scanner_type.trim());
+            }
+            await db.promise().query(`
+              INSERT INTO Scanner_info (Serial_Number, Scanner_Name, Governmental_Number, Department, ScannerType_id, Model_id)
+              VALUES (?, ?, ?, ?, ?, ?)
+            `, [serial_number, device_name, governmental_number, departmentId, scannerTypeId, modelId]);
+            console.log(`✅ Created new Scanner_info record for serial: ${serial_number}`);
+          } else {
+            console.log(`✅ Scanner_info record already exists for serial: ${serial_number}`);
+          }
+        }
+      } else {
+        // لم يوجد في أي مكان، أنشئ جهاز جديد ببيانات الطلب الحالي
+        console.log(`🆕 Creating new device for serial number: ${serial_number}`);
+        actualDeviceId = result.insertId;
+        await db.promise().query(
+          `UPDATE Maintenance_Reports SET device_id = ? WHERE id = ?`,
+          [actualDeviceId, id]
+        );
+        console.log(`🆕 Created new device ${actualDeviceId} for external-legacy report ${id}`);
+        
+        // إنشاء السجل في الجدول التفصيلي المناسب (فقط إذا لم يكن موجوداً)
+        if (device_type === "Printer" || device_type === "printer") {
+          console.log(`🖨️ Checking if Printer_info record exists for serial: ${serial_number}`);
+          const [existingPrinter] = await db.promise().query(
+            `SELECT 1 FROM Printer_info WHERE Serial_Number = ? LIMIT 1`,
+            [serial_number]
+          );
+          
+          if (existingPrinter.length === 0) {
+            console.log(`🖨️ Creating new Printer_info record for serial: ${serial_number}`);
+            let inkTypeId = Number(updatedData.ink_type_id);
+            if ((!inkTypeId || isNaN(inkTypeId)) && updatedData.ink_type) {
+              inkTypeId = await getOrCreateId("Ink_Types", "ink_type", updatedData.ink_type.trim());
+            }
+            const newInkSerialStr = updatedData.ink_serial_number?.trim() || null;
+            const inkSerialId = newInkSerialStr ? await getOrCreateinkId("Ink_Serials", "serial_number", newInkSerialStr) : null;
+            let printerTypeId = Number(updatedData.printer_type_id);
+            if ((!printerTypeId || isNaN(printerTypeId)) && updatedData.printer_type) {
+              printerTypeId = await getOrCreateId("Printer_Types", "printer_type", updatedData.printer_type.trim());
+            }
+            await db.promise().query(`
+              INSERT INTO Printer_info (Serial_Number, Printer_Name, Governmental_Number, Department, InkType_id, InkSerial_id, PrinterType_id, Model_id)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `, [serial_number, device_name, governmental_number, departmentId, inkTypeId, inkSerialId, printerTypeId, modelId]);
+            console.log(`✅ Created new Printer_info record for serial: ${serial_number}`);
+          } else {
+            console.log(`✅ Printer_info record already exists for serial: ${serial_number}`);
+          }
+        } else if (device_type === "PC") {
+          console.log(`🖥️ Checking if PC_info record exists for serial: ${serial_number}`);
+          const [existingPC] = await db.promise().query(
+            `SELECT 1 FROM PC_info WHERE Serial_Number = ? LIMIT 1`,
+            [serial_number]
+          );
+          
+          if (existingPC.length === 0) {
+            console.log(`🖥️ Creating new PC_info record for serial: ${serial_number}`);
+            await db.promise().query(`
+              INSERT INTO PC_info (Serial_Number, Computer_Name, Governmental_Number, Department, Model_id, Mac_Address, Ip_Address)
+              VALUES (?, ?, ?, ?, ?, ?, ?)
+            `, [serial_number, device_name, governmental_number, departmentId, modelId, mac_address, ip_address]);
+            console.log(`✅ Created new PC_info record for serial: ${serial_number}`);
+          } else {
+            console.log(`✅ PC_info record already exists for serial: ${serial_number}`);
+          }
+        } else if (device_type === "Scanner" || device_type === "scanner") {
+          console.log(`📷 Checking if Scanner_info record exists for serial: ${serial_number}`);
+          const [existingScanner] = await db.promise().query(
+            `SELECT 1 FROM Scanner_info WHERE Serial_Number = ? LIMIT 1`,
+            [serial_number]
+          );
+          
+          if (existingScanner.length === 0) {
+            console.log(`📷 Creating new Scanner_info record for serial: ${serial_number}`);
+            let scannerTypeId = Number(updatedData.scanner_type_id);
+            if ((!scannerTypeId || isNaN(scannerTypeId)) && updatedData.scanner_type) {
+              scannerTypeId = await getOrCreateId("Scanner_Types", "scanner_type", updatedData.scanner_type.trim());
+            }
+            await db.promise().query(`
+              INSERT INTO Scanner_info (Serial_Number, Scanner_Name, Governmental_Number, Department, ScannerType_id, Model_id)
+              VALUES (?, ?, ?, ?, ?, ?)
+            `, [serial_number, device_name, governmental_number, departmentId, scannerTypeId, modelId]);
+            console.log(`✅ Created new Scanner_info record for serial: ${serial_number}`);
+          } else {
+            console.log(`✅ Scanner_info record already exists for serial: ${serial_number}`);
+          }
+        }
+      }
+    }
+  }
+}
+
+console.log(`✅ Final actualDeviceId for external-legacy: ${actualDeviceId}`);
+
+// تحديث External_Maintenance مع جميع المواصفات والقسم
+await updateExternalMaintenanceInfo(actualDeviceId, updatedData, id, source);
+
+// تحديث Maintenance_Reports لربط التقرير بالجهاز إذا لم يكن مرتبطاً
+if (actualDeviceId && !reportOld.device_id) {
+  await db.promise().query(
+    `UPDATE Maintenance_Reports SET device_id = ? WHERE id = ?`,
+    [actualDeviceId, id]
+  );
+  console.log(`🔗 Linked report ${id} to device ${actualDeviceId}`);
+}
 
 // جب بيانات الجهاز القديم باستخدام نفس الـ ID
 if (actualDeviceId) {
@@ -628,7 +903,11 @@ if (actualDeviceId) {
   oldDevice = rows[0] || {};
 }
 
-if (actualDeviceId && !isExternal) {
+// تحديث الجداول الأخرى لجميع أنواع التقارير (بما في ذلك الصيانة الخارجية)
+console.log(`🔧 Starting device updates for actualDeviceId: ${actualDeviceId}, Source: ${source}`);
+
+// تحديث Maintenance_Devices إذا كان actualDeviceId موجود
+if (actualDeviceId) {
   const oldSerial = oldDevice.serial_number?.trim();
   const newSerial = serial_number?.trim();
   const isValidMac = (mac) => /^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$/i.test(mac);
@@ -641,18 +920,28 @@ if (actualDeviceId && !isExternal) {
   if (mac_address && !isValidMac(mac_address)) {
     return res.status(400).json({ error: " عنوان MAC غير صالح. مثال صحيح: 00:1A:2B:3C:4D:5E" });
   }
+  
+  console.log(`🔧 Updating existing device ${actualDeviceId} in Maintenance_Devices`);
+  
   // ✅ طباعة لتأكيد الفرق
   console.log("🧾 Comparing old vs new serial");
   console.log("🔴 old:", oldSerial);
   console.log("🟢 new:", newSerial);
 
-  if (oldSerial && newSerial && oldSerial !== newSerial) {
+  // تحسين شرط الفحص - إزالة استثناء الصيانة الخارجية:
+  if (
+    oldSerial && newSerial &&
+    oldSerial !== newSerial &&
+    newSerial !== "" &&
+    newSerial !== null
+  ) {
     const [conflictRows] = await db.promise().query(
       `SELECT id FROM Maintenance_Devices WHERE serial_number = ? AND id != ?`,
       [newSerial, actualDeviceId]
     );
     if (conflictRows.length > 0) {
-      return res.status(400).json({ error: "❌ الرقم التسلسلي مستخدم مسبقًا من قبل جهاز آخر." });
+      // أضف رقم الجهاز المسبب للتعارض في الرسالة
+      return res.status(400).json({ error: `❌ الرقم التسلسلي مستخدم مسبقًا من قبل جهاز آخر (ID: ${conflictRows[0].id})` });
     }
 
     // تحديث الجداول المرتبطة...
@@ -672,9 +961,6 @@ if (actualDeviceId && !isExternal) {
     }
 
     console.log("📦 modelId to update:", modelId);
-
-    // في هذه النقطة لم نعرِّف بعد `updates` و `values`
-    // لذا ننقل طباعتهما إلى ما بعد تعريفهما
 
     // ✅ تحديث Serial Number أولًا
     await db.promise().query(
@@ -704,22 +990,40 @@ if (actualDeviceId && !isExternal) {
   values.push(modelId || null);
 
   if (isPrinter && serial_number && modelId) {
-    await db.promise().query(
-      `UPDATE Printer_info SET Model_id = ? WHERE Serial_Number = ?`,
-      [modelId, serial_number]
+    const [existingPrinter] = await db.promise().query(
+      `SELECT 1 FROM Printer_info WHERE Serial_Number = ? LIMIT 1`,
+      [serial_number]
     );
+    if (existingPrinter.length > 0) {
+      await db.promise().query(
+        `UPDATE Printer_info SET Model_id = ? WHERE Serial_Number = ?`,
+        [modelId, serial_number]
+      );
+    }
   }
   if (isScanner && serial_number && modelId) {
-    await db.promise().query(
-      `UPDATE Scanner_info SET Model_id = ? WHERE Serial_Number = ?`,
-      [modelId, serial_number]
+    const [existingScanner] = await db.promise().query(
+      `SELECT 1 FROM Scanner_info WHERE Serial_Number = ? LIMIT 1`,
+      [serial_number]
     );
+    if (existingScanner.length > 0) {
+      await db.promise().query(
+        `UPDATE Scanner_info SET Model_id = ? WHERE Serial_Number = ?`,
+        [modelId, serial_number]
+      );
+    }
   }
   if (isPC && serial_number && modelId) {
-    await db.promise().query(
-      `UPDATE PC_info SET Model_id = ? WHERE Serial_Number = ?`,
-      [modelId, serial_number]
+    const [existingPC] = await db.promise().query(
+      `SELECT 1 FROM PC_info WHERE Serial_Number = ? LIMIT 1`,
+      [serial_number]
     );
+    if (existingPC.length > 0) {
+      await db.promise().query(
+        `UPDATE PC_info SET Model_id = ? WHERE Serial_Number = ?`,
+        [modelId, serial_number]
+      );
+    }
   }
 
   if (isPC) {
@@ -751,257 +1055,548 @@ if (actualDeviceId && !isExternal) {
   );
 }
 
+// تحديث Maintenance_Devices بالرقم التسلسلي إذا لم يكن actualDeviceId موجود
+if (!actualDeviceId && serial_number) {
+  console.log(`🔧 Updating Maintenance_Devices by serial number: ${serial_number}`);
+  
+  const maintenanceUpdates = [
+    "device_name = ?", "governmental_number = ?", "department_id = ?", 
+    "model_id = ?", "mac_address = ?", "ip_address = ?"
+  ];
+  const maintenanceValues = [
+    device_name, governmental_number, departmentId, modelId, mac_address, ip_address
+  ];
 
-
-
-    // تحديث PC_info
-    if (isPC && serial_number) {
-      await db.promise().query(`
-        UPDATE PC_info
-        SET Computer_Name = ?,  Processor_id = ?, RAM_id = ?, RamSize_id = ?, OS_id = ?, Generation_id = ?, Drive_id = ?, Mac_Address = ? ,Ip_Address = ?
-        WHERE Serial_Number = ?
-      `, [device_name, cpuId,  ramId, ramSizeId, osId, generationId, driveId, mac_address, ip_address, serial_number]);
-    }
-
- // ———— تحديث Printer_info ————
-if (device_type === "printer") {
-  // 1) حضّر inkTypeId
-  let inkTypeId = Number(updatedData.ink_type_id);
-  if ((!inkTypeId || isNaN(inkTypeId)) && updatedData.ink_type) {
-    inkTypeId = await getOrCreateId(
-      "Ink_Types",
-      "ink_type",
-      updatedData.ink_type.trim()
-    );
+  if (isPC) {
+    maintenanceUpdates.push("cpu_id = ?", "ram_id = ?", "os_id = ?", "generation_id = ?", "drive_id = ?", "ram_size_id = ?");
+    maintenanceValues.push(cpuId, ramId, osId, generationId, driveId, ramSizeId);
   }
 
-  // 2) حضّر inkSerialId
-  const newInkSerialStr = updatedData.ink_serial_number?.trim() || null;
-  const inkSerialId = newInkSerialStr
-    ? await getOrCreateinkId("Ink_Serials", "serial_number", newInkSerialStr)
-    : null;
+  maintenanceValues.push(serial_number);
+  await db.promise().query(`
+    UPDATE Maintenance_Devices 
+    SET ${maintenanceUpdates.join(", ")}
+    WHERE serial_number = ?
+  `, maintenanceValues);
+  
+  console.log(`✅ Maintenance_Devices updated by serial number`);
+}
 
-  // 3) حضّر printerTypeId
-  let printerTypeId = Number(updatedData.printer_type_id);
-  if ((!printerTypeId || isNaN(printerTypeId)) && updatedData.printer_type) {
-    printerTypeId = await getOrCreateId(
-      "Printer_Types",
-      "printer_type",
-      updatedData.printer_type.trim()
-    );
+// تحديث الجداول التفصيلية لجميع أنواع التقارير (بما في ذلك الصيانة الخارجية)
+console.log(`🔧 Starting detailed table updates for source: ${source}`);
+
+// تحديث PC_info
+if ((isPC || device_type === "PC") && serial_number) {
+  console.log(`🖥️ Updating PC_info for serial: ${serial_number}`);
+  const [existingPC] = await db.promise().query(
+    `SELECT 1 FROM PC_info WHERE Serial_Number = ? LIMIT 1`,
+    [serial_number]
+  );
+  
+  if (existingPC.length > 0) {
+    await db.promise().query(`
+      UPDATE PC_info
+      SET Computer_Name = ?,  Processor_id = ?, RAM_id = ?, RamSize_id = ?, OS_id = ?, Generation_id = ?, Drive_id = ?, Mac_Address = ? ,Ip_Address = ?
+      WHERE Serial_Number = ?
+    `, [device_name, cpuId,  ramId, ramSizeId, osId, generationId, driveId, mac_address, ip_address, serial_number]);
+    console.log(`✅ PC_info updated successfully`);
+  } else {
+    console.log(`⚠️ PC_info record not found for serial: ${serial_number}, skipping update`);
   }
-
-  // 4) استخدم دائمًاًً الـ serial_number المحدث
-  const serialKey = serial_number.trim(); // من updatedData
-
-  await db.promise().query(
-    `UPDATE Printer_info
-       SET 
-           Printer_Name   = ?,
-           Governmental_Number = ?,
-           Department     = ?,
-        InkType_id     = ?,
-           InkSerial_id   = ?,
-           PrinterType_id = ?
-     WHERE Serial_Number = ?`,
-    [ device_name, governmental_number, departmentId, inkTypeId, inkSerialId, printerTypeId, serialKey]
-  );
 }
 
-
-// ———— تحديث موديل الطابعة لو تغير ————
-if (isPrinter && serial_number && modelId) {
-  await db.promise().query(
-    `UPDATE Printer_info
-     SET Model_id = ?
-     WHERE Serial_Number = ?`,
-    [modelId, serial_number]
+// تحديث Printer_info
+if ((device_type === "printer" || device_type === "Printer") && serial_number) {
+  console.log(`🖨️ Updating Printer_info for serial: ${serial_number}`);
+  
+  const [existingPrinter] = await db.promise().query(
+    `SELECT 1 FROM Printer_info WHERE Serial_Number = ? LIMIT 1`,
+    [serial_number]
   );
-}
-
-
-
-// 1) جهّز scannerTypeId مضبوط:
- if (device_type === "scanner") {
-   // خذ القيمة القديمة أو الجديدة
-   let scannerTypeId = Number(updatedData.scanner_type_id);
-   // لو ما عندنا ID صالح لكن عندنا اسم جديد:
-   if ((!scannerTypeId || isNaN(scannerTypeId)) && updatedData.scanner_type) {
-     scannerTypeId = await getOrCreateId(
-       "Scanner_Types",
-       "scanner_type",
-       updatedData.scanner_type.trim()
-     );
-   }
-
-   // إذا ما حصلنا ID، حذّر وما تحدث:
-await db.promise().query(
-  `UPDATE Scanner_info
-   SET
-     Scanner_Name        = ?,
-     Governmental_Number = ?,
-     Department          = ?,
-     ScannerType_id      = ?
-   WHERE Serial_Number = ?`,
-  [
-    device_name,
-    governmental_number,
-    departmentId,
-    scannerTypeId,
-    serial_number
-  ]
-);
-
-
-   
- }
-  updatedData.device_specifications = reportOld.device_specifications;
-
-  await updateExternalMaintenanceInfo(actualDeviceId, updatedData);
-
-
-    // تحديث Scanner_info
-    if (isScanner && serial_number && modelId) {
-      await db.promise().query(`
-        UPDATE Scanner_info
-        SET Model_id = ?
-        WHERE Serial_Number = ?
-      `, [modelId, serial_number]);
+  
+  if (existingPrinter.length > 0) {
+    // 1) حضّر inkTypeId
+    let inkTypeId = Number(updatedData.ink_type_id);
+    if ((!inkTypeId || isNaN(inkTypeId)) && updatedData.ink_type) {
+      inkTypeId = await getOrCreateId(
+        "Ink_Types",
+        "ink_type",
+        updatedData.ink_type.trim()
+      );
     }
 
-    // تحديث الجداول المشتركة
-    const sharedParams = [
-      device_name, serial_number, governmental_number, department_name,
-      model_name, cpu_name, ram_type, os_name, generation_number, drive_type,
-      ram_size, ink_type, ink_serial_number, printer_type, mac_address, ip_address, scanner_type
+    // 2) حضّر inkSerialId
+    const newInkSerialStr = updatedData.ink_serial_number?.trim() || null;
+    const inkSerialId = newInkSerialStr
+      ? await getOrCreateinkId("Ink_Serials", "serial_number", newInkSerialStr)
+      : null;
+
+    // 3) حضّر printerTypeId
+    let printerTypeId = Number(updatedData.printer_type_id);
+    if ((!printerTypeId || isNaN(printerTypeId)) && updatedData.printer_type) {
+      printerTypeId = await getOrCreateId(
+        "Printer_Types",
+        "printer_type",
+        updatedData.printer_type.trim()
+      );
+    }
+
+    // 4) استخدم دائمًاًً الـ serial_number المحدث
+    const serialKey = serial_number.trim(); // من updatedData
+
+    await db.promise().query(
+      `UPDATE Printer_info
+         SET 
+             Printer_Name   = ?,
+             Governmental_Number = ?,
+             Department     = ?,
+          InkType_id     = ?,
+             InkSerial_id   = ?,
+             PrinterType_id = ?
+       WHERE Serial_Number = ?`,
+      [ device_name, governmental_number, departmentId, inkTypeId, inkSerialId, printerTypeId, serialKey]
+    );
+    console.log(`✅ Printer_info updated successfully`);
+  } else {
+    console.log(`⚠️ Printer_info record not found for serial: ${serial_number}, skipping update`);
+  }
+}
+
+// تحديث Scanner_info
+if ((device_type === "scanner" || device_type === "Scanner") && serial_number) {
+  console.log(`📷 Updating Scanner_info for serial: ${serial_number}`);
+  
+  const [existingScanner] = await db.promise().query(
+    `SELECT 1 FROM Scanner_info WHERE Serial_Number = ? LIMIT 1`,
+    [serial_number]
+  );
+  
+  if (existingScanner.length > 0) {
+    // خذ القيمة القديمة أو الجديدة
+    let scannerTypeId = Number(updatedData.scanner_type_id);
+    // لو ما عندنا ID صالح لكن عندنا اسم جديد:
+    if ((!scannerTypeId || isNaN(scannerTypeId)) && updatedData.scanner_type) {
+      scannerTypeId = await getOrCreateId(
+        "Scanner_Types",
+        "scanner_type",
+        updatedData.scanner_type.trim()
+      );
+    }
+
+    await db.promise().query(
+      `UPDATE Scanner_info
+       SET
+         Scanner_Name        = ?,
+         Governmental_Number = ?,
+         Department          = ?,
+         ScannerType_id      = ?
+       WHERE Serial_Number = ?`,
+      [
+        device_name,
+        governmental_number,
+        departmentId,
+        scannerTypeId,
+        serial_number
+      ]
+    );
+    console.log(`✅ Scanner_info updated successfully`);
+  } else {
+    console.log(`⚠️ Scanner_info record not found for serial: ${serial_number}, skipping update`);
+  }
+}
+
+// تحديث الجداول المشتركة لجميع أنواع التقارير
+if (serial_number) {
+  console.log(`🔄 Updating shared tables for ${source} maintenance with serial: ${serial_number}`);
+  
+  const sharedParams = [
+    device_name, serial_number, governmental_number, department_name,
+    model_name, cpu_name, ram_type, os_name, generation_number, drive_type,
+    ram_size, updatedData.ink_type, updatedData.ink_serial_number, updatedData.printer_type, mac_address, ip_address, scanner_type
+  ];
+
+  // تحديث General_Maintenance بالرقم التسلسلي
+  await db.promise().query(`
+    UPDATE General_Maintenance 
+    SET device_name = ?, governmental_number = ?, department_name = ?, 
+        model_name = ?, cpu_name = ?, ram_type = ?, os_name = ?, generation_number = ?, 
+        drive_type = ?, ram_size = ?, ink_type = ?, ink_serial_number = ?, printer_type = ?, 
+        mac_address = ?, ip_address = ?, scanner_type = ? 
+    WHERE serial_number = ?
+  `, [...sharedParams, serial_number]);
+
+  // تحديث Regular_Maintenance بالرقم التسلسلي
+  await db.promise().query(`
+    UPDATE Regular_Maintenance 
+    SET device_name = ?, governmental_number = ?, department_name = ?, 
+        model_name = ?, cpu_name = ?, ram_type = ?, ram_size = ?, os_name = ?, 
+        generation_number = ?, drive_type = ?, ink_type = ?, ink_serial_number = ?, 
+        printer_type = ?, mac_address = ?, ip_address = ?, scanner_type = ? 
+    WHERE serial_number = ?
+  `, [device_name, governmental_number, department_name, model_name, cpu_name, ram_type, 
+      ram_size, os_name, generation_number, drive_type, updatedData.ink_type, updatedData.ink_serial_number, 
+      updatedData.printer_type, mac_address, ip_address, scanner_type, serial_number]);
+
+  // تحديث External_Maintenance بالرقم التسلسلي
+  await db.promise().query(`
+    UPDATE External_Maintenance 
+    SET device_name = ?, governmental_number = ?, department_name = ?, 
+        model_name = ?, cpu_name = ?, ram_type = ?, os_name = ?, generation_number = ?, 
+        drive_type = ?, ram_size = ?, ink_type = ?, ink_serial_number = ?, printer_type = ?, 
+        mac_address = ?, ip_address = ?, scanner_type = ? 
+    WHERE serial_number = ?
+  `, [...sharedParams, serial_number]);
+
+  // تحديث Maintenance_Devices بالرقم التسلسلي (فقط إذا لم يتم تحديثه مسبقاً)
+  if (!actualDeviceId) {
+    const maintenanceUpdates = [
+      "device_name = ?", "governmental_number = ?", "department_id = ?", 
+      "model_id = ?", "mac_address = ?", "ip_address = ?"
+    ];
+    const maintenanceValues = [
+      device_name, governmental_number, departmentId, modelId, mac_address, ip_address
     ];
 
-    if (actualDeviceId) {
-      await db.promise().query(`
-  UPDATE General_Maintenance 
-  SET device_name = ?, serial_number = ?, governmental_number = ?, department_name = ?, 
-      model_name = ?, cpu_name = ?, ram_type = ?, os_name = ?, generation_number = ?, 
-      drive_type = ?, ram_size = ?, ink_type = ?, ink_serial_number = ?, printer_type = ?, 
-      mac_address = ?,ip_address = ?, scanner_type = ? 
-  WHERE device_id = ?
-`, [...sharedParams, actualDeviceId]);
-      await db.promise().query(`
-  UPDATE Regular_Maintenance 
-  SET device_name = ?, serial_number = ?, governmental_number = ?, department_name = ?, 
-      model_name = ?, cpu_name = ?, ram_type = ?, ram_size = ?, os_name = ?, 
-      generation_number = ?, drive_type = ?, ink_type = ?, ink_serial_number = ?, 
-      printer_type = ?, mac_address = ?,ip_address = ?, scanner_type = ? 
-  WHERE device_id = ?
-`, [...sharedParams, actualDeviceId]);
-
-// واستبدله بـ:
-
+    if (isPC) {
+      maintenanceUpdates.push("cpu_id = ?", "ram_id = ?", "os_id = ?", "generation_id = ?", "drive_id = ?", "ram_size_id = ?");
+      maintenanceValues.push(cpuId, ramId, osId, generationId, driveId, ramSizeId);
     }
 
-if (changes.length > 0) {
-  // جلب اسم المستخدم من req.user
-  const userId = req.user.id;
-  const [[userRow]] = await db.promise().query(
-    'SELECT name FROM users WHERE id = ?',
-    [userId]
-  );
-  const userName = userRow?.name || 'Unknown';
-  const fieldLabelMap = {
-    "Issue Summary":      { en: "Issue Summary",      ar: "ملخص المشكلة" },
-    "Description":        { en: "Description",        ar: "الوصف" },
-    "Priority":           { en: "Priority",           ar: "الأولوية" },
-    "Status":             { en: "Status",             ar: "الحالة" },
-    "Assigned To":        { en: "Assigned To",        ar: "المسند إليه" },
-    "Category":           { en: "Category",           ar: "الفئة" },
-    "Device Name":        { en: "Device Name",        ar: "اسم الجهاز" },
-    "Serial Number":      { en: "Serial Number",      ar: "الرقم التسلسلي" },
-    "Governmental Number":{ en: "Governmental Number",ar: "الرقم الحكومي" },
-    "IP Address":         { en: "IP Address",         ar: "عنوان IP" },
-    "MAC Address":        { en: "MAC Address",        ar: "عنوان MAC" },
-    "Model":              { en: "Model",              ar: "الموديل" },
-    "Processor":          { en: "Processor",          ar: "المعالج" },
-    "RAM":                { en: "RAM",                ar: "الذاكرة" },
-    "RAM Size":           { en: "RAM Size",           ar: "حجم الذاكرة" },
-    "OS":                 { en: "OS",                 ar: "نظام التشغيل" },
-    "Generation":         { en: "Generation",         ar: "جيل المعالج" },
-    "Drive Type":         { en: "Drive Type",         ar: "نوع القرص" },
-    "Ink Type":           { en: "Ink Type",           ar: "نوع الحبر" },
-    "Ink Serial":         { en: "Ink Serial",         ar: "سيريال الحبر" },
-    "Printer Type":       { en: "Printer Type",       ar: "نوع الطابعة" },
-    "Scanner Type":       { en: "Scanner Type",       ar: "نوع الماسح" },
-    "Department":         { en: "Department",         ar: "القسم" }
-    // أضف أي حقل آخر تحتاجه هنا
-  };
-  // سجل كل تغيير في لوق منفصل
-  for (const change of changes) {
-    // استخراج اسم الحقل من التغيير (مثلاً: "Device Name" أو "Status" ...)
-    // إذا كان التغيير بصيغة: "Device Name: old → new"
-    const match = change.match(/^(.+?):/);
-    const field = match ? match[1].trim() : "";
-    const label = fieldLabelMap[field] || { en: field, ar: field };
+    maintenanceValues.push(serial_number);
+    await db.promise().query(`
+      UPDATE Maintenance_Devices 
+      SET ${maintenanceUpdates.join(", ")}
+      WHERE serial_number = ?
+    `, maintenanceValues);
+  }
+
+  console.log(`✅ Updated shared tables for ${source} maintenance with serial: ${serial_number}`);
+}
+
+// تحديث إضافي للصيانة الخارجية: تحديث External_Maintenance باستخدام ID التقرير
+if (source === "external-legacy" || source === "external-new") {
+  console.log(`🔧 Final External_Maintenance update for ${source} with report ID: ${id}`);
+  await updateExternalMaintenanceInfo(actualDeviceId, updatedData, id, source);
   
-    await logActivity(
-      userId,
-      userName,
-      JSON.stringify(makeBilingualLog("Edited", "تعديل")),
-      JSON.stringify(makeBilingualLog(
-        `Report ID ${id} changed: ${change.replace(field, label.en).trim()}`,
-        `تم تعديل تقرير رقم ${id}: ${change.replace(field, label.ar).trim()}`
-      ))
-    );
+  // تحسين إضافي: تأكد من تحديث جميع الجداول المشتركة للصيانة الخارجية
+  if (serial_number) {
+    console.log(`🔄 Final verification: Updating all shared tables for external maintenance`);
+    
+    // تحديث إضافي للجداول المشتركة بالرقم التسلسلي
+    const finalSharedParams = [
+      device_name, serial_number, governmental_number, department_name,
+      model_name, cpu_name, ram_type, os_name, generation_number, drive_type,
+      ram_size, updatedData.ink_type, updatedData.ink_serial_number, updatedData.printer_type, mac_address, ip_address, scanner_type
+    ];
+
+    // تحديث نهائي لـ External_Maintenance بالرقم التسلسلي
+    await db.promise().query(`
+      UPDATE External_Maintenance 
+      SET device_name = ?, governmental_number = ?, department_name = ?, 
+          model_name = ?, cpu_name = ?, ram_type = ?, os_name = ?, generation_number = ?, 
+          drive_type = ?, ram_size = ?, ink_type = ?, ink_serial_number = ?, printer_type = ?, 
+          mac_address = ?, ip_address = ?, scanner_type = ? 
+      WHERE serial_number = ?
+    `, [...finalSharedParams, serial_number]);
+
+    // تحديث نهائي لـ General_Maintenance بالرقم التسلسلي
+    await db.promise().query(`
+      UPDATE General_Maintenance 
+      SET device_name = ?, governmental_number = ?, department_name = ?, 
+          model_name = ?, cpu_name = ?, ram_type = ?, os_name = ?, generation_number = ?, 
+          drive_type = ?, ram_size = ?, ink_type = ?, ink_serial_number = ?, printer_type = ?, 
+          mac_address = ?, ip_address = ?, scanner_type = ? 
+      WHERE serial_number = ?
+    `, [...finalSharedParams, serial_number]);
+
+    // تحديث نهائي لـ Regular_Maintenance بالرقم التسلسلي
+    await db.promise().query(`
+      UPDATE Regular_Maintenance 
+      SET device_name = ?, governmental_number = ?, department_name = ?, 
+          model_name = ?, cpu_name = ?, ram_type = ?, ram_size = ?, os_name = ?, 
+          generation_number = ?, drive_type = ?, ink_type = ?, ink_serial_number = ?, 
+          printer_type = ?, mac_address = ?, ip_address = ?, scanner_type = ? 
+      WHERE serial_number = ?
+    `, [device_name, governmental_number, department_name, model_name, cpu_name, ram_type, 
+        ram_size, os_name, generation_number, drive_type, updatedData.ink_type, updatedData.ink_serial_number, 
+        updatedData.printer_type, mac_address, ip_address, scanner_type, serial_number]);
+
+    console.log(`✅ Final verification completed for external maintenance`);
   }
 }
 
-         res.json({ message: "تم تحديث التقرير والجهاز والمواصفات بنجاح." });
-   } catch (err) {
-     console.error("Error during update:", err);
-     res.status(500).json({ error: "خطأ في الخادم أثناء التحديث" });
-   }
- }
+// تحديث نهائي للجداول التفصيلية لجميع أنواع الصيانة
+if (serial_number) {
+  console.log(`🔄 Final detailed table updates for all maintenance types with serial: ${serial_number}`);
+  
+  // تحديث نهائي لـ PC_info
+  if (isPC || device_type === "PC") {
+    console.log(`🖥️ Final PC_info update for serial: ${serial_number}`);
+    const [existingPC] = await db.promise().query(
+      `SELECT 1 FROM PC_info WHERE Serial_Number = ? LIMIT 1`,
+      [serial_number]
+    );
+    
+    if (existingPC.length > 0) {
+      await db.promise().query(`
+        UPDATE PC_info
+        SET Computer_Name = ?, Processor_id = ?, RAM_id = ?, RamSize_id = ?, OS_id = ?, Generation_id = ?, Drive_id = ?, Mac_Address = ?, Ip_Address = ?
+        WHERE Serial_Number = ?
+      `, [device_name, cpuId, ramId, ramSizeId, osId, generationId, driveId, mac_address, ip_address, serial_number]);
+      console.log(`✅ Final PC_info update completed`);
+    } else {
+      console.log(`⚠️ PC_info record not found for serial: ${serial_number}, skipping update`);
+    }
+  }
 
-async function updateExternalMaintenanceInfo(deviceSpecId, data) {
-  if (!deviceSpecId) {
-    console.warn("⚠️ missing deviceSpecId → cannot sync External_Maintenance");
+  // تحديث نهائي لـ Printer_info
+  if (device_type === "printer" || device_type === "Printer") {
+    console.log(`🖨️ Final Printer_info update for serial: ${serial_number}`);
+    
+    const [existingPrinter] = await db.promise().query(
+      `SELECT 1 FROM Printer_info WHERE Serial_Number = ? LIMIT 1`,
+      [serial_number]
+    );
+    
+    if (existingPrinter.length > 0) {
+      // حضّر inkTypeId
+      let inkTypeId = Number(updatedData.ink_type_id);
+      if ((!inkTypeId || isNaN(inkTypeId)) && updatedData.ink_type) {
+        inkTypeId = await getOrCreateId("Ink_Types", "ink_type", updatedData.ink_type.trim());
+      }
+
+      // حضّر inkSerialId
+      const newInkSerialStr = updatedData.ink_serial_number?.trim() || null;
+      const inkSerialId = newInkSerialStr ? await getOrCreateinkId("Ink_Serials", "serial_number", newInkSerialStr) : null;
+
+      // حضّر printerTypeId
+      let printerTypeId = Number(updatedData.printer_type_id);
+      if ((!printerTypeId || isNaN(printerTypeId)) && updatedData.printer_type) {
+        printerTypeId = await getOrCreateId("Printer_Types", "printer_type", updatedData.printer_type.trim());
+      }
+
+      await db.promise().query(`
+        UPDATE Printer_info
+        SET Printer_Name = ?, Governmental_Number = ?, Department = ?, InkType_id = ?, InkSerial_id = ?, PrinterType_id = ?
+        WHERE Serial_Number = ?
+      `, [device_name, governmental_number, departmentId, inkTypeId, inkSerialId, printerTypeId, serial_number]);
+      console.log(`✅ Final Printer_info update completed`);
+    } else {
+      console.log(`⚠️ Printer_info record not found for serial: ${serial_number}, skipping update`);
+    }
+  }
+
+  // تحديث نهائي لـ Scanner_info
+  if (device_type === "scanner" || device_type === "Scanner") {
+    console.log(`📷 Final Scanner_info update for serial: ${serial_number}`);
+    
+    const [existingScanner] = await db.promise().query(
+      `SELECT 1 FROM Scanner_info WHERE Serial_Number = ? LIMIT 1`,
+      [serial_number]
+    );
+    
+    if (existingScanner.length > 0) {
+      let scannerTypeId = Number(updatedData.scanner_type_id);
+      if ((!scannerTypeId || isNaN(scannerTypeId)) && updatedData.scanner_type) {
+        scannerTypeId = await getOrCreateId("Scanner_Types", "scanner_type", updatedData.scanner_type.trim());
+      }
+
+      await db.promise().query(`
+        UPDATE Scanner_info
+        SET Scanner_Name = ?, Governmental_Number = ?, Department = ?, ScannerType_id = ?
+        WHERE Serial_Number = ?
+      `, [device_name, governmental_number, departmentId, scannerTypeId, serial_number]);
+      console.log(`✅ Final Scanner_info update completed`);
+    } else {
+      console.log(`⚠️ Scanner_info record not found for serial: ${serial_number}, skipping update`);
+    }
+  }
+
+  console.log(`✅ Final detailed table updates completed for all maintenance types`);
+}
+
+  if (changes.length > 0) {
+    // جلب اسم المستخدم من req.user
+    const userId = req.user.id;
+    const [[userRow]] = await db.promise().query(
+      'SELECT name FROM users WHERE id = ?',
+      [userId]
+    );
+    const userName = userRow?.name || 'Unknown';
+    const fieldLabelMap = {
+      "Issue Summary":      { en: "Issue Summary",      ar: "ملخص المشكلة" },
+      "Description":        { en: "Description",        ar: "الوصف" },
+      "Priority":           { en: "Priority",           ar: "الأولوية" },
+      "Status":             { en: "Status",             ar: "الحالة" },
+      "Assigned To":        { en: "Assigned To",        ar: "المسند إليه" },
+      "Category":           { en: "Category",           ar: "الفئة" },
+      "Device Name":        { en: "Device Name",        ar: "اسم الجهاز" },
+      "Serial Number":      { en: "Serial Number",      ar: "الرقم التسلسلي" },
+      "Governmental Number":{ en: "Governmental Number",ar: "الرقم الحكومي" },
+      "IP Address":         { en: "IP Address",         ar: "عنوان IP" },
+      "MAC Address":        { en: "MAC Address",        ar: "عنوان MAC" },
+      "Model":              { en: "Model",              ar: "الموديل" },
+      "Processor":          { en: "Processor",          ar: "المعالج" },
+      "RAM":                { en: "RAM",                ar: "الذاكرة" },
+      "RAM Size":           { en: "RAM Size",           ar: "حجم الذاكرة" },
+      "OS":                 { en: "OS",                 ar: "نظام التشغيل" },
+      "Generation":         { en: "Generation",         ar: "جيل المعالج" },
+      "Drive Type":         { en: "Drive Type",         ar: "نوع القرص" },
+      "Ink Type":           { en: "Ink Type",           ar: "نوع الحبر" },
+      "Ink Serial":         { en: "Ink Serial",         ar: "سيريال الحبر" },
+      "Printer Type":       { en: "Printer Type",       ar: "نوع الطابعة" },
+      "Scanner Type":       { en: "Scanner Type",       ar: "نوع الماسح" },
+      "Department":         { en: "Department",         ar: "القسم" }
+      // أضف أي حقل آخر تحتاجه هنا
+    };
+    // سجل كل تغيير في لوق منفصل
+    for (const change of changes) {
+      // استخراج اسم الحقل من التغيير (مثلاً: "Device Name" أو "Status" ...)
+      // إذا كان التغيير بصيغة: "Device Name: old → new"
+      const match = change.match(/^(.+?):/);
+      const field = match ? match[1].trim() : "";
+      const label = fieldLabelMap[field] || { en: field, ar: field };
+    
+      await logActivity(
+        userId,
+        userName,
+        JSON.stringify(makeBilingualLog("Edited", "تعديل")),
+        JSON.stringify(makeBilingualLog(
+          `Report ID ${id} changed: ${change.replace(field, label.en).trim()}`,
+          `تم تعديل تقرير رقم ${id}: ${change.replace(field, label.ar).trim()}`
+        ))
+      );
+    }
+  }
+
+  res.json({ message: "تم تحديث التقرير والجهاز والمواصفات بنجاح." });
+} catch (err) {
+  console.error("Error during update:", err);
+  res.status(500).json({ error: "خطأ في الخادم أثناء التحديث" });
+}
+};
+
+async function updateExternalMaintenanceInfo(deviceSpecId, data, reportId = null, source = null) {
+  if (!deviceSpecId && !reportId) {
+    console.warn("⚠️ missing deviceSpecId and reportId → cannot sync External_Maintenance");
     return;
   }
 
-  // 1) جهّز خريطة الحقول اللي بنحدثها
-  const map = {
-    device_name:        data.device_name,
-    serial_number:      data.serial_number,
-    governmental_number:data.governmental_number,
-    model_name:         data.model_name,
-    department_name:    data.department_name,
-    cpu_name:           data.cpu_name,
-    ram_type:           data.ram_type,
-    os_name:            data.os_name,
-    generation_number:  data.generation_number,
-    drive_type:         data.drive_type,
-    ram_size:           data.ram_size,
-    mac_address:        data.mac_address,
-    ink_type:           data.ink_type,
-    ink_serial_number:  data.ink_serial_number,
-    printer_type:       data.printer_type,
-    scanner_type:       data.scanner_type,
-    ip_address:         data.ip_address
-  };
+  try {
+    console.log(`🔧 updateExternalMaintenanceInfo called with:`, {
+      deviceSpecId,
+      reportId,
+      source,
+      hasData: !!data
+    });
 
-  // 2) صفّي الحقول والقيم
-  const fields  = Object.keys(map).filter(k => data[k] !== undefined);
-  const updates = fields.map(k => `${k} = ?`);
-  const values  = fields.map(k => map[k]);
+    // For external-legacy, we need to fetch current data and merge with updates
+    let mergedData = { ...data };
+    
+    if (source === "external-legacy" && reportId) {
+      // Fetch current data from External_Maintenance
+      const [[currentData]] = await db.promise().query(
+        `SELECT * FROM External_Maintenance WHERE id = ?`,
+        [reportId]
+      );
+      
+      if (currentData) {
+        console.log(`📋 Found existing External_Maintenance data for report ${reportId}`);
+        // Merge current data with updates (updates take precedence)
+        mergedData = {
+          device_name:        data.device_name ?? currentData.device_name,
+          serial_number:      data.serial_number ?? currentData.serial_number,
+          governmental_number:data.governmental_number ?? currentData.governmental_number,
+          model_name:         data.model_name ?? currentData.model_name,
+          department_name:    data.department_name ?? currentData.department_name,
+          cpu_name:           data.cpu_name ?? currentData.cpu_name,
+          ram_type:           data.ram_type ?? currentData.ram_type,
+          os_name:            data.os_name ?? currentData.os_name,
+          generation_number:  data.generation_number ?? currentData.generation_number,
+          drive_type:         data.drive_type ?? currentData.drive_type,
+          ram_size:           data.ram_size ?? currentData.ram_size,
+          mac_address:        data.mac_address ?? currentData.mac_address,
+          ip_address:         data.ip_address ?? currentData.ip_address,
+          ink_type:           data.ink_type ?? currentData.ink_type,
+          ink_serial_number:  data.ink_serial_number ?? currentData.ink_serial_number,
+          printer_type:       data.printer_type ?? currentData.printer_type,
+          scanner_type:       data.scanner_type ?? currentData.scanner_type
+        };
+      } else {
+        console.log(`⚠️ No existing External_Maintenance data found for report ${reportId}`);
+      }
+    }
 
-  // 3) أضف deviceSpecId في الأخير كعامل WHERE
-  values.push(deviceSpecId);
+    // 1) جهّز خريطة الحقول اللي بنحدثها - تشمل جميع المواصفات والقسم
+    const map = {
+      device_name:        mergedData.device_name,
+      serial_number:      mergedData.serial_number,
+      governmental_number:mergedData.governmental_number,
+      model_name:         mergedData.model_name,
+      department_name:    mergedData.department_name,
+      cpu_name:           mergedData.cpu_name,
+      ram_type:           mergedData.ram_type,
+      os_name:            mergedData.os_name,
+      generation_number:  mergedData.generation_number,
+      drive_type:         mergedData.drive_type,
+      ram_size:           mergedData.ram_size,
+      mac_address:        mergedData.mac_address,
+      ip_address:         mergedData.ip_address,
+      ink_type:           mergedData.ink_type,
+      ink_serial_number:  mergedData.ink_serial_number,
+      printer_type:       mergedData.printer_type,
+      scanner_type:       mergedData.scanner_type
+    };
 
-  // 4) نفّذ التحديث بناءً على device_specifications
-  const [result] = await db.promise().query(
-    `UPDATE External_Maintenance
-        SET ${updates.join(", ")}
-      WHERE device_specifications = ?`,
-    values
-  );
-  console.log("✅ External_Maintenance affectedRows =", result.affectedRows);
+    // 2) صفّي الحقول والقيم - نأخذ فقط الحقول التي لها قيم
+    const fields  = Object.keys(map).filter(k => mergedData[k] !== undefined && mergedData[k] !== null && mergedData[k] !== "");
+    const updates = fields.map(k => `${k} = ?`);
+    const values  = fields.map(k => map[k]);
+
+    console.log(`📝 Fields to update:`, fields);
+    console.log(`📝 Values:`, values);
+
+    // 3) حدد شرط WHERE بناءً على المصدر
+    let whereClause, whereValue;
+    
+    if (source === "external-legacy" && reportId) {
+      // للحالات القديمة، نستخدم id
+      whereClause = "id = ?";
+      whereValue = reportId;
+      console.log(`🎯 Using WHERE clause: ${whereClause} = ${whereValue}`);
+    } else if (deviceSpecId) {
+      // للحالات الجديدة، نستخدم device_specifications
+      whereClause = "device_specifications = ?";
+      whereValue = deviceSpecId;
+      console.log(`🎯 Using WHERE clause: ${whereClause} = ${whereValue}`);
+    } else {
+      console.warn("⚠️ No valid WHERE condition for External_Maintenance update");
+      return;
+    }
+
+    // 4) أضف قيمة WHERE في الأخير
+    values.push(whereValue);
+
+    // 5) نفّذ التحديث
+    if (fields.length > 0) {
+      const sql = `UPDATE External_Maintenance SET ${updates.join(", ")} WHERE ${whereClause}`;
+      console.log(`🔧 Executing SQL:`, sql);
+      console.log(`🔧 With values:`, values);
+      
+      const [result] = await db.promise().query(sql, values);
+      console.log("✅ External_Maintenance updated with fields:", fields);
+      console.log("✅ External_Maintenance affectedRows =", result.affectedRows);
+      
+      if (result.affectedRows === 0) {
+        console.warn(`⚠️ No rows were updated in External_Maintenance. This might indicate the record doesn't exist.`);
+      }
+    } else {
+      console.log("ℹ️ No fields to update in External_Maintenance");
+    }
+  } catch (error) {
+    console.error("❌ Error updating External_Maintenance:", error);
+    throw error; // Re-throw to be handled by the calling function
+  }
 }
 
 async function getOrCreateId(table, column, value) {
