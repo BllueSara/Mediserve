@@ -120,13 +120,57 @@ header {
 
 /* Status label style (e.g., In Progress) */
 .status {
-  background-color: #FDE68A;
-  color: #92400E;
   padding: 5px 12px;
   border-radius: 12px;
   font-size: 14px;
   font-weight: 600;
   display: inline-block;
+}
+
+/* Status colors based on status value */
+.status[data-key="Open"],
+.status[data-key="open"] {
+  background-color: #FDE68A;
+  color: #92400E;
+}
+
+.status[data-key="In Progress"],
+.status[data-key="in progress"] {
+  background-color: #DBEAFE;
+  color: #1E40AF;
+}
+
+.status[data-key="Closed"],
+.status[data-key="closed"] {
+  background-color: #D1FAE5;
+  color: #065F46;
+}
+
+.status[data-key="Pending"],
+.status[data-key="pending"] {
+  background-color: #F3E8FF;
+  color: #7C3AED;
+}
+
+/* Additional status classes for better styling */
+.status.status-open {
+  background-color: #FDE68A;
+  color: #92400E;
+}
+
+.status.status-in-progress {
+  background-color: #DBEAFE;
+  color: #1E40AF;
+}
+
+.status.status-closed {
+  background-color: #D1FAE5;
+  color: #065F46;
+}
+
+.status.status-pending {
+  background-color: #F3E8FF;
+  color: #7C3AED;
 }
 
 /* Top section of the report with title and buttons */

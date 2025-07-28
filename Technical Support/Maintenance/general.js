@@ -230,10 +230,12 @@ const getRaw   = id  => (document.getElementById(id)?.value || "").trim();
     })
     .catch(err => {
       console.error("❌ Failed to submit form:", err);
-      alert("❌ فشل في الإرسال. تحقق من الاتصال.");
+      showErrorToast("❌ فشل في الإرسال. تحقق من الاتصال.");
     });
 });
 
+
+import { showToast, showErrorToast, showSuccessToast, showWarningToast, showInfoToast } from '../shared_functions/toast.js';
 
 document.addEventListener("DOMContentLoaded", () => {
 

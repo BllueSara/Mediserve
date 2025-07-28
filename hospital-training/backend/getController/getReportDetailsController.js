@@ -438,6 +438,7 @@ WHERE mr.id = ?
         signature_path: report.signature_path || "",
         created_at: report.created_at,
         report_type: report.report_type,
+        status: report.status || "Open",
         cpu_name: report.cpu_name || "",
         ram_type: report.ram_type || "",
         ram_size: report.ram_size || "",

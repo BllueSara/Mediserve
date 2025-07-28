@@ -49,6 +49,8 @@ document.addEventListener(" ", () => {
 
 
 
+import { showToast, showErrorToast, showSuccessToast, showWarningToast, showInfoToast } from '../shared_functions/toast.js';
+
 document.addEventListener("DOMContentLoaded", () => {
   fetchDeviceTypes();
   fetchDepartments("section");
@@ -95,7 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!type) {
           console.log("❌ نوع الجهاز غير محدد");
-          alert("❌ اختر نوع الجهاز أولاً");
+          showErrorToast("❌ اختر نوع الجهاز أولاً");
           return;
         }
         
@@ -214,7 +216,7 @@ async function submitNewDevice(data) {
 
   } catch (err) {
     console.error("❌ Submission error:", err);
-    alert("❌ Failed to submit device.");
+    showErrorToast("❌ Failed to submit device.");
   }
 }
 

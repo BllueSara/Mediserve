@@ -44,24 +44,24 @@
     />
 
 <select id="filter-type">
-  <option data-val=""        data-i18n="report_types">Report Types</option>
-  <option data-val="maintenance"  data-i18n="maintenance">Maintenance</option>
-  <option data-val="Ticket"  data-i18n="ticket">Ticket</option>
-  <option data-val="New"     data-i18n="new_report">New Report</option>
+  <option value=""        data-i18n="report_types">Report Types</option>
+  <option value="maintenance"  data-i18n="maintenance">Maintenance</option>
+  <option value="Ticket"  data-i18n="ticket">Ticket</option>
+  <option value="New"     data-i18n="new_report">New Report</option>
 </select>
 
     <select id="filter-status">
-      <option data-val=""           data-i18n="status">Status</option>
-      <option data-val="Open"       data-i18n="open">Open</option>
-      <option data-val="In Progress"data-i18n="in_progress">In Progress</option>
-      <option data-val="Closed"     data-i18n="closed">Closed</option>
+      <option value=""           data-i18n="status">Status</option>
+      <option value="Open"       data-i18n="open">Open</option>
+      <option value="In Progress"data-i18n="in_progress">In Progress</option>
+      <option value="Closed"     data-i18n="closed">Closed</option>
     </select>
 
     <select id="filter-device-type">
-      <option data-val=""        data-i18n="all_devices">All Devices</option>
-      <option data-val="PC"      data-i18n="pc">PC</option>
-      <option data-val="Printer" data-i18n="printer">Printer</option>
-      <option data-val="Scanner" data-i18n="scanner">Scanner</option>
+      <option value=""        data-i18n="all_devices">All Devices</option>
+      <option value="PC"      data-i18n="pc">PC</option>
+      <option value="Printer" data-i18n="printer">Printer</option>
+      <option value="Scanner" data-i18n="scanner">Scanner</option>
     </select>
 
     <input type="date" id="filter-date-from" />
@@ -102,7 +102,7 @@
 }</script>
   <!-- JavaScript -->
   <script src="Reports.js"></script>
-  <script src="Search reports.js"></script>
+  <script type="module" src="Search reports.js"></script>
   <script src="/Language/Language.js"></script>
 </body>
 </html>

@@ -1,10 +1,32 @@
-import {
-  goBack,
-  loadFonts
-} from "../shared_functions/reports_details_helpers/helpers.js";
+// Make goBack available globally for HTML onclick handlers immediately
+window.goBack = function() {
+  window.history.back();
+};
 
-// Make goBack available globally for HTML onclick handlers
-window.goBack = goBack;
+// Also make it available as a fallback for any remaining onclick handlers
+window.addEventListener('DOMContentLoaded', () => {
+  window.goBack = function() {
+    window.history.back();
+  };
+  
+  // Ensure back button is properly translated when language changes
+  if (window.languageManager && typeof window.languageManager.onLanguageChange === 'function') {
+    window.languageManager.onLanguageChange(() => {
+      const backButton = document.getElementById("back-button");
+      if (backButton) {
+        const backSpan = backButton.querySelector('span[data-i18n="back"]');
+        if (backSpan) {
+          backSpan.textContent = window.languageManager.currentLang === 'ar' ? 'رجوع' : 'Back';
+        }
+      }
+    });
+  }
+});
+
+import {
+  loadFonts,
+  setReportStatus
+} from "../shared_functions/reports_details_helpers/helpers.js";
 
 import { generatePdf, getTranslations } from "../shared_functions/reports_details_helpers/pdf_helpers.js";
 import { 
@@ -15,10 +37,11 @@ import {
   handleSuccessfulSave,
 } from "../shared_functions/reports_details_helpers/update_helpers.js";
 import { setGlobalVariables } from "../shared_functions/reports_details_helpers/ui_helpers.js";
+import { showToast, showErrorToast, showSuccessToast, showWarningToast, showInfoToast } from '../shared_functions/toast.js';
 
 let reportData = null;
 const canvas = document.getElementById("signatureCanvas");
-const ctx = canvas.getContext("2d");
+const ctx = canvas ? canvas.getContext("2d") : null;
 let drawing = false;
 let userDrewOnCanvas = false;
 
@@ -26,13 +49,39 @@ let userDrewOnCanvas = false;
 const translations = getTranslations();
 
 document.addEventListener("DOMContentLoaded", async () => {
+  // Add event listener for back button
+  const backButton = document.getElementById("back-button");
+  if (backButton) {
+    backButton.addEventListener("click", (e) => {
+      e.preventDefault();
+      window.history.back();
+    });
+  } else {
+    console.warn("Back button not found in the DOM");
+  }
+
   const saveBtn = document.querySelector(".save-btn");
   const reportId = new URLSearchParams(window.location.search).get("id");
   const reportType = new URLSearchParams(window.location.search).get("type");
 
   if (!reportId) {
-    alert("No report ID provided");
+    showErrorToast("No report ID provided");
     return;
+  }
+
+  // إخفاء المحتوى حتى يتم تحميل اللغة
+  const container = document.querySelector('.container');
+  const navButtons = document.querySelector('.nav-buttons');
+  const header = document.querySelector('header');
+  
+  if (container) {
+    container.classList.add('content-hidden');
+  }
+  if (navButtons) {
+    navButtons.classList.add('content-hidden');
+  }
+  if (header) {
+    header.classList.add('content-hidden');
   }
 
   // تعيين المتغيرات العامة للدوال المساعدة مبكراً
@@ -83,9 +132,34 @@ document.addEventListener("DOMContentLoaded", async () => {
       processNewReport(report, lang, languageManager);
       createNewReportSpecs(report, lang, languageManager);
       
+      // تعيين حالة التقرير مع الترجمة والألوان
+      setReportStatus(report.status, lang);
+      
       // تطبيق الترجمة النهائية
-      languageManager.applyLanguage();
-      return;
+    languageManager.applyLanguage();
+    
+    // إظهار المحتوى بعد تحميل اللغة
+    setTimeout(() => {
+      if (container) {
+        container.classList.remove('content-hidden');
+        container.classList.add('content-visible');
+      }
+      if (navButtons) {
+        navButtons.classList.remove('content-hidden');
+        navButtons.classList.add('content-visible');
+      }
+      if (header) {
+        header.classList.remove('content-hidden');
+        header.classList.add('content-visible');
+      }
+      
+      // إخفاء loading spinner
+      const loadingSpinner = document.getElementById('loading-spinner');
+      if (loadingSpinner) {
+        loadingSpinner.style.display = 'none';
+      }
+    }, 100);
+    return;
     }
 
     // معالجة البيانات الأساسية للتقارير العادية
@@ -101,6 +175,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         ? report.ticket_number || `INT-${report.id}`
         : report.report_number || report.request_number || `MR-${report.id}`;
 
+    // تعيين حالة التقرير مع الترجمة والألوان
+    setReportStatus(report.status, lang);
+
     // معالجة وعرض الوصف
     setDescription(report, lang);
 
@@ -112,6 +189,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     
     // تطبيق الترجمة النهائية
     languageManager.applyLanguage();
+    
+    // إظهار المحتوى بعد تحميل اللغة
+    setTimeout(() => {
+      if (container) {
+        container.classList.remove('content-hidden');
+        container.classList.add('content-visible');
+      }
+      if (navButtons) {
+        navButtons.classList.remove('content-hidden');
+        navButtons.classList.add('content-visible');
+      }
+      if (header) {
+        header.classList.remove('content-hidden');
+        header.classList.add('content-visible');
+      }
+      
+      // إخفاء loading spinner
+      const loadingSpinner = document.getElementById('loading-spinner');
+      if (loadingSpinner) {
+        loadingSpinner.style.display = 'none';
+      }
+    }, 100);
 
   } catch (err) {
     console.error("❌ Error fetching report:", err);
@@ -121,7 +220,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       ? "❌ فشل في الاتصال بالخادم. تأكد من تشغيل الخادم على المنفذ 4000"
       : `❌ حدث خطأ أثناء تحميل التقرير: ${err.message}`;
     
-    alert(errorMessage);
+    showErrorToast(errorMessage);
     
     // إضافة رسالة في الصفحة
     const container = document.querySelector('.container') || document.body;
@@ -143,6 +242,28 @@ document.addEventListener("DOMContentLoaded", async () => {
       </button>
     `;
     container.appendChild(errorDiv);
+    
+    // إظهار المحتوى حتى في حالة الخطأ
+    setTimeout(() => {
+      if (container) {
+        container.classList.remove('content-hidden');
+        container.classList.add('content-visible');
+      }
+      if (navButtons) {
+        navButtons.classList.remove('content-hidden');
+        navButtons.classList.add('content-visible');
+      }
+      if (header) {
+        header.classList.remove('content-hidden');
+        header.classList.add('content-visible');
+      }
+      
+      // إخفاء loading spinner
+      const loadingSpinner = document.getElementById('loading-spinner');
+      if (loadingSpinner) {
+        loadingSpinner.style.display = 'none';
+      }
+    }, 100);
   }
 
   // ⬇️ تحميل PDF
@@ -201,7 +322,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     } catch (err) {
       console.error("❌ فشل الحفظ:", err);
-      alert("❌ حدث خطأ أثناء الحفظ: " + err.message);
+      showErrorToast("❌ حدث خطأ أثناء الحفظ: " + err.message);
     }
   });
 

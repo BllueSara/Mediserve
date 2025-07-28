@@ -1,3 +1,189 @@
+import { showToast, showErrorToast, showSuccessToast, showWarningToast, showInfoToast } from '../Technical Support/shared_functions/toast.js';
+
+// Make functions available globally for HTML onclick handlers
+window.handleSelection = function(type) {
+  try {
+    if (type === "new") {
+      window.location.href = "diagnostic.html";
+    } else if (type === "existing") {
+      window.location.href = "saved.html";
+    } else {
+      console.warn(`Unknown selection type: ${type}`);
+    }
+  } catch (error) {
+    console.error("Error in handleSelection:", error);
+  }
+};
+
+window.handleReportsSelection = function() {
+  try {
+    window.location.href = 'reports.html';
+  } catch (error) {
+    console.error("Error in handleReportsSelection:", error);
+  }
+};
+
+// Make addRow function available globally
+window.addRow = function() {
+  const circuitGroup = document.getElementById('circuit-group');
+  const ispGroup = document.getElementById('isp-group');
+  const locationGroup = document.getElementById('location-group');
+  const ipGroup = document.getElementById('ip-group');
+  const speedGroup = document.getElementById('speed-group');
+  const startGroup = document.getElementById('start-group');
+  const endGroup = document.getElementById('end-group');
+
+  // أنشئ الحقول
+  const circuitInput = document.createElement('input');
+  circuitInput.name = 'Circuit[]';
+  circuitInput.placeholder = 'Enter Circuit Name';
+
+  const ispInput = document.createElement('input');
+  ispInput.name = 'ISP[]';
+  ispInput.placeholder = 'STC / MOBILY / ZAIN';
+
+  const locationInput = document.createElement('input');
+  locationInput.name = 'Location[]';
+  locationInput.placeholder = 'Enter Location';
+
+  const ipWrapper = document.createElement('div');
+  ipWrapper.className = 'input-row';
+  const dot = document.createElement('span');
+  dot.className = `dot status-dot gray`;
+  dot.id = `ip-dot-${currentIndex}`;
+  const ipInput = document.createElement('input');
+  ipInput.name = 'ip[]';
+  ipInput.className = 'ip-input';
+  ipInput.setAttribute('data-index', currentIndex);
+  ipInput.placeholder = `192.168.1.${currentIndex + 1}`;
+  ipWrapper.appendChild(dot);
+  ipWrapper.appendChild(ipInput);
+
+  const speedInput = document.createElement('input');
+  speedInput.name = 'speed[]';
+  speedInput.placeholder = 'Enter Circuit Speed';
+
+  const startInput = document.createElement('input');
+  startInput.name = 'start[]';
+  startInput.type = 'date';
+
+  const endInput = document.createElement('input');
+  endInput.name = 'end[]';
+  endInput.type = 'date';
+
+  // ضيفهم إلى الصفحات
+  circuitGroup.appendChild(circuitInput);
+  ispGroup.appendChild(ispInput);
+  locationGroup.appendChild(locationInput);
+  ipGroup.appendChild(ipWrapper);
+  speedGroup.appendChild(speedInput);
+  startGroup.appendChild(startInput);
+  endGroup.appendChild(endInput);
+
+  // احفظهم مباشرة بعد ثانية (أو بعد إدخال المستخدم لو حبيت)
+  setTimeout(() => {
+    const entry = {
+      circuit: circuitInput.value,
+      isp: ispInput.value,
+      location: locationInput.value,
+      ip: ipInput.value,
+      speed: speedInput.value,
+      start_date: startInput.value,
+      end_date: endInput.value
+    };
+
+    // تحقق فيه قيمة واحدة على الأقل
+    const hasAny = Object.values(entry).some(val => val?.trim?.());
+    if (hasAny) {
+      fetch(`${API_BASE_URL}/add-entry`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem("token")}`
+        },
+        body: JSON.stringify(entry)
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) appendToTerminal(`✅ Row added to DB for ${entry.ip}`);
+          else appendToTerminal(data.error || '❌ Failed to auto-save row.', true);
+        })
+        .catch(err => appendToTerminal(`❌ Auto-save error: ${err.message}`, true));
+    }
+  }, 1500); // تأخير خفيف عشان المستخدم يمديه يدخل بيانات
+  currentIndex++;
+};
+
+// Make closeSharePopup function available globally
+window.closeSharePopup = function() {
+  const popup = document.getElementById('sharePopup');
+  popup.classList.add('hidden');
+};
+
+// Also make them available immediately when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  window.handleSelection = function(type) {
+    if (type === "new") {
+      window.location.href = "diagnostic.html";
+    } else if (type === "existing") {
+      window.location.href = "saved.html";
+    }
+  };
+
+  window.handleReportsSelection = function() {
+    window.location.href = 'reports.html';
+  };
+});
+
+// Make checkUserPermissions available globally
+window.checkUserPermissions = async function(userId) {
+  if (!userId) {
+    userId = localStorage.getItem("userId");
+  }
+
+  const userRole = localStorage.getItem("userRole");
+
+  if (userRole === "admin") {
+    return {
+      device_access: "all",
+      view_access: true,
+      full_access: true,
+      add_items: true,
+      edit_items: true,
+      delete_items: true,
+      check_logs: true,
+      edit_permission: true,
+      share_items: true
+    };
+  }
+
+  try {
+    const response = await fetch(`http://localhost:4000/users/${userId}/with-permissions`);
+    if (!response.ok) throw new Error('Failed to fetch user permissions');
+
+    const userData = await response.json();
+    return {
+      device_access: userData.permissions?.device_access || 'none',
+      view_access: userData.permissions?.view_access || false,
+      full_access: userData.permissions?.full_access || false,
+      add_items: userData.permissions?.add_items || false,
+      edit_items: userData.permissions?.edit_items || false,
+      delete_items: userData.permissions?.delete_items || false,
+      check_logs: userData.permissions?.check_logs || false,
+      edit_permission: userData.permissions?.edit_permission || false,
+      share_items: userData.permissions?.share_items || false
+    };
+  } catch (error) {
+    console.error('Error checking permissions:', error);
+    return {
+      device_access: 'none',
+      view_access: false,
+      full_access: false
+    };
+  }
+};
+
+// Also define them locally for module use
 function handleSelection(type) {
   if (type === "new") {
     window.location.href = "diagnostic.html";
@@ -507,14 +693,55 @@ function showCenterAlert(message) {
 
 
 document.addEventListener('DOMContentLoaded',async () => {
-    userPermissions = await checkUserPermissions();
+    let userPermissions;
+    try {
+      userPermissions = await checkUserPermissions();
+    } catch (error) {
+      console.error('Error loading user permissions:', error);
+      userPermissions = {
+        device_access: 'none',
+        view_access: false,
+        full_access: false,
+        add_items: false,
+        edit_items: false,
+        delete_items: false,
+        check_logs: false,
+        edit_permission: false,
+        share_items: false
+      };
+    }
 
   // إظهار زر المشاركة فقط إذا لديه الصلاحية
-  if (userPermissions.share_items ) {
-    document.getElementById("shareBtn").style.display = "inline-block";
+  const shareBtn = document.getElementById("shareBtn");
+  if (shareBtn) {
+    if (userPermissions && userPermissions.share_items) {
+      shareBtn.style.display = "inline-block";
+    } else {
+      shareBtn.style.display = "none";
+    }
   } else {
-    document.getElementById("shareBtn").style.display = "none";
   }
+  
+  // Add event listeners for tool selection options
+  const existingOption = document.getElementById('existing-option');
+  const newOption = document.getElementById('new-option');
+  const reportsOption = document.getElementById('reports-option');
+  
+  if (existingOption) {
+    existingOption.addEventListener('click', () => handleSelection('existing'));
+  } else {
+  }
+  
+  if (newOption) {
+    newOption.addEventListener('click', () => handleSelection('new'));
+  } else {
+  }
+  
+  if (reportsOption) {
+    reportsOption.addEventListener('click', handleReportsSelection);
+  } else {
+  }
+  
   document.getElementById('ping-btn')?.addEventListener('click', pingSelectedIP);
   document.getElementById('pingall-btn')?.addEventListener('click', pingAllIPs);
   document.getElementById('pingt-btn')?.addEventListener('click', startContinuousPing);
@@ -554,97 +781,6 @@ function handleEnterKey(event) {
 let currentIndex = document.querySelectorAll('.ip-input').length;
 
 
-function addRow() {
-  const circuitGroup = document.getElementById('circuit-group');
-  const ispGroup = document.getElementById('isp-group');
-  const locationGroup = document.getElementById('location-group');
-  const ipGroup = document.getElementById('ip-group');
-  const speedGroup = document.getElementById('speed-group');
-  const startGroup = document.getElementById('start-group');
-  const endGroup = document.getElementById('end-group');
-
-  // أنشئ الحقول
-  const circuitInput = document.createElement('input');
-  circuitInput.name = 'Circuit[]';
-  circuitInput.placeholder = 'Enter Circuit Name';
-
-  const ispInput = document.createElement('input');
-  ispInput.name = 'ISP[]';
-  ispInput.placeholder = 'STC / MOBILY / ZAIN';
-
-  const locationInput = document.createElement('input');
-  locationInput.name = 'Location[]';
-  locationInput.placeholder = 'Enter Location';
-
-  const ipWrapper = document.createElement('div');
-  ipWrapper.className = 'input-row';
-  const dot = document.createElement('span');
-  dot.className = `dot status-dot gray`;
-  dot.id = `ip-dot-${currentIndex}`;
-  const ipInput = document.createElement('input');
-  ipInput.name = 'ip[]';
-  ipInput.className = 'ip-input';
-  ipInput.setAttribute('data-index', currentIndex);
-  ipInput.placeholder = `192.168.1.${currentIndex + 1}`;
-  ipWrapper.appendChild(dot);
-  ipWrapper.appendChild(ipInput);
-
-  const speedInput = document.createElement('input');
-  speedInput.name = 'speed[]';
-  speedInput.placeholder = 'Enter Circuit Speed';
-
-  const startInput = document.createElement('input');
-  startInput.name = 'start[]';
-  startInput.type = 'date';
-
-  const endInput = document.createElement('input');
-  endInput.name = 'end[]';
-  endInput.type = 'date';
-
-  // ضيفهم إلى الصفحات
-  circuitGroup.appendChild(circuitInput);
-  ispGroup.appendChild(ispInput);
-  locationGroup.appendChild(locationInput);
-  ipGroup.appendChild(ipWrapper);
-  speedGroup.appendChild(speedInput);
-  startGroup.appendChild(startInput);
-  endGroup.appendChild(endInput);
-
-  // احفظهم مباشرة بعد ثانية (أو بعد إدخال المستخدم لو حبيت)
-  setTimeout(() => {
-    const entry = {
-      circuit: circuitInput.value,
-      isp: ispInput.value,
-      location: locationInput.value,
-      ip: ipInput.value,
-      speed: speedInput.value,
-      start_date: startInput.value,
-      end_date: endInput.value
-    };
-
-    // تحقق فيه قيمة واحدة على الأقل
-    const hasAny = Object.values(entry).some(val => val?.trim?.());
-    if (hasAny) {
-      fetch(`${API_BASE_URL}/add-entry`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem("token")}`
-        },
-        body: JSON.stringify(entry)
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) appendToTerminal(`✅ Row added to DB for ${entry.ip}`);
-          else appendToTerminal(data.error || '❌ Failed to auto-save row.', true);
-        })
-        .catch(err => appendToTerminal(`❌ Auto-save error: ${err.message}`, true));
-    }
-  }, 1500); // تأخير خفيف عشان المستخدم يمديه يدخل بيانات
-  currentIndex++;
-}
-
-
 
 
 
@@ -657,7 +793,7 @@ function handleGroupPingSelection(value) {
     if (!isNaN(count) && count > 0) {
       runPingGroup(count);
     } else {
-      alert('❌ Please enter a valid number.');
+      showErrorToast('❌ Please enter a valid number.');
     }
   } else {
     const count = parseInt(value);
@@ -753,10 +889,7 @@ function openSharePopup() {
 
 
 
-function closeSharePopup() {
-  const popup = document.getElementById('sharePopup');
-  popup.classList.add('hidden');
-}
+
 
 
 
@@ -872,5 +1005,8 @@ for (let i = 0; i < ips.length; i++) {
 function handleReportsSelection() {
   window.location.href = 'reports.html';
 }
+
+// Ensure it's also available globally
+window.handleReportsSelection = handleReportsSelection;
 
 

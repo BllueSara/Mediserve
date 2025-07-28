@@ -63,6 +63,8 @@ handleFiles(files);
 * دالة للتعامل مع الملفات المختارة وإرسالها للسيرفر
 * @param {FileList} files - قائمة الملفات المختارة
 */
+import { showToast, showErrorToast, showSuccessToast, showWarningToast, showInfoToast } from '../shared_functions/toast.js';
+
 function handleFiles(files) {
 // إنشاء كائن FormData لتجميع الملفات
 const formData = new FormData();
@@ -152,7 +154,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!type) {
           console.log("❌ نوع الجهاز غير محدد");
-          alert("❌ اختر نوع الجهاز أولاً");
+          showErrorToast("❌ اختر نوع الجهاز أولاً");
           return;
         }
         
@@ -296,7 +298,7 @@ if (sectionInput?.dataset?.id) {
 
   } catch (err) {
     console.error("❌ Submission error:", err);
-    alert(err.message.includes("already in use")
+    showErrorToast(err.message.includes("already in use")
       ? err.message
       : "❌ An error occurred while submitting the request. Please try again later.");
   }

@@ -1,6 +1,8 @@
 const API_BASE_URL = 'http://localhost:4000';
 
 // Function to format date
+import { showToast, showErrorToast, showSuccessToast, showWarningToast, showInfoToast } from '../Technical Support/shared_functions/toast.js';
+
 function formatDate(date) {
     const options = {
         year: 'numeric',
@@ -171,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function generateExcelForIPDetails() {
     const reportId = new URLSearchParams(location.search).get('report_id');
     if (!reportId) {
-        alert('No report ID found.');
+        showErrorToast('No report ID found.');
         return;
     }
 
@@ -184,7 +186,7 @@ async function generateExcelForIPDetails() {
 
         const { type, results } = await res.json();
         if (!results || results.length === 0) {
-            alert('لا توجد بيانات لهذا العنوان');
+            showInfoToast('لا توجد بيانات لهذا العنوان');
             return;
         }
 
@@ -222,7 +224,7 @@ async function generateExcelForIPDetails() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     } catch (err) {
-        alert('❌ Failed to download report.');
+        showErrorToast('❌ Failed to download report.');
         console.error(err);
     }
 }

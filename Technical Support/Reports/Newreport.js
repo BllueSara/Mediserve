@@ -1,5 +1,7 @@
 
   
+import { showToast, showErrorToast, showSuccessToast, showWarningToast, showInfoToast } from '../shared_functions/toast.js';
+
 window.addEventListener("DOMContentLoaded", () => {
   fillSelect("reportType", ["Incident Report", "Maintenance", "Other"]);
 
@@ -43,7 +45,7 @@ fileInput.addEventListener("change", (event) => {
     const allowed = ["pdf", "doc", "docx", "eml"];
     const ext = file.name.split(".").pop().toLowerCase();
     if (!allowed.includes(ext)) {
-      alert("❌ Invalid file type. Only PDF, DOC, DOCX, and EML are allowed.");
+      showErrorToast("❌ Invalid file type. Only PDF, DOC, DOCX, and EML are allowed.");
       fileInput.value = "";
       fileLabel.querySelector("p").textContent = "Drop files here or click to upload";
     } else {
@@ -159,17 +161,17 @@ document.getElementById("report-form").addEventListener("submit", async (e) => {
     const text = await res.text();
     try {
       const data = JSON.parse(text);
-      alert(data.message || "✅ Report submitted successfully");
+      showSuccessToast(data.message || "✅ Report submitted successfully");
       if (data.id) {
         window.location.href = `ReportDetails.html?id=${data.id}`;
       }
     } catch (err) {
       console.error("❌ Server returned non-JSON:", text);
-      alert("⚠️ Unexpected server response.");
+      showWarningToast("⚠️ Unexpected server response.");
     }
   })
   .catch(err => {
     console.error("❌ Submit failed:", err);
-    alert("❌ Error submitting the report.");
+    showErrorToast("❌ Error submitting the report.");
   });
 });

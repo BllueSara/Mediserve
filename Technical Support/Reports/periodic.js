@@ -1,6 +1,8 @@
 let currentType = '3months'; // 🧠 الحالة الحالية للجدول
 
 // ✅ تحميل جدول حسب النوع (3months أو 4months)
+import { showToast, showErrorToast, showSuccessToast, showWarningToast, showInfoToast } from '../shared_functions/toast.js';
+
 function loadMaintenance(type) {
   currentType = type;
 
@@ -83,7 +85,7 @@ function updateStatus(id, selectElement) {
   })
     .then(res => res.json())
     .then(data => {
-      alert(data.message || "✅ Status updated");
+      showSuccessToast(data.message || "✅ Status updated");
 
       // ✅ عدل الكلاس
       selectElement.className = `status-select ${getStatusClass(newStatus)}`;
@@ -96,7 +98,7 @@ function updateStatus(id, selectElement) {
     })
     .catch(err => {
       console.error("❌ Error updating status:", err);
-      alert("❌ Failed to update status");
+      showErrorToast("❌ Failed to update status");
     });
 }
 function adjustHeaderCountManually(prevStatus, newStatus, type = '3months') {

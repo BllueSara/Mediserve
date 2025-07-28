@@ -22,7 +22,44 @@ export function processNewReport(report, lang, languageManager) {
   
   document.getElementById("department").textContent = report.department_name || ""; // تعيين القسم
   document.getElementById("category").textContent = "New"; // تعيين الفئة
-  document.getElementById("report-status").textContent = report.status || "Open"; // تعيين حالة التقرير
+  // تعيين حالة التقرير مع الترجمة
+  const rawStatus = report.status || "Open";
+  let translatedStatus;
+  if (lang === "ar") {
+    switch (rawStatus.toLowerCase()) {
+      case "open":
+        translatedStatus = "مفتوح";
+        break;
+      case "in progress":
+        translatedStatus = "قيد التنفيذ";
+        break;
+      case "closed":
+        translatedStatus = "مغلق";
+        break;
+      case "pending":
+        translatedStatus = "في الانتظار";
+        break;
+      default:
+        translatedStatus = rawStatus;
+    }
+  } else {
+    translatedStatus = rawStatus;
+  }
+  const statusElement = document.getElementById("report-status");
+  statusElement.textContent = translatedStatus;
+  statusElement.dataset.key = rawStatus;
+  
+  // تحديث الـ CSS class بناءً على الحالة
+  statusElement.className = "status";
+  if (rawStatus.toLowerCase() === "closed") {
+    statusElement.classList.add("status-closed");
+  } else if (rawStatus.toLowerCase() === "in progress") {
+    statusElement.classList.add("status-in-progress");
+  } else if (rawStatus.toLowerCase() === "open") {
+    statusElement.classList.add("status-open");
+  } else if (rawStatus.toLowerCase() === "pending") {
+    statusElement.classList.add("status-pending");
+  }
   document.getElementById("submitted-date").textContent = `Submitted on ${new Date(report.created_at).toLocaleString()}`; // تعيين تاريخ الإرسال
   
   // معالجة problem_status

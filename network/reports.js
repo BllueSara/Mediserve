@@ -1,4 +1,6 @@
 // Function to go back
+import { showToast, showErrorToast, showSuccessToast, showWarningToast, showInfoToast } from '../Technical Support/shared_functions/toast.js';
+
 function goBack() {
     if (window.history.length > 1) {
         window.history.back();
@@ -487,6 +489,6 @@ async function loadSavedReports() {
       })
       .catch(err => {
         console.error('❌ Download error:', err);
-        alert('❌ Failed to download the report.');
+        showErrorToast('❌ Failed to download the report.');
       });
   }

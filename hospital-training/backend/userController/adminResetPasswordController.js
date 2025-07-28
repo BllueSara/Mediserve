@@ -25,6 +25,13 @@ const adminResetPasswordController = async (req, res) => {
     return res.status(400).json({ message: 'Password is required' });
   }
   try {
+    // Get user name first
+    const [userRows] = await db.promise().query('SELECT name FROM users WHERE id = ?', [userId]);
+    if (userRows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    const userName = userRows[0].name;
     const hashed = await bcrypt.hash(newPassword, 12);
     await db.promise().query('UPDATE users SET password = ? WHERE id = ?', [hashed, userId]);
     await logActivity(userId, 'System', makeBilingualLog('Admin Reset Password', 'إعادة تعيين كلمة مرور من الأدمن'), makeBilingualLog(`Password reset for user ${userName}.`, `تم إعادة تعيين كلمة المرور للمستخدم ${userName}.`));

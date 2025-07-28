@@ -175,7 +175,44 @@ export async function setBasicReportData(report, translations, lang) {
   category.dataset.key = rawCategory;
 
   // تعيين حالة التقرير والتاريخ
-  reportStatus.textContent = report.status || "Pending";
+  const rawStatus = report.status || "Open";
+  let translatedStatus;
+  if (translations.status?.[rawStatus]?.[lang]) {
+    translatedStatus = translations.status[rawStatus][lang];
+  } else {
+    // ترجمة الحالة إذا لم تكن موجودة في القاموس
+    switch (rawStatus.toLowerCase()) {
+      case "open":
+        translatedStatus = lang === "ar" ? "مفتوح" : "Open";
+        break;
+      case "in progress":
+        translatedStatus = lang === "ar" ? "قيد التنفيذ" : "In Progress";
+        break;
+      case "closed":
+        translatedStatus = lang === "ar" ? "مغلق" : "Closed";
+        break;
+      case "pending":
+        translatedStatus = lang === "ar" ? "في الانتظار" : "Pending";
+        break;
+      default:
+        translatedStatus = rawStatus;
+    }
+  }
+  reportStatus.textContent = translatedStatus;
+  reportStatus.dataset.key = rawStatus;
+  
+  // تحديث الـ CSS class بناءً على الحالة
+  reportStatus.className = "status";
+  // إضافة class إضافي للحالة إذا لزم الأمر
+  if (rawStatus.toLowerCase() === "closed") {
+    reportStatus.classList.add("status-closed");
+  } else if (rawStatus.toLowerCase() === "in progress") {
+    reportStatus.classList.add("status-in-progress");
+  } else if (rawStatus.toLowerCase() === "open") {
+    reportStatus.classList.add("status-open");
+  } else if (rawStatus.toLowerCase() === "pending") {
+    reportStatus.classList.add("status-pending");
+  }
   submittedDate.textContent = `Submitted on ${new Date(report.created_at).toLocaleString()}`;
 }
 

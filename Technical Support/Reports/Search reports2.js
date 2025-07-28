@@ -1,6 +1,13 @@
 // ===================== دوال مساعدة =====================
 
 // 1) دالة لتنظيف وسوم [ar] أو [en] من قيمة نصية
+import { showToast, showErrorToast, showSuccessToast, showWarningToast, showInfoToast } from '../shared_functions/toast.js';
+
+// دالة مساعدة لجلب ترجمة من memory لهويتك
+function t(key, fallback = '') {
+  return languageManager.translations[languageManager.currentLang]?.[key] || fallback || key;
+}
+
 function cleanTag(value) {
   return value?.replace(/\s*\[(ar|en)\]$/i, "").trim();
 }
@@ -125,7 +132,7 @@ function updateReportStatus(reportId, selectElement) {
   })
     .then(res => res.json())
     .then(data => {
-      alert(data.message || "✅ Status updated");
+      showSuccessToast(data.message || "✅ Status updated");
 
       // حدّث كل القوائم المرتبطة بنفس ticket_id إن وجد
       if (ticketId) {
@@ -143,12 +150,9 @@ function updateReportStatus(reportId, selectElement) {
     })
     .catch(err => {
       console.error("❌ Failed to update external report status:", err);
-      alert("❌ Failed to update status");
+      showErrorToast("❌ Failed to update status");
     });
 }
-
-// 9) دالة مساعدة لجلب ترجمة من memory لهويتك
-t = (key, fallback = '') => languageManager.translations[languageManager.currentLang]?.[key] || fallback || key;
 
 
 // ===================== الدالة الرئيسة =====================

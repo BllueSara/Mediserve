@@ -1,4 +1,5 @@
 import { fetchOptions, createSelectElement, populateModelDropdown, getLookupField } from './helpers.js'; // استيراد الدوال المساعدة
+import { showToast, showErrorToast, showSuccessToast, showWarningToast } from '../toast.js';
 
 /**
  * Activates edit mode for the report details page
@@ -163,7 +164,7 @@ export const activateEditMode = async (reportData, lookupConfig, specConfig) => 
   document.getElementById("attachment-input").style.display = "block";
   document.getElementById("signature-edit-wrapper").style.display = "block";
 
-  alert("📝 وضع التعديل مفعل");
+  showInfoToast("📝 وضع التعديل مفعل");
 };
 
 /**
@@ -607,7 +608,7 @@ export const submitUpdatedData = async (formData) => {
  * Handles successful save by hiding form elements and reloading the page
  */
 export const handleSuccessfulSave = () => {
-  alert("✅ تم الحفظ بنجاح.");
+  showSuccessToast("✅ تم الحفظ بنجاح.");
 
   // إخفاء الحقول بأمان
   const att = document.getElementById("attachment-input");

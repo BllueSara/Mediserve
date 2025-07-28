@@ -96,7 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!type) {
           console.log("❌ نوع الجهاز غير محدد");
-          alert("❌ اختر نوع الجهاز أولاً");
+          showErrorToast("❌ اختر نوع الجهاز أولاً");
           return;
         }
         
@@ -117,6 +117,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
+
+import { showToast, showErrorToast, showSuccessToast, showWarningToast, showInfoToast } from '../shared_functions/toast.js';
 
 document.addEventListener("DOMContentLoaded", function () {
   const form = document.getElementById("external-maintenance-form");

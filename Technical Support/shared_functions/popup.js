@@ -2,6 +2,7 @@
 import * as device from "./device.js";
 import {labelWithStar } from "./helpers.js";
 import { getFullName,editOptionWithFullName } from "./edit.js";
+import { showToast, showErrorToast, showSuccessToast, showWarningToast } from "./toast.js";
 
 const popup = document.getElementById("popup-modal");
 const popupHeading = popup.querySelector("#popup-title");
@@ -135,7 +136,7 @@ export function openGenericPopup(labelKey, targetId) {
       })
       .catch(err => {
         console.error("❌ Error loading departments:", err);
-        alert(t['failed_to_load_departments']);
+        showErrorToast(t['failed_to_load_departments']);
       });
 
   } else {
@@ -228,7 +229,7 @@ export function saveDeviceSpecification() {
   const dropdown = document.getElementById("device-spec");
 
   if (!deviceType) {
-    alert(t['device_type_not_selected']);
+    showErrorToast(t['device_type_not_selected']);
     return;
   }
 
@@ -279,12 +280,12 @@ export function saveDeviceSpecification() {
 
         document.getElementById("generic-popup").style.display = "none";
       } else {
-        alert(t['save_failed'] + ": " + result.error);
+        showErrorToast(t['save_failed'] + ": " + result.error);
       }
     })
     .catch(err => {
       console.error("❌ Error saving device_specifications:", err);
-      alert(t['error_saving_specifications']);
+      showErrorToast(t['error_saving_specifications']);
     });
 }
 window.saveDeviceSpecification = saveDeviceSpecification;
@@ -310,7 +311,7 @@ export function saveGenericOption() {
     .then(res => res.json())
     .then(result => {
       if (result.error) {
-        alert(t[result.error] || result.error);
+        showErrorToast(t[result.error] || result.error);
       } else {
         if (targetId === "device-type") {
           sessionStorage.setItem("device-type", value);
@@ -321,7 +322,7 @@ export function saveGenericOption() {
       }
     })
     .catch(err => {
-      alert(err.message || "❌ Failed to save");
+      showErrorToast(err.message || "❌ Failed to save");
     });
 }
 window.saveGenericOption = saveGenericOption;
@@ -389,7 +390,7 @@ if (isEdit) {
   // جلب الاسم الكامل باستخدام الجزء المحلي
   getFullName("section", searchValue).then(fullNameData => {
     if (!fullNameData) {
-      alert(`❌ Could not find section "${searchValue}". Please check the spelling.`);
+      showErrorToast(`❌ Could not find section "${searchValue}". Please check the spelling.`);
       popup.style.display = "none";
       return;
     }
@@ -419,7 +420,7 @@ if (isEdit) {
     `;
   }).catch(err => {
     console.error("❌ Error loading section data:", err);
-    alert("❌ Error loading section data. Please try again.");
+    showErrorToast("❌ Error loading section data. Please try again.");
     popup.style.display = "none";
   });
   
@@ -621,7 +622,7 @@ export function saveOptionForSelect() {
     .then(res => res.json())
     .then(result => {
       if (result.error) {
-        alert(t[result.error] || result.error);
+        showErrorToast(t[result.error] || result.error);
       } else {
         switch (targetId) {
           case "os-select": device.fetchOS(); break;
@@ -641,7 +642,7 @@ export function saveOptionForSelect() {
     })
     .catch(err => {
       console.error("❌ Error saving new option:", err);
-      alert(t['failed_to_save'] || "Failed to save");
+      showErrorToast(t['failed_to_save'] || "Failed to save");
     });
 }
 window.saveOptionForSelect = saveOptionForSelect;
@@ -1091,7 +1092,7 @@ export function savePCSpec() {
               }
             }
           } else {
-            alert(result.error); // ← fallback
+            showErrorToast(result.error); // ← fallback
           }
         }
         return;
@@ -1132,7 +1133,7 @@ export function saveNewSection() {
   const en = document.getElementById("new-section-en").value.trim();
   const ar = document.getElementById("new-section-ar").value.trim();
   if (!en || !ar) {
-    alert("❌ الرجاء إدخال اسم القسم بالإنجليزي والعربي.");
+    showErrorToast("❌ الرجاء إدخال اسم القسم بالإنجليزي والعربي.");
     return;
   }
   const combined = `${en}|${ar}`;
@@ -1173,7 +1174,7 @@ export function saveNewSection() {
     .then(res => res.json())
     .then(result => {
       if (result.error) {
-        alert(result.error);
+        showErrorToast(result.error);
         return;
       }
 
@@ -1257,7 +1258,7 @@ export function saveNewSection() {
     })
     .catch(err => {
   console.error("❌ Failed to save section:", err, err?.message, err?.stack);
-      alert("❌ Error saving section");
+      showErrorToast("❌ Error saving section");
     });
 }
 window.saveNewSection = saveNewSection; 
@@ -1270,7 +1271,7 @@ export function saveNewModel() {
   const t = languageManager.translations[languageManager.currentLang];
   
   if (!modelName) {
-    alert("❌ Please enter a model name");
+    showErrorToast("❌ Please enter a model name");
     return;
   }
 
@@ -1288,7 +1289,7 @@ export function saveNewModel() {
     .then(res => res.json())
     .then(result => {
       if (result.error) {
-        alert(result.error);
+        showErrorToast(result.error);
         return;
       }
 
@@ -1321,7 +1322,7 @@ export function saveNewModel() {
     })
     .catch(err => {
       console.error("❌ Failed to save model:", err);
-      alert(t['failed_to_save_model']);
+      showErrorToast(t['failed_to_save_model']);
     });
 }
 window.saveNewModel = saveNewModel; 
@@ -1353,7 +1354,7 @@ export function saveNewOption(selectId, labelKey) {
   const rawValue = input.value.trim();
 
   if (!rawValue) {
-    alert(`❌ ${t['please_enter']} ${t[labelKey]}`);
+    showErrorToast(`❌ ${t['please_enter']} ${t[labelKey]}`);
     return;
   }
 
@@ -1377,7 +1378,7 @@ export function saveNewOption(selectId, labelKey) {
     })
     .then(result => {
       if (result.error) {
-        alert(result.error);
+        showErrorToast(result.error);
       } else {
         closeGenericPopup();
 

@@ -1,4 +1,11 @@
 // دالة مساعدة لتقسيم النصوص حسب اللغة
+import { showToast, showErrorToast, showSuccessToast, showWarningToast, showInfoToast } from '../shared_functions/toast.js';
+
+// مساعدة الترجمة العامة
+function t(key, fallback = '') {
+  return languageManager.translations[languageManager.currentLang]?.[key] || fallback || key;
+}
+
 function splitTextByLanguage(text, currentLang) {
   if (!text || typeof text !== 'string') return text;
   
@@ -98,11 +105,7 @@ function normalizeKey(str) {
     .trim();
 }
 
-function getSelectVal(id) {
-  const sel = document.getElementById(id);
-  const opt = sel.options[sel.selectedIndex];
-  return opt?.dataset?.val ?? "";
-}
+
 
 
 async function loadReports(page = 1) {
@@ -134,13 +137,15 @@ async function loadReports(page = 1) {
   });
   // 2.1) اجمع قيم الفلاتر
 
-// ← 2.1 اجمع قيم الفلاتر باستخدام getSelectVal
-const typeFilter       = getSelectVal("filter-type");
-const statusFilter     = getSelectVal("filter-status");
-const deviceTypeFilter = getSelectVal("filter-device-type");
+// ← 2.1 اجمع قيم الفلاتر
+const typeFilter       = document.getElementById("filter-type")?.value;
+const statusFilter     = document.getElementById("filter-status")?.value;
+const deviceTypeFilter = document.getElementById("filter-device-type")?.value;
 const searchQuery      = document.getElementById("search-input").value.trim().toLowerCase();
 const dateFrom         = document.getElementById("filter-date-from").value;
 const dateTo           = document.getElementById("filter-date-to").value;
+
+
 
 // 2.2) طبّق الفلاتر على data
 const filtered = data.filter(report => {
@@ -171,12 +176,22 @@ const filtered = data.filter(report => {
   // ... باقي الفلاتر أو الكود ..
 
     // —— 2) فلترة الحالة:
-    if (statusFilter && (report.status || "").toLowerCase() !== statusFilter.toLowerCase()) 
-      return false;
+    if (statusFilter && statusFilter.trim() !== "") {
+      const reportStatus = (report.status || "").trim();
+      console.log(`🔍 Status filter: "${statusFilter}" vs report status: "${reportStatus}"`);
+      if (reportStatus.toLowerCase() !== statusFilter.toLowerCase()) {
+        console.log(`❌ Status filter failed for report ${report.id}`);
+        return false;
+      }
+    }
 
     // —— 3) فلترة نوع الجهاز:
-    if (deviceTypeFilter && (report.device_type || "").toLowerCase() !== deviceTypeFilter.toLowerCase()) 
-      return false;
+    if (deviceTypeFilter && deviceTypeFilter.trim() !== "") {
+      const reportDeviceType = (report.device_type || "").trim();
+      if (reportDeviceType.toLowerCase() !== deviceTypeFilter.toLowerCase()) {
+        return false;
+      }
+    }
 
     // —— 4) فلترة البحث الحر:
     if (searchQuery) {
@@ -270,6 +285,7 @@ const paginated = filtered.slice(startIndex, startIndex + reportsPerPage);
     // ——— بناء تسمية الـ maintenanceLabel والـ iconSrc بناءً على نوع التقرير
 // 1) Map maintenance_type → baseLabelKey
 let baseLabelKey;
+let iconSrc;
 switch (report.maintenance_type) {
   case "Regular":
     baseLabelKey = 'regular_maintenance';    // "صيانة دورية"
@@ -524,7 +540,7 @@ function updateReportStatus(reportId, selectElement) {
   })
     .then(res => res.json())
     .then(data => {
-      alert(data.message || "✅ Status updated successfully");
+      showSuccessToast(data.message || "✅ Status updated successfully");
 
       // ✅ حدّث كل القوائم المرتبطة بنفس التذكرة
       if (ticketId) {
@@ -542,7 +558,7 @@ function updateReportStatus(reportId, selectElement) {
     })
     .catch(err => {
       console.error("❌ Failed to update report status:", err);
-      alert("❌ Failed to update status");
+      showErrorToast("❌ Failed to update status");
     });
 }
 
@@ -626,9 +642,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
-
-// مساعدة الترجمة العامة
-t = (key, fallback = '') => languageManager.translations[languageManager.currentLang]?.[key] || fallback || key;
 
 // ===================== دالة تحميل تقرير الأجهزة المطلوب استبدالها =====================
 
@@ -728,7 +741,7 @@ async function generateReplacementReport() {
   });
 
   if (!response.ok) {
-    alert('❌ فشل في جلب البيانات');
+    showErrorToast('❌ فشل في جلب البيانات');
     return;
   }
 
@@ -747,7 +760,7 @@ async function generateReplacementReport() {
   });
 
   if (filteredDevices.length === 0) {
-    alert('✅ لا توجد أجهزة تنطبق عليها شروط الإحلال.');
+    showInfoToast('✅ لا توجد أجهزة تنطبق عليها شروط الإحلال.');
     return;
   }
 

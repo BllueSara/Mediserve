@@ -91,6 +91,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 
+import { showToast, showErrorToast, showSuccessToast, showWarningToast, showInfoToast } from '../shared_functions/toast.js';
+
 function handleFileChange(event) {
   const fileInput = event.target;
   const file = fileInput.files[0];
@@ -99,7 +101,7 @@ function handleFileChange(event) {
 
   const fileLabel = document.querySelector(".upload-box p");
   if (file && !allowedExtensions.includes(ext)) {
-    alert("Invalid file type. Only PDF, DOC, DOCX, and EML are allowed.");
+    showErrorToast("Invalid file type. Only PDF, DOC, DOCX, and EML are allowed.");
     fileInput.value = "";
     fileLabel.textContent = "Drop files here or click to upload";
   } else if (file) {
@@ -305,7 +307,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!type) {
           console.log("❌ نوع الجهاز غير محدد");
-          alert("❌ اختر نوع الجهاز أولاً");
+          showErrorToast("❌ اختر نوع الجهاز أولاً");
           return;
         }
 

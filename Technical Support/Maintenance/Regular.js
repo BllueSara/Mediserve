@@ -63,6 +63,8 @@ document.addEventListener(" ", () => {
 
 
 
+import { showToast, showErrorToast, showSuccessToast, showWarningToast, showInfoToast } from '../shared_functions/toast.js';
+
 document.addEventListener("DOMContentLoaded", () => {
   fetchDeviceTypes();
   fetchDepartments("section");
@@ -257,7 +259,7 @@ async function submitRegularMaintenance(data) {
     const result = await response.json();
 
     if (!response.ok) {
-      alert(result.error);
+      showErrorToast(result.error);
       return;
     }
 
@@ -266,7 +268,7 @@ async function submitRegularMaintenance(data) {
 
   } catch (err) {
     console.error("❌ Submission error:", err);
-    alert("❌ فشل في الاتصال بالسيرفر. حاول مرة أخرى.");
+    showErrorToast("❌ فشل في الاتصال بالسيرفر. حاول مرة أخرى.");
   }
 }
 

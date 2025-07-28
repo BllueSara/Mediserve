@@ -645,6 +645,30 @@ function updateCombinedDeviceView() {
   renderColumnLayout(unique);
 }
 
+// دالة فلترة أسماء المستخدمين حسب اللغة
+function filterEngineerNameByLang(text, lang) {
+  if (!text || typeof text !== 'string') return text;
+  return text.replace(/([A-Za-z\s]+)\|([\u0600-\u06FF\s]+)/g, (match, en, ar, offset, string) => {
+    const name = lang === 'ar' ? ar.trim() : en.trim();
+    
+    // التحقق من المسافة قبل الاسم
+    const before = string.slice(0, offset);
+    let result = name;
+    
+    if (before.length > 0 && !before.endsWith(' ')) {
+      result = ' ' + name;
+    }
+    
+    // التحقق من المسافة بعد الاسم
+    const after = string.slice(offset + match.length);
+    if (after.length > 0 && !after.startsWith(' ') && !after.startsWith('،') && !after.startsWith('.') && !after.startsWith('!') && !after.startsWith('?')) {
+      result = result + ' ';
+    }
+    
+    return result;
+  });
+}
+
 function openSharePopup() {
   const popup = document.getElementById('sharePopup');
   popup.classList.remove('hidden');
@@ -660,6 +684,9 @@ function openSharePopup() {
       const container = document.getElementById('userCheckboxContainer');
       container.innerHTML = '';
 
+      // الحصول على اللغة الحالية
+      const currentLang = localStorage.getItem('language') || 'en';
+
       users.forEach(user => {
         const label = document.createElement('label');
         label.className = 'user-checkbox';
@@ -669,8 +696,11 @@ function openSharePopup() {
         checkbox.name = 'shareUsers';
         checkbox.value = user.id;
 
+        // فلترة اسم المستخدم حسب اللغة
+        const filteredName = filterEngineerNameByLang(user.name, currentLang);
+
         label.appendChild(checkbox);
-        label.appendChild(document.createTextNode(' ' + user.name));
+        label.appendChild(document.createTextNode(' ' + filteredName));
         container.appendChild(label);
       });
     });

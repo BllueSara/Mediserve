@@ -2,6 +2,7 @@
 import { checkUserPermissions,isArabicText,cleanDropdownError } from "./helpers.js";
 import { closeAllDropdowns, } from "./dropdowns.js";
 import { deleteOption } from "./edit.js";
+import { showToast, showErrorToast, showSuccessToast, showWarningToast } from "./toast.js";
 
 export async function fetchProblemStatus(deviceType, onFinished) {
   const permissions = await checkUserPermissions();
@@ -203,7 +204,7 @@ export function saveNewProblemStatus() {
   const oldValue = document.getElementById("old-problem-status-value")?.value.trim();
   const deviceType = document.getElementById("problem-status-device-type")?.value;
   if (!en || !ar) {
-    alert("❌ الرجاء إدخال المشكلة بالإنجليزي والعربي.");
+    showErrorToast("❌ الرجاء إدخال المشكلة بالإنجليزي والعربي.");
     return;
   }
   const rawName = `${en}|${ar}`;
@@ -224,7 +225,7 @@ export function saveNewProblemStatus() {
       .then(res => res.json())
       .then(result => {
         if (result.error) {
-          alert(result.error);
+          showErrorToast(result.error);
         } else {
           fetchProblemStatus(deviceType, () => {
             const displaySpan = document.getElementById("selected-problem-status");
@@ -255,7 +256,7 @@ export function saveNewProblemStatus() {
       })
       .catch(err => {
         console.error("❌ Error updating problem status:", err);
-        alert(t['failed_to_save'] || "Failed to update problem status");
+        showErrorToast(t['failed_to_save'] || "Failed to update problem status");
       });
     return;
   }
@@ -274,7 +275,7 @@ export function saveNewProblemStatus() {
     .then(res => res.status === 204 ? {} : res.json())
     .then(result => {
       if (result.error) {
-        alert(result.error);
+        showErrorToast(result.error);
       } else {
         const parts = rawName.split("|").map(p => p.trim());
         const en = parts[0] || "";
@@ -305,7 +306,7 @@ export function saveNewProblemStatus() {
     })
     .catch(err => {
       console.error("❌ Error saving problem status:", err);
-      alert(t['failed_to_save'] || "Failed to save problem status");
+      showErrorToast(t['failed_to_save'] || "Failed to save problem status");
     });
 } 
 window.saveNewProblemStatus = saveNewProblemStatus

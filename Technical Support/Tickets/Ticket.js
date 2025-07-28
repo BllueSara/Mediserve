@@ -1,3 +1,5 @@
+import { showToast, showErrorToast, showSuccessToast, showWarningToast, showInfoToast } from '../shared_functions/toast.js';
+
 document.addEventListener("DOMContentLoaded", () => {
     // زر الرجوع
     document.querySelector(".back-button").addEventListener("click", () => window.history.back());
@@ -7,7 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // عند الضغط على Internal Ticket
     document.querySelector(".container1").addEventListener("click", function () {
-        alert("Internal Ticket selected");
+        showInfoToast("Internal Ticket selected");
         this.classList.add("clicked"); // إضافة التأثير
         setTimeout(() => {
             this.classList.remove("clicked");
@@ -20,7 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // عند الضغط على External Ticket
     document.querySelector(".container2").addEventListener("click", function () {
-        alert("External Ticket selected");
+        showInfoToast("External Ticket selected");
         this.classList.add("clicked"); // إضافة التأثير
         setTimeout(() => {
             this.classList.remove("clicked");

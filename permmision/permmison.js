@@ -4,6 +4,9 @@ function i18n(key) {
   return (languageManager.translations[lang] && languageManager.translations[lang][key]) || key;
 }
 
+// Import toast functions
+import { showToast, showErrorToast, showSuccessToast, showWarningToast } from '../Technical Support/shared_functions/toast.js';
+
 // تعريف دالة applyTranslations لتحديث النصوص والعناوين
 function applyTranslations() {
   // لكل عنصر فيه data-i18n
@@ -261,10 +264,24 @@ async function loadUserDetails(userId) {
 changeUserRole(userId, user.role);
     });
 
+    // زر مسح الكاش ميموري - يظهر فقط للمسؤولين
+    const clearCacheBtn = document.getElementById("clear-cache-btn");
+    if (clearCacheBtn) {
+      // إخفاء الزر إذا لم يكن المستخدم مسؤول
+      if (user.role !== 'admin') {
+        clearCacheBtn.style.display = 'none';
+      } else {
+        clearCacheBtn.style.display = 'flex';
+        clearCacheBtn.addEventListener("click", () => {
+          clearCache();
+        });
+      }
+    }
+
 
   } catch (error) {
     console.error('Error loading user details:', error);
-    alert('فشل تحميل معلومات المستخدم');
+    showErrorToast('فشل تحميل معلومات المستخدم');
   }                                                                             
 }
 
@@ -345,7 +362,7 @@ async function deleteUser(userId) {
   });
 
   if (res.ok) {
-    alert("User deleted");
+    showSuccessToast("User deleted");
     loadUsers();
   }
 }
@@ -383,7 +400,7 @@ function submitUser() {
   const employee_id = document.getElementById("modal_employee_id").value.trim();
 
   if (!nameEn || !nameAr || !email || !password) {
-    alert(i18n("error.requiredFields"));
+    showErrorToast(i18n("error.requiredFields"));
     return;
   }
 
@@ -394,12 +411,12 @@ function submitUser() {
   })
     .then(res => res.json())
     .then(data => {
-      alert(i18n("success.userCreated"));
+      showSuccessToast(i18n("success.userCreated"));
       closeUserModal();
       // loadUsers();
     })
     .catch(err => {
-      alert(i18n("error.creationFailed"));
+      showErrorToast(i18n("error.creationFailed"));
       console.error(err);
     });
 }
@@ -410,7 +427,8 @@ async function resetUserPassword(userId) {
   const newPassword = prompt(t['enter_new_password'] || "Enter new password:");
 
   if (!newPassword || newPassword.trim() === "") {
-    return alert(t['password_required'] || "Password is required");
+    showErrorToast(t['password_required'] || "Password is required");
+    return;
   }
 
   try {
@@ -425,10 +443,10 @@ async function resetUserPassword(userId) {
 
     const result = await res.json();
     if (!res.ok) throw new Error(result.message);
-    alert(t['password_updated'] || "Password updated successfully");
+    showSuccessToast(t['password_updated'] || "Password updated successfully");
   } catch (err) {
     console.error("❌ Failed to update password:", err);
-    alert(t['password_update_failed'] || "Failed to update password");
+    showErrorToast(t['password_update_failed'] || "Failed to update password");
   }
 }
 async function changeUserRole(userId, currentRole) {
@@ -450,10 +468,105 @@ async function changeUserRole(userId, currentRole) {
     const result = await res.json();
     if (!res.ok) throw new Error(result.message);
 
-    alert(result.message);
+    showSuccessToast(result.message);
     loadUserDetails(userId); // إعادة تحميل البيانات بعد التحديث
   } catch (err) {
-    alert("❌ فشل تغيير الدور: " + err.message);
+    showErrorToast("❌ فشل تغيير الدور: " + err.message);
+  }
+}
+
+// دالة مسح الكاش ميموري مع الاحتفاظ بالبيانات المهمة
+async function clearCache() {
+  const t = languageManager.translations[languageManager.currentLang];
+  const confirmMessage = t['confirm_clear_cache'] || "Are you sure you want to clear the cache? This will remove all stored data except authentication and language settings.";
+  
+  if (!confirm(confirmMessage)) return;
+
+  try {
+    // حفظ البيانات المهمة قبل المسح
+    const token = localStorage.getItem('token');
+    const language = localStorage.getItem('language');
+    const userId = localStorage.getItem('userId');
+    const userRole = localStorage.getItem('userRole');
+    const userName = localStorage.getItem('userName');
+    const userEmail = localStorage.getItem('userEmail');
+    
+    console.log('🔒 حفظ البيانات المهمة قبل المسح:', { 
+      token: !!token, 
+      language, 
+      userId: !!userId, 
+      userRole, 
+      userName: !!userName, 
+      userEmail: !!userEmail 
+    });
+    
+    // مسح localStorage مع الاحتفاظ بالبيانات المهمة
+    const keysToKeep = ['token', 'language', 'userId', 'userRole', 'userName', 'userEmail']; // نحتفظ بالبيانات المهمة
+    const allKeys = Object.keys(localStorage);
+    
+    console.log('📋 المفاتيح الموجودة في localStorage:', allKeys);
+    
+    allKeys.forEach(key => {
+      if (!keysToKeep.includes(key)) {
+        localStorage.removeItem(key);
+        console.log('🗑️ تم حذف المفتاح:', key);
+      } else {
+        console.log('✅ تم الاحتفاظ بالمفتاح:', key);
+      }
+    });
+    
+    // التأكد من أن البيانات المهمة ما زالت موجودة
+    const tokenAfter = localStorage.getItem('token');
+    const languageAfter = localStorage.getItem('language');
+    const userIdAfter = localStorage.getItem('userId');
+    const userRoleAfter = localStorage.getItem('userRole');
+    const userNameAfter = localStorage.getItem('userName');
+    const userEmailAfter = localStorage.getItem('userEmail');
+    
+    console.log('🔍 بعد المسح - البيانات المهمة:', { 
+      token: !!tokenAfter, 
+      language: languageAfter, 
+      userId: !!userIdAfter, 
+      userRole: userRoleAfter, 
+      userName: !!userNameAfter, 
+      userEmail: !!userEmailAfter 
+    });
+    
+    // مسح sessionStorage
+    sessionStorage.clear();
+    console.log('🗑️ تم مسح sessionStorage');
+    
+    // مسح الكاش ميموري للمتصفح
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+      console.log('🗑️ تم مسح cache المتصفح');
+    }
+    
+    // مسح IndexedDB إذا كان موجود
+    if ('indexedDB' in window) {
+      const databases = await indexedDB.databases();
+      databases.forEach(db => {
+        if (db.name) {
+          indexedDB.deleteDatabase(db.name);
+        }
+      });
+      console.log('🗑️ تم مسح IndexedDB');
+    }
+    
+    // إعادة تحميل الصفحة
+    const successMessage = t['cache_cleared'] || "Cache cleared successfully!";
+    showSuccessToast(successMessage);
+    
+    // إعادة تحميل الصفحة بعد ثانيتين
+    setTimeout(() => {
+      window.location.reload();
+    }, 2000);
+    
+  } catch (error) {
+    console.error("❌ Error clearing cache:", error);
+    const errorMessage = t['cache_clear_failed'] || "Failed to clear cache";
+    showErrorToast(errorMessage);
   }
 }
 

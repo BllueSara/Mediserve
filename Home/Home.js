@@ -1,9 +1,12 @@
+import { showToast, showErrorToast, showSuccessToast, showWarningToast, showInfoToast } from '../Technical Support/shared_functions/toast.js';
+
 document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("token");
   const userId = localStorage.getItem("userId");
   const role = localStorage.getItem("userRole");
 
   console.log("🚀 الصفحة تم تحميلها بنجاح!");
+  console.log("🔍 عند تحميل الصفحة - التوكن:", !!token, "userId:", !!userId, "role:", role);
 
   // ✅ تحقق من حالة الحساب كل دقيقة
   checkAccountStatus(); // تحقق فوري عند تحميل الصفحة
@@ -15,14 +18,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!token) return;
 
     try {
+      console.log("🔍 جاري التحقق من حالة الحساب...");
       const res = await fetch("http://localhost:4000/me/status", {
         headers: { Authorization: "Bearer " + token }
       });
+      
+      if (!res.ok) {
+        console.error("❌ خطأ في الـ API:", res.status, res.statusText);
+        return;
+      }
+      
       const data = await res.json();
+      console.log("🔍 checkAccountStatus - حالة الحساب:", data.status);
+      
       if (data.status === "inactive") {
-        alert("🚫 تم تعطيل حسابك. سيتم تسجيل الخروج الآن.");
+        showWarningToast("🚫 تم تعطيل حسابك. سيتم تسجيل الخروج الآن.");
         localStorage.clear();
         window.location.href = "/auth/login.html";
+      } else if (data.status === "active") {
+        console.log("✅ الحساب نشط");
+      } else {
+        console.log("❓ حالة غير معروفة:", data.status);
       }
     } catch (err) {
       console.error("🚨 فشل التحقق من حالة الحساب:", err);

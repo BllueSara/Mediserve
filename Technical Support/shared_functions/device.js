@@ -4,6 +4,7 @@ import { checkUserPermissions, createLangAwareTransform, cleanDropdownError } fr
 import { openAddModelPopup, openAddSectionPopup, openAddOptionPopup,openGenericPopup,updatePopupHeadingAndFields,openAddNewOptionPopup } from "./popup.js";
 import { editOption, deleteOption,openDeviceEditPopup,openGenericEditPopup } from "./edit.js";
 import { fetchProblemStatus } from "./problem.js";
+import { showToast, showErrorToast, showSuccessToast, showWarningToast } from "./toast.js";
 
 // ========== الدوال المنقولة من Regular.js ===========
 
@@ -149,7 +150,7 @@ export async function fetchDeviceSpecsByTypeAndDepartment() {
                 }
               } catch (err) {
                 console.error("❌ Failed to fetch full device data:", err);
-                alert("❌ Could not load full device data for editing.");
+                showErrorToast("❌ Could not load full device data for editing.");
               }
             };
             icons.appendChild(editIcon);
@@ -808,7 +809,7 @@ export function fetchDevicesBySection() {
   const department = sessionStorage.getItem("section");
 
   if (!type || !department) {
-    alert("❌ تأكد من اختيار نوع الجهاز والقسم");
+    showErrorToast("❌ تأكد من اختيار نوع الجهاز والقسم");
     return;
   }
 
@@ -874,7 +875,7 @@ export function saveNewTechnical() {
   const ar = document.getElementById("new-technical-ar").value.trim();
   const oldValue = document.getElementById("old-technical-value")?.value.trim();
   if (!en || !ar) {
-    alert("❌ الرجاء إدخال اسم المهندس بالإنجليزي والعربي.");
+    showErrorToast("❌ الرجاء إدخال اسم المهندس بالإنجليزي والعربي.");
     return;
   }
   const rawName = `${en}|${ar}`;
@@ -896,7 +897,7 @@ export function saveNewTechnical() {
       .then(res => res.json())
       .then(result => {
         if (result.error) {
-          alert(result.error);
+          showErrorToast(result.error);
         } else {
           fetchTechnicalStatus(() => {
             const displaySpan = document.getElementById("selected-technical-status");
@@ -910,7 +911,7 @@ export function saveNewTechnical() {
       })
       .catch(err => {
         console.error("❌ Error updating engineer:", err);
-        alert(t['failed_to_save'] || "Failed to update engineer");
+        showErrorToast(t['failed_to_save'] || "Failed to update engineer");
       });
     return;
   }
@@ -929,7 +930,7 @@ export function saveNewTechnical() {
     .then(res => res.status === 204 ? {} : res.json())
     .then(result => {
       if (result.error) {
-        alert(result.error);
+        showErrorToast(result.error);
       } else {
         // ✅ بعد الإضافة، أظهر الجزء المناسب حسب اللغة
         const parts = rawName.split("|").map(p => p.trim());
@@ -947,7 +948,7 @@ export function saveNewTechnical() {
     })
     .catch(err => {
       console.error("❌ Error saving engineer:", err);
-      alert(t['failed_to_save'] || "Failed to save engineer");
+      showErrorToast(t['failed_to_save'] || "Failed to save engineer");
     });
 }
 window.saveNewTechnical = saveNewTechnical;
@@ -960,7 +961,7 @@ const en = document.getElementById("new-technical-en").value.trim();
 const ar = document.getElementById("new-technical-ar").value.trim();
 const oldValue = document.getElementById("old-technical-value")?.value.trim();
   if (!en || !ar) {
-    alert("❌ الرجاء إدخال اسم المراسل بالإنجليزي والعربي.");
+    showErrorToast("❌ الرجاء إدخال اسم المراسل بالإنجليزي والعربي.");
     return;
   }
   const rawName = `${en}|${ar}`;
@@ -981,7 +982,7 @@ const oldValue = document.getElementById("old-technical-value")?.value.trim();
       .then(res => res.json())
       .then(result => {
         if (result.error) {
-          alert(result.error);
+          showErrorToast(result.error);
         } else {
           fetchReporterNames(() => {
             const displaySpan = document.getElementById("selected-technical");
@@ -995,7 +996,7 @@ const oldValue = document.getElementById("old-technical-value")?.value.trim();
       })
       .catch(err => {
         console.error("❌ Error updating reporter:", err);
-        alert(t['failed_to_save'] || "Failed to update reporter");
+        showErrorToast(t['failed_to_save'] || "Failed to update reporter");
       });
     return;
   }
@@ -1014,7 +1015,7 @@ const oldValue = document.getElementById("old-technical-value")?.value.trim();
     .then(res => res.status === 204 ? {} : res.json())
     .then(result => {
       if (result.error) {
-        alert(result.error);
+        showErrorToast(result.error);
       } else {
         const displayName = languageManager.currentLang === "ar" ? (ar || en) : en;
         fetchReporterNames(() => {
@@ -1028,7 +1029,7 @@ const oldValue = document.getElementById("old-technical-value")?.value.trim();
     })
     .catch(err => {
       console.error("❌ Error saving reporter:", err);
-      alert(t['failed_to_save'] || "Failed to save reporter");
+      showErrorToast(t['failed_to_save'] || "Failed to save reporter");
     });
 }
 window.saveNewReporter = saveNewReporter;

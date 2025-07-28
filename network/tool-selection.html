@@ -67,7 +67,7 @@
     <div class="ticket-frame">
       <div class="ticket-options">
 
-        <div class="option" onclick="handleSelection('existing')">
+        <div class="option" id="existing-option">
           <div class="icon-container">
             <img src="/icon/disk.png" alt="Existing" />
           </div>
@@ -75,7 +75,7 @@
           <p data-i18n="use_connected_devices">Use one of your currently connected devices</p>
         </div>
 
-        <div class="option" onclick="handleSelection('new')">
+        <div class="option" id="new-option">
           <div class="icon-container">
             <img src="/icon/network.png" alt="New Device" />
           </div>
@@ -84,7 +84,7 @@
         </div>
 
         <!-- New Reports Option -->
-        <div class="option" onclick="handleReportsSelection()">
+        <div class="option" id="reports-option">
           <div class="icon-container">
             <img src="/icon/reports.png" alt="Reports" />
           </div>
@@ -108,6 +108,6 @@ function goBack() {
 }
 
     </script>
-  <script src="script.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>

@@ -1,3 +1,6 @@
+// Import toast functions
+import { showToast, showErrorToast, showSuccessToast, showWarningToast } from '../Technical Support/shared_functions/toast.js';
+
 // Handle switching between Sign In and Sign Up
 const container = document.querySelector('.container');
 const signUpButton = document.getElementById('signUp');
@@ -177,7 +180,7 @@ document.getElementById("signupForm").addEventListener("submit", function (event
                 localStorage.setItem("userName", data.user.name);
                 localStorage.setItem("userEmail", data.user.email);
 
-                alert("Registration successful!");
+                showSuccessToast("Registration successful!");
                 window.location.href = "/Home/Home.html";
             } else {
                 errorMessage.textContent = data.message || "Signup failed.";

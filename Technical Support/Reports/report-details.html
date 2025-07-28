@@ -15,7 +15,22 @@
   <link rel="stylesheet" href="report-details.CSS" />
   <link rel="stylesheet" href="/Language/Language.css">
 <style>
+  /* إخفاء المحتوى حتى يتم تحميل اللغة */
+  .content-hidden {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease-in-out;
+  }
+  
+  .content-visible {
+    opacity: 1;
+    visibility: visible;
+  }
 
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
 
   body,
   h1, h2, h3, p, span, button, select, input, label,
@@ -28,9 +43,9 @@
 <body>
 
   <!-- Navigation buttons: Back and Home -->
-  <div class="nav-buttons">
+  <div class="nav-buttons content-hidden">
     <div class="back-button">
-      <a href="#" onclick="goBack()">
+      <a href="#" id="back-button">
         <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> <span data-i18n="back">Back</span>
       </a>
     </div>
@@ -42,7 +57,7 @@
   </div>
 
   <!-- Page header with logos -->
-  <header>
+  <header class="content-hidden">
     <div class="ms-logo">
       <img src="/icon/MS Logo.png" alt="MS Logo">
     </div>
@@ -51,8 +66,33 @@
     </div>
   </header>
 
+  <!-- Loading Spinner -->
+  <div id="loading-spinner" style="
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    text-align: center;
+  ">
+    <div style="
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #007bff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    "></div>
+    <p style="margin: 0; color: #666;" data-i18n="loading">جاري التحميل...</p>
+  </div>
+
   <!-- Main container for the report content -->
-  <div class="container">
+  <div class="container content-hidden">
     <div class="report-header">
       <div>
         <h2 id="report-title" data-i18n="maintenance_report">Maintenance Report</h2>

@@ -871,6 +871,10 @@ const languageManager = {
             'add': 'Add',
             'cancel': 'Cancel',
             'change_role': 'Change Role',
+            'clear_cache': 'Clear Cache',
+            'confirm_clear_cache': 'Are you sure you want to clear the cache? This will remove all stored data except token and language settings.',
+            'cache_cleared': 'Cache cleared successfully!',
+            'cache_clear_failed': 'Failed to clear cache',
             // ... existing code ...
             'report_for': 'Report for',
             'unknown_ip': 'Unknown IP',
@@ -915,6 +919,10 @@ const languageManager = {
             'password_updated': "تم تحديث كلمة المرور بنجاح",
             'password_update_failed': "فشل في تحديث كلمة المرور",
             'change_role': "تغيير الصلاحيات",
+            'clear_cache': 'مسح الكاش',
+            'confirm_clear_cache': 'هل أنت متأكد من مسح الكاش؟ سيتم حذف جميع البيانات المخزنة باستثناء التوكن وإعدادات اللغة.',
+            'cache_cleared': 'تم مسح الكاش بنجاح!',
+            'cache_clear_failed': 'فشل في مسح الكاش',
             // Navigation
 
             'home': 'الرئيسية',

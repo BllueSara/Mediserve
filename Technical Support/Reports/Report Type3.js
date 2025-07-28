@@ -1,9 +1,11 @@
+import { showToast, showErrorToast, showSuccessToast, showWarningToast, showInfoToast } from '../shared_functions/toast.js';
+
 document.addEventListener("DOMContentLoaded", () => {
   const reportType = localStorage.getItem("reportType"); // internal / external
 
   // احذر لو ما حُدد النوع
   if (!reportType) {
-    alert("❗ Please select report type first");
+    showWarningToast("❗ Please select report type first");
     window.location.href = "Report Type.html"; // رجع المستخدم لاختيار النوع
     return;
   }
@@ -59,3 +61,16 @@ function goToSearchWithStatus(status) {
     window.location.href = "/Technical Support/Reports/Search reports2.html";
   }
 }
+
+// دالة لتغيير الصورة عند التمرير
+function changeImage(element, newImageSrc) {
+  const img = element.querySelector('img');
+  if (img) {
+    img.src = newImageSrc;
+  }
+}
+
+// Make functions globally accessible for HTML onclick/onmouseover/onmouseout attributes
+window.goBack = goBack;
+window.goToSearchWithStatus = goToSearchWithStatus;
+window.changeImage = changeImage;

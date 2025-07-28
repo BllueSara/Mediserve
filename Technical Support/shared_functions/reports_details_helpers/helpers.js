@@ -98,4 +98,51 @@ export {
   optimizedTextSearch, // دالة البحث المحسن في النصوص
   cleanupMemory, // دالة تنظيف الذاكرة
   isDevelopment // دالة التحقق من بيئة التطوير
-} from './performance_optimizer.js'; 
+} from './performance_optimizer.js';
+
+// دالة مساعدة لتعيين حالة التقرير مع الترجمة والألوان
+export function setReportStatus(status, lang = "en") {
+  const statusElement = document.getElementById("report-status");
+  if (!statusElement) return;
+  
+  const rawStatus = status || "Open";
+  let translatedStatus;
+  
+  // ترجمة الحالة
+  if (lang === "ar") {
+    switch (rawStatus.toLowerCase()) {
+      case "open":
+        translatedStatus = "مفتوح";
+        break;
+      case "in progress":
+        translatedStatus = "قيد التنفيذ";
+        break;
+      case "closed":
+        translatedStatus = "مغلق";
+        break;
+      case "pending":
+        translatedStatus = "في الانتظار";
+        break;
+      default:
+        translatedStatus = rawStatus;
+    }
+  } else {
+    translatedStatus = rawStatus;
+  }
+  
+  // تعيين النص والبيانات
+  statusElement.textContent = translatedStatus;
+  statusElement.dataset.key = rawStatus;
+  
+  // تحديث الـ CSS classes
+  statusElement.className = "status";
+  if (rawStatus.toLowerCase() === "closed") {
+    statusElement.classList.add("status-closed");
+  } else if (rawStatus.toLowerCase() === "in progress") {
+    statusElement.classList.add("status-in-progress");
+  } else if (rawStatus.toLowerCase() === "open") {
+    statusElement.classList.add("status-open");
+  } else if (rawStatus.toLowerCase() === "pending") {
+    statusElement.classList.add("status-pending");
+  }
+} 

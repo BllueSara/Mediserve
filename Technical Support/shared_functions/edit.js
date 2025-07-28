@@ -1,12 +1,13 @@
 import * as device from "./device.js";
 import { fetchProblemStatus } from "./problem.js";
+import { showToast, showErrorToast, showSuccessToast, showWarningToast } from "./toast.js";
 
 export async function editOption(selectId, updatedDevice, newValue = null, type = null) {
   const lang = languageManager.currentLang;
   const t = languageManager.translations[lang];
 
   if (!updatedDevice || (selectId !== "device-spec" && (!updatedDevice || !newValue))) {
-    alert(t['please_select_and_enter_valid_value']);
+    showErrorToast(t['please_select_and_enter_valid_value']);
     return false;
   }
 
@@ -46,7 +47,7 @@ export async function editOption(selectId, updatedDevice, newValue = null, type 
     const result = await res.json();
 
     if (result.error) {
-      alert(result.error);
+      showErrorToast(result.error);
       return false;
     } else {
       if (!isDeviceSpec) refreshDropdown(selectId);
@@ -54,7 +55,7 @@ export async function editOption(selectId, updatedDevice, newValue = null, type 
     }
   } catch (err) {
     console.error("❌ Error editing option:", err);
-    alert(t['failed_to_edit_option']);
+    showErrorToast(t['failed_to_edit_option']);
     return false;
   }
 }
@@ -66,7 +67,7 @@ export async function editOptionWithFullName(selectId, oldValue, newValue = null
   console.log(`🔍 editOptionWithFullName called with:`, { selectId, oldValue, newValue, type });
 
   if (!oldValue) {
-    alert(t['please_select_and_enter_valid_value']);
+    showErrorToast(t['please_select_and_enter_valid_value']);
     return false;
   }
 
@@ -95,7 +96,7 @@ export async function editOptionWithFullName(selectId, oldValue, newValue = null
     const itemType = target === "section" ? "department" : 
                     target === "technical" ? "engineer" : 
                     target === "problem-status" ? "problem" : "item";
-    alert(`❌ Could not find ${itemType} information.`);
+    showErrorToast(`❌ Could not find ${itemType} information.`);
     return false;
   }
 
@@ -124,7 +125,7 @@ export async function editOptionWithFullName(selectId, oldValue, newValue = null
     if (parts.length === 2) {
       fullNameNew = `${parts[0]}|${parts[1]}`;
     } else {
-      alert("❌ Please enter both English and Arabic names separated by | e.g. en|عربي");
+      showErrorToast("❌ Please enter both English and Arabic names separated by | e.g. en|عربي");
       return false;
     }
   } else {
@@ -157,7 +158,7 @@ export async function editOptionWithFullName(selectId, oldValue, newValue = null
     });
     const result = await response.json();
     if (result.error) {
-      alert(result.error);
+      showErrorToast(result.error);
       return false;
     } else {
       console.log(`✅ Update successful:`, result);
@@ -166,7 +167,7 @@ export async function editOptionWithFullName(selectId, oldValue, newValue = null
     }
   } catch (err) {
     console.error("❌ Error in editOptionWithFullName:", err);
-    alert(t['failed_to_edit_option']);
+    showErrorToast(t['failed_to_edit_option']);
     return false;
   }
 }
@@ -398,7 +399,7 @@ export async function deleteOption(selectId, valueOrObject, type = null) {
 
   // تحقق مبكر من القيمة
   if (valueOrObject === undefined || valueOrObject === null) {
-    alert(t['please_select_valid_option']);
+    showErrorToast(t['please_select_valid_option']);
     return false;
   }
 
@@ -423,13 +424,13 @@ export async function deleteOption(selectId, valueOrObject, type = null) {
       });
       const result = await res.json();
       if (result.error) {
-        alert(result.error);
+        showErrorToast(result.error);
         return false;
       }
       return true;
     } catch (err) {
       console.error("❌ Error deleting device specification:", err);
-      alert(t['failed_to_delete_option']);
+      showErrorToast(t['failed_to_delete_option']);
       return false;
     }
   }
@@ -450,7 +451,7 @@ export async function deleteOption(selectId, valueOrObject, type = null) {
     const parts = valueOrObject.fullName.split("|").map(s => s && s.trim());
     valueToSend = (languageManager.currentLang === "ar") ? (parts[1] || parts[0]) : parts[0];
   } else if (!valueOrObject) {
-    alert(t['please_select_valid_option']);
+    showErrorToast(t['please_select_valid_option']);
     return false;
   }
 
@@ -494,7 +495,7 @@ export async function deleteOption(selectId, valueOrObject, type = null) {
     const result = await res.json();
 
     if (result.error) {
-      alert(result.error);
+      showErrorToast(result.error);
       return false;
     }
 
@@ -505,7 +506,7 @@ export async function deleteOption(selectId, valueOrObject, type = null) {
     return true;
   } catch (err) {
     console.error("❌ Error deleting option:", err);
-    alert(t['failed_to_delete_option']);
+    showErrorToast(t['failed_to_delete_option']);
     return false;
   }
 }
