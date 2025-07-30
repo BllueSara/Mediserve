@@ -547,6 +547,54 @@ header {
     background-color: #545b62;
 }
 
+/* View Last Report Button Styles */
+.view-last-report-btn {
+    background-color: #3B82F6;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.view-last-report-btn:hover {
+    background-color: #2563EB;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.view-last-report-btn:disabled {
+    background-color: #9CA3AF;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.view-last-report-btn i {
+    font-size: 14px;
+}
+
+/* RTL Support for the button */
+[dir="rtl"] .view-last-report-btn {
+    flex-direction: row-reverse;
+}
+
+/* Table cell styling for the button column */
+.needs-replacement table td:last-child {
+    text-align: center;
+    padding: 8px;
+}
+
+[dir="rtl"] .needs-replacement table td:last-child {
+    text-align: center;
+}
+
 .needs-replacement {
     min-height: 200px; /* Placeholder height */
 }

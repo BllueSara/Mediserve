@@ -1,10 +1,20 @@
 // Navigation functions (if needed, add here)
 // t function for localization (if needed, add here)
 
+// Global chart instances to prevent canvas reuse errors
+let ramChartInstance = null;
+let cpuChartInstance = null;
+
 // Function to draw RAM Distribution Chart
 function drawRamDistributionChart(ramData) {
     const ramChartCtx = document.getElementById('ramDistributionChart')?.getContext('2d');
     if (!ramChartCtx) return;
+
+    // Destroy existing chart if it exists
+    if (ramChartInstance) {
+        ramChartInstance.destroy();
+        ramChartInstance = null;
+    }
 
     const data = {
         labels: ramData.labels,
@@ -38,13 +48,19 @@ function drawRamDistributionChart(ramData) {
         }
     };
 
-    new Chart(ramChartCtx, config);
+    ramChartInstance = new Chart(ramChartCtx, config);
 }
 
 // Function to draw CPU Generation Overview Chart
 function drawCpuGenerationChart(cpuData) {
     const cpuChartCtx = document.getElementById('cpuGenerationChart')?.getContext('2d');
     if (!cpuChartCtx) return;
+
+    // Destroy existing chart if it exists
+    if (cpuChartInstance) {
+        cpuChartInstance.destroy();
+        cpuChartInstance = null;
+    }
 
     const data = {
         labels: cpuData.labels,
@@ -79,7 +95,7 @@ function drawCpuGenerationChart(cpuData) {
         }
     };
 
-    new Chart(cpuChartCtx, config);
+    cpuChartInstance = new Chart(cpuChartCtx, config);
 }
 
 // Placeholder function to update overview cards (Total Devices, PCs, etc.)
@@ -173,6 +189,13 @@ function populateNeedsReplacementTable(data) {
             <td>${device.cpu}</td>
             <td>${device.os}</td>
             <td>${device.status}</td>
+            <td>
+                <button class="view-last-report-btn" onclick="viewLastReport('${device.name}', '${device.department}')" 
+                        title="${lang === 'ar' ? 'عرض آخر تقرير' : 'View Last Report'}">
+                    <i class="fas fa-file-alt"></i>
+                    <span>${lang === 'ar' ? 'عرض آخر تقرير' : 'View Last Report'}</span>
+                </button>
+            </td>
         `;
         tableBody.appendChild(tr);
     });
@@ -227,6 +250,14 @@ function getLocalizedDepartmentName(dept, lang) {
 }
 
 async function loadDashboardData() {
+    // Prevent multiple simultaneous calls
+    if (isLoadDashboardDataInProgress) {
+        console.log('loadDashboardData already in progress, skipping...');
+        return;
+    }
+    
+    isLoadDashboardDataInProgress = true;
+    
     try {
         const token = localStorage.getItem('token');
         const res = await fetch('http://localhost:4000/api/dashboard-data', {
@@ -237,6 +268,8 @@ async function loadDashboardData() {
         renderDashboard(allDashboardData);
     } catch (err) {
         console.error('Error loading dashboard data:', err);
+    } finally {
+        isLoadDashboardDataInProgress = false;
     }
 }
 
@@ -298,3 +331,370 @@ function getFilteredNeedsReplacement() {
 setInterval(() => {
     loadDashboardData();
 }, 60000); // 
+
+// Global variables to prevent multiple simultaneous calls
+let isViewLastReportInProgress = false;
+let lastViewLastReportCall = 0;
+let viewLastReportCallCount = 0;
+let isLoadDashboardDataInProgress = false;
+
+// Function to view last report for a device
+async function viewLastReport(deviceName, department) {
+    viewLastReportCallCount++;
+    console.log(`=== viewLastReport call #${viewLastReportCallCount} ===`);
+    console.log('Device:', deviceName, 'Department:', department);
+    
+    // Prevent multiple simultaneous calls and rapid successive calls
+    const now = Date.now();
+    if (isViewLastReportInProgress || (now - lastViewLastReportCall) < 1000) {
+        console.log('View last report already in progress or called too recently, skipping...');
+        return;
+    }
+    
+    lastViewLastReportCall = now;
+    isViewLastReportInProgress = true;
+    
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            showErrorToast('Please login first');
+            return;
+        }
+
+        // Show loading indicator
+        const button = event.target.closest('.view-last-report-btn');
+        let originalContent = '';
+        if (button) {
+            originalContent = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+            button.disabled = true;
+        }
+
+        // Search for the last report for this device
+        const response = await fetch(`http://localhost:4000/api/search-device-reports?deviceName=${encodeURIComponent(deviceName)}&department=${encodeURIComponent(department)}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const reports = await response.json();
+        
+        console.log('Raw reports received from API:', reports);
+        console.log('Number of reports received:', reports ? reports.length : 0);
+        
+        if (!reports || reports.length === 0) {
+            showWarningToast('No reports found for this device');
+            if (button) {
+                button.innerHTML = originalContent;
+                button.disabled = false;
+            }
+            return;
+        }
+
+        console.log('All reports found:', reports);
+        
+        // تحقق إضافي للتأكد من أن التقارير تعود للجهاز الصحيح
+        const validReports = reports.filter(report => {
+            const isValid = report.device_name === deviceName;
+            if (!isValid) {
+                console.log(`Filtering out report with wrong device: ${report.device_name} (expected: ${deviceName})`);
+            }
+            return isValid;
+        });
+        
+        if (validReports.length === 0) {
+            showWarningToast('No valid reports found for this device');
+            if (button) {
+                button.innerHTML = originalContent;
+                button.disabled = false;
+            }
+            return;
+        }
+
+        console.log('Valid reports after filtering:', validReports);
+        
+        // تحقق إضافي من ترتيب التقارير حسب التاريخ
+        const sortedValidReports = validReports.sort((a, b) => {
+            const dateA = new Date(a.created_at);
+            const dateB = new Date(b.created_at);
+            
+            // إذا كان التاريخ متساوي، رتب حسب ID تنازلي (الأكبر أولاً)
+            if (dateA.getTime() === dateB.getTime()) {
+                return b.id - a.id;
+            }
+            
+            return dateB - dateA; // ترتيب تنازلي (الأحدث أولاً)
+        });
+        
+        console.log('Sorted valid reports:', sortedValidReports);
+        
+        // Log all dates for debugging
+        console.log('All report dates:');
+        sortedValidReports.forEach((report, index) => {
+            console.log(`Report ${index + 1}: ID=${report.id}, Date=${report.created_at}, Type=${report.maintenance_type}`);
+        });
+
+        // Get the most recent report
+        let lastReport = sortedValidReports[0]; // Assuming the API returns reports sorted by date (newest first)
+        
+        console.log('Initial last report found:', lastReport);
+        
+        // تحقق إضافي من أن التقرير هو الأحدث فعلاً
+        if (sortedValidReports.length > 1) {
+            // ابحث عن التقرير الأحدث فعلاً مع مراعاة التاريخ والـ ID
+            const maxDate = Math.max(...sortedValidReports.map(r => new Date(r.created_at).getTime()));
+            const reportsWithMaxDate = sortedValidReports.filter(report => {
+                const reportDate = new Date(report.created_at);
+                return reportDate.getTime() === maxDate;
+            });
+            
+            if (reportsWithMaxDate.length > 1) {
+                // إذا كان هناك أكثر من تقرير بنفس التاريخ، اختر ذو الـ ID الأكبر
+                const maxId = Math.max(...reportsWithMaxDate.map(r => r.id));
+                const reportWithMaxId = reportsWithMaxDate.find(r => r.id === maxId);
+                if (reportWithMaxId) {
+                    console.warn('⚠️ Warning: Multiple reports with same date, selecting the one with highest ID');
+                    console.log('Using report with highest ID:', reportWithMaxId);
+                    lastReport = reportWithMaxId;
+                }
+            } else if (reportsWithMaxDate.length === 1) {
+                // إذا كان هناك تقرير واحد فقط بالتاريخ الأحدث
+                console.log('Found single report with latest date:', reportsWithMaxDate[0]);
+                lastReport = reportsWithMaxDate[0];
+            }
+        }
+        
+        // تحقق إضافي من أن lastReport هو الأحدث فعلاً
+        const currentReportDate = new Date(lastReport.created_at);
+        const maxDate = Math.max(...sortedValidReports.map(r => new Date(r.created_at).getTime()));
+        
+        if (currentReportDate.getTime() !== maxDate) {
+            console.warn('⚠️ Warning: Selected report is not the latest, correcting...');
+            console.log('Selected report date:', currentReportDate);
+            console.log('Latest report date:', new Date(maxDate));
+            
+            // Find the correct latest report
+            const reportsWithMaxDate = sortedValidReports.filter(report => {
+                const reportDate = new Date(report.created_at);
+                return reportDate.getTime() === maxDate;
+            });
+            
+            if (reportsWithMaxDate.length > 0) {
+                // Select the one with highest ID if multiple reports have same date
+                const maxId = Math.max(...reportsWithMaxDate.map(r => r.id));
+                const correctReport = reportsWithMaxDate.find(r => r.id === maxId);
+                if (correctReport) {
+                    console.log('Correcting to latest report:', correctReport);
+                    lastReport = correctReport;
+                }
+            }
+        }
+        
+        // تحقق من وجود الحقول المطلوبة
+        if (!lastReport.id || !lastReport.maintenance_type) {
+            console.error('Invalid report data:', lastReport);
+            showErrorToast('Invalid report data received');
+            if (button) {
+                button.innerHTML = originalContent;
+                button.disabled = false;
+            }
+            return;
+        }
+        
+        // تحقق إضافي من أن التقرير ينتمي للجهاز والقسم الصحيحين
+        if (lastReport.device_name !== deviceName) {
+            console.error('Report device name mismatch:', lastReport.device_name, 'expected:', deviceName);
+            showErrorToast('Report device mismatch detected');
+            if (button) {
+                button.innerHTML = originalContent;
+                button.disabled = false;
+            }
+            return;
+        }
+        
+        // تحقق إضافي من القسم إذا كان متوفراً
+        if (department && lastReport.department) {
+            const reportDept = lastReport.department;
+            const isDepartmentMatch = reportDept === department || 
+                                    reportDept.includes('|') && 
+                                    (reportDept.split('|')[0].trim() === department || 
+                                     reportDept.split('|')[1].trim() === department);
+            
+            if (!isDepartmentMatch) {
+                console.error('Report department mismatch:', reportDept, 'expected:', department);
+                showErrorToast('Report department mismatch detected');
+                if (button) {
+                    button.innerHTML = originalContent;
+                    button.disabled = false;
+                }
+                return;
+            }
+        }
+        
+        // Determine report type based on maintenance_type
+        let reportType = 'regular';
+        if (lastReport.maintenance_type === 'External') {
+            reportType = 'external';
+        } else if (lastReport.maintenance_type === 'General') {
+            reportType = 'general';
+        } else if (lastReport.maintenance_type === 'Internal') {
+            reportType = 'internal';
+        } else if (lastReport.maintenance_type === 'External Ticket') {
+            reportType = 'external-ticket';
+        } else if (lastReport.maintenance_type === 'New') {
+            reportType = 'new';
+        } else if (lastReport.maintenance_type === 'Maintenance Report') {
+            reportType = 'maintenance-report';
+        } else {
+            console.warn('Unknown maintenance type:', lastReport.maintenance_type);
+            reportType = 'regular'; // fallback
+        }
+
+        console.log('Report type determined:', reportType, 'from maintenance_type:', lastReport.maintenance_type);
+
+        // Get device_id from the report or use a fallback
+        const deviceId = lastReport.device_id || 'unknown';
+        
+        console.log('Navigating to report:', {
+            id: lastReport.id,
+            type: reportType,
+            deviceId: deviceId,
+            deviceName: lastReport.device_name,
+            maintenanceType: lastReport.maintenance_type,
+            createdAt: lastReport.created_at
+        });
+
+        // تحقق إضافي من صحة الرابط
+        const reportUrl = `../Reports/report-details.html?id=${lastReport.id}&type=${reportType}&deviceId=${deviceId}`;
+        console.log('Report URL:', reportUrl);
+        
+        // تحقق نهائي من البيانات قبل الانتقال
+        console.log('Final validation before navigation:');
+        console.log('- Report ID:', lastReport.id);
+        console.log('- Report Type:', reportType);
+        console.log('- Device ID:', deviceId);
+        console.log('- Device Name:', lastReport.device_name);
+        console.log('- Expected Device Name:', deviceName);
+        console.log('- Maintenance Type:', lastReport.maintenance_type);
+        console.log('- Created At:', lastReport.created_at);
+        
+        // تحقق إضافي من صحة البيانات
+        const isValidReport = lastReport.id && 
+                             lastReport.maintenance_type && 
+                             lastReport.device_name && 
+                             lastReport.device_name === deviceName &&
+                             lastReport.created_at;
+        
+        if (!isValidReport) {
+            console.error('Invalid report data detected:', lastReport);
+            showErrorToast('Invalid report data received');
+            button.innerHTML = originalContent;
+            button.disabled = false;
+            return;
+        }
+        
+        console.log('✅ All validations passed, proceeding to navigation');
+        
+        // تحقق إضافي من نوع التقرير
+        const validReportTypes = ['regular', 'external', 'general', 'internal', 'external-ticket', 'new', 'maintenance-report'];
+        if (!validReportTypes.includes(reportType)) {
+            console.error('Invalid report type:', reportType);
+            showErrorToast('Invalid report type');
+            if (button) {
+                button.innerHTML = originalContent;
+                button.disabled = false;
+            }
+            return;
+        }
+        
+        console.log('✅ Report type validation passed');
+        
+        // تحقق نهائي من أن التقرير ينتمي للجهاز الصحيح
+        if (lastReport.device_name !== deviceName) {
+            console.error('Final validation failed: Report device name mismatch');
+            console.error('Report device name:', lastReport.device_name);
+            console.error('Expected device name:', deviceName);
+            showErrorToast('Report device mismatch detected');
+            if (button) {
+                button.innerHTML = originalContent;
+                button.disabled = false;
+            }
+            return;
+        }
+        
+        console.log('✅ Final device validation passed');
+        
+        // تحقق نهائي من أن التقرير هو الأحدث فعلاً
+        const finalCurrentReportDate = new Date(lastReport.created_at);
+        const finalMaxDate = Math.max(...sortedValidReports.map(r => new Date(r.created_at).getTime()));
+        
+        if (finalCurrentReportDate.getTime() !== finalMaxDate) {
+            console.error('Final validation failed: Selected report is not the latest');
+            console.error('Selected report date:', finalCurrentReportDate);
+            console.error('Latest report date:', new Date(finalMaxDate));
+            showErrorToast('Failed to find the latest report');
+            if (button) {
+                button.innerHTML = originalContent;
+                button.disabled = false;
+            }
+            return;
+        }
+        
+        console.log('✅ Final latest report validation passed');
+        
+        // Navigate to report details page
+        window.location.href = reportUrl;
+
+    } catch (error) {
+        console.error('Error fetching device reports:', error);
+        showErrorToast('Failed to load device reports');
+        
+        // Restore button state
+        const button = event.target.closest('.view-last-report-btn');
+        if (button) {
+            button.innerHTML = originalContent;
+            button.disabled = false;
+        }
+    } finally {
+        // Always reset the flag
+        isViewLastReportInProgress = false;
+    }
+}
+
+// Make viewLastReport globally accessible
+window.viewLastReport = viewLastReport;
+
+// Import toast functions if available
+let showErrorToast, showWarningToast;
+
+// Try to import toast functions
+try {
+    const toastModule = await import('../shared_functions/toast.js');
+    showErrorToast = toastModule.showErrorToast;
+    showWarningToast = toastModule.showWarningToast;
+} catch (error) {
+    // Fallback to alert if toast module is not available
+    showErrorToast = (message) => alert('❌ ' + message);
+    showWarningToast = (message) => alert('⚠️ ' + message);
+}
+
+// Make toast functions globally accessible
+window.showErrorToast = showErrorToast;
+window.showWarningToast = showWarningToast;
+
+// Cleanup function to destroy charts when page is unloaded
+window.addEventListener('beforeunload', () => {
+    if (ramChartInstance) {
+        ramChartInstance.destroy();
+        ramChartInstance = null;
+    }
+    if (cpuChartInstance) {
+        cpuChartInstance.destroy();
+        cpuChartInstance = null;
+    }
+});
