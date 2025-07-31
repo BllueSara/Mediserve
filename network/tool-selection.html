@@ -26,13 +26,25 @@
     input::-ms-input-placeholder {
       font-family: var(--font-family) !important;
     }
+
+    /* إخفاء المحتوى حتى يتم تحميل اللغة */
+    .content-hidden {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease-in-out;
+    }
+    
+    .content-visible {
+      opacity: 1;
+      visibility: visible;
+    }
   </style>
 </head>
 <body>
 
   <!-- Header with back and home buttons -->
   <!-- Navigation Buttons (Back & Home) -->
-  <div class="nav-buttons">
+  <div class="nav-buttons content-hidden">
     <div class="back-button">
             <a href="../../Home/Home.html">
         <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> <span data-i18n="back">Back</span>
@@ -46,7 +58,7 @@
   </div>
 
   <!-- Header (Logos) -->
-  <header>
+  <header class="content-hidden">
     <div class="ms-logo">
       <img src="/icon/MS Logo.png" alt="MS Logo">
     </div>
@@ -59,11 +71,11 @@
   </header>
 
   <!-- Title -->
-  <h1 class="title" data-i18n="network_tools">Network Tools</h1>
-  <p class="description" data-i18n="select_ping_method">Select your preferred ping method</p>
+  <h1 class="title content-hidden" data-i18n="network_tools">Network Tools</h1>
+  <p class="description content-hidden" data-i18n="select_ping_method">Select your preferred ping method</p>
 
   <!-- Tool selection cards -->
-  <div class="ticket-container">
+  <div class="ticket-container content-hidden">
     <div class="ticket-frame">
       <div class="ticket-options">
 
@@ -98,16 +110,17 @@
 
   <script src="/Language/Language.js"></script>
   <script>
-        
-function goBack() {
-  if (window.history.length > 1) {
-    window.history.back(); // Navigates to the previous page in browser history
-  } else {
-    window.location.href = "tool-selection.html"; // Redirects to Maintenance home if there's no previous page
-  }
-}
-
-    </script>
+    // إظهار المحتوى بعد تحميل اللغة
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        const elements = document.querySelectorAll('.content-hidden');
+        elements.forEach(element => {
+          element.classList.remove('content-hidden');
+          element.classList.add('content-visible');
+        });
+      }, 100);
+    });
+  </script>
   <script type="module" src="script.js"></script>
 </body>
 </html>

@@ -13,12 +13,24 @@
         h1, h2, h3, p, span, button, select, input, label, a {
             font-family: var(--font-family);
         }
+
+        /* إخفاء المحتوى حتى يتم تحميل اللغة */
+        .content-hidden {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .content-visible {
+            opacity: 1;
+            visibility: visible;
+        }
     </style>
 </head>
 <body>
 
     <!-- Navigation Buttons (Back & Home) -->
-    <div class="nav-buttons">
+    <div class="nav-buttons content-hidden">
         <div class="back-button"> <!-- Back button to navigate to the previous page -->
             <a href="#" onclick="goBack()"> <!-- JavaScript function to go back -->
                 <img src="/icon/Back.png" alt="Back Icon" class="back-icon">
@@ -35,7 +47,7 @@
     </div>
 
     <!-- Header (Logos) -->
-    <header>
+    <header class="content-hidden">
         <div class="ms-logo"> <!-- Microsoft (or other company) logo on the left -->
             <img src="/icon/MS Logo.png" alt="MS Logo"> <!-- Logo image -->
         </div>
@@ -48,10 +60,10 @@
     </header>
 
     <!-- Page Title -->
-    <h1 class="title" data-i18n="type_of_report">Type of report</h1> <!-- Main title of the page -->
+    <h1 class="title content-hidden" data-i18n="type_of_report">Type of report</h1> <!-- Main title of the page -->
 
     <!-- Maintenance Options Section -->
-    <div class="maintenance-container">
+    <div class="maintenance-container content-hidden">
         <div class="maintenance-frame"> <!-- Frame that holds maintenance options -->
          <!-- فقط التعديل داخل .maintenance-options -->
 <div class="maintenance-options">
@@ -91,7 +103,19 @@
     </div>
 
     <!-- JavaScript File -->
-    <script type="module" src="Report Type3.js"></script> <!-- External JavaScript file for functionality -->
     <script src="/Language/Language.js"></script>
+    <script type="module" src="Report Type3.js"></script> <!-- External JavaScript file for functionality -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // إظهار المحتوى بعد تحميل اللغة
+            setTimeout(() => {
+                const elements = document.querySelectorAll('.content-hidden');
+                elements.forEach(element => {
+                    element.classList.remove('content-hidden');
+                    element.classList.add('content-visible');
+                });
+            }, 100);
+        });
+    </script>
 </body>
 </html>

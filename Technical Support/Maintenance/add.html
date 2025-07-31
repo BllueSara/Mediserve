@@ -33,12 +33,24 @@
   input::-ms-input-placeholder {
     font-family: var(--font-family) !important;
   }
+
+  /* إخفاء المحتوى حتى يتم تحميل اللغة */
+  .content-hidden {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease-in-out;
+  }
+
+  .content-visible {
+    opacity: 1;
+    visibility: visible;
+  }
 </style>
 
 </head>
 
 <body>
-  <div class="nav-buttons">
+  <div class="nav-buttons content-hidden">
     <div class="back-button">
       <a href="#" onclick="goBack()">
         <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> <span data-i18n="back">Back</span>
@@ -51,7 +63,7 @@
     </div>
   </div>
 
-  <header>
+  <header class="content-hidden">
     <div class="ms-logo">
       <img src="/icon/MS Logo.png" alt="MS Logo" />
     </div>
@@ -60,7 +72,7 @@
     </div>
   </header>
 
-  <div class="form-container">
+  <div class="form-container content-hidden">
     <h1 class="title" data-i18n="add_devices">Add Devices</h1>
     <p class="subtitle" data-i18n="add_new_device">Add a new device to the system</p>
 
@@ -167,9 +179,21 @@
     </div>
   </div>
 
+  <script src="/Language/Language.js"></script>
   <script src="Maintenance.js"></script>
   <script type="module" src="add.js"></script>
-  <script src="/Language/Language.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // إظهار المحتوى بعد تحميل اللغة
+      setTimeout(() => {
+        const elements = document.querySelectorAll('.content-hidden');
+        elements.forEach(element => {
+          element.classList.remove('content-hidden');
+          element.classList.add('content-visible');
+        });
+      }, 100);
+    });
+  </script>
 </body>
 
 </html>

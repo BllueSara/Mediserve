@@ -15,12 +15,24 @@
     * {
       font-family: 'Inter', sans-serif;
     }
+
+    /* إخفاء المحتوى حتى يتم تحميل اللغة */
+    .content-hidden {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    .content-visible {
+      opacity: 1;
+      visibility: visible;
+    }
   </style>
 </head>
 <body>
 
   <!-- Navigation Buttons -->
-  <div class="nav-buttons">
+  <div class="nav-buttons content-hidden">
     <div class="back-button">
       <a href="#" onclick="goBack()">
         <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> <span data-i18n="back">Back</span>
@@ -34,7 +46,7 @@
   </div>
 
   <!-- Header -->
-  <header>
+  <header class="content-hidden">
     <div class="ms-logo">
       <img src="/icon/MS Logo.png" alt="MS Logo">
     </div>
@@ -45,7 +57,7 @@
 
   <!-- ✅ Form Starts -->
   <form id="report-form" action="Search reports.html" method="GET" enctype="multipart/form-data">
-    <div class="container">
+    <div class="container content-hidden">
 
       <div class="title" data-i18n="new_report">New Report</div>
       <p data-i18n="fill_report_details">Fill out the report details below</p>
@@ -130,8 +142,20 @@
       window.history.back();
     }
   </script>
-  <script type="module" src="Newreport.js"></script>
   <script src="/Language/Language.js"></script>
+  <script type="module" src="Newreport.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // إظهار المحتوى بعد تحميل اللغة
+      setTimeout(() => {
+        const elements = document.querySelectorAll('.content-hidden');
+        elements.forEach(element => {
+          element.classList.remove('content-hidden');
+          element.classList.add('content-visible');
+        });
+      }, 100);
+    });
+  </script>
 
 </body>
 </html>

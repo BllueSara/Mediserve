@@ -16,11 +16,23 @@
     h1, h2, h3, p, span, button, select, input {
       font-family: var(--font-family);
     }
+
+    /* إخفاء المحتوى حتى يتم تحميل اللغة */
+    .content-hidden {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease-in-out;
+    }
+    
+    .content-visible {
+      opacity: 1;
+      visibility: visible;
+    }
   </style>
 </head>
 
 <body>
-  <div class="nav-buttons">
+  <div class="nav-buttons content-hidden">
     <div class="back-button">
       <a href="#" onclick="goBack()">
         <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> <span data-i18n="back">Back</span>
@@ -34,7 +46,7 @@
   </div>
 
   <!-- Header (Logos) -->
-  <header>
+  <header class="content-hidden">
     <div class="ms-logo">
       <img src="/icon/MS Logo.png" alt="MS Logo">
     </div>
@@ -46,7 +58,7 @@
 
   </header>
   <!-- Main content for selecting report type -->
-  <div class="reports-container">
+  <div class="reports-container content-hidden">
     <h1 class="title" data-i18n="choose_reports_type">Choose Reports Type</h1>
     <p data-i18n="select_reports_type">Select the appropriate reports type for your request</p>
 
@@ -78,7 +90,19 @@
   } else {
     window.location.href = "REPORTSTYPE1.html"; // Redirects to Maintenance home if there's no previous page
   }
-}</script>
+}
+
+// إظهار المحتوى بعد تحميل اللغة
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    const elements = document.querySelectorAll('.content-hidden');
+    elements.forEach(element => {
+      element.classList.remove('content-hidden');
+      element.classList.add('content-visible');
+    });
+  }, 100);
+});
+</script>
   <!-- External JavaScript file that adds interactivity -->
   <script src="Reports.js"></script>
   <script src="/Language/Language.js"></script>

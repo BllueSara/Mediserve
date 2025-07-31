@@ -10,6 +10,19 @@
   <link rel="stylesheet" href="/Language/Language.css" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="/Notifications/notifications.js"></script>
+  <style>
+    /* إخفاء المحتوى حتى يتم تحميل اللغة */
+    .content-hidden {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease-in-out;
+    }
+    
+    .content-visible {
+      opacity: 1;
+      visibility: visible;
+    }
+  </style>
 </head>
 
 <body class="bg-gray-40">
@@ -25,7 +38,7 @@
 
   <!-- الهيدر -->
 <!-- الهيدر -->
-<header class="relative bg-white px-4 py-3 w-full flex items-center justify-between">
+<header class="content-hidden relative bg-white px-4 py-3 w-full flex items-center justify-between">
   <!-- شعار MS -->
   <div class="absolute left-4 top-2">
     <img src="/icon/MS Logo.png" alt="MS Logo" class="w-[100px] md:w-[120px]" />
@@ -80,7 +93,7 @@
 
 
   <!-- المحتوى -->
-  <main class="p-10 max-w-6xl mx-auto mt-4">
+  <main class="content-hidden p-10 max-w-6xl mx-auto mt-4">
     <div class="main-text">
       <h1 class="text-3xl font-semibold" data-i18n="enterprise_solutions">Enterprise Technology Solutions</h1>
       <p class="text-gray-500 mt-2" data-i18n="comprehensive_services">Comprehensive technical services for modern businesses, empowering your
@@ -129,8 +142,8 @@
   </main>
 
 
-  <script type="module" src="/Home/Home.js"></script>
   <script src="/Language/Language.js"></script>
+  <script type="module" src="/Home/Home.js"></script>
 </body>
 
 </html>

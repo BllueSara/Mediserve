@@ -13,12 +13,24 @@
     h1, h2, h3, p, span, button, select, input, label {
       font-family: var(--font-family);
     }
+
+    /* إخفاء المحتوى حتى يتم تحميل اللغة */
+    .content-hidden {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    .content-visible {
+      opacity: 1;
+      visibility: visible;
+    }
   </style>
 </head>
 
 <body>
   <!-- Header Section -->
-  <header>
+  <header class="content-hidden">
     <div class="ms-logo"><img src="/icon/Ms Logo.png" alt="MS Logo" /></div>
     <div class="back-button">
       <a href="#" onclick="goBack()">
@@ -32,7 +44,7 @@
   </header>
 
   <!-- Main Container -->
-  <div class="container">
+  <div class="container content-hidden">
     <!-- Search bar -->
 <div class="search-bar">
   <div class="search-group">
@@ -101,8 +113,20 @@
   }
 }</script>
   <!-- JavaScript -->
+  <script src="/Language/Language.js"></script>
   <script src="Reports.js"></script>
   <script type="module" src="Search reports.js"></script>
-  <script src="/Language/Language.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // إظهار المحتوى بعد تحميل اللغة
+      setTimeout(() => {
+        const elements = document.querySelectorAll('.content-hidden');
+        elements.forEach(element => {
+          element.classList.remove('content-hidden');
+          element.classList.add('content-visible');
+        });
+      }, 100);
+    });
+  </script>
 </body>
 </html>

@@ -30,11 +30,23 @@
     .selected-row {
       background-color: #f0f0f0;
     }
+
+    /* إخفاء المحتوى حتى يتم تحميل اللغة */
+    .content-hidden {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease-in-out;
+    }
+    
+    .content-visible {
+      opacity: 1;
+      visibility: visible;
+    }
   </style>
 </head>
 <body>
   <!-- Header -->
-   <div class="nav-buttons">
+   <div class="nav-buttons content-hidden">
     <div class="back-button">
       <a href="#" onclick="goBack()">
         <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> <span data-i18n="back">Back</span>
@@ -48,7 +60,7 @@
   </div>
 
   <!-- Header (Logos) -->
-  <header>
+  <header class="content-hidden">
     <div class="ms-logo">
       <img src="/icon/MS Logo.png" alt="MS Logo">
     </div>
@@ -60,7 +72,7 @@
 
   </header>
   <!-- Status Summary -->
-  <section class="status-summary">
+  <section class="status-summary content-hidden">
     <div class="status-box total">
       <span class="dot gray"></span>
       <span class="count" id="total-count">0</span>
@@ -84,7 +96,7 @@
   </section>
 
   <!-- Command Buttons -->
-  <section class="command-buttons">
+  <section class="command-buttons content-hidden">
     <button class="cmd-btn step1" id="pingall-btn" data-i18n="ping_all">Ping All</button>
     <button class="cmd-btn step2" id="ping-btn" data-i18n="ping">Ping</button>
     <button class="cmd-btn step3" id="pingt-btn" data-i18n="ping_t">Ping -t</button>
@@ -259,6 +271,17 @@ function goBack() {
     window.location.href = "saved.html"; // Redirects to Maintenance home if there's no previous page
   }
 }
+
+// إظهار المحتوى بعد تحميل اللغة
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    const elements = document.querySelectorAll('.content-hidden');
+    elements.forEach(element => {
+      element.classList.remove('content-hidden');
+      element.classList.add('content-visible');
+    });
+  }, 100);
+});
 
     </script>
   <script src="/Language/Language.js"></script>

@@ -18,6 +18,15 @@ function filterEngineerNameByLang(text, lang) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  // إظهار المحتوى بعد تحميل اللغة
+  setTimeout(() => {
+    const elements = document.querySelectorAll('.content-hidden');
+    elements.forEach(element => {
+      element.classList.remove('content-hidden');
+      element.classList.add('content-visible');
+    });
+  }, 100);
+
   const container = document.getElementById("activity-log-container");
   const filterButtons = document.querySelectorAll(".filter-btn");
   let allLogs = [];

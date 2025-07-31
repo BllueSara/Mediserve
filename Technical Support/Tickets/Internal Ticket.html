@@ -24,13 +24,25 @@
     label {
       font-family: var(--font-family);
     }
+
+    /* إخفاء المحتوى حتى يتم تحميل اللغة */
+    .content-hidden {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    .content-visible {
+      opacity: 1;
+      visibility: visible;
+    }
   </style>
 </head>
 
 <body>
-  <div class="container" id="container">
+  <div class="container content-hidden" id="container">
     <!-- Navigation -->
-  <header>
+  <header class="content-hidden">
     <div class="ms-logo"><img src="/icon/Ms Logo.png" alt="MS Logo" /></div>
     <div class="back-button">
       <a href="#" onclick="goBack()">
@@ -44,7 +56,7 @@
   </header>
 
     <!-- Form -->
-    <div class="ticket-container">
+    <div class="ticket-container content-hidden">
       <h1 class="title" data-i18n="internal_ticket">Internal Ticket</h1>
       <p class="subtitle" data-i18n="fill_ticket_details">Fill in the details below to create a new Internal ticket</p>
 
@@ -311,8 +323,20 @@ function goBack() {
 
     </script>
   <!-- JavaScript -->
-  <script type="module" src="Internal Ticket.js"></script>
   <script src="/Language/Language.js"></script>
+  <script type="module" src="Internal Ticket.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // إظهار المحتوى بعد تحميل اللغة
+      setTimeout(() => {
+        const elements = document.querySelectorAll('.content-hidden');
+        elements.forEach(element => {
+          element.classList.remove('content-hidden');
+          element.classList.add('content-visible');
+        });
+      }, 100);
+    });
+  </script>
 </body>
 
 </html>

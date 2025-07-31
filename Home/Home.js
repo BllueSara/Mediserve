@@ -8,6 +8,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   console.log("🚀 الصفحة تم تحميلها بنجاح!");
   console.log("🔍 عند تحميل الصفحة - التوكن:", !!token, "userId:", !!userId, "role:", role);
 
+  // إخفاء المحتوى حتى يتم تحميل اللغة
+  const container = document.querySelector('main');
+  const header = document.querySelector('header');
+  
+  if (container) {
+    container.classList.add('content-hidden');
+  }
+  if (header) {
+    header.classList.add('content-hidden');
+  }
+
   // ✅ تحقق من حالة الحساب كل دقيقة
   checkAccountStatus(); // تحقق فوري عند تحميل الصفحة
 
@@ -82,6 +93,53 @@ if (notifCountSpan) {
       if (url) window.location.href = url;
     });
   });
+
+  // إظهار المحتوى بعد تحميل اللغة
+  setTimeout(() => {
+    // تأكد من أن languageManager متاح
+    if (window.languageManager && window.languageManager.currentLang) {
+      if (container) {
+        container.classList.remove('content-hidden');
+        container.classList.add('content-visible');
+      }
+      if (header) {
+        header.classList.remove('content-hidden');
+        header.classList.add('content-visible');
+      }
+    } else {
+      // إذا لم يتم تحميل languageManager بعد، انتظر قليلاً
+      setTimeout(() => {
+        if (container) {
+          container.classList.remove('content-hidden');
+          container.classList.add('content-visible');
+        }
+        if (header) {
+          header.classList.remove('content-hidden');
+          header.classList.add('content-visible');
+        }
+      }, 200);
+    }
+  }, 100);
+
+  // إضافة event listener للتأكد من تطبيق اللغة
+  if (window.languageManager) {
+    const originalApplyLanguage = window.languageManager.applyLanguage;
+    window.languageManager.applyLanguage = function() {
+      originalApplyLanguage.call(this);
+      
+      // إظهار المحتوى بعد تطبيق اللغة
+      setTimeout(() => {
+        if (container) {
+          container.classList.remove('content-hidden');
+          container.classList.add('content-visible');
+        }
+        if (header) {
+          header.classList.remove('content-hidden');
+          header.classList.add('content-visible');
+        }
+      }, 50);
+    };
+  }
 });
 
 async function hasPermissionOrAdmin(key) {

@@ -13,12 +13,24 @@
         h1, h2, h3, p, span, button, select, input {
             font-family: var(--font-family);
         }
+
+        /* إخفاء المحتوى حتى يتم تحميل اللغة */
+        .content-hidden {
+          opacity: 0;
+          visibility: hidden;
+          transition: opacity 0.3s ease-in-out;
+        }
+        
+        .content-visible {
+          opacity: 1;
+          visibility: visible;
+        }
     </style>
 </head>
 <body>
 
     <!-- 🔁 Navigation Buttons (Back & Home) -->
-    <div class="nav-buttons">
+    <div class="nav-buttons content-hidden">
         <!-- Back Button -->
         <div class="back-button">
             <a href="#" onclick="goBack()"> <!-- JavaScript function for going back -->
@@ -35,7 +47,7 @@
     </div>
 
     <!-- 🏥 Header Section (Logos) -->
-    <header>
+    <header class="content-hidden">
         <!-- Organization Logo -->
         <div class="ms-logo">
             <img src="/icon/Ms Logo.png" alt="MC Logo">
@@ -49,13 +61,13 @@
     </header>
 
     <!-- 🧾 Page Title -->
-    <h1 class="title" data-i18n="choose_ticket_type">Choose Ticket Type</h1>
+    <h1 class="title content-hidden" data-i18n="choose_ticket_type">Choose Ticket Type</h1>
 
     <!-- Short description -->
-    <p class="description" data-i18n="select_ticket_type">Select the appropriate ticket type for your request</p>
+    <p class="description content-hidden" data-i18n="select_ticket_type">Select the appropriate ticket type for your request</p>
 
     <!-- 🎫 Ticket Type Options -->
-    <div class="ticket-container">
+    <div class="ticket-container content-hidden">
         <div class="ticket-frame">
             <div class="ticket-options">
 
@@ -86,5 +98,17 @@
     <!-- 📜 JavaScript File -->
     <script type="module" src="Tickets.js"></script> <!-- Link to external JavaScript file -->
     <script src="/Language/Language.js"></script>
+    <script>
+      // إظهار المحتوى بعد تحميل اللغة
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+          const elements = document.querySelectorAll('.content-hidden');
+          elements.forEach(element => {
+            element.classList.remove('content-hidden');
+            element.classList.add('content-visible');
+          });
+        }, 100);
+      });
+    </script>
 </body>
 </html>

@@ -30,12 +30,24 @@
     input::-ms-input-placeholder {
       font-family: var(--font-family) !important;
     }
+
+    /* إخفاء المحتوى حتى يتم تحميل اللغة */
+    .content-hidden {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease-in-out;
+    }
+    
+    .content-visible {
+      opacity: 1;
+      visibility: visible;
+    }
   </style>
 </head>
 
 <body>
   <!-- Navigation Buttons (Back & Home) -->
-  <div class="nav-buttons">
+  <div class="nav-buttons content-hidden">
     <div class="back-button">
       <a href="#" onclick="goBack()">
         <img src="/icon/Back.png" alt="Back Icon" class="back-icon"> <span data-i18n="back">Back</span>
@@ -49,7 +61,7 @@
   </div>
 
   <!-- Header (Logos) -->
-  <header>
+  <header class="content-hidden">
     <div class="ms-logo">
       <img src="/icon/MS Logo.png" alt="MS Logo">
     </div>
@@ -62,7 +74,7 @@
   </header>
 
   <!-- Dashboard Title -->
-  <div class="dashboard-title">
+  <div class="dashboard-title content-hidden">
     <span data-i18n="maintenance_dashboard">Maintenance Dashboard</span>
     <div style="font-size: 0.875rem; font-weight: 400; color: #6B7280; margin-top: 0.25rem;">
       <span data-i18n="last_updated">Last updated</span>: <span id="current-date"></span>
@@ -70,7 +82,7 @@
   </div>
 
   <!-- Dashboard Grid -->
-  <section class="dashboard">
+  <section class="dashboard content-hidden">
     <!-- Completion Rates -->
     <div class="card1">
       <div class="label" data-i18n="completion_rates">Completion Rates</div>
@@ -229,6 +241,17 @@
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
+    });
+
+    // إظهار المحتوى بعد تحميل اللغة
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        const elements = document.querySelectorAll('.content-hidden');
+        elements.forEach(element => {
+          element.classList.remove('content-hidden');
+          element.classList.add('content-visible');
+        });
+      }, 100);
     });
   </script>
   
