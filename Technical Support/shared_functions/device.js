@@ -519,7 +519,7 @@ export function fetchTechnicalStatus(callback) {
       if (typeof openAddTechnicalPopup === "function") openAddTechnicalPopup(oldVal);
     },
     onDeleteOption: (id) => {
-      if (confirm(`Delete?`)) {
+      if (confirm(`هل تريد حذف المهندس`)) {
         deleteOption("technical-status", id);
       }
     },

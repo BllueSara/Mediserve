@@ -49,7 +49,15 @@ document.addEventListener("DOMContentLoaded", () => {
       allLogs = logs;
       renderLogs("All"); // عرض الكل بالبداية
       console.log("🔎 جميع الأحداث الموجودة:");
-console.log(allLogs.map(log => log.action));
+      console.log(allLogs.map(log => log.action));
+      console.log("🔍 أمثلة على البيانات:");
+      allLogs.slice(0, 3).forEach((log, index) => {
+        console.log(`السجل ${index + 1}:`, {
+          action: log.action,
+          actionType: typeof log.action,
+          details: log.details
+        });
+      });
     })
     .catch(err => {
       console.error("❌ Failed to load logs:", err);
@@ -73,7 +81,29 @@ function renderLogs(filter, searchTerm = "") {
     const details = cleanTag(detailsText)?.toLowerCase() || "";
     const search = searchTerm.toLowerCase();
 
-    const actionMatch = filter === "All" || action.includes(filter.toLowerCase());
+    // فلترة أكثر مرونة - البحث في النص الإنجليزي والعربي
+    let actionMatch = filter === "All";
+    if (filter !== "All") {
+      // البحث في النص الإنجليزي الأصلي
+      const englishAction = typeof log.action === "object" && log.action !== null
+        ? log.action.en || ""
+        : log.action || "";
+      const englishActionClean = cleanTag(englishAction)?.toLowerCase() || "";
+      
+      // البحث في النص المترجم
+      const translatedFilter = languageManager.translations[lang]?.[filter.toLowerCase()] || filter;
+      const translatedFilterLower = translatedFilter.toLowerCase();
+      
+      // البحث في النص الإنجليزي والعربي - أكثر دقة
+      const filterLower = filter.toLowerCase();
+      actionMatch = englishActionClean.includes(filterLower) || 
+                   action.includes(translatedFilterLower) ||
+                   englishActionClean.includes(translatedFilterLower) ||
+                   // البحث في بداية النص أو بعد مسافة
+                   englishActionClean.match(new RegExp(`\\b${filterLower}\\b`)) ||
+                   action.match(new RegExp(`\\b${translatedFilterLower}\\b`));
+    }
+    
     const searchMatch = action.includes(search) || details.includes(search);
 
     return actionMatch && searchMatch;

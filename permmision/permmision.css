@@ -292,6 +292,48 @@ html[dir="rtl"] .modal-content {
   text-align: right;
 }
 
+/* أنماط إضافية للنافذة المنبثقة الجديدة */
+.modal-content h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 18px;
+  text-align: center;
+  color: #374151;
+}
+
+/* تحسين مظهر الأزرار في النافذة المنبثقة */
+.modal-content button {
+  margin-top: 15px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.modal-content button:first-of-type {
+  background-color: #3DA9E0;
+  color: white;
+  margin-right: 10px;
+}
+
+.modal-content button:first-of-type:hover {
+  background-color: #2d8bc0;
+  transform: translateY(-1px);
+}
+
+.modal-content button:last-of-type {
+  background-color: #6c757d;
+  color: white;
+}
+
+.modal-content button:last-of-type:hover {
+  background-color: #5a6268;
+  transform: translateY(-1px);
+}
+
 /* تحسين الدروب داون للأقسام */
 #department-dropdown {
   position: relative;
@@ -344,5 +386,52 @@ html[lang="ar"]
 #selected-department,
 html[lang="ar"] 
 .dropdown-option {
+  font-family: 'Tajawal', sans-serif;
+}
+
+/* أنماط للدروب داون في نافذة التعديل */
+#edit-department-dropdown {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+#edit-selected-department {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  min-width: 180px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: border 0.2s, box-shadow 0.2s;
+}
+
+#edit-selected-department:hover {
+  border-color: #3DA9E0;
+  box-shadow: 0 2px 8px rgba(61,169,224,0.10);
+}
+
+#edit-department-options {
+  position: absolute;
+  top: 110%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+  z-index: 10;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+/* دعم RTL للدروب داون الجديد */
+html[lang="ar"] 
+#edit-department-dropdown,
+html[lang="ar"] 
+#edit-selected-department,
+html[lang="ar"] 
+#edit-department-options {
   font-family: 'Tajawal', sans-serif;
 }

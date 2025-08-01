@@ -41,6 +41,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // إغلاق النافذة المنبثقة عند الضغط خارجها
+  window.addEventListener('click', (event) => {
+    const userModal = document.getElementById("userModal");
+    if (event.target === userModal) {
+      closeUserModal();
+    }
+  });
+
+  // إغلاق النافذة المنبثقة عند الضغط على مفتاح Escape
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      const userModal = document.getElementById("userModal");
+      const editUserModal = document.getElementById("editUserModal");
+      
+      if (userModal && userModal.style.display === "flex") {
+        closeUserModal();
+      }
+      if (editUserModal && editUserModal.style.display === "flex") {
+        closeEditUserModal();
+      }
+    }
+  });
+
   // تفعيل النمط النشط للراديوات
   document.querySelectorAll('.radio-wrapper input[type="radio"]').forEach(radio => {
     radio.addEventListener('change', () => {
@@ -264,6 +287,11 @@ async function loadUserDetails(userId) {
 changeUserRole(userId, user.role);
     });
 
+    // تعديل بيانات المستخدم
+    document.getElementById("edit-user-btn")?.addEventListener("click", () => {
+      openEditUserModal(user);
+    });
+
     // زر مسح الكاش ميموري - يظهر فقط للمسؤولين
     const clearCacheBtn = document.getElementById("clear-cache-btn");
     if (clearCacheBtn) {
@@ -388,6 +416,15 @@ function openUserModal() {
 
 function closeUserModal() {
   document.getElementById("userModal").style.display = "none";
+  
+  // تنظيف الحقول
+  document.getElementById("modal_name_en").value = "";
+  document.getElementById("modal_name_ar").value = "";
+  document.getElementById("modal_email").value = "";
+  document.getElementById("modal_password").value = "";
+  document.getElementById("modal_department").value = "";
+  document.getElementById("modal_employee_id").value = "";
+  document.getElementById("selected-department").textContent = i18n('department-select');
 }
 
 function submitUser() {
@@ -404,6 +441,19 @@ function submitUser() {
     return;
   }
 
+  // التحقق من صحة البريد الإلكتروني
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    showErrorToast("Please enter a valid email address");
+    return;
+  }
+
+  // التحقق من طول كلمة المرور
+  if (password.length < 6) {
+    showErrorToast("Password must be at least 6 characters long");
+    return;
+  }
+
   fetch("http://localhost:4000/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -411,13 +461,16 @@ function submitUser() {
   })
     .then(res => res.json())
     .then(data => {
+      if (data.error) {
+        throw new Error(data.message || data.error);
+      }
       showSuccessToast(i18n("success.userCreated"));
       closeUserModal();
-      // loadUsers();
+      loadUsers(); // إعادة تحميل قائمة المستخدمين
     })
     .catch(err => {
       showErrorToast(i18n("error.creationFailed"));
-      console.error(err);
+      console.error("❌ Error creating user:", err);
     });
 }
 
@@ -580,3 +633,173 @@ if (window.languageManager) {
     renderDepartmentsDropdown();
   };
 }
+
+// --- دوال تعديل بيانات المستخدم ---
+
+function openEditUserModal(user) {
+  document.getElementById("editUserModal").style.display = "flex";
+  loadEditDepartmentsDropdown();
+  applyTranslations();
+  
+  // ملء البيانات الحالية للمستخدم
+  let nameEn = '', nameAr = '';
+  if (user.name && user.name.includes('|')) {
+    const parts = user.name.split('|');
+    nameEn = parts[0].trim();
+    nameAr = parts[1].trim();
+  } else {
+    nameEn = user.name || '';
+    nameAr = user.name || '';
+  }
+  
+  document.getElementById("edit_modal_name_en").value = nameEn;
+  document.getElementById("edit_modal_name_ar").value = nameAr;
+  document.getElementById("edit_modal_email").value = user.email || '';
+  document.getElementById("edit_modal_employee_id").value = user.employee_id || '';
+  
+  // تعيين القسم الحالي
+  let department = user.department || '';
+  if (department && department.includes('|')) {
+    const parts = department.split('|');
+    const lang = document.documentElement.lang || 'en';
+    const displayName = lang === 'ar' ? parts[0].trim() : parts[1].trim();
+    document.getElementById("edit-selected-department").textContent = displayName;
+    document.getElementById("edit_modal_department").value = department;
+  } else {
+    document.getElementById("edit-selected-department").textContent = department || i18n('department-select');
+    document.getElementById("edit_modal_department").value = department || '';
+  }
+  
+  // تخزين معرف المستخدم الحالي للتعديل
+  window.currentEditUserId = user.id;
+}
+
+function closeEditUserModal() {
+  document.getElementById("editUserModal").style.display = "none";
+  window.currentEditUserId = null;
+  
+  // تنظيف الحقول
+  document.getElementById("edit_modal_name_en").value = "";
+  document.getElementById("edit_modal_name_ar").value = "";
+  document.getElementById("edit_modal_email").value = "";
+  document.getElementById("edit_modal_department").value = "";
+  document.getElementById("edit_modal_employee_id").value = "";
+  document.getElementById("edit-selected-department").textContent = i18n('department-select');
+}
+
+function loadEditDepartmentsDropdown() {
+  fetch("http://localhost:4000/Departments")
+    .then((response) => response.json())
+    .then((data) => {
+      renderEditDepartmentsDropdown(data);
+    })
+    .catch((err) => {
+      console.error("Error loading departments:", err);
+    });
+}
+
+function renderEditDepartmentsDropdown(departmentsData) {
+  const sectionOptions = document.getElementById("edit-department-options");
+  sectionOptions.innerHTML = "";
+  const lang = document.documentElement.lang || 'en';
+  
+  departmentsData.forEach((dep) => {
+    let nameEn = dep.name, nameAr = dep.name;
+    if (dep.name.includes("|")) {
+      const parts = dep.name.split("|");
+      nameEn = parts[0].trim();
+      nameAr = parts[1].trim();
+    }
+    const optionDiv = document.createElement("div");
+    optionDiv.classList.add("dropdown-option");
+    optionDiv.textContent = lang === "ar" ? nameAr : nameEn;
+    optionDiv.onclick = () => {
+      document.getElementById("edit-selected-department").textContent = lang === "ar" ? nameAr : nameEn;
+      document.getElementById("edit_modal_department").value = nameAr + "|" + nameEn;
+      sectionOptions.style.display = "none";
+    };
+    sectionOptions.appendChild(optionDiv);
+  });
+}
+
+// إظهار/إخفاء الدروب داون عند الضغط في نافذة التعديل
+document.addEventListener('DOMContentLoaded', () => {
+  if (document.getElementById("edit-selected-department")) {
+    document.getElementById("edit-selected-department").onclick = function() {
+      const options = document.getElementById("edit-department-options");
+      options.style.display = options.style.display === "block" ? "none" : "block";
+    };
+  }
+  
+  // إغلاق النافذة المنبثقة عند الضغط خارجها
+  window.addEventListener('click', (event) => {
+    const editModal = document.getElementById("editUserModal");
+    if (event.target === editModal) {
+      closeEditUserModal();
+    }
+  });
+
+  // إغلاق النافذة المنبثقة عند الضغط على مفتاح Escape
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      const editModal = document.getElementById("editUserModal");
+      if (editModal && editModal.style.display === "flex") {
+        closeEditUserModal();
+      }
+    }
+  });
+});
+
+async function submitEditUser() {
+  const nameEn = document.getElementById("edit_modal_name_en").value.trim();
+  const nameAr = document.getElementById("edit_modal_name_ar").value.trim();
+  const name = nameEn + '|' + nameAr;
+  const email = document.getElementById("edit_modal_email").value.trim();
+  const department = document.getElementById("edit_modal_department").value.trim();
+  const employee_id = document.getElementById("edit_modal_employee_id").value.trim();
+
+  if (!nameEn || !nameAr || !email) {
+    showErrorToast(i18n("error.requiredFields"));
+    return;
+  }
+
+  // التحقق من صحة البريد الإلكتروني
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    showErrorToast("Please enter a valid email address");
+    return;
+  }
+
+  try {
+    const response = await fetch(`http://localhost:4000/users/${window.currentEditUserId}`, {
+      method: "PUT",
+      headers: { 
+        "Content-Type": "application/json",
+        Authorization: 'Bearer ' + localStorage.getItem('token')
+      },
+      body: JSON.stringify({ name, email, department, employee_id })
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to update user');
+    }
+
+    showSuccessToast(i18n("userUpdated") || "User updated successfully");
+    const updatedUserId = window.currentEditUserId; // حفظ معرف المستخدم قبل إغلاق النافذة
+    closeEditUserModal();
+    loadUserDetails(updatedUserId); // إعادة تحميل بيانات المستخدم
+    loadUsers(); // إعادة تحميل قائمة المستخدمين
+  } catch (err) {
+    showErrorToast(i18n("updateFailed") || "Failed to update user");
+    console.error("❌ Error updating user:", err);
+  }
+}
+
+// Make functions globally accessible for inline onclick handlers
+window.submitEditUser = submitEditUser;
+window.closeEditUserModal = closeEditUserModal;
+window.openUserModal = openUserModal;
+window.closeUserModal = closeUserModal;
+window.submitUser = submitUser;

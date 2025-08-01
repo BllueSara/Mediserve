@@ -281,6 +281,8 @@ const updateOptionCompleteController = async (req, res) => {
           throw new Error("❌ Unable to parse newValue for technical");
         }
       }
+      
+      // تحديث الجداول المرتبطة
       for (const { table, column } of mapping.propagate) {
         if (column === "technical_engineer_id") continue;
         await conn.query(
@@ -288,11 +290,71 @@ const updateOptionCompleteController = async (req, res) => {
           [arNew, arOld]
         );
       }
+      
+      // تحديث اسم المهندس في جدول Engineers
       const fullNameNew = `${enNew}|${arNew}`;
       await conn.query(
         `UPDATE ${mapping.table} SET ${mapping.column} = ? WHERE id = ?`,
         [fullNameNew, oldEngineerId]
       );
+      
+      // تحديث اسم المهندس في جدول المستخدمين أيضاً
+      try {
+        console.log(`🔍 البحث عن المستخدم بالاسم: ${oldValue.trim()}`);
+        
+        // البحث عن المستخدم بالاسم القديم في جدول users
+        const [userCheck] = await conn.query(
+          'SELECT id, name FROM users WHERE name LIKE ?',
+          [`%${oldValue.trim()}%`]
+        );
+
+        console.log(`🔍 تم العثور على ${userCheck.length} مستخدم`);
+
+        if (userCheck.length > 0) {
+          const user = userCheck[0];
+          console.log(`🔍 المستخدم الحالي: ${user.name}`);
+          
+          // تحليل الاسم الحالي في جدول المستخدمين
+          const currentNameParts = user.name.split('|');
+          let userEnglishName = currentNameParts[0] || '';
+          let userArabicName = currentNameParts[1] || '';
+          
+          console.log(`🔍 الاسم الإنجليزي الحالي للمستخدم: "${userEnglishName}"`);
+          console.log(`🔍 الاسم العربي الحالي للمستخدم: "${userArabicName}"`);
+          
+          // تحديث الاسم المناسب بناءً على نوع الاسم القديم
+          let updatedUserName = user.name;
+          
+          if (oldValue.trim() === userEnglishName) {
+            // الاسم القديم هو الاسم الإنجليزي، نحدث الاسم الإنجليزي فقط
+            updatedUserName = `${enNew}|${userArabicName}`;
+            console.log(`✅ تم تحديث الاسم الإنجليزي في جدول users من "${userEnglishName}" إلى "${enNew}"`);
+          } else if (oldValue.trim() === userArabicName) {
+            // الاسم القديم هو الاسم العربي، نحدث الاسم العربي فقط
+            updatedUserName = `${userEnglishName}|${arNew}`;
+            console.log(`✅ تم تحديث الاسم العربي في جدول users من "${userArabicName}" إلى "${arNew}"`);
+          } else {
+            // الاسم القديم متطابق مع الاسم الكامل، نحدث كلا الاسمين
+            updatedUserName = fullNameNew;
+            console.log(`✅ تم تحديث الاسمين في جدول users من "${user.name}" إلى "${fullNameNew}"`);
+          }
+          
+          console.log(`🔍 الاسم المحدث للمستخدم: ${updatedUserName}`);
+          
+          // تحديث الاسم في جدول users
+          await conn.query(
+            'UPDATE users SET name = ? WHERE id = ?',
+            [updatedUserName, user.id]
+          );
+          
+          console.log(`✅ تم تحديث المستخدم بنجاح`);
+        } else {
+          console.log(`⚠️ لم يتم العثور على مستخدم بالاسم: ${oldValue.trim()}`);
+        }
+      } catch (userErr) {
+        console.error('⚠️ خطأ في تحديث جدول المستخدمين:', userErr);
+        // لا نوقف العملية إذا فشل تحديث جدول المستخدمين
+      }
     } else if (target === "problem-status") {
       console.log(`[UPDATE] PROBLEM-STATUS: oldValue = '${oldValue}', newValue = '${newValue}', type = '${type}'`);
       const [rows] = await conn.query(
