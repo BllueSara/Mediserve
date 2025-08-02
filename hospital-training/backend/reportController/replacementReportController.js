@@ -11,6 +11,25 @@ const replacementReportController = async (req, res) => {
     for (const device of devices) {
       const type = device.device_type?.toLowerCase().trim();
       const serial = device.serial_number;
+      
+      // التحقق من وجود نوع الجهاز
+      if (!type || type.trim() === '') {
+        console.log(`⚠️ Device ${device.device_name} has no device type`);
+        continue; // تخطي هذا الجهاز
+      }
+      
+      // التحقق من وجود serial number
+      if (!serial || serial.trim() === '') {
+        console.log(`⚠️ Device ${device.device_name} has no serial number`);
+        continue; // تخطي هذا الجهاز
+      }
+      
+      // التحقق من وجود اسم الجهاز
+      if (!device.device_name || device.device_name.trim() === '') {
+        console.log(`⚠️ Device with serial ${serial} has no device name`);
+        continue; // تخطي هذا الجهاز
+      }
+      
       if (pcTypes.includes(type)) {
         const [pcRows] = await db.promise().query(`
           SELECT 
@@ -24,10 +43,32 @@ const replacementReportController = async (req, res) => {
           WHERE pc.Serial_Number = ?
         `, [serial]);
 
+        // التحقق من وجود الجهاز في جدول PC_info
+        if (pcRows.length === 0) {
+          console.log(`⚠️ Device ${device.device_name} (Serial: ${serial}) not found in PC_info table`);
+          continue; // تخطي هذا الجهاز
+        }
+
         const info = pcRows[0] || {};
         const ram        = info.RAM        || '';
         const generation = info.Generation || '';
         const os         = info.OS        || '';
+
+        // التحقق من أن البيانات ليست فارغة تماماً
+        if (!ram && !generation && !os) {
+          console.log(`⚠️ Device ${device.device_name} (Serial: ${serial}) has no technical data`);
+          continue; // تخطي هذا الجهاز
+        }
+
+        // التحقق من أن البيانات تحتوي على قيم صحيحة
+        const hasValidData = (ram && ram.trim() !== '') || 
+                           (generation && generation.trim() !== '') || 
+                           (os && os.trim() !== '');
+        
+        if (!hasValidData) {
+          console.log(`⚠️ Device ${device.device_name} (Serial: ${serial}) has empty technical data`);
+          continue; // تخطي هذا الجهاز
+        }
 
         const genNum = parseInt(generation.replace(/\D/g, '')) || 0;
         const ramNum = parseInt(ram.replace(/\D/g, ''))           || 0;
@@ -40,9 +81,9 @@ const replacementReportController = async (req, res) => {
         if (needsReplacement) {
           results.push([
             serial,
-            os  || 'Unknown',
-            generation || 'Unknown',
-            ram || 'Unknown',
+            os  || 'N/A',
+            generation || 'N/A',
+            ram || 'N/A',
             '8th Gen+, 4GB+ RAM, Win 10/11',
             'Needs Replacement'
           ]);
@@ -51,8 +92,10 @@ const replacementReportController = async (req, res) => {
     }
 
     if (results.length === 0) {
-      return res.status(200).json({ message: 'No devices needing replacement.' });
+      return res.status(200).json({ message: 'No devices needing replacement found with valid data.' });
     }
+
+    console.log(`✅ Found ${results.length} devices needing replacement with valid data`);
 
     // جهز البيانات للورقة
     const worksheetData = [

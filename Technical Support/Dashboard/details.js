@@ -180,7 +180,11 @@ function populateNeedsReplacementTable(data) {
     if (!tableBody) return;
     tableBody.innerHTML = '';
     const lang = (languageManager && languageManager.currentLang) || 'en';
-    data.forEach(device => {
+    
+    // عرض آخر 10 أجهزة فقط التي تحتاج استبدال
+    const limitedData = data.slice(0, 10);
+    
+    limitedData.forEach(device => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${device.name}</td>
@@ -199,6 +203,21 @@ function populateNeedsReplacementTable(data) {
         `;
         tableBody.appendChild(tr);
     });
+    
+    // إضافة رسالة إذا كان هناك أكثر من 10 أجهزة
+    if (data.length > 10) {
+        const infoRow = document.createElement('tr');
+        infoRow.className = 'info-row';
+        infoRow.innerHTML = `
+            <td colspan="7" style="text-align: center; color: #666; font-style: italic; padding: 10px;">
+                ${lang === 'ar' ? 
+                    `عرض آخر 10 أجهزة من أصل ${data.length} جهاز يحتاج استبدال` : 
+                    `Showing last 10 devices out of ${data.length} devices that need replacement`
+                }
+            </td>
+        `;
+        tableBody.appendChild(infoRow);
+    }
 }
 
 // Function to get current filter values
@@ -320,12 +339,14 @@ if (window.languageManager && typeof window.languageManager.onLanguageChange ===
 // Helper: إعادة الفلترة عند تغيير اللغة إذا كان هناك فلتر مطبق
 function getFilteredNeedsReplacement() {
     const filters = getFilterValues();
-    return allDashboardData.needsReplacement.filter(device => {
+    const filtered = allDashboardData.needsReplacement.filter(device => {
         return (!filters.department || device.department === filters.department) &&
                (!filters.cpuGen || device.cpu === filters.cpuGen) &&
                (!filters.osVersion || device.os === filters.osVersion) &&
                (!filters.ramSize || device.ram === filters.ramSize);
     });
+    // إرجاع آخر 10 أجهزة فقط
+    return filtered.slice(0, 10);
 }
 
 setInterval(() => {

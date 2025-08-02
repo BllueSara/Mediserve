@@ -50,6 +50,25 @@ const dashboardDataController = async (req, res) => {
       const serial = device.serial_number;
       let department = '';
       const pcTypes = ["pc", "desktop", "laptop", "كمبيوتر", "لابتوب"];
+      
+      // التحقق من وجود نوع الجهاز
+      if (!type || type.trim() === '') {
+        console.log(`⚠️ Device ${device.device_name} has no device type`);
+        continue; // تخطي هذا الجهاز
+      }
+      
+      // التحقق من وجود serial number
+      if (!serial || serial.trim() === '') {
+        console.log(`⚠️ Device ${device.device_name} has no serial number`);
+        continue; // تخطي هذا الجهاز
+      }
+      
+      // التحقق من وجود اسم الجهاز
+      if (!device.device_name || device.device_name.trim() === '') {
+        console.log(`⚠️ Device with serial ${serial} has no device name`);
+        continue; // تخطي هذا الجهاز
+      }
+      
       if (pcTypes.includes(type)) {
         const [deptRow] = await db.promise().query(`SELECT name FROM Departments WHERE id = ?`, [device.department_id]);
         if (deptRow.length > 0) department = deptRow[0].name;
@@ -65,10 +84,34 @@ const dashboardDataController = async (req, res) => {
           LEFT JOIN Processor_Generations gen ON pc.Generation_id = gen.id
           WHERE pc.Serial_Number = ?
         `, [serial]);
+        
+        // التحقق من وجود الجهاز في جدول PC_info
+        if (pcRows.length === 0) {
+          console.log(`⚠️ Device ${device.device_name} (Serial: ${serial}) not found in PC_info table`);
+          continue; // تخطي هذا الجهاز
+        }
+        
         const info = pcRows[0] || {};
         ram = info.RAM || '';
         generation = info.Generation || '';
         os = info.OS || '';
+        
+        // التحقق من أن البيانات ليست فارغة تماماً
+        if (!ram && !generation && !os) {
+          console.log(`⚠️ Device ${device.device_name} (Serial: ${serial}) has no technical data`);
+          continue; // تخطي هذا الجهاز
+        }
+        
+        // التحقق من أن البيانات تحتوي على قيم صحيحة
+        const hasValidData = (ram && ram.trim() !== '') || 
+                           (generation && generation.trim() !== '') || 
+                           (os && os.trim() !== '');
+        
+        if (!hasValidData) {
+          console.log(`⚠️ Device ${device.device_name} (Serial: ${serial}) has empty technical data`);
+          continue; // تخطي هذا الجهاز
+        }
+        
         const genNum = parseInt(generation?.replace(/\D/g, '')) || 0;
         const ramNum = parseInt(ram?.replace(/\D/g, '')) || 0;
         const osClean = (os || '').toLowerCase();
@@ -76,16 +119,24 @@ const dashboardDataController = async (req, res) => {
         const isLowRam = ramNum < 4;
         const isOldOS = osClean.includes('windows') && !osClean.includes('10') && !osClean.includes('11');
         const needs = isOldGen || isLowRam || isOldOS;
-        needsReplacement.push({
-          name: device.device_name,
-          department,
-          ram: ram || 'Unknown',
-          cpu: generation || 'Unknown',
-          os: os || 'Unknown',
-          status: needs ? 'Replace Soon' : 'OK'
-        });
+        
+        // إضافة الجهاز فقط إذا كان يحتوي على معلومات صحيحة ويحتاج استبدال
+        if (device.device_name && device.device_name.trim() !== '' && needs) {
+          console.log(`✅ Device ${device.device_name} (Serial: ${serial}) needs replacement - Gen: ${genNum}, RAM: ${ramNum}GB, OS: ${os}`);
+          needsReplacement.push({
+            name: device.device_name,
+            department: department || 'N/A',
+            ram: ram || 'N/A',
+            cpu: generation || 'N/A',
+            os: os || 'N/A',
+            status: 'Replace Soon'
+          });
+        }
       }
     }
+    
+    console.log(`✅ Found ${needsReplacement.length} devices needing replacement with valid data`);
+    
     res.json({
       overview: {
         totalDevices,
