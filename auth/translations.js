@@ -93,10 +93,15 @@ const translations = {
     password_update_failed: "Failed to update password",
     confirm_clear_cache: "Are you sure you want to clear the cache? This will remove all stored data except authentication and language settings.",
     cache_cleared: "Cache cleared successfully!",
-    cache_clear_failed: "Failed to clear cache"
+    cache_clear_failed: "Failed to clear cache",
+    all_rights_reserved : "All rights reserved 2025 ©",
+    developed_by : "Designed and Developed by Hany Miyajan | Implemented by Sara Alluhaibi",
 
-    },
-    ar: {
+
+},
+ar: {
+  all_rights_reserved : "جميع الحقوق محفوظة 2025 ©",
+      developed_by : "إعداد المهندس هاني مياجان | تنفيذ المهندسة سارا اللهيبي",
         welcome: "مرحباً",
         enterInfo: "الرجاء إدخال معلوماتك",
         usernameEmailId: "اسم المستخدم / البريد الإلكتروني / الرقم الوظيفي",

@@ -56,58 +56,71 @@
 
     </div>
 
-    <div class="card"> <!-- Profile card container -->
-        <img src="/icon/user.PNG" alt="User" class="profile-img"> <!-- Profile image -->
+    <main>
+        <div class="card"> <!-- Profile card container -->
+            <img src="/icon/user.PNG" alt="User" class="profile-img"> <!-- Profile image -->
 
-        <!-- Username field -->
-        <div class="form-group">
-            <label for="username" data-i18n="username">Username</label>
-            <div>
-                <span><img src="/icon/username.png" alt="Username Icon"></span>
-                <input type="text" id="username"  readonly>
+            <!-- Username field -->
+            <div class="form-group">
+                <label for="username" data-i18n="username">Username</label>
+                <div>
+                    <span><img src="/icon/username.png" alt="Username Icon"></span>
+                    <input type="text" id="username"  readonly>
+                </div>
+            </div>
+
+            <!-- Email field -->
+            <div class="form-group">
+                <label for="email" data-i18n="email">Email</label>
+                <div>
+                    <span><img src="/icon/email.png" alt="Email Icon"></span>
+                    <input type="email" id="email" readonly>
+                </div>
+            </div>
+
+            <!-- Role field -->
+            <div class="form-group">
+                <label for="role" data-i18n="role">Role</label>
+                <div>
+                    <span><img src="/icon/role.png" alt="Role Icon"></span>
+                    <input type="text" id="role"  readonly>
+                </div>
+            </div>
+            <div class="nav-buttons">
+
+                <!-- Reset Password Button inside Anchor -->
+                <div class="reset-password-button">
+                    <a href="/auth/password.html" onclick="resetPasswordClicked()">
+                        <button class="btn btn-primary">
+                            <img src="/icon/password.png" alt="Reset Icon" class="btn-icon">
+                            <span data-i18n="reset_password">Reset Password</span>
+                        </button>
+                    </a>
+                </div>
+
+                <!-- Sign Out Button inside Anchor -->
+                <div class="sign-out-button">
+                    <a href="/auth/login.html" onclick="signOutClicked()">
+                        <button class="btn btn-danger">
+                            <img src="/icon/password.png" alt="Sign Out Icon" class="btn-icon">
+                            <span data-i18n="sign_out">Sign Out</span>
+                        </button>
+                    </a>
+                </div>
             </div>
         </div>
+    </main>
 
-        <!-- Email field -->
-        <div class="form-group">
-            <label for="email" data-i18n="email">Email</label>
-            <div>
-                <span><img src="/icon/email.png" alt="Email Icon"></span>
-                <input type="email" id="email" readonly>
+    <footer class="main-footer">
+        <div class="footer-content">
+            <div class="copyright" data-translate="all-rights-reserved">
+                جميع الحقوق محفوظة 2025 ©
+            </div>
+            <div class="developers" data-translate="developed-by">
+                إعداد المهندس هاني مياجان | تنفيذ المهندسة سارا اللهيبي
             </div>
         </div>
-
-        <!-- Role field -->
-        <div class="form-group">
-            <label for="role" data-i18n="role">Role</label>
-            <div>
-                <span><img src="/icon/role.png" alt="Role Icon"></span>
-                <input type="text" id="role"  readonly>
-            </div>
-        </div>
-        <div class="nav-buttons">
-
-            <!-- Reset Password Button inside Anchor -->
-            <div class="reset-password-button">
-                <a href="/auth/password.html" onclick="resetPasswordClicked()">
-                    <button class="btn btn-primary">
-                        <img src="/icon/password.png" alt="Reset Icon" class="btn-icon">
-                        <span data-i18n="reset_password">Reset Password</span>
-                    </button>
-                </a>
-            </div>
-
-            <!-- Sign Out Button inside Anchor -->
-            <div class="sign-out-button">
-                <a href="/auth/login.html" onclick="signOutClicked()">
-                    <button class="btn btn-danger">
-                        <img src="/icon/signout.png" alt="Sign Out Icon" class="btn-icon">
-                        <span data-i18n="sign_out">Sign Out</span>
-                    </button>
-                </a>
-            </div>
-        </div>
-    </div>
+    </footer>
 
     <script src="profile.js"></script> <!-- Link to external JavaScript -->
     <script src="/Language/Language.js"></script>

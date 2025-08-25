@@ -890,8 +890,11 @@ const languageManager = {
             'search_reports': 'Search reports...',
             'network_reports': 'Network Reports',
             'ips': 'IPs',
+
             'owner': 'Owner',
             
+                 'all-rights-reserved': 'All Rights Reserved 2025 ©',
+        'developed-by': 'Prepared by Engineer Hani Miyajan | Implemented by Engineer Sara Alluhaibi',
             // User Management
             'edit_user': 'Edit User',
             'edit_user_data': 'Edit User Data',
@@ -1491,6 +1494,8 @@ const languageManager = {
             'type_of_report': 'نوع التقرير',
             'closed': 'مغلق',
 
+        'all-rights-reserved': 'جميع الحقوق محفوظة 2025 ©',
+        'developed-by': 'إعداد المهندس هاني مياجان | تنفيذ المهندسة سارا اللهيبي',
             // Login Page
             'login_signup': 'تسجيل الدخول وإنشاء حساب',
             'remember_me': 'تذكرني',
