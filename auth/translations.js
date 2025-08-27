@@ -95,13 +95,13 @@ const translations = {
     cache_cleared: "Cache cleared successfully!",
     cache_clear_failed: "Failed to clear cache",
     all_rights_reserved : "All rights reserved 2025 ©",
-    developed_by : "Designed and Developed by Hany Miyajan | Implemented by Sara Alluhaibi",
+    developed_by : " Enginner Hany Miyajan | Enginner Sara Alluhaibi",
 
 
 },
 ar: {
   all_rights_reserved : "جميع الحقوق محفوظة 2025 ©",
-      developed_by : "إعداد المهندس هاني مياجان | تنفيذ المهندسة سارا اللهيبي",
+      developed_by : " المهندس هاني مياجان |  المهندسة سارا اللهيبي",
         welcome: "مرحباً",
         enterInfo: "الرجاء إدخال معلوماتك",
         usernameEmailId: "اسم المستخدم / البريد الإلكتروني / الرقم الوظيفي",
