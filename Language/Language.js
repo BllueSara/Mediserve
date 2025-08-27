@@ -957,9 +957,12 @@ const languageManager = {
             'password_update_failed': 'Failed to update password',
             'confirm_clear_cache': 'Are you sure you want to clear the cache? This will remove all stored data except authentication and language settings.',
             'cache_cleared': 'Cache cleared successfully!',
-            'cache_clear_failed': 'Failed to clear cache'
+            'cache_clear_failed': 'Failed to clear cache',
+            'search_devices_placeholder': 'Search devices...',
+
         },
         ar: {
+          'search_devices_placeholder': 'ابحث عن الجهاز',
           'report_for': 'البلاغ عن',
           'unknown_ip': 'IP غير معروف',
 'view_details': 'عرض التفاصيل',

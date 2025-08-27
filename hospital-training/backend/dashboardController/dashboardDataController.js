@@ -77,7 +77,9 @@ const dashboardDataController = async (req, res) => {
           SELECT 
             os.os_name AS OS,
             ram_size.ram_size AS RAM,
-            gen.generation_number AS Generation
+            gen.generation_number AS Generation,
+            pc.Mac_Address AS MAC_Address,
+            pc.Ip_Address AS IP_Address
           FROM PC_info pc
           LEFT JOIN OS_Types os ON pc.OS_id = os.id
           LEFT JOIN RAM_Sizes ram_size ON pc.RamSize_id = ram_size.id
@@ -95,6 +97,8 @@ const dashboardDataController = async (req, res) => {
         ram = info.RAM || '';
         generation = info.Generation || '';
         os = info.OS || '';
+        const macAddress = info.MAC_Address || '';
+        const ipAddress = info.IP_Address || '';
         
         // التحقق من أن البيانات ليست فارغة تماماً
         if (!ram && !generation && !os) {
@@ -122,14 +126,16 @@ const dashboardDataController = async (req, res) => {
         
         // إضافة الجهاز فقط إذا كان يحتوي على معلومات صحيحة ويحتاج استبدال
         if (device.device_name && device.device_name.trim() !== '' && needs) {
-          console.log(`✅ Device ${device.device_name} (Serial: ${serial}) needs replacement - Gen: ${genNum}, RAM: ${ramNum}GB, OS: ${os}`);
+          console.log(`✅ Device ${device.device_name} (Serial: ${serial}) needs replacement - Gen: ${genNum}, RAM: ${ramNum}GB, OS: ${os}, IP: ${ipAddress}, MAC: ${macAddress}`);
           needsReplacement.push({
             name: device.device_name,
             department: department || 'N/A',
             ram: ram || 'N/A',
             cpu: generation || 'N/A',
             os: os || 'N/A',
-            status: 'Replace Soon'
+            status: 'Replace Soon',
+            ip_address: ipAddress || 'N/A',
+            mac_address: macAddress || 'N/A'
           });
         }
       }

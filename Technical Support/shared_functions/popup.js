@@ -714,7 +714,7 @@ export function updatePopupHeadingAndFields(type) {
         </div>
         <div class="form-field">
           <label>${t['ip_address']}</label>
-          <input type="text" name="ip-address" required>
+          <input type="text" name="ip-address">
         </div>
       `;
     }

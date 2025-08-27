@@ -5,6 +5,13 @@
 let ramChartInstance = null;
 let cpuChartInstance = null;
 
+// Global variables for search functionality
+let searchTimeout = null;
+let currentSearchQuery = '';
+let allDevicesData = null; // Store all devices for search
+let allDashboardData = null;
+let isSearchInProgress = false;
+
 // Function to draw RAM Distribution Chart
 function drawRamDistributionChart(ramData) {
     const ramChartCtx = document.getElementById('ramDistributionChart')?.getContext('2d');
@@ -174,51 +181,7 @@ function populateFilters(filters) {
     if (typeof languageManager !== 'undefined') languageManager.applyLanguage();
 }
 
-// Function to populate Needs Replacement table
-function populateNeedsReplacementTable(data) {
-    const tableBody = document.querySelector('.needs-replacement table tbody');
-    if (!tableBody) return;
-    tableBody.innerHTML = '';
-    const lang = (languageManager && languageManager.currentLang) || 'en';
-    
-    // عرض آخر 10 أجهزة فقط التي تحتاج استبدال
-    const limitedData = data.slice(0, 10);
-    
-    limitedData.forEach(device => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${device.name}</td>
-            <td>${getLocalizedDepartmentName(device.department, lang)}</td>
-            <td>${device.ram}</td>
-            <td>${device.cpu}</td>
-            <td>${device.os}</td>
-            <td>${device.status}</td>
-            <td>
-                <button class="view-last-report-btn" onclick="viewLastReport('${device.name}', '${device.department}')" 
-                        title="${lang === 'ar' ? 'عرض آخر تقرير' : 'View Last Report'}">
-                    <i class="fas fa-file-alt"></i>
-                    <span>${lang === 'ar' ? 'عرض آخر تقرير' : 'View Last Report'}</span>
-                </button>
-            </td>
-        `;
-        tableBody.appendChild(tr);
-    });
-    
-    // إضافة رسالة إذا كان هناك أكثر من 10 أجهزة
-    if (data.length > 10) {
-        const infoRow = document.createElement('tr');
-        infoRow.className = 'info-row';
-        infoRow.innerHTML = `
-            <td colspan="7" style="text-align: center; color: #666; font-style: italic; padding: 10px;">
-                ${lang === 'ar' ? 
-                    `عرض آخر 10 أجهزة من أصل ${data.length} جهاز يحتاج استبدال` : 
-                    `Showing last 10 devices out of ${data.length} devices that need replacement`
-                }
-            </td>
-        `;
-        tableBody.appendChild(infoRow);
-    }
-}
+// Function to populate Needs Replacement table (moved to search section below)
 
 // Function to get current filter values
 function getFilterValues() {
@@ -255,8 +218,6 @@ function applyFilters(allData) {
      console.log('Filter application logic needs implementation.');
 }
 
-let allDashboardData = null;
-
 function getLocalizedDepartmentName(dept, lang) {
     if (!dept) return '';
     const parts = dept.split('|');
@@ -292,7 +253,10 @@ async function loadDashboardData() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', loadDashboardData);
+document.addEventListener('DOMContentLoaded', () => {
+    loadDashboardData();
+    initializeSearch();
+});
 
 function renderDashboard(data) {
     updateOverviewCards(data.overview);
@@ -349,9 +313,10 @@ function getFilteredNeedsReplacement() {
     return filtered.slice(0, 10);
 }
 
-setInterval(() => {
-    loadDashboardData();
-}, 60000); // 
+// إزالة الـ auto refresh - كان يحدث كل دقيقة
+// setInterval(() => {
+//     loadDashboardData();
+// }, 60000); // 
 
 // Global variables to prevent multiple simultaneous calls
 let isViewLastReportInProgress = false;
@@ -707,6 +672,374 @@ try {
 // Make toast functions globally accessible
 window.showErrorToast = showErrorToast;
 window.showWarningToast = showWarningToast;
+
+// ========== Search Functionality ==========
+
+// Local search function (fallback when API is not available)
+function performLocalSearch(query) {
+    console.log('🔍 Performing local search for:', query);
+    
+    if (!allDashboardData || !allDashboardData.needsReplacement) {
+        console.warn('⚠️ No dashboard data available for local search');
+        return [];
+    }
+    
+    // Log available departments for debugging
+    const departments = [...new Set(allDashboardData.needsReplacement.map(d => d.department))];
+    console.log('📋 Available departments:', departments);
+    
+    const searchTerm = query.toLowerCase().trim();
+    const results = allDashboardData.needsReplacement.filter(device => {
+        // Search in device name (exact match first, then partial)
+        if (device.name) {
+            const nameLower = device.name.toLowerCase();
+            if (nameLower === searchTerm || nameLower.includes(searchTerm)) {
+                console.log(`✅ Device name match: "${device.name}" contains "${searchTerm}"`);
+                return true;
+            }
+        }
+        
+        // Search in department (both English and Arabic parts)
+        if (device.department) {
+            // Search in English part (before |)
+            const englishPart = device.department.split('|')[0]?.trim().toLowerCase();
+            if (englishPart && englishPart.includes(searchTerm)) {
+                console.log(`✅ English department match: "${englishPart}" contains "${searchTerm}"`);
+                return true;
+            }
+            
+            // Search in Arabic part (after |) - more precise matching
+            const arabicPart = device.department.split('|')[1]?.trim().toLowerCase();
+            if (arabicPart) {
+                // Check if search term is at the beginning of a word
+                const words = arabicPart.split(' ');
+                for (const word of words) {
+                    if (word.startsWith(searchTerm)) {
+                        console.log(`✅ Arabic department match: "${word}" starts with "${searchTerm}"`);
+                        return true;
+                    }
+                }
+                // Also check if search term is in the middle of a word (for partial matches)
+                if (arabicPart.includes(searchTerm)) {
+                    console.log(`✅ Arabic department match: "${arabicPart}" contains "${searchTerm}"`);
+                    return true;
+                }
+            }
+            
+            // Also search in localized department name
+            const localizedDept = getLocalizedDepartmentName(device.department, 'ar').toLowerCase();
+            if (localizedDept.includes(searchTerm)) {
+                console.log(`✅ Localized department match: "${localizedDept}" contains "${searchTerm}"`);
+                return true;
+            }
+        }
+        
+        // Search in RAM (exact match for numbers)
+        if (device.ram && device.ram !== 'N/A') {
+            const ramLower = device.ram.toLowerCase();
+            if (ramLower.includes(searchTerm)) {
+                return true;
+            }
+        }
+        
+        // Search in CPU (exact match for generation numbers)
+        if (device.cpu && device.cpu !== 'N/A') {
+            const cpuLower = device.cpu.toLowerCase();
+            if (cpuLower.includes(searchTerm)) {
+                return true;
+            }
+        }
+        
+        // Search in OS
+        if (device.os && device.os !== 'N/A') {
+            const osLower = device.os.toLowerCase();
+            if (osLower.includes(searchTerm)) {
+                return true;
+            }
+        }
+        
+        // Search in IP address (exact match)
+        if (device.ip_address && device.ip_address !== 'N/A') {
+            const ipLower = device.ip_address.toLowerCase();
+            if (ipLower.includes(searchTerm)) {
+                console.log(`✅ IP address match: "${device.ip_address}" contains "${searchTerm}"`);
+                return true;
+            }
+        }
+        
+        // Search in MAC address (exact match)
+        if (device.mac_address && device.mac_address !== 'N/A') {
+            const macLower = device.mac_address.toLowerCase();
+            if (macLower.includes(searchTerm)) {
+                console.log(`✅ MAC address match: "${device.mac_address}" contains "${searchTerm}"`);
+                return true;
+            }
+        }
+        
+        return false;
+    });
+    
+    // Sort results by relevance (exact matches first)
+    const sortedResults = results.sort((a, b) => {
+        const searchTermLower = searchTerm.toLowerCase();
+        
+        // Exact name match gets highest priority
+        if (a.name && a.name.toLowerCase() === searchTermLower) return -1;
+        if (b.name && b.name.toLowerCase() === searchTermLower) return 1;
+        
+        // Name contains search term
+        if (a.name && a.name.toLowerCase().includes(searchTermLower)) return -1;
+        if (b.name && b.name.toLowerCase().includes(searchTermLower)) return 1;
+        
+        // IP address match
+        if (a.ip_address && a.ip_address.toLowerCase().includes(searchTermLower)) return -1;
+        if (b.ip_address && b.ip_address.toLowerCase().includes(searchTermLower)) return 1;
+        
+        // MAC address match
+        if (a.mac_address && a.mac_address.toLowerCase().includes(searchTermLower)) return -1;
+        if (b.mac_address && b.mac_address.toLowerCase().includes(searchTermLower)) return 1;
+        
+        // Department match
+        if (a.department && a.department.toLowerCase().includes(searchTermLower)) return -1;
+        if (b.department && b.department.toLowerCase().includes(searchTermLower)) return 1;
+        
+        // Default alphabetical order
+        return a.name.localeCompare(b.name);
+    });
+    
+    console.log('🔍 Local search results:', sortedResults);
+    return sortedResults;
+}
+
+// Initialize search functionality
+function initializeSearch() {
+    const searchInput = document.getElementById('device-search');
+    const clearSearchBtn = document.getElementById('clear-search');
+    const searchResultsInfo = document.getElementById('search-results-info');
+    
+    console.log('🔍 Initializing search functionality...');
+    console.log('Search input element:', searchInput);
+    console.log('Clear search button:', clearSearchBtn);
+    
+    if (!searchInput) {
+        console.error('❌ Search input element not found!');
+        return;
+    }
+    
+    // Search input event listener
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        currentSearchQuery = query;
+        
+        console.log('🔍 Search input changed:', query);
+        
+        // Show/hide clear button
+        if (query) {
+            clearSearchBtn.classList.add('show');
+        } else {
+            clearSearchBtn.classList.remove('show');
+            searchResultsInfo.style.display = 'none';
+            // Reset to show all devices when input is empty
+            if (allDashboardData) {
+                populateNeedsReplacementTable(allDashboardData.needsReplacement);
+            }
+            console.log('🔍 Input is empty, returning to normal view');
+        }
+        
+        // Immediate search for better user experience - always stay in search mode
+        if (query.length >= 2) {
+            console.log('🔍 Performing immediate search for:', query);
+            performSearch(query);
+        } else if (query.length === 0) {
+            // Clear search and return to normal view
+            searchResultsInfo.style.display = 'none';
+            if (allDashboardData) {
+                populateNeedsReplacementTable(allDashboardData.needsReplacement);
+            }
+            console.log('🔍 Input is empty, returning to normal view');
+        } else {
+            // Keep search active even for short queries
+            console.log('🔍 Keeping search active for query:', query);
+        }
+    });
+    
+    // Clear search button
+    clearSearchBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        currentSearchQuery = '';
+        clearSearchBtn.classList.remove('show');
+        searchResultsInfo.style.display = 'none';
+        
+        // Reset to show all devices when clear button is clicked
+        if (allDashboardData) {
+            populateNeedsReplacementTable(allDashboardData.needsReplacement);
+        }
+        console.log('🔍 Clear button clicked, returning to normal view');
+    });
+    
+    // Search on Enter key
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const query = e.target.value.trim();
+            if (query) {
+                performSearch(query);
+            }
+        }
+    });
+}
+
+// Perform search function
+async function performSearch(query) {
+    console.log('🔍 performSearch called with query:', query);
+    
+    if (!query || query.length < 2) {
+        console.log('🔍 Query too short, but keeping search active');
+        // Don't return - keep search active
+        return;
+    }
+    
+    // Always perform new search for better user experience
+    console.log('🔍 Performing new search for query:', query);
+    currentSearchQuery = query;
+    
+    // Don't exit search mode - keep it active
+    
+    // Allow multiple searches for better responsiveness
+    console.log('🔍 Starting search for:', query);
+    
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('❌ No token found');
+            showErrorToast('Please login first');
+            // Don't return - keep search active
+            return;
+        }
+        
+        console.log('🔍 Starting search API call...');
+        console.log('🔍 Search URL:', `http://localhost:4000/api/search-devices?q=${encodeURIComponent(query)}`);
+        
+        // Don't show loading state - keep search active
+        console.log('🔍 Performing search without loading state');
+        
+        // Use local search only (faster and more reliable)
+        console.log('🔍 Using local search for better performance');
+        const localResults = performLocalSearch(query);
+        console.log('🔍 Storing local search results for query:', query, 'Results count:', localResults.length);
+        allDevicesData = localResults; // Cache local results
+        updateSearchResults(localResults, query);
+        
+        // Don't restore input state - keep search active
+        console.log('🔍 Search completed, keeping search active');
+        
+    } catch (error) {
+        console.error('Search error:', error);
+        showErrorToast('Search failed. Please try again.');
+        
+        // Don't restore input state - keep search active
+        console.log('🔍 Search error occurred, but keeping search active');
+    }
+}
+
+// Update search results in UI
+function updateSearchResults(results, query) {
+    console.log('🔍 updateSearchResults called with:', results, 'for query:', query);
+    
+    const searchResultsInfo = document.getElementById('search-results-info');
+    const searchResultsCount = document.getElementById('search-results-count');
+    
+    if (!results || results.length === 0) {
+        // No results found - but keep search active
+        searchResultsInfo.style.display = 'none'; // Hide results count
+        console.log(`❌ No devices found matching "${query}"`);
+        
+        // Clear the table but keep search active
+        const tableBody = document.querySelector('.needs-replacement table tbody');
+        if (tableBody) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align: center; color: #666; font-style: italic; padding: 20px;">
+                        ${languageManager?.currentLang === 'ar' ? 
+                            `🔍 لم يتم العثور على أجهزة تطابق البحث: "${query}"` : 
+                            `🔍 No devices found matching: "${query}"`
+                        }
+                        <br>
+                        <small style="color: #999; font-size: 12px;">
+                            ${languageManager?.currentLang === 'ar' ? 
+                                'جرب البحث بالاسم، القسم، IP، أو MAC' : 
+                                'Try searching by name, department, IP, or MAC'
+                            }
+                        </small>
+                    </td>
+                </tr>
+            `;
+        }
+        // Don't return - keep search active
+        console.log('🔍 No results found, but keeping search active');
+        return;
+    }
+    
+    // Hide results count - user doesn't want to see it
+    searchResultsInfo.style.display = 'none';
+    
+    // Show success message in console only
+    console.log(`✅ Found ${results.length} devices matching "${query}"`);
+    
+    // Update the table with search results
+    populateNeedsReplacementTable(results);
+}
+
+// Enhanced populateNeedsReplacementTable to handle search results
+function populateNeedsReplacementTable(data) {
+    const tableBody = document.querySelector('.needs-replacement table tbody');
+    if (!tableBody) return;
+    tableBody.innerHTML = '';
+    const lang = (languageManager && languageManager.currentLang) || 'en';
+    
+    // If it's search results, show all results, otherwise limit to 10
+    const limitedData = currentSearchQuery ? data : data.slice(0, 10);
+    
+    // Keep search active - don't exit search mode
+    console.log('🔍 Populating table with', limitedData.length, 'devices');
+    
+    limitedData.forEach(device => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${device.name}</td>
+            <td>${getLocalizedDepartmentName(device.department, lang)}</td>
+            <td>${device.ram}</td>
+            <td>${device.cpu}</td>
+            <td>${device.os}</td>
+            <td>${device.status}</td>
+            <td>
+                <button class="view-last-report-btn" onclick="viewLastReport('${device.name}', '${device.department}')" 
+                        title="${lang === 'ar' ? 'عرض آخر تقرير' : 'View Last Report'}">
+                    <i class="fas fa-file-alt"></i>
+                    <span>${lang === 'ar' ? 'عرض آخر تقرير' : 'View Last Report'}</span>
+                </button>
+            </td>
+        `;
+        tableBody.appendChild(tr);
+    });
+    
+    // Add info message if there are more devices (only for non-search results)
+    if (!currentSearchQuery && data.length > 10) {
+        const infoRow = document.createElement('tr');
+        infoRow.className = 'info-row';
+        infoRow.innerHTML = `
+            <td colspan="7" style="text-align: center; color: #666; font-style: italic; padding: 10px;">
+                ${lang === 'ar' ? 
+                    `عرض آخر 10 أجهزة من أصل ${data.length} جهاز يحتاج استبدال` : 
+                    `Showing last 10 devices out of ${data.length} devices that need replacement`
+                }
+            </td>
+        `;
+        tableBody.appendChild(infoRow);
+    }
+}
+
+// Search initialization is now handled in the main DOMContentLoaded event
 
 // Cleanup function to destroy charts when page is unloaded
 window.addEventListener('beforeunload', () => {
